@@ -967,7 +967,7 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,      BOOLEAN, { .b = false              },  (S_Func) dwb_set_proxy,  { 0 }, },
   { { "proxy-url",                               "The HTTP-proxy url", },                                          
     SETTING_GLOBAL,      CHAR,    { .p = NULL              },   (S_Func) dwb_soup_init_proxy,  { 0 }, },
-  { { "ssl-strict",                               "Whether to allow only save certificates", },                                          
+  { { "ssl-strict",                               "Whether to allow only safe certificates", },                                          
     SETTING_GLOBAL,      BOOLEAN,    { .b = true            },   (S_Func) dwb_soup_init_session_features,  { 0 }, },
 #ifdef WITH_LIBSOUP_2_38
   { { "ssl-use-system-ca-file",                               "Whether to use the system certification file", },                                          
