@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 12/05/2012
+.\"      Date: 12/09/2012
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "12/05/2012" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "12/09/2012" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -701,27 +701,6 @@ A string with the file content
 .nr an-break-flag 1
 .br
 .ps +1
-\fBString io.statusBar(Object text)\fR
-.RS 4
-.sp
-Sets the statusbar text\&. The statusbar consists of two labels, a \fImiddle\fR label and a \fIright\fR label, on both labels pango markup can be used
-.PP
-\fItext\&.middle\fR
-.RS 4
-Text for the middle label
-.RE
-.PP
-\fItext\&.right\fR
-.RS 4
-Text for the right label
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
 \fBBoolean io.write(String path, String mode, String text)\fR
 .RS 4
 .sp
@@ -1156,6 +1135,241 @@ Label used for displaying uris, third child of
 Label used for status information, fourth child of
 \fBgui\&.statusBox\fR\&.
 .RE
+.SS "Deferred"
+.sp
+Deferred objects can be used to manage asynchronous operations\&. It can trigger a callback function when an asynchrounous operation has finished, and allows chaining of callbacks\&. Deferred basically have 2 callback chains, a \fIdone\fR\-chain and a \fIfail\fR\-chain\&. If a asynchronous operation is successful the deferred should be resolved and the done callback chain of the deferred is called\&. If a asynchronous operation fails the deferred should be rejected and the fail callback chain of the deferred is called\&.
+.sp
+Deferreds implement the following methods:
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Deferred.done(Function callback)\fR
+.RS 4
+.sp
+Registers a function for the done\-chain\&.
+.PP
+\fIcallback\fR
+.RS 4
+A callback function that will be called when the Deferred is resolved\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A new deferred that can be used to chain callbacks\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBDeferred Deferred.fail(Function callback)\fR
+.RS 4
+.sp
+Registers a function for the fail\-chain\&.
+.PP
+\fIcallback\fR
+.RS 4
+A callback function that will be called when the deferred is rejected\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A new deferred that can be used to chain callbacks\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBDeferred Deferred.reject(arguments)\fR
+.RS 4
+.sp
+Rejects a deferred, the fail\-chain is called when a deferred is rejected\&.
+.PP
+\fIarguments\fR
+.RS 4
+Arguments passed to the
+\fIfail\fR
+callbacks\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Deferred.resolve(arguments)\fR
+.RS 4
+.sp
+Resolves a deferred, the done\-chain is called when a deferred is resolved\&.
+.PP
+\fIarguments\fR
+.RS 4
+Arguments passed to the
+\fIdone\fR
+callbacks\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBDeferred Deferred.then(Function ondone, Function onfail)\fR
+.RS 4
+.sp
+Registers a function for the done and fail chain\&.
+.PP
+\fIondone\fR
+.RS 4
+A callback function that will be called when the deferred is resolved\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
+.RE
+.PP
+\fIonfail\fR
+.RS 4
+A callback function that will be called when the deferred is rejected\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A new deferred that can be used to chain callbacks\&.
+.RE
+.sp
+Simple usage of a deferred:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+function loadUri(uri) {
+    var d = new Deferred();
+    tabs\&.current\&.loadUri(uri, function(wv) {
+        if (wv\&.loadStatus == LoadStatus\&.finished)
+        {
+            d\&.resolve("Finished");
+            return true;
+        }
+        else if (wv\&.loadStatus == LoadStatus\&.failed)
+        {
+            d\&.reject("Failed");
+            return true;
+        }
+    });
+    return d;
+}
+
+loadUri("http://www\&.example\&.com")\&.then(
+    function(response) {
+        io\&.print(response); // Finished
+    },
+    function(response) {
+        io\&.print(response); // Failed
+    }
+);
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Chaining of a deferred:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+function foo()
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d\&.reject("rejected");
+    });
+    return d;
+}
+
+function onResponse(response)
+{
+    io\&.print(response);
+}
+
+// Will print "rejected" twice to stdout after 2 seconds
+foo()\&.fail(onResponse)\&.fail(onResponse);
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Note that if the deferred is rejected only the fail chain is called, when it is resolved only the done chain is called\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+function foo()
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d\&.reject("rejected");
+        // Already rejected, will not execute the done chain
+        d\&.resolve("rejected");
+    });
+    return d;
+}
+
+function onResponse(response)
+{
+    io\&.print(response);
+}
+
+// Only the fail will be executed
+
+foo()\&.fail(onResponse)\&.done(onResponse);
+foo()\&.done(onResponse)\&.fail(onResponse);
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Changing the deferred in a callback chain:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+function foo(message)
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d\&.resolve(message);
+    });
+    return d;
+}
+function callback1(response)
+{
+    io\&.print(response); // Prints "foo" after 2 seconds
+
+    // Return a new Deferred, will replace the old one\&.
+    return foo("bar");
+}
+function callback2(response)
+{
+    io\&.print(response); // Prints "bar" after 4 seconds
+}
+
+foo("foo")\&.done(callback1)\&.done(callback2);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
 .SH "WEBKIT OBJECTS"
 .sp
 All webkit objects correspond to gobject objects, i\&.e\&. they have the same properties, but the javascript properties are all camelcase\&. For example, a WebKitWebView has the property \fBzoom\-level\fR, the corresponding javascript property is \fBzoomLevel\fR:
@@ -1194,10 +1408,58 @@ The following methods are implemented by all Objects derived from GObject
 .nr an-break-flag 1
 .br
 .ps +1
+\fBvoid object.blockSignal(Number signalid)\fR
+.RS 4
+.sp
+Blocks emission of a gobect signal\&.
+.PP
+\fIsignalid\fR
+.RS 4
+The signalid returned from
+\fBobject\&.connect\fR
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBNumber object.connect(String name, Function callback, [Boolean after])\fR
 .RS 4
 .sp
 Connect to a gobject\-signal, note that all signals are connected using the \fIsignal::\fR\- or with \fInotify::\fR\-prefix\&. If connecting to a signal the \fIsignal::\fR\-prefix must be omitted\&. The callback function will have the same parameters as the GObject signal callback, however some parameters may be undefined if they cannot be converted to javascript objects\&. All signal handlers are executed after dwb\(cqs default handler\&.
+.PP
+\fIname\fR
+.RS 4
+The signal name to connect to\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function that will be called when the signal is emitted\&.
+.RE
+.PP
+\fIafter\fR
+.RS 4
+Whether to install the handler after the default handler, default false\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The signal id of the signal\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNumber object.connectBlocked(String name, Function callback, [Boolean after])\fR
+.RS 4
+.sp
+Connect to a gobject\-signal but block the emission of the own callback during execution of the callback, useful if the object is connected to a notify event and the the property is changed in the callback function\&.
 .PP
 \fIname\fR
 .RS 4
@@ -1277,6 +1539,37 @@ The signal id of the signal\&.
 .nr an-break-flag 1
 .br
 .ps +1
+\fBNumber object.notifyBlocked(String name, Function callback, [Boolean after])\fR
+.RS 4
+.sp
+Wrapper function for property\-change notification, the same as \fIobject\&.connectBlocked("notify::" + name, callback, after);\fR\&.
+.PP
+\fIname\fR
+.RS 4
+The property name to connect to, the name can also be in camelcase\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function that will be called when the property changes\&.
+.RE
+.PP
+\fIafter\fR
+.RS 4
+Whether to install the handler after the default handler, default after\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The signal id of the signal\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBObject GObject.getPrivate(String key, Object identifier)\fR
 .RS 4
 .sp
@@ -1321,6 +1614,23 @@ The property value
 \fIidentifier\fR
 .RS 4
 A local object to identify the calling script, the identifier must either be of type Object or of type Function\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid object.unblockSignal(Number signalid)\fR
+.RS 4
+.sp
+Unblocks a signal previously blocked with \fBobject\&.blockSignal\fR\&.
+.PP
+\fIsignalid\fR
+.RS 4
+The signalid returned from
+\fBobject\&.connect\fR
 .RE
 .RE
 .SS "webview"
@@ -1449,7 +1759,7 @@ Number of steps, pass a negative value to go back in history
 \fBBoolean wv.loadUri(String uri, [Function callback])\fR
 .RS 4
 .sp
-Load an uri in a webview\&.
+Loads an uri in a webview\&.
 .PP
 \fIuri\fR
 .RS 4
@@ -1465,6 +1775,28 @@ A callback function that will be called when the load status changes, return tru
 .RS 4
 true if the uri is loaded
 .RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid wv.reload(void)\fR
+.RS 4
+.sp
+Reloads a webview
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid wv.stopLoading()\fR
+.RS 4
+.sp
+Stops any ongoing loading\&.
 .RE
 .sp
 .it 1 an-trap
@@ -1501,17 +1833,6 @@ Whether to keep the aspect ratio, if set to true the new image will have the sam
 .RS 4
 A cairo_status_t (0 on success) or \-1 if an error occured\&.
 .RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBvoid wv.reload(void)\fR
-.RS 4
-.sp
-Reload a webview
 .RE
 .SS "frame"
 .sp

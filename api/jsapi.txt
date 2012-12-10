@@ -532,25 +532,6 @@ _returns_;; A string with the file content
 ****
 
 ****
-[[statusBar]]
-[float]
-==== *statusBar()* ==== 
-
-[source,javascript]
-----
-void io.statusBar(Object text)
-----
-
-Sets the statusbar text. The statusbar consists of two labels, a 'middle' label and
-a 'right' label, on both labels pango markup can be used
-
- ::
-
-_text.middle_;; Text for the middle label
-_text.right_;; Text for the right label
-****
-
-****
 [[write]]
 [float]
 ==== *write()* ==== 
@@ -1064,6 +1045,221 @@ gui.statusLabel      GtkLabel     read
 Label used for status information, fourth child of *gui.statusBox*.
 ****
 
+[[Deferred]]
+=== Deferred ===
+
+Deferred objects can be used to manage asynchronous operations. It can trigger a
+callback function when an asynchrounous operation has finished, and allows
+chaining of callbacks. 
+Deferred basically have 2 callback chains, a _done_-chain and a _fail_-chain.
+If a asynchronous operation is successful the deferred should be resolved and
+the done callback chain of the deferred is called. 
+If a asynchronous operation fails the deferred should be rejected and
+the fail callback chain of the deferred is called. 
+
+
+Deferreds implement the following methods: 
+
+**** 
+[float]
+==== *done()* ==== 
+
+[source,javascript]
+----
+Deferred Deferred.done(Function callback) 
+----
+
+Registers a function for the done-chain.
+
+ ::
+
+_callback_;; A callback function that will be called when the Deferred is
+resolved. If the function returns a deferred the original deferred will be replaced with
+the new deferred.
+_returns_;; A new deferred that can be used to chain callbacks. 
+****
+
+**** 
+[float]
+==== *fail()* ==== 
+
+[source,javascript]
+----
+void Deferred.fail(Function callback) 
+----
+
+Registers a function for the fail-chain.
+
+ ::
+
+_callback_;; A callback function that will be called when the deferred is
+rejected. If the function returns a deferred the original deferred will be replaced with
+the new deferred.
+_returns_;; A new deferred that can be used to chain callbacks. 
+****
+
+**** 
+[float]
+==== *reject()* ==== 
+
+[source,javascript]
+----
+void Deferred.reject(arguments) 
+----
+
+Rejects a deferred, the fail-chain is called when a deferred is rejected. 
+
+ ::
+
+_arguments_;; Arguments passed to the _fail_ callbacks.
+****
+
+****
+[float]
+==== *resolve()* ==== 
+
+[source,javascript]
+----
+Deferred Deferred.resolve(arguments) 
+----
+
+Resolves a deferred, the done-chain is called when a deferred is resolved. 
+
+ ::
+
+_arguments_;; Arguments passed to the _done_ callbacks.
+****
+
+****
+[float]
+==== *then()* ==== 
+
+[source,javascript]
+----
+Deferred Deferred.then(Function ondone, Function onfail) 
+----
+
+Registers a function for the done and fail chain.
+
+ ::
+
+_ondone_;; A callback function that will be called when the deferred is
+resolved. If the function returns a deferred the original deferred will be replaced with
+the new deferred.
+_onfail_;; A callback function that will be called when the deferred is
+rejected. If the function returns a deferred the original deferred will be replaced with
+the new deferred.
+_returns_;; A new deferred that can be used to chain callbacks. 
+****
+
+==== *Examples* ====
+
+Simple usage of a deferred:
+
+[source,javascript]
+---------------------------------
+function loadUri(uri) {
+    var d = new Deferred();
+    tabs.current.loadUri(uri, function(wv) {
+        if (wv.loadStatus == LoadStatus.finished) 
+        {
+            d.resolve("Finished");
+            return true;
+        }
+        else if (wv.loadStatus == LoadStatus.failed) 
+        {
+            d.reject("Failed");
+            return true;
+        }
+    });
+    return d;
+}
+
+loadUri("http://www.example.com").then(
+    function(response) {
+        io.print(response); // Finished
+    }, 
+    function(response) {
+        io.print(response); // Failed
+    }
+);
+---------------------------------
+
+Chaining of a deferred: 
+
+[source,javascript]
+---------------------------------
+function foo() 
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d.reject("rejected");
+    });
+    return d;
+}
+
+function onResponse(response) 
+{
+    io.print(response);
+}
+
+// Will print "rejected" twice to stdout after 2 seconds
+foo().fail(onResponse).fail(onResponse);
+---------------------------------
+
+Note that if the deferred is rejected only the fail chain is called, when it is
+resolved only the done chain is called. 
+[source,javascript]
+---------------------------------
+function foo() 
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d.reject("rejected");
+        // Already rejected, will not execute the done chain
+        d.resolve("rejected");
+    });
+    return d;
+}
+
+function onResponse(response) 
+{
+    io.print(response);
+}
+
+// Only the fail will be executed
+
+foo().done(onResponse).fail(onResponse);
+foo().fail(onResponse).done(onResponse);
+---------------------------------
+
+Changing the deferred in a callback chain:
+
+[source,javascript]
+---------------------------------
+function foo(message) 
+{
+    var d = new Deferred();
+    timerStart(2000, function() {
+        d.resolve(message);
+    });
+    return d;
+}
+function callback1(response) 
+{
+    io.print(response); // Prints "foo" after 2 seconds
+
+    // Return a new Deferred, will replace the old one.
+    return foo("bar");
+}
+function callback2(response) 
+{
+    io.print(response); // Prints "bar" after 4 seconds
+}
+
+foo("foo").done(callback1).done(callback2);
+---------------------------------
+
 
 [[Webkitobjects]]
 == Webkit objects ==
@@ -1120,6 +1316,23 @@ All Objects derived from GObjets implement the following methods.
 
 ****
 [float]
+==== *blockSignal()* ==== 
+
+[source,javascript]
+----
+Number object.blockSignal(Number signalid)
+----
+
+Blocks emission of a gobect signal.
+
+ ::
+
+_signalid_;; The signalid returned from *object.connect*
+****
+
+
+****
+[float]
 ==== *connect()* ==== 
 
 [source,javascript]
@@ -1133,6 +1346,28 @@ _signal::_-prefix must be omitted. The callback function will have the
 same parameters as the GObject signal callback, however some parameters may be
 undefined if they cannot be converted to javascript objects. 
 All signal handlers are executed after dwb's default handler.
+
+ ::
+
+_name_;; The signal name to connect to.
+_callback_;; Callback function that will be called when the signal is emitted.
+_after_;; Whether to install the handler after the default handler, default
+false.
+_returns_;; The signal id of the signal.
+****
+
+****
+[float]
+==== *connectBlocked()* ==== 
+
+[source,javascript]
+----
+Number object.connectBlocked(String name, Function callback, [Boolean after]) 
+----
+
+Connect to a gobject-signal but block the emission of the own callback during
+execution of the callback, useful if the object is connected to a notify event
+and the the property is changed in the callback function. 
 
  ::
 
@@ -1169,7 +1404,7 @@ _returns_;; +true+ if the signal was disconnected
 Number object.notify(String name, Function callback, [Boolean after]) 
 ----
 
-Wrapper function for property-change notification, the same as 
+Wrapper function for property-change notification but with signal blocking, same as 
 _object.connect("notify::" +  name, callback, after);_.
 
  ::
@@ -1179,6 +1414,27 @@ _callback_;; Callback function that will be called when the property changes.
 _after_;; Whether to install the handler after the default handler.
 _returns_;; The signal id of the signal.
 ****
+
+****
+[float]
+==== *notifyBlocked()* ==== 
+
+[source,javascript]
+----
+Number object.notifyBlocked(String name, Function callback, [Boolean after]) 
+----
+
+Wrapper function for property-change notification but with signal blocking, same as 
+_object.connectBlocked("notify::" +  name, callback, after);_.
+
+ ::
+
+_name_;; The property name to connect to, can also be in camelcase.
+_callback_;; Callback function that will be called when the property changes.
+_after_;; Whether to install the handler after the default handler.
+_returns_;; The signal id of the signal.
+****
+
 
 ****
 [[getPrivate]]
@@ -1214,6 +1470,22 @@ _key_;; The property name
 _value_;; The property value
 _identifier_;; A local object to identify the calling script, the identifier
 must either be of type object or of type function.
+****
+
+****
+[float]
+==== *unblockSignal()* ==== 
+
+[source,javascript]
+----
+Number object.unblockSignal(Number signalid)
+----
+
+Unblocks a signal previously blocked with *object.blockSignal*.
+
+ ::
+
+_signalid_;; The signalid returned from *object.connect*
 ****
 
 
@@ -1439,7 +1711,7 @@ _steps_;; Number of steps, pass a negative value to go back in history
 Boolean wv.loadUri(String uri, [Function callback]) 
 ----
 
-Load an uri in a webview. 
+Loads an uri in a webview. 
 
  ::
 
@@ -1460,6 +1732,18 @@ void wv.reload(void)
 ----
 
 Reload a webview 
+****
+
+****
+[float]
+==== *stopLoading()* ====
+
+[source,javascript]
+----
+void wv.stopLoading(void) 
+----
+
+Stops any ongoing loading.
 ****
 
 ****

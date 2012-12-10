@@ -155,7 +155,7 @@
                     var i = _getPrivateIdx(this, key, identifier);
                     if (i !== -1) 
                         return _privProps[i].value;
-                    return null;
+                    return undefined;
                 }
             },
             "notify" : 
@@ -163,6 +163,38 @@
                 value : function(name, callback, after) 
                 { 
                     return this.connect("notify::" + util.uncamelize(name), callback, after || false);
+                }
+            },
+            "connectBlocked" : 
+            { 
+                value : function(name, callback, after) 
+                { 
+                    var self = this;
+                    var sig = self.connect(name, function() { 
+                        self.blockSignal(sig);
+                        callback.apply(null, arguments);
+                        self.unblockSignal(sig);
+                    });
+                    return sig;
+                }
+            },
+            "notifyBlocked" : 
+            {
+                value : function(name, callback, after) 
+                {
+                    return this.connectBlocked("notify::" + util.uncamelize(name), callback, after || false);
+                }
+            }
+    });
+    Object.defineProperties(Deferred.prototype, {
+            "done" : {
+                value : function(method) {
+                    return this.then(method);
+                }
+            },
+            "fail" : {
+                value : function(method) {
+                    return this.then(null, method);
                 }
             }
     });

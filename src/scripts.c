@@ -62,6 +62,12 @@ struct _SSignal {
     GObject *object;
     JSObjectRef func;
 };
+typedef struct DeferredPriv_s 
+{
+    JSObjectRef reject;
+    JSObjectRef resolve;
+    JSObjectRef next;
+} DeferredPriv;
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
@@ -97,10 +103,13 @@ static Sigmap s_sigmap[] = {
 
 static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
 
-static JSValueRef connect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
-static JSValueRef disconnect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+static JSValueRef gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+static JSValueRef gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+static JSValueRef gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+static JSValueRef gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
 
 static JSValueRef wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+static JSValueRef wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
 static JSValueRef wv_history(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
 static JSValueRef wv_reload(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
 static JSValueRef wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
@@ -108,12 +117,15 @@ static JSValueRef wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef 
 static JSValueRef wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc);
 #endif
 static JSStaticFunction default_functions[] = { 
-    { "connect",         connect_object,                kJSDefaultAttributes },
-    { "disconnect",      disconnect_object,             kJSDefaultAttributes },
+    { "connect",            gobject_connect,                kJSDefaultAttributes },
+    { "blockSignal",        gobject_block_signal,                kJSDefaultAttributes },
+    { "unblockSignal",      gobject_unblock_signal,                kJSDefaultAttributes },
+    { "disconnect",         gobject_disconnect,             kJSDefaultAttributes },
     { 0, 0, 0 }, 
 };
 static JSStaticFunction wv_functions[] = { 
     { "loadUri",         wv_load_uri,             kJSDefaultAttributes },
+    { "stopLoading",         wv_stop_loading,        kJSDefaultAttributes },
     { "history",         wv_history,             kJSDefaultAttributes },
     { "reload",          wv_reload,             kJSDefaultAttributes },
     { "inject",          wv_inject,             kJSDefaultAttributes },
@@ -190,6 +202,7 @@ enum {
     CONSTRUCTOR_DOWNLOAD,
     CONSTRUCTOR_FRAME,
     CONSTRUCTOR_SOUP_MESSAGE,
+    CONSTRUCTOR_DEFERRED,
     CONSTRUCTOR_LAST,
 };
 
@@ -203,7 +216,7 @@ static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
 static JSGlobalContextRef s_global_context;
 static GSList *s_script_list;
-static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class;
+static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class;
 static gboolean s_commandline = false;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
@@ -277,6 +290,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
         if (func != NULL && JSObjectIsFunction(ctx, func)) 
         {
             JSValueRef wret = JSObjectCallAsFunction(wctx, func, NULL, count, count == 1 ? args : NULL, NULL) ;
+            // This could be replaced with js_context_change
             char *retx = js_value_to_json(wctx, wret, -1, NULL);
             if (retx) 
             {
@@ -356,8 +370,8 @@ ssignal_new()
 static void 
 make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception) 
 {
-    JSObjectRef func = JSValueToObject(ctx, value, exception);
-    if (func != NULL && JSObjectIsFunction(ctx, func)) 
+    JSObjectRef func = js_value_to_function(ctx, value, exception);
+    if (func != NULL) 
     {
         CallbackData *c = callback_data_new(gobject, this, func, notify);
         g_signal_connect_swapped(gobject, signalname, G_CALLBACK(callback), c);
@@ -430,9 +444,13 @@ tabs_get_nth(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 static GList *
 find_webview(JSObjectRef o) 
 {
-    GList *r = NULL;
-    for (r = dwb.state.views; r && VIEW(r)->script_wv != o; r=r->next);
-    return r;
+    for (GList *r = dwb.state.fview; r; r=r->next)
+        if (VIEW(r)->script_wv == o)
+            return r;
+    for (GList *r = dwb.state.fview->prev; r; r=r->prev)
+        if (VIEW(r)->script_wv == o)
+            return r;
+    return NULL;
 }
 /* wv_status_cb {{{*/
 static gboolean 
@@ -469,6 +487,15 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     }
     return false;
 }/*}}}*/
+
+static JSValueRef 
+wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    WebKitWebView *wv = JSObjectGetPrivate(this);
+    if (wv != NULL)
+        webkit_web_view_stop_loading(wv);
+    return UNDEFINED;
+}
 
 /* wv_history {{{*/
 static JSValueRef 
@@ -729,11 +756,9 @@ static JSObjectRef
 sp_callback_create(JSContextRef ctx, size_t argc, const JSValueRef argv[], JSValueRef *exc) 
 {
     JSObjectRef ret = NULL;
-    if (argc > 0) 
+    if (argc > 0)
     {
-        ret = JSValueToObject(ctx, argv[0], exc);
-        if (ret == NULL || !JSObjectIsFunction(ctx, ret))
-            ret = NULL;
+        ret = js_value_to_function(ctx, argv[0], exc);
     }
     return ret;
 }
@@ -970,15 +995,11 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
         return JSValueMakeBoolean(ctx, false);
     }
     keystr = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-    JSObjectRef func = JSValueToObject(ctx, argv[1], exc);
+
+    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
     if (func == NULL)
         goto error_out;
 
-    if (!JSObjectIsFunction(ctx, func)) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("bind: not a function."));
-        goto error_out;
-    }
     if (argc > 2) 
     {
         name = js_value_to_char(ctx, argv[2], JS_STRING_MAX, exc);
@@ -1147,8 +1168,8 @@ global_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     if (uri == NULL) 
         return JSValueMakeNumber(ctx, -1);
 
-    function = JSValueToObject(ctx, argv[1], exc);
-    if (function == NULL || !JSObjectIsFunction(ctx, function)) 
+    function = js_value_to_function(ctx, argv[1], exc);
+    if (function == NULL)
         goto error_out;
 
     if (argc > 2) 
@@ -1219,14 +1240,10 @@ global_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
         js_make_exception(ctx, exc, EXCEPTION("tabComplete: invalid argument."));
         return UNDEFINED;
     }
-    s_completion_callback = JSValueToObject(ctx, argv[2], exc);
+    s_completion_callback = js_value_to_function(ctx, argv[2], exc);
     if (s_completion_callback == NULL)
         return UNDEFINED;
-    if (!JSObjectIsFunction(ctx, s_completion_callback)) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("tabComplete: arguments[2] is not a function."));
-        return UNDEFINED;
-    }
+
     dwb.state.script_comp_readonly = false;
     if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
     {
@@ -1320,12 +1337,10 @@ global_timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size
     if ((msec = JSValueToNumber(ctx, argv[0], exc)) == NAN )
         return JSValueMakeNumber(ctx, -1);
 
-    JSObjectRef func = JSValueToObject(ctx, argv[1], exc);
-    if (func == NULL || !JSObjectIsFunction(ctx, func)) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("timerStart: argument 2 is not a function."));
+    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
+    if (func == NULL)
         return JSValueMakeNumber(ctx, -1);
-    }
+
     JSValueProtect(ctx, func);
 
     int ret = g_timeout_add((int)msec, (GSourceFunc)timeout_callback, func);
@@ -1379,6 +1394,116 @@ util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
 }
+
+void 
+deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
+{
+    g_return_if_fail(this != NULL);
+
+    if (priv == NULL)
+        priv = JSObjectGetPrivate(this);
+    JSObjectSetPrivate(this, NULL);
+
+    g_free(priv);
+
+    JSValueUnprotect(ctx, this);
+}
+
+static JSObjectRef
+deferred_new(JSContextRef ctx) 
+{
+    DeferredPriv *priv = g_malloc(sizeof(DeferredPriv));
+    priv->resolve = priv->reject = priv->next = NULL;
+
+    JSObjectRef ret = JSObjectMake(ctx, s_deferred_class, priv);
+    JSValueProtect(ctx, ret);
+
+    return ret;
+}
+static JSValueRef 
+deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL) 
+        return NIL;
+
+    if (argc > 0)
+        priv->resolve = js_value_to_function(ctx, argv[0], NULL);
+    if (argc > 1) 
+        priv->reject = js_value_to_function(ctx, argv[1], NULL);
+
+    priv->next = deferred_new(ctx);
+
+    return priv->next;
+}
+static DeferredPriv * 
+deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
+{
+    DeferredPriv *opriv = JSObjectGetPrivate(old);
+    DeferredPriv *npriv = JSObjectGetPrivate(new);
+
+    npriv->resolve = opriv->resolve;
+    npriv->reject = opriv->reject;
+    npriv->next = opriv->next;
+
+    deferred_destroy(ctx, old, opriv);
+    return npriv;
+}
+static JSValueRef 
+deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NULL;
+
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL)
+        return UNDEFINED;
+
+    if (priv->resolve) 
+        ret = JSObjectCallAsFunction(ctx, priv->resolve, NULL, argc, argv, exc);
+
+    JSObjectRef next = priv->next;
+    deferred_destroy(ctx, this, priv);
+
+    if (next) 
+    {
+        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
+        {
+            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
+            deferred_transition(ctx, next, o)->reject = NULL;
+        }
+        else 
+            deferred_resolve(ctx, f, next, argc, argv, exc);
+    }
+    return UNDEFINED;
+}
+static JSValueRef 
+deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NULL;
+
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL)
+        return UNDEFINED;
+
+    if (priv->reject) 
+        ret = JSObjectCallAsFunction(ctx, priv->reject, NULL, argc, argv, exc);
+
+    JSObjectRef next = priv->next;
+    deferred_destroy(ctx, this, priv);
+
+    if (next) 
+    {
+        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
+        {
+            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
+            deferred_transition(ctx, next, o)->resolve = NULL;
+        }
+        else 
+            deferred_reject(ctx, f, next, argc, argv, exc);
+    }
+    return UNDEFINED;
+}
+
 /* DATA {{{*/
 /* data_get_profile {{{*/
 static JSValueRef 
@@ -1532,8 +1657,8 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
     if (argc > 1) 
     {
-        oc = JSValueToObject(ctx, argv[1], NULL);
-        if ( oc == NULL || !JSObjectIsFunction(ctx, oc) )  
+        oc = js_value_to_function(ctx, argv[1], NULL);
+        if ( oc == NULL )
         {
             if (!JSValueIsNull(ctx, argv[1])) 
                 ret |= SPAWN_STDOUT_FAILED;
@@ -1541,8 +1666,8 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         }
     }
     if (argc > 2) {
-        ec = JSValueToObject(ctx, argv[2], NULL);
-        if ( ec == NULL || !JSObjectIsFunction(ctx, ec) ) 
+        ec = js_value_to_function(ctx, argv[2], NULL);
+        if ( ec == NULL )
         {
             if (!JSValueIsNull(ctx, argv[2])) 
                 ret |= SPAWN_STDERR_FAILED;
@@ -1557,7 +1682,9 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
-            !g_spawn_async_with_pipes(NULL, srgv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, oc != NULL ? &outfd : NULL, ec != NULL ? &errfd : NULL, NULL)) 
+            !g_spawn_async_with_pipes(NULL, srgv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, NULL, 
+                oc != NULL ? &outfd : NULL, 
+                ec != NULL ? &errfd : NULL, NULL)) 
     {
         js_make_exception(ctx, exc, EXCEPTION("spawning %s failed."), cmdline);
         ret |= SPAWN_FAILED;
@@ -1709,38 +1836,13 @@ io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
     }
     return UNDEFINED;
 }/*}}}*/
-static JSValueRef 
-io_status_bar(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-        return UNDEFINED;
-
-    JSObjectRef o = JSValueToObject(ctx, argv[0], exc);
-    if (o == NULL) 
-        return UNDEFINED;
-
-    char *middle = js_get_string_property(ctx, o, "middle");
-    char *right = js_get_string_property(ctx, o, "right");
-
-    if (middle != NULL) 
-        gtk_label_set_markup(GTK_LABEL(dwb.gui.urilabel), middle);
-
-    if (right != NULL) 
-        gtk_label_set_markup(GTK_LABEL(dwb.gui.rstatus), right);
-
-    g_free(middle);
-    g_free(right);
-    return UNDEFINED;
-}
 
 static JSValueRef 
 io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("io.dirNames: missing argument."));
         return NIL;
-    }
+
     JSValueRef ret;
     GDir *dir;
     char *dir_name = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
@@ -1752,7 +1854,8 @@ io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if ((dir = g_dir_open(dir_name, 0, NULL)) != NULL) 
     {
         GSList *list = NULL;
-        while ((name = g_dir_read_name(dir)) != NULL) {
+        while ((name = g_dir_read_name(dir)) != NULL) 
+        {
             list = g_slist_prepend(list, (gpointer)js_char_to_value(ctx, name));
         }
         g_dir_close(dir);
@@ -1820,10 +1923,7 @@ static JSValueRef
 io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     if (argc == 0) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("io.print needs an argument."));
         return UNDEFINED;
-    }
 
     FILE *stream = stdout;
     if (argc >= 2) 
@@ -1884,10 +1984,7 @@ static JSObjectRef
 download_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
     if (argc<1) 
-    {
-        js_make_exception(ctx, exception, EXCEPTION("Download constructor: missing argument"));
         return JSValueToObject(ctx, NIL, NULL);
-    }
 
     char *uri = js_value_to_char(ctx, argv[0], -1, exception);
     if (uri == NULL) 
@@ -1907,6 +2004,11 @@ download_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, 
     WebKitDownload *download = webkit_download_new(request);
     return JSObjectMake(ctx, s_download_class, download);
 }/*}}}*/
+static JSObjectRef 
+deferred_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    return deferred_new(ctx);
+}
 
 /* stop_download_notify {{{*/
 static gboolean 
@@ -1955,57 +2057,57 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
 static JSValueRef
 gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.window), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.window), true);
 }
 static JSValueRef
 gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.vbox), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.vbox), true);
 }
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.topbox), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.topbox), true);
 }
 static JSValueRef
 gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.mainbox), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.mainbox), true);
 }
 static JSValueRef
 gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.statusbox), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.statusbox), true);
 }
 static JSValueRef
 gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.alignment), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.alignment), true);
 }
 static JSValueRef
 gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.status_hbox), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.status_hbox), true);
 }
     static JSValueRef
 gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.lstatus), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.lstatus), true);
 }
 static JSValueRef
 gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.entry), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.entry), true);
 }
 static JSValueRef
 gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.urilabel), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.urilabel), true);
 }
 static JSValueRef
 gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.rstatus), false);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.rstatus), true);
 }
 /*}}}*/
 
@@ -2030,7 +2132,7 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
             s_sig_objects[i] = NULL;
             dwb.misc.script_signals &= ~(1<<i);
         }
-        else if ( (o = JSValueToObject(ctx, value, exception)) != NULL && JSObjectIsFunction(ctx, o)) 
+        else if ( (o = js_value_to_function(ctx, value, exception)) != NULL) 
         {
             s_sig_objects[i] = o;
             dwb.misc.script_signals |= (1<<i);
@@ -2197,11 +2299,12 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
 static void
 notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
 {
-    JSValueRef argv[] = { make_object(s_global_context, o) };
+    JSObjectRef jso = make_object(s_global_context, o);
+    JSValueRef argv[] = { jso };
     JSObjectCallAsFunction(s_global_context, func, NULL, 1, argv, NULL);
 }
 static JSValueRef 
-connect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     GConnectFlags flags = 0;
     gulong id = 0;
@@ -2216,8 +2319,8 @@ connect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
     if (name == NULL) 
         goto error_out;
 
-    JSObjectRef func = JSValueToObject(ctx, argv[1], exc);
-    if (func == NULL || !JSObjectIsFunction(ctx, func)) 
+    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
+    if (func == NULL) 
         goto error_out;
 
     GObject *o = JSObjectGetPrivate(this);
@@ -2229,7 +2332,7 @@ connect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
 
     if (strncmp(name, "notify::", 8) == 0) 
     {
-        g_signal_connect_data(o, name, G_CALLBACK(notify_callback), func, NULL, flags);
+        id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), func, NULL, flags);
     }
     else
     {
@@ -2266,8 +2369,33 @@ error_out:
     g_free(name);
     return JSValueMakeNumber(ctx, id);
 }
+
 static JSValueRef 
-disconnect_object(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    double sigid;
+    if (argc > 0 && (sigid = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    {
+        GObject *o = JSObjectGetPrivate(this);
+        if (o != NULL)
+            g_signal_handler_block(o, (int)sigid);
+    }
+    return UNDEFINED;
+}
+static JSValueRef 
+gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    double sigid;
+    if (argc > 0 && (sigid = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    {
+        GObject *o = JSObjectGetPrivate(this);
+        if (o != NULL)
+            g_signal_handler_unblock(o, (int)sigid);
+    }
+    return UNDEFINED;
+}
+static JSValueRef 
+gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     int id;
     if (argc > 0 && JSValueIsNumber(ctx, argv[0]) && (id = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
@@ -2515,7 +2643,6 @@ create_global_object()
         { "dirNames",  io_dir_names,        kJSDefaultAttributes },
         { "notify",    io_notify,           kJSDefaultAttributes },
         { "error",     io_error,            kJSDefaultAttributes },
-        { "statusBar", io_status_bar,      kJSDefaultAttributes },
         { 0,           0,           0 },
     };
     class = create_class("io", io_functions, NULL);
@@ -2607,6 +2734,18 @@ create_global_object()
 
     s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
 
+    JSStaticFunction deferred_functions[] = { 
+        { "then",             deferred_then,         kJSDefaultAttributes },
+        { "resolve",          deferred_resolve,         kJSDefaultAttributes },
+        { "reject",           deferred_reject,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "Deferred"; 
+    cd.staticFunctions = deferred_functions;
+    s_deferred_class = JSClassCreate(&cd);
+    s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(s_global_context, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
+
     JSStaticValue gui_values[] = {
         { "window",           gui_get_window, NULL, kJSDefaultAttributes }, 
         { "mainBox",          gui_get_main_box, NULL, kJSDefaultAttributes }, 
@@ -2666,8 +2805,8 @@ apply_scripts()
     int i=0;
 
     // XXX Not needed?
-    JSValueRef *scripts = g_try_malloc(length * sizeof(JSValueRef));
-    JSObjectRef *objects = g_try_malloc(length * sizeof(JSObjectRef));
+    JSValueRef *scripts = g_malloc(length * sizeof(JSValueRef));
+    JSObjectRef *objects = g_malloc(length * sizeof(JSObjectRef));
     for (GSList *l=s_script_list; l; l=l->next, i++) 
     {
         scripts[i] = JSObjectMake(s_global_context, NULL, NULL);
