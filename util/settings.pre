@@ -24,7 +24,7 @@ proxy-url text The HTTP-proxy url
 save-session checkbox Whether to Automatically save sessions
 single-instance checkbox Whether to have only one instance
 SSL_CERTIFICATION
-ssl-strict checkbox Whether to allow only save ssl-certificates
+ssl-strict checkbox Whether to allow only safe ssl-certificates
 use-ntlm checkbox Whether to use ntlm-authentication
 user-agent text The user agent string
 
@@ -112,6 +112,7 @@ adblocker-filterlist text Path to a adblock plus compatible filterlist
 enable-java-applet checkbox Whether to enable java applets
 enable-plugins checkbox Whether to enable plugins
 enable-scripts checkbox Enable embedded scripting languages
+hsts checkbox Whether HSTS support should be enabled
 javascript-can-access-clipboard checkbox Whether javascript can access the clipboard
 javascript-can-open-windows-automatically checkbox Whether javascript can open windows
 javascript-schemes checkbox Whether to allow loading url with scheme 'javascript'
