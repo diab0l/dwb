@@ -22,6 +22,8 @@
 #include "dwb.h"
 #include "util.h"
 #include "hsts.h"
+#include "gnutls/gnutls.h"
+#include "gnutls/x509.h"
 
 /*
  * This file contains an HSTS (HTTP Strict Transport Security) implementation
@@ -33,20 +35,17 @@
  * Current Features:
  * + Enforces HSTS as specified in [RFC6797]
  * + Loading and saving of the cache
+ * + Enforce strict ssl verification on known hsts hosts
+ * + Bootstrap whitelist (automatically converted from the chromium project)
+ * + Add support for certificate pinning a la Chromium
  *
  * TODO:
  * + Handle UTF-8 BOM in loading code
- * + Bootstrap whitelist (steal from chromium)
- * + Enforce strict ssl verification on known hsts hosts
- * + Add support for certificate pining a la Chromium
  * + Periodic saving of database to mitigate loss of information in event of crash
  *
  * Problems:
  * 1. The implementation doesn't consider mixed content, which should be
  *    blocked according to RFC 6797 12.4
- *
- * Sites that support HSTS to test the system with:
- * + crypto.cat
  */
 
 #define HSTS_HEADER_NAME "Strict-Transport-Security"
@@ -101,6 +100,42 @@ hsts_entry_free(HSTSEntry *entry)
     g_free(entry);
 }
 
+/* The HSTSPinEntry data structure represents a host with a static set of
+ * allowed and forbidden SPKIs hashes.
+ */
+typedef struct _HSTSPinEntry {
+    GHashTable *good_certs;
+    GHashTable *bad_certs;
+    gboolean sub_domains;
+} HSTSPinEntry;
+
+/* Allocates and initialises a new HSTSPinEntry
+ */
+static HSTSPinEntry *
+hsts_pin_entry_new()
+{
+    HSTSPinEntry *entry = dwb_malloc(sizeof(HSTSPinEntry));
+    entry->good_certs = NULL;
+    entry->bad_certs = NULL;
+    entry->sub_domains = false;
+    return entry;
+}
+
+/* Frees the HSTSPinEntry, it is safe to pass NULL
+ */
+static void
+hsts_pin_entry_free(HSTSPinEntry *entry)
+{
+    if(entry == NULL)
+        return;
+
+    if(entry->good_certs != NULL)
+        g_hash_table_destroy(entry->good_certs);
+    if(entry->bad_certs != NULL)
+        g_hash_table_destroy(entry->bad_certs);
+    g_free(entry);
+}
+
 /*
  * HSTSProvider works by registering as a SoupSessionFeature and rewriting all
  * http requests into https requests for known hosts. However this means that
@@ -131,7 +166,7 @@ typedef struct _HSTSProvider
  */
 typedef struct _HSTSProviderPrivate
 {
-    GHashTable *domains;
+    GHashTable *domains, *pin_domains;
 } HSTSProviderPrivate;
 
 /* The class members of the HSTSProvider
@@ -231,6 +266,7 @@ hsts_provider_init (HSTSProvider *provider)
     HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE (provider);
 
     priv->domains = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, (GDestroyNotify)hsts_entry_free);
+    priv->pin_domains = g_hash_table_new_full((GHashFunc)g_str_hash, (GEqualFunc)g_str_equal, (GDestroyNotify)g_free, (GDestroyNotify)hsts_pin_entry_free);
 }
 
 /* Finalise an HSTSProvider instance
@@ -241,6 +277,7 @@ hsts_provider_finalize (GObject *object)
     HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE (object);
 
     g_hash_table_destroy(priv->domains);
+    g_hash_table_destroy(priv->pin_domains);
 
     G_OBJECT_CLASS (hsts_provider_parent_class)->finalize (object);
 }
@@ -272,6 +309,20 @@ hsts_provider_add_entry(HSTSProvider *provider, const char *host, HSTSEntry *ent
     HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE(provider);
 
     g_hash_table_replace(priv->domains, g_hostname_to_unicode(host), entry);
+}
+
+/* Adds the host to hosts for which a certificate black or whitelist has been
+ * specified.
+ */
+static void
+hsts_provider_add_pin_entry(HSTSProvider *provider, const char *host, HSTSPinEntry *entry)
+{
+    if(g_hostname_is_ip_address(host))
+        return;
+
+    HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE(provider);
+
+    g_hash_table_replace(priv->pin_domains, g_hostname_to_unicode(host), entry);
 }
 
 /* Checks whether host is currently a known host or it is a sub domain of a
@@ -308,6 +359,47 @@ hsts_provider_should_secure_host(HSTSProvider *provider, const char *host)
                     break;
                 }
             }
+
+            sub_domain = true;
+            cur = g_utf8_strchr(cur, -1, dot);
+            /* Since canonical is in canonical form, it doesn't end with a .
+             * and hence there's no problem with the following: */
+            if(cur != NULL)
+                cur = g_utf8_next_char(cur); 
+        }
+    }
+    g_free(canonical);
+
+    return result;
+}
+
+/* Checks whether there is relevant information for host in the certificate
+ * white- and blacklist, if so it returns the relevant entry. Else it returns
+ * NULL.
+ */
+static HSTSPinEntry *
+hsts_provider_has_cert_pin(HSTSProvider *provider, const char *host)
+{
+    HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE(provider);
+
+    if(g_hostname_is_ip_address(host))
+        return false;
+
+    HSTSPinEntry *result = NULL;
+    gchar *canonical = g_hostname_to_unicode(host);
+    if(strlen(canonical) > 0) /* Don't match empty strings as per. 8.3 [RFC6797] */
+    {
+        gchar *cur = canonical;
+        gboolean sub_domain = false; /* Indicates whether host is a proper sub domain of cur */
+        gunichar dot = g_utf8_get_char(".");
+        while(cur != NULL)
+        {
+            result = g_hash_table_lookup(priv->pin_domains, cur);
+            if(result != NULL && (!sub_domain || result->sub_domains))
+                /* If either host == cur or host is a proper sub domain of
+                   cur and the cur entry covers sub domains. */
+                break;
+            result = NULL;
 
             sub_domain = true;
             cur = g_utf8_strchr(cur, -1, dot);
@@ -407,14 +499,7 @@ hsts_process_hsts_header (SoupMessage *msg, gpointer user_data)
         HSTSProvider *provider = user_data;
 
         SoupMessageHeaders *hdrs;
-        {   
-            /* Get the headers from msg */
-            GValue hdrs_val = G_VALUE_INIT;
-            g_value_init(&hdrs_val, SOUP_TYPE_MESSAGE_HEADERS);
-            g_object_get_property(G_OBJECT(msg), SOUP_MESSAGE_RESPONSE_HEADERS, &hdrs_val);
-            hdrs = g_value_get_boxed(&hdrs_val);
-            g_value_unset(&hdrs_val);
-        }
+        g_object_get(G_OBJECT(msg), SOUP_MESSAGE_RESPONSE_HEADERS, &hdrs, NULL);
 
         SoupMessageHeadersIter iter;
         soup_message_headers_iter_init(&iter, hdrs);
@@ -431,6 +516,10 @@ hsts_process_hsts_header (SoupMessage *msg, gpointer user_data)
                     break;
             }
         }
+        /* FIXME: Possible memory leak, Investigate whether hdrs should be
+         * cleaned up?
+         * g_object_unref(hdrs);  <-- This makes GLib complain so that clearly
+         * isn't the right approach. */
     }
 }
 
@@ -475,11 +564,68 @@ parse_line(HSTSProvider *provider, const char *line, gint64 now)
     g_strfreev(split);
 }
 
+/* Represents an entry in the preloaded HSTS database.
+ *
+ * Members:
+ * host        - the host of the entry
+ * good_certs  - a null terminated array of base64 encoded key ids of the good certificates, if NULL it is treated as the empty array
+ * bad_certs   - a null terminated array of base64 encoded key ids of the bad certificates, if NULL it is treated as the empty array
+ * hsts        - if true the host is added to the database of known HSTS hosts
+ * sub_domains - indicates whether this entry applies to sub_domains
+ *
+ */
+typedef struct _HSTSPreloadEntry {
+    const char *host;
+    const char * const *good_certs;
+    const char * const *bad_certs;
+    gboolean hsts;
+    gboolean sub_domains;
+} HSTSPreloadEntry;
+
+#include "hsts_preload.h"
+
+/* Allocates and fills a hash set of certificates
+ */
+static void
+fill_cert_set(GHashTable **cert_set, const char * const *certs)
+{
+    if(certs == NULL)
+        return;
+    if(*cert_set == NULL)
+        *cert_set = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+    GHashTable *hash_set = *cert_set;
+    while(*certs != NULL)
+    {
+        g_hash_table_add(hash_set, g_strdup(*certs));
+        certs++;
+    }
+}
+
 /* Loads the default database built into dwb
  */
 static void
 load_default_database(HSTSProvider *provider)
 {
+    const HSTSPreloadEntry *entry = s_hsts_preload;
+    size_t i;
+    for(i=0; i < s_hsts_preload_length; i++)
+    {
+        if(entry->hsts)
+        {
+            HSTSEntry *hsts_entry = hsts_entry_new();
+            hsts_entry->sub_domains = entry->sub_domains;
+            hsts_provider_add_entry(provider, entry->host, hsts_entry);
+        }
+        if(entry->good_certs != NULL || entry->bad_certs != NULL)
+        {
+            HSTSPinEntry *hsts_pin_entry = hsts_pin_entry_new();
+            hsts_pin_entry->sub_domains = entry->sub_domains;
+            fill_cert_set(&hsts_pin_entry->good_certs, entry->good_certs);
+            fill_cert_set(&hsts_pin_entry->bad_certs, entry->bad_certs);
+            hsts_provider_add_pin_entry(provider, entry->host, hsts_pin_entry);
+        }
+        entry++;
+    }
 }
 
 /* Reads a database of known hosts from filename. filename is a utf-8 encoded
@@ -557,7 +703,7 @@ hsts_provider_save(HSTSProvider *provider, const char *filename)
     {
         const char *host = (const char *)key;
         const HSTSEntry *entry = (HSTSEntry *)value;
-        /* TODO: assert MAX_LONG_LONG > G_MAXINT64 */
+        /* TODO: assert MAX_LONG_LONG >= G_MAXINT64 */
         long long expiry = entry->expiry;
         fprintf(file, "%s\t%s\t%lld\n", host, entry->sub_domains ? "true" : "false", expiry);
     }
@@ -585,8 +731,6 @@ hsts_provider_request_queued (SoupSessionFeature *feature,
         if(soup_uri_get_port(uri) == 80) 
             soup_uri_set_port(uri, 443);
         soup_session_requeue_message(session, msg);
-
-        /* TODO: Ensure strict ssl handling of known HSTS hosts. */
     }
 
     /* Only look for HSTS headers sent over https */
@@ -599,12 +743,93 @@ hsts_provider_request_queued (SoupSessionFeature *feature,
     }
 }
 
+
+/* This callback is called when a new message is started, that is right before
+ * data is sent but after a connection has been made. This callback might be
+ * called multiple times for the same message. It is used to check the HTTPS
+ * certificates according to the relevant HSTS directives and certificate
+ * pinnings.*/
 static void
 hsts_provider_request_started (SoupSessionFeature *feature,
                                SoupSession *session,
                                SoupMessage *msg,
                                SoupSocket *socket)
 {
+    HSTSProvider *provider = HSTS_PROVIDER (feature);
+
+    const char *host = soup_uri_get_host(soup_message_get_uri(msg));
+    gboolean cancel = false;
+    if(hsts_provider_should_secure_host(provider, host))
+    {
+        GTlsCertificate *certificate;
+        GTlsCertificateFlags errors;
+        if(!(soup_message_get_https_status(msg, &certificate, &errors) &&
+                errors == 0))
+            /* If host is known HSTS host the standard specifies that we should ensure strict ssl handling */
+            cancel = true;
+    }
+    HSTSPinEntry *entry;
+    GTlsCertificate *certificate;
+    GTlsCertificateFlags errors;
+    if(!cancel && soup_message_get_https_status(msg, &certificate, &errors) && (entry = hsts_provider_has_cert_pin(provider, host)) != NULL)
+    {
+        /* If we are connecting over HTTPS to a host with a certificate black/whitelist */
+        /* If there is no whitelist assume the certificate chain is good */
+        gboolean is_good = entry->good_certs != NULL ? false : true; /* Whether a certificate on the chain is found in the whitelist */
+        gboolean is_bad = false; /* Whether a certificate in the chain is on the blacklist */
+        GTlsCertificate *cur = certificate;
+        while(cur != NULL)
+        {
+            /* Check each certificate in the chain */
+
+            /* First import the certificate into gnutls */
+            GByteArray *cert_bytes;
+            g_object_get(G_OBJECT(cur), "certificate", &cert_bytes, NULL);
+            
+            gnutls_datum_t data;
+            data.data = cert_bytes->data;
+            data.size = cert_bytes->len;
+
+            gnutls_x509_crt_t cert;
+            gnutls_x509_crt_init(&cert);
+
+            /* Then try to get the key_id and check that against the black/white lists */
+            int err;
+            unsigned char key_id[1024];
+            size_t key_id_size = 1024;
+
+            if((err = gnutls_x509_crt_import(cert, &data, GNUTLS_X509_FMT_DER)) == GNUTLS_E_SUCCESS &&
+                    (err = gnutls_x509_crt_get_key_id(cert, 0, key_id, &key_id_size)) == GNUTLS_E_SUCCESS
+                    )
+            {
+                
+                char *key_id_base64 = g_base64_encode(key_id, key_id_size);
+                is_good = is_good || 
+                    (entry->good_certs != NULL && g_hash_table_lookup(entry->good_certs, key_id_base64));
+                is_bad  = is_bad  ||
+                    (entry->bad_certs != NULL && g_hash_table_lookup(entry->bad_certs, key_id_base64));
+                g_free(key_id_base64);
+            }
+            else
+            {
+                printf("HSTS: Warning: Problems getting certificate key id for a certificate of %s\n", host);
+            }
+
+            /* Cleanup */
+            gnutls_x509_crt_deinit(cert);
+            g_byte_array_unref(cert_bytes);
+            cur = g_tls_certificate_get_issuer(cur);
+        }
+        /* If we aren't explicitly on the whitelist or a certificate is on the
+         * blacklist, cancel the message. Said simpler a certificate is
+         * accepted only if it has at least one certificate in it's chain on
+         * the whitelist and none on the blacklist
+         */
+        if(!is_good || is_bad)
+            cancel = true;
+    }
+    if(cancel)
+        soup_session_cancel_message(session, msg, SOUP_STATUS_SSL_FAILED);
 }
 
 /* Removes added callbacks on message unqueue
