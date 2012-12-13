@@ -383,7 +383,7 @@ hsts_provider_has_cert_pin(HSTSProvider *provider, const char *host)
     HSTSProviderPrivate *priv = HSTS_PROVIDER_GET_PRIVATE(provider);
 
     if(g_hostname_is_ip_address(host))
-        return false;
+        return NULL;
 
     HSTSPinEntry *result = NULL;
     gchar *canonical = g_hostname_to_unicode(host);
