@@ -48,6 +48,7 @@
 #include "application.h"
 #include "scripts.h"
 #include "scratchpad.h"
+#include "hsts.h"
 
 /* DECLARATIONS {{{*/
 static DwbStatus dwb_webkit_setting(GList *, WebSettings *);
@@ -175,6 +176,19 @@ dwb_set_adblock(GList *gl, WebSettings *s)
             adblock_disconnect(l);
     }
 }/*}}}*/
+
+void
+dwb_set_hsts(GList *gl, WebSettings *s) 
+{
+    if (s->arg_local.b) 
+    {
+        hsts_activate();
+    }
+    else 
+    {
+        hsts_deactivate();
+    }
+}
 
 /* dwb_set_cookies {{{ */
 static DwbStatus
@@ -3487,6 +3501,7 @@ dwb_free_custom_keys()
 gboolean
 dwb_clean_up() 
 {
+    hsts_end(); /* Assumes it has access to dwb.settings */
     for (GList *l = dwb.keymap; l; l=l->next) {
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
@@ -3522,7 +3537,6 @@ dwb_clean_up()
 
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
-    
 
     dwb_soup_end();
     adblock_end();
@@ -4417,6 +4431,8 @@ dwb_init_files()
     dwb_check_create(dwb.files[FILES_PLUGINS_ALLOW]);
     dwb.files[FILES_CUSTOM_KEYS]     = g_build_filename(profile_path, "custom_keys",      NULL);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
+    dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
+    dwb_check_create(dwb.files[FILES_HSTS]);
 
     userscripts               = g_build_filename(path, "userscripts",   NULL);
     dwb.files[FILES_USERSCRIPTS]     = util_check_directory(userscripts);
@@ -4622,6 +4638,7 @@ dwb_init()
     dwb_init_hints(NULL, NULL);
 
     dwb_soup_init();
+    hsts_init();
 } /*}}}*/ /*}}}*/
 
 /* FIFO {{{*/

@@ -956,7 +956,7 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,      BOOLEAN, { .b = false              },  (S_Func) dwb_set_proxy,  { 0 }, },
   { { "proxy-url",                               "The HTTP-proxy url", },                                          
     SETTING_GLOBAL,      CHAR,    { .p = NULL              },   (S_Func) dwb_soup_init_proxy,  { 0 }, },
-  { { "ssl-strict",                               "Whether to allow only save certificates", },                                          
+  { { "ssl-strict",                               "Whether to allow only safe certificates", },                                          
     SETTING_GLOBAL,      BOOLEAN,    { .b = true            },   (S_Func) dwb_soup_init_session_features,  { 0 }, },
 #ifdef WITH_LIBSOUP_2_38
   { { "ssl-use-system-ca-file",                               "Whether to use the system certification file", },                                          
@@ -1136,6 +1136,8 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,  BOOLEAN, { .b = false }, (S_Func)dwb_set_adblock,   { 0 }, }, 
   { { "adblocker-filterlist",                    "Path to a filterlist", },                   
     SETTING_GLOBAL,  CHAR, { .p = NULL }, NULL,   { 0 }, }, 
+  { { "hsts",                                    "Whether HSTS support should be enabled",},
+    SETTING_GLOBAL,  BOOLEAN, { .b = true }, (S_Func)dwb_set_hsts,       { 0 }, },
 #ifdef WITH_LIBSOUP_2_38 
   { { "addressbar-dns-lookup",                               "Whether to perform a dns check for text typed into the address bar", },                   
     SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_dns_lookup,   { 0 }, }, 
