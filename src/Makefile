@@ -13,13 +13,13 @@ $(TARGET): $(OBJ)
 -include $(OBJ:.o=.d)
 -include $(DOBJ:.do=.dd)
 
-%.o: %.c %.h config.h dwb.h tlds.h
+%.o: %.c %.h config.h dwb.h
 	@echo "${CC} $<"
 	@$(CC) -c -o $@ $< $(CFLAGS) $(CPPFLAGS) 
 
 debug: $(DTARGET)
 
-deps.d: %.c %.h tlds.h 
+deps.d: %.c %.h
 	@echo "$(CC) -MM $@"
 	@$(CC) $(CFLAGS) -MM $< -o $@
 
@@ -31,14 +31,6 @@ deps.d: %.c %.h tlds.h
 $(DTARGET): $(DOBJ) 
 	@echo "$(CC) $@"
 	@$(CC) $(DOBJ) -o $(DTARGET) $(LDFLAGS) 
-
-tlds.h: tlds.in ../tools/mktlds-header
-	@echo gen tlds.h
-	@../tools/mktlds-header < tlds.in > tlds.h
-
-domain.o: tlds.h 
-
-domain.do: tlds.h
 
 dependencies: $(DEPS)
 

@@ -3,7 +3,8 @@
 include ../config.mk
 SETTINGS=../$(LIBDIR)/settings.html
 KEYS=../$(LIBDIR)/keys.html
-OUTFILES=$(SETTINGS) $(KEYS)
+TLDS_H=../$(SRCDIR)/tlds.h
+OUTFILES=$(SETTINGS) $(KEYS) $(TLDS_H)
 
 all: $(OUTFILES)
 
@@ -14,6 +15,18 @@ $(KEYS): keys.in
 $(SETTINGS): settings.in
 	@echo gen settings.html
 	@awk -f generate_settings.awk $< > $@
+
+$(TLDS_H): ../src/tlds.in mktlds-header
+	@echo gen $@
+	@./mktlds-header < ../src/tlds.in > $@
+
+mktlds-header: mktlds-header.o
+	@echo "${CC} $<"
+	@$(CC) -o $@ $< $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
+
+%.o: %.c
+	@echo "${CC} $<"
+	@$(CC) -c -o $@ $< $(CFLAGS) $(CPPFLAGS) 
 
 settings.in: settings.pre
 	@$(shell if pkg-config --exists 'libsoup-2.4 >= 2.38'; then \
