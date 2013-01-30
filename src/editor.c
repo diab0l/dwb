@@ -30,6 +30,20 @@ typedef struct _EditorInfo {
     char *tagname;
 } EditorInfo;
 
+GMutex s_disconnect_mutex;
+
+static void
+disconnect_navigation(GList *gl)
+{
+    g_mutex_lock(&s_disconnect_mutex);
+    if (VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION] != 0)
+    {
+        g_signal_handler_disconnect(VIEW(gl)->web, VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION]);
+        VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION] = 0;
+    }
+    g_mutex_unlock(&s_disconnect_mutex);
+}
+
 /* dwb_editor_watch (GChildWatchFunc) {{{*/
 static void
 editor_watch(GPid pid, int status, EditorInfo *info) 
@@ -75,11 +89,14 @@ editor_watch(GPid pid, int status, EditorInfo *info)
         webkit_dom_html_text_area_element_set_value(WEBKIT_DOM_HTML_TEXT_AREA_ELEMENT(e), content);
 
 clean:
+    disconnect_navigation(info->gl);
+
     unlink(info->filename);
     g_free(info->filename);
     g_free(info->id);
     g_free(info);
 }/*}}}*/
+
 
 static gboolean 
 navigation_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetworkRequest *request, WebKitWebNavigationAction *action,
@@ -90,7 +107,7 @@ navigation_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetworkRequest *r
         info->element = NULL;
         g_free(info->id);
         info->id = NULL;
-        g_signal_handler_disconnect(web, VIEW(info->gl)->status->signals[SIG_EDITOR_NAVIGATION]);
+        disconnect_navigation(info->gl);
     }
     return false;
 }
