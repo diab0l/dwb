@@ -22,7 +22,9 @@ OPTIONS
 -------
 *-a*::
 *--list-all*:: 
-  List all available extensions that can be handled by dwbem.
+  List all available extensions that can be handled by dwbem, if an extension is
+  installed it will be indicated with an 'i', if it is disabled it will be
+  indicated with a 'd'.
  
 *-b*::
 *--bind*::
@@ -67,7 +69,8 @@ OPTIONS
 
 *-l*:: 
 *--list*::
-  List installed extensions handled by dwbem.
+  List installed extensions handled by dwbem, if an extension is disabled it
+  will indicated with a 'd'.
 
 *-L* 'extension':: 
 *--setload* 'extension'::
