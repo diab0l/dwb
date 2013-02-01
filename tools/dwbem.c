@@ -929,16 +929,41 @@ get_list(const char *path)
 
 static void 
 list(const char *file, const char *message, gboolean sync) {
+  char buffer[128];
   if (sync)
     sync_meta(file);
   char **list = get_list(file);
+  char suffix[3];
+  int c;
+
+  char *content = NULL;
+
   if (list != NULL) 
   {
+    g_file_get_contents(m_loader, &content, NULL, NULL);
     notify("%s:", message);
     for (int i=0; list[i]; i++) 
-      printf("  * %s\n", list[i]);
+    {
+      c=0;
+      if (sync && grep(m_installed, list[i], buffer, sizeof(buffer)) > 0) 
+        suffix[c++] = 'i';
+      else if (sync)
+        suffix[c++] = ' ';
+
+      if (content != NULL) {
+        char *regex = g_strdup_printf("/\\*<%s"TMPL_DISABLED, list[i]);
+        if (g_regex_match_simple(regex, content, G_REGEX_DOTALL, 0)) 
+          suffix[c++] = 'd';
+        else 
+          suffix[c++] = ' ';
+        g_free(regex);
+      }
+      suffix[c] = '\0';
+      printf("%s - %s\n", suffix, list[i]);
+    }
 
     g_strfreev(list);
+    g_free(content);
   }
   else 
     notify("No extensions installed");

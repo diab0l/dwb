@@ -1819,7 +1819,7 @@ _notify_;; Whether to notify about blocked request, default *false*
 Extension that allows to remove duplicate tabs or avoids duplicate tabs
 automatically.
 
-_Configuration options_::
+*Configuration options*::
 
 _shortcutRemoveDuplicates_;; Shortcut that removes duplicate tabs, default *null*
 
