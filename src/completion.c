@@ -700,7 +700,7 @@ completion_eval_autocompletion()
     Completion *c = dwb.comps.active_auto_c->data;
     KeyMap *m = c->data;
     dwb_change_mode(NORMAL_MODE, true);
-    commands_simple_command(m);
+    commands_simple_command(m, NULL);
 }/*}}}*/
 
 /* dwb_set_autcompletion{{{*/

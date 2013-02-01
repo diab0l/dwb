@@ -773,7 +773,14 @@ util_create_json(int n, ...) {
         else {
           g_string_append_c(string, '"');
           while (*cval) {
-            if (*cval == '"') 
+            if (   *cval == '"' 
+                || *cval == '/'
+                || *cval == '\\'
+                || *cval == '\b'
+                || *cval == '\f'
+                || *cval == '\n'
+                || *cval == '\r'
+                || *cval == '\t') 
               g_string_append_c(string, '\\');
             g_string_append_c(string, *cval);
             cval++;

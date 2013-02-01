@@ -2688,88 +2688,89 @@ dwb_eval_key(GdkEventKey *e)
                 KeyMap *km = l->data;
                 if (IS_NUMMOD(km->mod)) {
                     //if ((km->mod & DWB_NUMMOD_MASK) && (km->mod & ~DWB_NUMMOD_MASK) == mod_mask) {
-                    commands_simple_command(km);
+                    commands_simple_command(km, NULL);
                     break;
                 }
-                }
+            }
 #undef IS_NUMMOD
-            }
-            g_free(key);
-            return true;
-        }
-        g_string_append(dwb.state.buffer, key);
-        if (ALPHA(e) || DIGIT(e)) {
-            dwb_set_status_bar_text(dwb.gui.lstatus, dwb.state.buffer->str, &dwb.color.active_fg, dwb.font.fd_active, false);
-        }
-
-        buf = dwb.state.buffer->str;
-        longest = 0;
-
-        for (GSList *l = dwb.custom_commands; l; l=l->next) 
-        {
-            CustomCommand *c = l->data;
-            if (c->key->num == dwb.state.nummod  && c->key->mod == mod_mask) 
-            {
-                if (!g_strcmp0(c->key->str, buf)) 
-                {
-                    for (int i=0; c->commands[i]; i++) 
-                    {
-                        if (dwb_parse_command_line(c->commands[i]) == STATUS_END) 
-                            return true;
-                    }
-                    return true;
-                }
-                else if (g_str_has_prefix(c->key->str, buf)) 
-                    longest = 1;
-            }
-        }
-
-        for (GList *l = dwb.keymap; l; l=l->next) 
-        {
-            KeyMap *km = l->data;
-            if (km->map->prop & CP_OVERRIDE_ENTRY || km->key == NULL) 
-                continue;
-
-            gsize kl = strlen(km->key);
-            if (!km->key || !kl ) 
-                continue;
-
-            if (g_str_has_prefix(km->key, buf) && (mod_mask == km->mod) ) 
-            {
-                if  (!longest || kl > longest) 
-                {
-                    longest = kl;
-                    tmp = km;
-                }
-                if (dwb.comps.autocompletion) 
-                {
-                    coms = g_list_append(coms, km);
-                }
-            }
-        }
-        /* autocompletion */
-        if (dwb.state.mode & AUTO_COMPLETE) 
-            completion_clean_autocompletion();
-
-        if (coms && g_list_length(coms) > 0) 
-            completion_autocomplete(coms, NULL);
-        
-        if (tmp && dwb.state.buffer->len == longest) 
-        {
-            commands_simple_command(tmp);
-            ret = true;
-        }
-        else if (e->state & GDK_CONTROL_MASK || !isprint) 
-            ret = false;
-        
-        if (longest == 0) 
-        {
-            dwb_clean_key_buffer();
-            CLEAR_COMMAND_TEXT();
         }
         g_free(key);
-        return ret;
-    }/*}}}*/
+        return true;
+    }
+    g_string_append(dwb.state.buffer, key);
+    if (ALPHA(e) || DIGIT(e)) 
+    {
+        dwb_set_status_bar_text(dwb.gui.lstatus, dwb.state.buffer->str, &dwb.color.active_fg, dwb.font.fd_active, false);
+    }
+
+    buf = dwb.state.buffer->str;
+    longest = 0;
+
+    for (GSList *l = dwb.custom_commands; l; l=l->next) 
+    {
+        CustomCommand *c = l->data;
+        if (c->key->num == dwb.state.nummod  && c->key->mod == mod_mask) 
+        {
+            if (!g_strcmp0(c->key->str, buf)) 
+            {
+                for (int i=0; c->commands[i]; i++) 
+                {
+                    if (dwb_parse_command_line(c->commands[i]) == STATUS_END) 
+                        return true;
+                }
+                return true;
+            }
+            else if (g_str_has_prefix(c->key->str, buf)) 
+                longest = 1;
+        }
+    }
+
+    for (GList *l = dwb.keymap; l; l=l->next) 
+    {
+        KeyMap *km = l->data;
+        if (km->map->prop & CP_OVERRIDE_ENTRY || km->key == NULL) 
+            continue;
+
+        gsize kl = strlen(km->key);
+        if (!km->key || !kl ) 
+            continue;
+
+        if (g_str_has_prefix(km->key, buf) && (mod_mask == km->mod) ) 
+        {
+            if  (!longest || kl > longest) 
+            {
+                longest = kl;
+                tmp = km;
+            }
+            if (dwb.comps.autocompletion) 
+            {
+                coms = g_list_append(coms, km);
+            }
+        }
+    }
+    /* autocompletion */
+    if (dwb.state.mode & AUTO_COMPLETE) 
+        completion_clean_autocompletion();
+
+    if (coms && g_list_length(coms) > 0) 
+        completion_autocomplete(coms, NULL);
+
+    if (tmp && dwb.state.buffer->len == longest) 
+    {
+        commands_simple_command(tmp, NULL);
+        ret = true;
+    }
+    else if (e->state & GDK_CONTROL_MASK || !isprint) 
+        ret = false;
+
+    if (longest == 0) 
+    {
+        dwb_clean_key_buffer();
+        CLEAR_COMMAND_TEXT();
+    }
+    g_free(key);
+    return ret;
+}/*}}}*/
 
 /* dwb_eval_override_key {{{*/
 gboolean 
@@ -4421,6 +4422,7 @@ dwb_parse_command_line(const char *line)
     KeyMap *m = NULL;
     gboolean found;
     gboolean has_arg = false;
+    const char *argument = NULL;
 
     if (!token[0]) 
         return STATUS_OK;
@@ -4456,11 +4458,12 @@ dwb_parse_command_line(const char *line)
             {
                 g_strstrip(token[1]);
                 m->map->arg.p = token[1];
+                argument = token[1];
             }
             if (gtk_widget_has_focus(dwb.gui.entry) && (m->map->prop & CP_OVERRIDE_ENTRY)) 
                 m->map->func(&m, &m->map->arg);
             else 
-                ret = commands_simple_command(m);
+                ret = commands_simple_command(m, argument);
             
             break;
         }

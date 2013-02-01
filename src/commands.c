@@ -44,7 +44,7 @@ modulo(int x, int y) {
 /* commands.h {{{*/
 /* commands_simple_command(keyMap *km) {{{*/
 DwbStatus 
-commands_simple_command(KeyMap *km) 
+commands_simple_command(KeyMap *km, const char *argument) 
 {
     int ret;
     gboolean (*func)(void *, void *) = km->map->func;
@@ -60,7 +60,7 @@ commands_simple_command(KeyMap *km)
     {
         char *json = util_create_json(3, 
                 CHAR, "command", km->map->n.first, 
-                CHAR, "argument", arg->p, 
+                CHAR, "argument", argument,
                 INTEGER, "nummod", dwb.state.nummod);
         ScriptSignal sig = { NULL, SCRIPTS_SIG_META(json, EXECUTE_COMMAND, 0) } ;
 

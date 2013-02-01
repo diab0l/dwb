@@ -1814,6 +1814,29 @@ _autoreload_;; Whether to automatically reload the website after the
 
 _notify_;; Whether to notify about blocked request, default *false*
 
+==== unique_tabs
+
+Extension that allows to remove duplicate tabs or avoids duplicate tabs
+automatically.
+
+_Configuration options_::
+
+_shortcutRemoveDuplicates_;; Shortcut that removes duplicate tabs, default *null*
+
+_commandRemoveDuplicates_;; Command that remove s duplicate tabs, default
+*ut_remove_duplicates*
+
+_autoFocus_;; Autofocus a tab if an url is already opened, if the url would be loaded in a
+new tab the new tab is closed.  Setting this to true makes commandRemoveDuplicates and
+shortcutRemoveDuplicates obsolete because there will be no duplicate tabs.
+Default value: *true*
+
+_shortcutToggleAutoFocus_;; Shortcut that enables/disables autofocus, default
+*null*
+
+_commandToggleAutoFocus_;;  Command that enables/disables autofocus, default
+*ut_toggle_autofocus*
+
 
 ==== userscripts
 

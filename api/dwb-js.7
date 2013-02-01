@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 01/28/2013
+.\"      Date: 02/01/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "01/28/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/01/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3501,6 +3501,51 @@ Whether to automatically reload the website after the persistentList has changed
 .RS 4
 Whether to notify about blocked request, default
 \fBfalse\fR
+.RE
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBunique_tabs\fR
+.RS 4
+.sp
+Extension that allows to remove duplicate tabs or avoids duplicate tabs automatically\&.
+.PP
+\fIConfiguration options\fR
+.RS 4
+.PP
+\fIshortcutRemoveDuplicates\fR
+.RS 4
+Shortcut that removes duplicate tabs, default
+\fBnull\fR
+.RE
+.PP
+\fIcommandRemoveDuplicates\fR
+.RS 4
+Command that remove s duplicate tabs, default
+\fBut_remove_duplicates\fR
+.RE
+.PP
+\fIautoFocus\fR
+.RS 4
+Autofocus a tab if an url is already opened, if the url would be loaded in a new tab the new tab is closed\&. Setting this to true makes commandRemoveDuplicates and shortcutRemoveDuplicates obsolete because there will be no duplicate tabs\&. Default value:
+\fBtrue\fR
+.RE
+.PP
+\fIshortcutToggleAutoFocus\fR
+.RS 4
+Shortcut that enables/disables autofocus, default
+\fBnull\fR
+.RE
+.PP
+\fIcommandToggleAutoFocus\fR
+.RS 4
+Command that enables/disables autofocus, default
+\fBut_toggle_autofocus\fR
 .RE
 .RE
 .RE
