@@ -30,18 +30,18 @@ typedef struct _EditorInfo {
     char *tagname;
 } EditorInfo;
 
-GMutex s_disconnect_mutex;
+pthread_mutex_t s_disconnect_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void
 disconnect_navigation(GList *gl)
 {
-    g_mutex_lock(&s_disconnect_mutex);
+    pthread_mutex_lock(&s_disconnect_mutex);
     if (VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION] != 0)
     {
         g_signal_handler_disconnect(VIEW(gl)->web, VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION]);
         VIEW(gl)->status->signals[SIG_EDITOR_NAVIGATION] = 0;
     }
-    g_mutex_unlock(&s_disconnect_mutex);
+    pthread_mutex_unlock(&s_disconnect_mutex);
 }
 
 /* dwb_editor_watch (GChildWatchFunc) {{{*/
