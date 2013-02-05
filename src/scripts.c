@@ -1949,52 +1949,52 @@ gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSVal
 static JSValueRef
 gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.vbox), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.vbox), false);
 }
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.topbox), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.topbox), false);
 }
 static JSValueRef
 gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.mainbox), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.mainbox), false);
 }
 static JSValueRef
 gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.statusbox), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.statusbox), false);
 }
 static JSValueRef
 gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.alignment), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.alignment), false);
 }
 static JSValueRef
 gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.status_hbox), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.status_hbox), false);
 }
     static JSValueRef
 gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.lstatus), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.lstatus), false);
 }
 static JSValueRef
 gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.entry), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.entry), false);
 }
 static JSValueRef
 gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.urilabel), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.urilabel), false);
 }
 static JSValueRef
 gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.rstatus), true);
+    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.rstatus), false);
 }
 /*}}}*/
 
