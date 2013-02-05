@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <pthread.h>
 #include "dwb.h"
 #include "editor.h"
 #include "util.h"
