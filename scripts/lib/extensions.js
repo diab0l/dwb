@@ -115,7 +115,7 @@
               else
               {
                   for (k in dc) 
-                      config[k] = typeof c[k] === typeof dc[k] ? c[k] : dc[k];
+                      config[k] = typeof c[k] === typeof dc[k] || c[k] === null ? c[k] : dc[k];
               }
               return config;
           }
