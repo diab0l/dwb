@@ -2469,10 +2469,17 @@ dwb_load_uri(GList *gl, const char *arg)
     else 
     {
         if ( g_str_has_prefix(tmpuri, "http://") || g_str_has_prefix(tmpuri, "https://")) 
-            uri = g_strdup(tmpuri);
+        {
+            webkit_web_view_load_uri(web, tmpuri);
+            goto clean;
+        }
         else if (strchr(tmpuri, ' ')) 
             uri = dwb_get_searchengine(tmpuri);
-
+        else if (g_regex_match_simple("^[a-z]+://", tmpuri, G_REGEX_CASELESS, 0))
+        {
+            webkit_web_view_load_uri(web, tmpuri);
+            goto clean;
+        }
 #ifdef WITH_LIBSOUP_2_38
         else if (dwb.misc.dns_lookup) 
         {
