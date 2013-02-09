@@ -2253,11 +2253,12 @@ dwb_tab_label_set_text(GList *gl, const char *text)
     if (v->status->progress != 0) 
         snprintf(progress, sizeof(progress), "[%2d%%] ", v->status->progress);
 
-    escaped = g_markup_printf_escaped("<span foreground='%s'>%d%s</span> %s%s", 
+    escaped = g_markup_printf_escaped("<span foreground='%s'>%d%s</span> %s%s%s", 
             LP_PROTECTED(v) ? dwb.color.tab_protected_color : dwb.color.tab_number_color,
             g_list_position(dwb.state.views, gl) + 1, 
             LP_VISIBLE(v) ? "*" : "",
             progress,
+            v->status->deferred ? "*" : "",
             title ? title : "---");
     gtk_label_set_markup(GTK_LABEL(v->tablabel), escaped);
 
@@ -2298,14 +2299,12 @@ dwb_update_status(GList *gl, const char *title)
 void 
 dwb_update_layout() 
 {
+    const char *title;
     for (GList *gl = dwb.state.views; gl; gl = gl->next) 
     {
-        if (!VIEW(gl)->status->deferred) 
-        {
-            View *v = gl->data;
-            const char *title = webkit_web_view_get_title(WEBKIT_WEB_VIEW(v->web));
-            dwb_tab_label_set_text(gl, title);
-        }
+        View *v = gl->data;
+        title = v->status->deferred ? v->status->deferred_uri : webkit_web_view_get_title(WEBKIT_WEB_VIEW(v->web));
+        dwb_tab_label_set_text(gl, title);
 
     }
     dwb_update_tabs();
