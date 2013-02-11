@@ -204,5 +204,14 @@
                 }
             }
     });
+    Object.defineProperty(Deferred, "when", {
+            value : function(value, callback, errback)
+            {
+                if (value instanceof Deferred)
+                    return value.then(callback, errback);
+                else 
+                    return callback(value);
+            }
+    });
 })();
 Object.preventExtensions(this);

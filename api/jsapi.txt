@@ -1083,7 +1083,6 @@ the done callback chain of the deferred is called.
 If a asynchronous operation fails the deferred should be rejected and
 the fail callback chain of the deferred is called. 
 
-
 Deferreds implement the following methods: 
 
 **** 
@@ -1197,10 +1196,34 @@ the new deferred.
 _returns_;; A new deferred that can be used to chain callbacks. 
 ****
 
+Deferred also implements a static method: 
+
+****
+[float]
+==== *when()* ==== 
+
+[source,javascript]
+----
+Value Deferred.when(Value value, Function ondone, Function onfail) 
+----
+
+Static method that can be used for synchronous and asynchronous operations. If
+if *value* is a Deferred *ondone* is called when the Deferred is resolved and
+*onfail* is called if the Deferred is rejected, otherwise ondone is called 
+and value is the first parameter of the callback.
+
+ ::
+
+_value_;; A Deferred or a value.
+_ondone_;; Callback function.
+_onfail_;; Callback function.
+_returns_;; The value.
+****
+
+
 ==== *Examples* ====
 
 The builtin function system.spawn returns a deferred: 
-
 [source,javascript]
 ---------------------------------
 system.spawn("command").then(
@@ -1318,6 +1341,25 @@ function callback2(response)
 }
 
 foo("foo").done(callback1).done(callback2);
+---------------------------------
+
+Using Deferred.when
+
+[source,javascript]
+---------------------------------
+function asyncOperation() {
+    var d = new Deferred();
+    .... 
+    return d;
+}
+function syncOperation()
+{
+    var result = {};
+    .... 
+    return result;
+}
+Deferred.when(asyncOperation(), function() {...});
+Deferred.when(syncOperation(), function() {...});
 ---------------------------------
 
 
