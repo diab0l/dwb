@@ -5,7 +5,7 @@
         { 
             value :  function(f) 
             {
-                if (f !== null && f !== undefined && f instanceof Function) 
+                if (f && f instanceof Function) 
                 {
                     var m = f.toString().match(/\{([\s\S]*)\}/m)[1];
                     m = m.replace(/^\s*\/\/.*$/mg, '');

@@ -491,15 +491,13 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     {
         if (gl != dwb.state.fview)
         {
-            char buffer[128];
             const char *stripped;
 
             VIEW(gl)->status->deferred_uri = g_strdup(uri);
 
             stripped = strstr(uri, "://");
-            snprintf(buffer, sizeof(buffer), "*%s", stripped ? stripped + 3 : uri);
 
-            dwb_tab_label_set_text(gl, buffer);
+            dwb_tab_label_set_text(gl, stripped ? stripped + 3 : uri);
             webkit_web_policy_decision_ignore(policy);
             return true;
         }
