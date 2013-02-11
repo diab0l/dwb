@@ -2428,7 +2428,7 @@ dwb_load_uri(GList *gl, const char *arg)
 
     if ( (script = dwb_test_userscript(tmpuri)) ) 
     {
-        Arg a = { .arg = script };
+        Arg a = { .p = script };
         dwb_execute_user_script(NULL, &a);
         g_free(script);
         goto clean;
@@ -3181,7 +3181,7 @@ dwb_get_scripts()
                 map->key = "";
                 map->mod = 0;
             }
-            FunctionMap fm = { { n->first, n->first }, CP_DONT_SAVE | CP_COMMANDLINE | CP_USERSCRIPT, (Func)dwb_execute_user_script, NULL, POST_SM, { .p = path }, EP_NONE, {NULL} };
+            FunctionMap fm = { { n->first, n->first }, CP_DONT_SAVE | CP_COMMANDLINE | CP_USERSCRIPT, (Func)dwb_execute_user_script, NULL, POST_SM, { .p = path, .ro = true }, EP_NONE, {NULL} };
             *fmap = fm;
             map->map = fmap;
             dwb.misc.userscripts = g_list_prepend(dwb.misc.userscripts, n);
@@ -4460,7 +4460,7 @@ dwb_parse_command_line(const char *line)
                 dwb_change_mode(NORMAL_MODE, true);
 
             dwb.state.nummod = nummod;
-            if (token[1] && ! m->map->arg.ro) 
+            if (token[1]) 
             {
                 g_strstrip(token[1]);
                 m->map->arg.arg = token[1];
