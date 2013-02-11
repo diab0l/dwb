@@ -536,13 +536,14 @@ add_to_loader(const char *name, const char *content, int flags)
 
     if (matches[1] == NULL) 
         notify("No default configuration found");
-    else if (flags & F_NO_CONFIRM) {
-        notify("Skipping configuration check");
-        if (! (flags & F_UPDATE) ) 
-            new_config = matches[1];
-    }
     else if ((flags & F_UPDATE)) 
     {
+        if (flags & F_NO_CONFIRM)
+        {
+            notify("Skipping configuration check");
+            goto unwind;
+        }
+
         data = get_data(name, m_loader, TMPL_CONFIG, 0);
         if (diff(data, matches[1], &config) == 0) {
             notify("Config is up to date");
@@ -550,6 +551,10 @@ add_to_loader(const char *name, const char *content, int flags)
         }
         else 
             new_config = config;
+    }
+    else if (flags & F_NO_CONFIRM) {
+        notify("Skipping configuration check");
+        new_config = matches[1];
     }
     else if (!(flags & F_NO_CONFIG) && yes_no(1, "Edit configuration") == 1) 
         new_config = config = edit(matches[1]);
@@ -560,7 +565,7 @@ add_to_loader(const char *name, const char *content, int flags)
         notify("Updating extension-loader");
         set_data(name, new_config, TMPL_CONFIG, 0);
     }
-    else if ( (flags & F_NO_CONFIRM) == 0 && new_config != NULL ) 
+    else if ( (flags & F_NO_CONFIRM) == 0 || new_config != NULL ) 
         set_loader(name, new_config, flags);
 
 unwind:
@@ -1116,7 +1121,7 @@ main(int argc, char **argv)
         { "list-installed",  'l', 0, G_OPTION_ARG_NONE, &o_list_installed, "List installed extensions",  NULL},
         { "setload",  'L', 0, G_OPTION_ARG_STRING_ARRAY, &o_setload, "Edit configuration for <extension>, use exensions.load", "<extension>" },
         { "no-config", 'n', 0, G_OPTION_ARG_NONE, &o_noconfig, "Don't use config in loader script, use extensionrc instead", NULL },
-        { "no-confirm",   'N', 0, G_OPTION_ARG_NONE, &o_no_confirm,  "Update extensions", NULL },
+        { "no-confirm",   'N', 0, G_OPTION_ARG_NONE, &o_no_confirm,  "Don't ask for confirmations", NULL },
         { "remove",   'r', 0, G_OPTION_ARG_STRING_ARRAY, &o_remove, "Remove <extension>", "<extension>" },
         { "proxy",   'p', 0, G_OPTION_ARG_STRING, &o_proxy, "HTTP-proxy to use", NULL },
         { "upgrade",   'u', 0, G_OPTION_ARG_NONE, &o_update,  "Update all extensions", NULL },
