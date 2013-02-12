@@ -29,6 +29,7 @@ typedef struct _EditorInfo {
     GList *gl;
     WebKitDOMElement *element;
     char *tagname;
+    gboolean contenteditable;
 } EditorInfo;
 
 pthread_mutex_t s_disconnect_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -88,6 +89,8 @@ editor_watch(GPid pid, int status, EditorInfo *info)
         webkit_dom_html_input_element_set_value(WEBKIT_DOM_HTML_INPUT_ELEMENT(e), content);
     else if (!strcasecmp(info->tagname, "TEXTAREA")) 
         webkit_dom_html_text_area_element_set_value(WEBKIT_DOM_HTML_TEXT_AREA_ELEMENT(e), content);
+    else if (info->contenteditable)
+        webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(e), content, NULL);
 
 clean:
     disconnect_navigation(info->gl);
@@ -123,6 +126,7 @@ editor_open(void)
     char *value = NULL;
     GPid pid;
     gboolean success;
+    gboolean contenteditable = false;
 
     char *editor = GET_CHAR("editor");
 
@@ -145,6 +149,11 @@ editor_open(void)
         value = webkit_dom_html_input_element_get_value(WEBKIT_DOM_HTML_INPUT_ELEMENT(active));
     else if (! strcasecmp(tagname, "TEXTAREA"))
         value = webkit_dom_html_text_area_element_get_value(WEBKIT_DOM_HTML_TEXT_AREA_ELEMENT(active));
+    else if (webkit_dom_element_has_attribute(active, "contenteditable")) 
+    {
+        value = webkit_dom_html_element_get_inner_text(WEBKIT_DOM_HTML_ELEMENT(active));
+        contenteditable = true;
+    }
 
     if (value == NULL) 
     {
@@ -185,6 +194,7 @@ editor_open(void)
     info->element = active;
     info->filename = path;
     info->gl = dwb.state.fview;
+    info->contenteditable = contenteditable;
     g_child_watch_add(pid, (GChildWatchFunc)editor_watch, info);
     VIEW(dwb.state.fview)->status->signals[SIG_EDITOR_NAVIGATION] = 
         g_signal_connect(CURRENT_WEBVIEW(), "navigation-policy-decision-requested", G_CALLBACK(navigation_cb), info);
