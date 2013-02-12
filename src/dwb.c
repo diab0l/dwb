@@ -3012,7 +3012,7 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     char *fifo;
 
     snprintf(nummod, sizeof(nummod), "%d", NUMMOD);
-    char *argv[] = { a->p, (char*)webkit_web_view_get_uri(CURRENT_WEBVIEW()), (char *)webkit_web_view_get_title(CURRENT_WEBVIEW()), (char *)dwb.misc.profile, nummod, NULL } ;
+    char *argv[] = { a->arg, (char*)webkit_web_view_get_uri(CURRENT_WEBVIEW()), (char *)webkit_web_view_get_title(CURRENT_WEBVIEW()), (char *)dwb.misc.profile, nummod, a->p, NULL } ;
 
     const char *uri = webkit_web_view_get_uri(CURRENT_WEBVIEW());
     if (uri != NULL)
@@ -3025,8 +3025,8 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     list = g_slist_append(list, dwb_navigation_new("DWB_PROFILE", dwb.misc.profile));
     list = g_slist_append(list, dwb_navigation_new("DWB_NUMMOD",  nummod));
 
-    if (a->arg != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_ARGUMENT",  a->arg));
+    if (a->p != NULL)
+        list = g_slist_append(list, dwb_navigation_new("DWB_ARGUMENT",  a->p));
 
     const char *referer = soup_get_header(dwb.state.fview, "Referer");
     if (referer != NULL)
@@ -3048,7 +3048,7 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
         env->channel = g_io_channel_unix_new(env->fd);
         if (env->channel != NULL) 
         {
-            dwb_set_normal_message(dwb.state.fview, true, "Executing script %s", a->p);
+            dwb_set_normal_message(dwb.state.fview, true, "Executing script %s", a->arg);
             env->source = g_io_add_watch(env->channel, G_IO_IN, (GIOFunc)dwb_user_script_cb, env);
             g_child_watch_add(pid, (GChildWatchFunc)dwb_user_script_watch, env);
         }
@@ -3181,7 +3181,7 @@ dwb_get_scripts()
                 map->key = "";
                 map->mod = 0;
             }
-            FunctionMap fm = { { n->first, n->first }, CP_DONT_SAVE | CP_COMMANDLINE | CP_USERSCRIPT, (Func)dwb_execute_user_script, NULL, POST_SM, { .p = path }, EP_NONE, {NULL} };
+            FunctionMap fm = { { n->first, n->first }, CP_DONT_SAVE | CP_COMMANDLINE | CP_USERSCRIPT, (Func)dwb_execute_user_script, NULL, POST_SM, { .arg = path }, EP_NONE, {NULL} };
             *fmap = fm;
             map->map = fmap;
             dwb.misc.userscripts = g_list_prepend(dwb.misc.userscripts, n);
@@ -4463,7 +4463,7 @@ dwb_parse_command_line(const char *line)
             if (token[1] && ! m->map->arg.ro) 
             {
                 g_strstrip(token[1]);
-                m->map->arg.arg = token[1];
+                m->map->arg.p = token[1];
                 argument = token[1];
             }
             if (gtk_widget_has_focus(dwb.gui.entry) && (m->map->prop & CP_OVERRIDE_ENTRY)) 
