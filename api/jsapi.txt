@@ -1674,6 +1674,18 @@ wv.focusedFrame        frame     read
 The focused frame of the webview
 ****
 
+****
+[float]
+==== *historyList* ====
+
+[source,javascript]
+----
+wv.historyList        historylist     read
+----
+
+The history of the webview
+****
+
 
 ****
 [float]
@@ -2030,6 +2042,54 @@ download.start(function () {
 });
 ------
 ====
+
+[[HistoryList]]
+=== historylist ===
+Corresponds to a +WebkitWebBackForwardList+. 
+
+==== Properties ====
+
+****
+[float]
+==== *backLength* ====
+
+[source,javascript]
+----
+historylist.backLength          Number     read
+----
+Number of items that precede the current item
+****
+
+****
+[float]
+==== *forwardLength* ====
+
+[source,javascript]
+----
+historylist.forwardLength          Number     read
+----
+Number of items that succeed the current item
+****
+
+==== Methods ====
+
+****
+[float]
+==== *getItem()* ==== 
+
+[source,javascript]
+----
+WebKitWebHistoryItem historylist.getItem(Number position)
+----
+
+Gets a WebKitWebHistoryItem. 
+
+ ::
+
+_position_;; The position of the item where 0 corresponds to the current item.
+_returns_;; A WebKitWebHistoryItem.
+****
+
 
 
 == Signals ==

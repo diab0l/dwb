@@ -121,7 +121,7 @@ static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
 static JSGlobalContextRef s_global_context;
 static GSList *s_script_list;
-static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class;
+static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class, s_history_class;
 static gboolean s_commandline = false;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
@@ -348,7 +348,7 @@ tabs_get_nth(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         return NIL;
 
     double n = JSValueToNumber(ctx, argv[0], exc);
-    if (n == NAN)
+    if (isnan(n))
         return NIL;
     GList *nth = g_list_nth(dwb.state.views, (int)n);
     if (nth == NULL)
@@ -422,7 +422,7 @@ wv_history(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc
         return UNDEFINED;
     }
     double steps = JSValueToNumber(ctx, argv[0], exc);
-    if (steps != NAN) {
+    if (!isnan(steps)) {
         WebKitWebView *wv = JSObjectGetPrivate(this);
         if (wv != NULL)
             webkit_web_view_go_back_or_forward(wv, (int)steps);
@@ -469,7 +469,7 @@ wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
         gboolean keep_aspect = false;
         double width = JSValueToNumber(ctx, argv[1], exc);
         double height = JSValueToNumber(ctx, argv[2], exc);
-        if (width != NAN && height != NAN) 
+        if (!isnan(width) && !isnan(height)) 
         {
             sf = webkit_web_view_get_snapshot(wv);
 
@@ -640,6 +640,12 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
         return NIL;
     return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->scroll), true);
 }
+static JSValueRef 
+wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebView *wv = JSObjectGetPrivate(object);
+    return make_object(ctx, G_OBJECT(webkit_web_view_get_back_forward_list(wv)));
+}
 
 
 /*}}}*/
@@ -752,7 +758,7 @@ global_checksum(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, 
     if (argc > 1) 
     {
         type = JSValueToNumber(ctx, argv[1], exc);
-        if (type == NAN) 
+        if (isnan(type)) 
         {
             ret = NIL;
             goto error_out;
@@ -1186,7 +1192,7 @@ global_timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_
         js_make_exception(ctx, exc, EXCEPTION("timerStop: missing argument."));
         return JSValueMakeBoolean(ctx, false);
     }
-    if ((sigid = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    if (!isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
     {
         gboolean ret = g_source_remove((int)sigid);
         GSList *source = g_slist_find(s_timers, GINT_TO_POINTER(sigid));
@@ -1214,7 +1220,7 @@ global_timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size
         return JSValueMakeNumber(ctx, -1);
     }
     double msec = 10;
-    if ((msec = JSValueToNumber(ctx, argv[0], exc)) == NAN )
+    if (isnan(msec = JSValueToNumber(ctx, argv[0], exc)))
         return JSValueMakeNumber(ctx, -1);
 
     JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
@@ -1273,6 +1279,30 @@ static JSValueRef
 util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
+}
+
+static JSValueRef 
+history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    double n;
+    if (argc > 0 && !isnan(n = JSValueToNumber(ctx, argv[0], NULL)))
+    {
+        WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
+        return make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
+    }
+    return NIL;
+}
+static JSValueRef 
+history_back_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_back_length(list));
+}
+static JSValueRef 
+history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_forward_length(list));
 }
 
 void 
@@ -1612,7 +1642,7 @@ system_file_test(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
         return JSValueMakeBoolean(ctx, false);
 
     double test = JSValueToNumber(ctx, argv[1], exc);
-    if (test == NAN || ! ( (((guint)test) & G_FILE_TEST_VALID) == (guint)test) ) 
+    if (isnan(test) || ! ( (((guint)test) & G_FILE_TEST_VALID) == (guint)test) ) 
         return JSValueMakeBoolean(ctx, false);
 
     gboolean ret = g_file_test(path, (GFileTest) test);
@@ -1632,7 +1662,7 @@ system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
     char *path = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
     double mode = JSValueToNumber(ctx, argv[1], exc);
-    if (path != NULL && mode != NAN) 
+    if (path != NULL && !isnan(mode)) 
     {
         ret = g_mkdir_with_parents(path, (gint)mode) == 0;
     }
@@ -1845,7 +1875,7 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
             break;
         case kJSTypeNumber : 
             dout = JSValueToNumber(ctx, argv[0], exc);
-            if (dout != NAN) 
+            if (!isnan(dout)) 
                 if ((int)dout == dout) 
                     fprintf(stream, "%d\n", (int)dout);
                 else 
@@ -2121,6 +2151,8 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_download_class;
     else if (SOUP_IS_MESSAGE(o)) 
         class = s_message_class;
+    else if (WEBKIT_IS_WEB_BACK_FORWARD_LIST(o))
+        class = s_history_class;
     else 
         class = s_gobject_class;
     return make_object_for_class(ctx, class, o, true);
@@ -2277,7 +2309,7 @@ static JSValueRef
 gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     double sigid;
-    if (argc > 0 && (sigid = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    if (argc > 0 && !isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL)
@@ -2289,7 +2321,7 @@ static JSValueRef
 gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     double sigid;
-    if (argc > 0 && (sigid = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    if (argc > 0 && !isnan(sigid = JSValueToNumber(ctx, argv[0], exc)))
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL)
@@ -2301,7 +2333,7 @@ static JSValueRef
 gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     int id;
-    if (argc > 0 && JSValueIsNumber(ctx, argv[0]) && (id = JSValueToNumber(ctx, argv[0], exc)) != NAN) 
+    if (argc > 0 && JSValueIsNumber(ctx, argv[0]) && !isnan(id = JSValueToNumber(ctx, argv[0], exc)))
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL && g_signal_handler_is_connected(o, id)) 
@@ -2377,7 +2409,7 @@ set_property(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueR
              gtype == G_TYPE_UINT64 || gtype == G_TYPE_FLAGS))  
     {
         double value = JSValueToNumber(ctx, jsvalue, exception);
-        if (value != NAN) 
+        if (!isnan(value))
         {
             switch (gtype) 
             {
@@ -2644,6 +2676,7 @@ create_global_object()
         { "tabBox",        wv_get_tab_box, NULL, kJSDefaultAttributes }, 
         { "tabLabel",      wv_get_tab_label, NULL, kJSDefaultAttributes }, 
         { "tabIcon",       wv_get_tab_icon, NULL, kJSDefaultAttributes }, 
+        { "historyList",    wv_get_history_list, NULL, kJSDefaultAttributes }, 
         { "scrolledWindow",wv_get_scrolled_window, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
@@ -2688,6 +2721,23 @@ create_global_object()
     cd.staticValues = message_values;
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
+
+    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
+
+    JSStaticFunction history_functions[] = { 
+        { "getItem",           history_get_item,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    JSStaticValue history_values[] = {
+        { "backLength",     history_back_length, NULL, kJSDefaultAttributes }, 
+        { "forwardLength",     history_forward_length, NULL, kJSDefaultAttributes }, 
+        { 0, 0, 0, 0 }, 
+    };
+    cd.className = "HistoryList";
+    cd.staticFunctions = history_functions;
+    cd.staticValues = history_values;
+    cd.parentClass = s_gobject_class;
+    s_history_class = JSClassCreate(&cd);
 
     s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
 
@@ -2954,6 +3004,7 @@ scripts_end()
         JSClassRelease(s_frame_class);
         JSClassRelease(s_download_class);
         JSClassRelease(s_message_class);
+        JSClassRelease(s_history_class);
         JSGlobalContextRelease(s_global_context);
         s_global_context = NULL;
     }

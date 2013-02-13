@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 02/12/2013
+.\"      Date: 02/13/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/12/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/13/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1736,6 +1736,11 @@ All frames of a webview including the mainframe
 The focused frame of the webview
 .RE
 .PP
+\fIwv\&.historyList (Historylist, read)\fR
+.RS 4
+The focused frame of the webview
+.RE
+.PP
 \fIwv\&.mainFrame (Frame, read)\fR
 .RS 4
 The main frame of the webview
@@ -1992,6 +1997,40 @@ A callback function that will be executed whenever the DownloadStatus changes, r
 .RS 4
 .sp
 Cancels a download
+.RE
+.SS "historylist"
+.sp
+Corresponds to a WebkitWebBackForwardList\&.
+.PP
+\fIhistorylist\&.backLength\fR
+.RS 4
+Number of items that precede the current item
+.RE
+.PP
+\fIhistorylist\&.forwardLength\fR
+.RS 4
+Number of items that succeed the current item
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBWebKitWebHistoryItem historylist.getItem([Number position])\fR
+.RS 4
+.sp
+Gets a WebKitWebHistoryItem\&.
+.PP
+\fIposition\fR
+.RS 4
+The position of the item where 0 corresponds to the current item\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A WebKitWebHistoryItem\&.
+.RE
 .RE
 .SH "SIGNALS"
 .sp
