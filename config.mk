@@ -92,7 +92,12 @@ $(error Cannot find gtk2-libs or gtk3-libs)
 endif 																														#has gtk3 libs
 endif 																													#has gtk2 libs
 endif 																												#GTK=3
-
+GNUTLS=gnutls
+ifeq ($(shell pkg-config --exists $(GNUTLS) && echo 1), 1)
+LIBS+=$(GNUTLS)
+else
+$(error Cannot find $(GNUTLS))
+endif
 
 
 # HTML-files
