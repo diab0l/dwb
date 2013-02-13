@@ -784,6 +784,7 @@ struct _Misc {
   int script_signals;
   CloseLastTabPolicy clt_policy;
   ProgressBarStyle progress_bar_style;
+  //gboolean javascript_debugging;
 };
 enum Files {
   FILES_FIRST = 0,

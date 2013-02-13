@@ -882,6 +882,7 @@ content.
 
 _wv.allFrames (Array of frames, read)_;; All frames of a webview including the mainframe
 _wv.focusedFrame (Frame, read)_;; The focused frame of the webview
+_wv.historyList (Historylist, read)_;; The focused frame of the webview
 _wv.mainFrame (Frame, read)_;; The main frame of the webview
 _wv.number (Number, read)_;; The number of the webview, starting at 0
 _wv.scrolledWindow (GtkScrollwindow, read)_;; The parent widget of every webview, it
@@ -1015,6 +1016,24 @@ DownloadStatus changes, return true to stop the emission, optional.
 
 Cancels a download
 ****
+
+=== historylist ===
+
+Corresponds to a WebkitWebBackForwardList. 
+
+_historylist.backLength_;; Number of items that precede the current item
+_historylist.forwardLength_;; Number of items that succeed the current item
+
+==== WebKitWebHistoryItem historylist.getItem([Number position])
+****
+
+Gets a WebKitWebHistoryItem. 
+
+_position_;; The position of the item where 0 corresponds to the current item.
+_returns_;; A WebKitWebHistoryItem.
+****
+
+
 
 == SIGNALS ==
 With the signals object *dwb* communicates with the script on certain events. 

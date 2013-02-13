@@ -121,7 +121,7 @@ static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
 static JSGlobalContextRef s_global_context;
 static GSList *s_script_list;
-static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class;
+static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class, s_history_class;
 static gboolean s_commandline = false;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
@@ -639,6 +639,12 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
     if (gl == NULL)
         return NIL;
     return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->scroll), true);
+}
+static JSValueRef 
+wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebView *wv = JSObjectGetPrivate(object);
+    return make_object(ctx, G_OBJECT(webkit_web_view_get_back_forward_list(wv)));
 }
 
 
@@ -1273,6 +1279,30 @@ static JSValueRef
 util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
+}
+
+static JSValueRef 
+history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    double n;
+    if (argc > 0 && (n = JSValueToNumber(ctx, argv[0], NULL)) != NAN)
+    {
+        WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
+        return make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
+    }
+    return NIL;
+}
+static JSValueRef 
+history_back_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_back_length(list));
+}
+static JSValueRef 
+history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_forward_length(list));
 }
 
 void 
@@ -2121,6 +2151,8 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_download_class;
     else if (SOUP_IS_MESSAGE(o)) 
         class = s_message_class;
+    else if (WEBKIT_IS_WEB_BACK_FORWARD_LIST(o))
+        class = s_history_class;
     else 
         class = s_gobject_class;
     return make_object_for_class(ctx, class, o, true);
@@ -2644,6 +2676,7 @@ create_global_object()
         { "tabBox",        wv_get_tab_box, NULL, kJSDefaultAttributes }, 
         { "tabLabel",      wv_get_tab_label, NULL, kJSDefaultAttributes }, 
         { "tabIcon",       wv_get_tab_icon, NULL, kJSDefaultAttributes }, 
+        { "historyList",    wv_get_history_list, NULL, kJSDefaultAttributes }, 
         { "scrolledWindow",wv_get_scrolled_window, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
@@ -2688,6 +2721,23 @@ create_global_object()
     cd.staticValues = message_values;
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
+
+    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
+
+    JSStaticFunction history_functions[] = { 
+        { "getItem",           history_get_item,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    JSStaticValue history_values[] = {
+        { "backLength",     history_back_length, NULL, kJSDefaultAttributes }, 
+        { "forwardLength",     history_forward_length, NULL, kJSDefaultAttributes }, 
+        { 0, 0, 0, 0 }, 
+    };
+    cd.className = "HistoryList";
+    cd.staticFunctions = history_functions;
+    cd.staticValues = history_values;
+    cd.parentClass = s_gobject_class;
+    s_history_class = JSClassCreate(&cd);
 
     s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
 
@@ -2954,6 +3004,7 @@ scripts_end()
         JSClassRelease(s_frame_class);
         JSClassRelease(s_download_class);
         JSClassRelease(s_message_class);
+        JSClassRelease(s_history_class);
         JSGlobalContextRelease(s_global_context);
         s_global_context = NULL;
     }
