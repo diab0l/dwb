@@ -30,4 +30,5 @@ GSList * domain_get_cookie_domains(WebKitWebView *wv);
 gboolean domain_match(char **, const char *, const char *);
 const char * domain_get_base_for_host(const char *host);
 const char * domain_get_tld(const char *domain);
+gboolean domain_is_tld(const char *domain);
 #endif

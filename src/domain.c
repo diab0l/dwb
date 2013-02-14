@@ -139,11 +139,18 @@ count_char(const char *str, char ch)
     return count;
 }
 
-const char *
+gboolean
+domain_is_tld(const char *host)
+{
+    g_return_val_if_fail(host != NULL, false);
+
+    return g_hash_table_lookup(s_tld_table, host) != NULL;
+}
+
+const char * 
 domain_get_tld(const char *host)
 {
-    if (host == NULL)
-        return NULL;
+    g_return_val_if_fail(host != NULL, NULL);
     g_return_val_if_fail(s_tld_table != NULL, NULL);
 
     const char *cur_domain = host;
@@ -157,8 +164,7 @@ domain_get_tld(const char *host)
      * - cannot start with .
      * - must only contain A-Za-z0-9.-_
      */
-    if (nextdot == cur_domain ||
-        strspn(cur_domain, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if (*cur_domain == '.' || strspn(cur_domain, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                     "abcdefghijklmnopqrustuvwxyz"
                     "0123456789._-") != strlen(cur_domain)) {
         return NULL;
@@ -187,7 +193,7 @@ domain_get_tld(const char *host)
             }
             else if(strcmp(entry, prev_domain) == 0)
                 break;
-            else if(strcmp(entry, prev_domain) != 0)
+            else 
             {
                 ret = prev_domain;
                 break;
