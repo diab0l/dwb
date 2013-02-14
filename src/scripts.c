@@ -1903,6 +1903,18 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
 }/*}}}*/
 /*}}}*/
 
+static JSObjectRef 
+hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    GObject *wv = G_OBJECT(webkit_web_view_new());
+    return make_object_for_class(ctx, s_webview_class, G_OBJECT(wv), false);
+}
+static void 
+hwv_finalize(JSObjectRef o)
+{
+    g_object_unref(G_OBJECT(JSObjectGetPrivate(o)));
+}
+
 /* DOWNLOAD {{{*/
 /* download_constructor_cb {{{*/
 static JSObjectRef 
@@ -2687,7 +2699,16 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_webview_class = JSClassCreate(&cd);
 
+
     s_constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(s_global_context, "WebKitWebView", s_webview_class, NULL, NULL);
+
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "HiddenWebView";
+    cd.staticFunctions = wv_functions;
+    cd.finalize = hwv_finalize;
+    cd.parentClass = s_gobject_class;
+
+    s_constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(s_global_context, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
 
 
     /* Frame */
@@ -2701,6 +2722,7 @@ create_global_object()
         { 0, 0, 0, 0 }, 
     };
 
+    cd = kJSClassDefinitionEmpty;
     cd.className = "WebKitWebFrame";
     cd.staticFunctions = frame_functions;
     cd.staticValues = frame_values;
