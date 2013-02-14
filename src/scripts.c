@@ -110,6 +110,7 @@ enum {
     CONSTRUCTOR_FRAME,
     CONSTRUCTOR_SOUP_MESSAGE,
     CONSTRUCTOR_DEFERRED,
+    CONSTRUCTOR_HIDDEN_WEB_VIEW,
     CONSTRUCTOR_LAST,
 };
 
@@ -1907,7 +1908,7 @@ static JSObjectRef
 hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
     GObject *wv = G_OBJECT(webkit_web_view_new());
-    return make_object_for_class(ctx, s_webview_class, G_OBJECT(wv), false);
+    return make_object_for_class(ctx, s_webview_class, wv, false);
 }
 static void 
 hwv_finalize(JSObjectRef o)
@@ -2708,7 +2709,7 @@ create_global_object()
     cd.finalize = hwv_finalize;
     cd.parentClass = s_gobject_class;
 
-    s_constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(s_global_context, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(s_global_context, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
 
 
     /* Frame */
