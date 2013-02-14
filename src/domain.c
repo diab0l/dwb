@@ -139,14 +139,6 @@ count_char(const char *str, char ch)
     return count;
 }
 
-gboolean
-domain_is_tld(const char *host)
-{
-    g_return_val_if_fail(host != NULL, false);
-
-    return g_hash_table_lookup(s_tld_table, host) != NULL;
-}
-
 const char * 
 domain_get_tld(const char *host)
 {

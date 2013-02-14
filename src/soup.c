@@ -287,7 +287,7 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new,
             if (*base == '.')
                 base++;
 
-            if (domain_is_tld(base)) 
+            if (domain_get_tld(base) == NULL) 
             {
                 fprintf(stderr, "Site tried to set super-cookie @ TLD %s (base %s)\n", new->domain, base);
                 return;
