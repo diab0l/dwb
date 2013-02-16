@@ -228,16 +228,21 @@ callback_data_new(GObject *gobject, JSObjectRef object, JSObjectRef callback, St
 {
     CallbackData *c = g_malloc(sizeof(CallbackData));
     c->gobject = gobject != NULL ? g_object_ref(gobject) : NULL;
-    if (object != NULL) 
+    pthread_mutex_lock(&s_context_mutex); 
+    if (s_global_context) 
     {
-        JSValueProtect(s_global_context, object);
-        c->object = object;
+        if (object != NULL) 
+        {
+            JSValueProtect(s_global_context, object);
+            c->object = object;
+        }
+        if (object != NULL) 
+        {
+            JSValueProtect(s_global_context, callback);
+            c->callback = callback;
+        }
     }
-    if (object != NULL) 
-    {
-        JSValueProtect(s_global_context, callback);
-        c->callback = callback;
-    }
+    pthread_mutex_unlock(&s_context_mutex);
     c->notify = notify;
     return c;
 }/*}}}*/
@@ -250,11 +255,16 @@ callback_data_free(CallbackData *c)
     {
         if (c->gobject != NULL) 
             g_object_unref(c->gobject);
-        if (c->object != NULL) 
+        pthread_mutex_lock(&s_context_mutex);
+        if (s_global_context)
+        {
+            if (c->object != NULL) 
+                JSValueUnprotect(s_global_context, c->object);
             JSValueUnprotect(s_global_context, c->object);
-        JSValueUnprotect(s_global_context, c->object);
-        if (c->object != NULL) 
-            JSValueUnprotect(s_global_context, c->callback);
+            if (c->object != NULL) 
+                JSValueUnprotect(s_global_context, c->callback);
+        }
+        pthread_mutex_unlock(&s_context_mutex);
         g_free(c);
     }
 }/*}}}*/
@@ -264,10 +274,15 @@ ssignal_free(SSignal *sig)
 {
     if (sig != NULL) 
     {
-        if (sig->func)
-            JSValueUnprotect(s_global_context, sig->func);
-        if (sig->object)
-            JSValueUnprotect(s_global_context, sig->object);
+        pthread_mutex_lock(&s_context_mutex);
+        if (s_global_context) 
+        {
+            if (sig->func)
+                JSValueUnprotect(s_global_context, sig->func);
+            if (sig->object)
+                JSValueUnprotect(s_global_context, sig->object);
+        }
+        pthread_mutex_unlock(&s_context_mutex);
         g_free(sig->query);
         g_free(sig);
     }
@@ -2246,7 +2261,10 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
 }
 static void on_disconnect_notify(JSObjectRef func, GClosure *closure)
 {
-    JSValueUnprotect(s_global_context, func);
+    pthread_mutex_lock(&s_context_mutex);
+    if (s_global_context)
+        JSValueUnprotect(s_global_context, func);
+    pthread_mutex_unlock(&s_context_mutex);
 }
 static void
 notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
