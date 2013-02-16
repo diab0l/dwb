@@ -113,4 +113,14 @@
             }
         });
     }
+    if (! RegExp.escape)
+    {
+        Object.defineProperty(RegExp, "escape", 
+        {
+            value : function(string)
+            {
+                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            }
+        });
+    }
 })();
