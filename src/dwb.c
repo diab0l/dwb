@@ -664,12 +664,37 @@ dwb_set_error_message(GList *gl, const char *error, ...)
     gtk_widget_hide(dwb.gui.entry);
 }/*}}}*/
 
-void 
-dwb_update_uri(GList *gl) 
+static gboolean
+dwb_emit_status_signal(GList *gl) 
 {
-    if (EMIT_SCRIPT(STATUS_BAR))
-        return;
+    gboolean ret = false;
+    View *v = VIEW(gl);
+    if (EMIT_SCRIPT(STATUS_BAR)) 
+    {
+        gboolean back = webkit_web_view_can_go_back(WEBKIT_WEB_VIEW(v->web));
+        gboolean forward = webkit_web_view_can_go_forward(WEBKIT_WEB_VIEW(v->web));
+        char *json = util_create_json(5, 
+                CHAR, "ssl", v->status->ssl == SSL_TRUSTED 
+                ? "trusted" : v->status->ssl == SSL_UNTRUSTED 
+                ? "untrusted" : "none",
+                BOOLEAN, "canGoBack", back,
+                BOOLEAN, "canGoForward", forward, 
+                BOOLEAN, "scriptsBlocked", (v->status->scripts & SCRIPTS_BLOCKED) != 0, 
+                BOOLEAN, "pluginBlocked", (v->plugins->status & PLUGIN_STATUS_ENABLED) != 0 && 
+                (v->plugins->status & PLUGIN_STATUS_HAS_PLUGIN) != 0);
+        ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(json, STATUS_BAR, 0) };
+        ret = scripts_emit(&signal);
+        g_free(json);
+    }
+    return ret;
+}
+void 
+dwb_update_uri(GList *gl, gboolean emit_signal) 
+{
     if (gl != dwb.state.fview)
+        return;
+
+    if (dwb_emit_status_signal(gl))
         return;
 
     View *v = VIEW(gl);
@@ -696,30 +721,20 @@ void
 dwb_update_status_text(GList *gl, GtkAdjustment *a) 
 {
     g_return_if_fail(gl == dwb.state.fview);
+
+    if (dwb_emit_status_signal(gl))
+        return;
+
     View *v = gl->data;
 
     gboolean back = webkit_web_view_can_go_back(WEBKIT_WEB_VIEW(v->web));
     gboolean forward = webkit_web_view_can_go_forward(WEBKIT_WEB_VIEW(v->web));
 
-    if (EMIT_SCRIPT(STATUS_BAR)) 
-    {
-        char *json = util_create_json(5, 
-                CHAR, "ssl", v->status->ssl == SSL_TRUSTED 
-                ? "trusted" : v->status->ssl == SSL_UNTRUSTED 
-                ? "untrusted" : "none",
-                BOOLEAN, "canGoBack", back,
-                BOOLEAN, "canGoForward", forward, 
-                BOOLEAN, "scriptsBlocked", (v->status->scripts & SCRIPTS_BLOCKED) != 0, 
-                BOOLEAN, "pluginBlocked", (v->plugins->status & PLUGIN_STATUS_ENABLED) != 0 && 
-                (v->plugins->status & PLUGIN_STATUS_HAS_PLUGIN) != 0);
-        ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(json, STATUS_BAR, 0) };
-        SCRIPTS_EMIT(signal, json);
-    }
 
     if (!a) 
         a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(v->scroll));
 
-    dwb_update_uri(gl);
+    dwb_update_uri(gl, false);
     GString *string = g_string_new(NULL);
 
     const char *bof = back && forward ? " [+-]" : back ? " [+]" : forward  ? " [-]" : " ";

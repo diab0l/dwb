@@ -918,7 +918,7 @@ CompletionType dwb_eval_completion_type(void);
 void dwb_append_navigation_with_argument(GList **, const char *, const char *);
 void dwb_clean_load_end(GList *);
 void dwb_clean_load_begin(GList *);
-void dwb_update_uri(GList *);
+void dwb_update_uri(GList *, gboolean);
 gboolean dwb_get_allowed(const char *, const char *);
 gboolean dwb_toggle_allowed(const char *, const char *, GList **);
 char * dwb_get_host(WebKitWebView *);

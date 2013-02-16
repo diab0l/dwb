@@ -420,7 +420,7 @@ view_hovering_over_link_cb(WebKitWebView *web, char *title, char *uri, GList *gl
     {
         g_free(VIEW(gl)->status->hover_uri);
         VIEW(gl)->status->hover_uri = NULL;
-        dwb_update_uri(gl);
+        dwb_update_uri(gl, true);
         if (! (dwb.state.bar_visible & BAR_VIS_STATUS)) 
             dom_remove_from_parent(WEBKIT_DOM_NODE(VIEW(gl)->hover.element), NULL);
     }
@@ -680,7 +680,7 @@ view_title_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 static void 
 view_uri_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl) 
 {
-    dwb_update_uri(gl);
+    dwb_update_uri(gl, true);
 }/*}}}*/
 
 /* view_progress_cb {{{*/
@@ -1350,7 +1350,7 @@ view_ssl_state(GList *gl)
         }
     }
     v->status->ssl = ssl;
-    dwb_update_uri(gl);
+    dwb_update_uri(gl, true);
 }/*}}}*/
 
 
