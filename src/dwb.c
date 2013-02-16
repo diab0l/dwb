@@ -665,7 +665,7 @@ dwb_set_error_message(GList *gl, const char *error, ...)
 }/*}}}*/
 
 static gboolean
-dwb_emit_status_signal(GList *gl) 
+dwb_emit_status_signal(GList *gl, const char *type) 
 {
     gboolean ret = false;
     View *v = VIEW(gl);
@@ -673,12 +673,18 @@ dwb_emit_status_signal(GList *gl)
     {
         gboolean back = webkit_web_view_can_go_back(WEBKIT_WEB_VIEW(v->web));
         gboolean forward = webkit_web_view_can_go_forward(WEBKIT_WEB_VIEW(v->web));
-        char *json = util_create_json(5, 
+        const char *uri = webkit_web_view_get_uri(WEBVIEW(gl));
+        gboolean has_quickmark = g_list_find_custom(dwb.fc.quickmarks, uri, (GCompareFunc)util_quickmark_compare_uri) != NULL;
+        gboolean has_bookmark = g_list_find_custom(dwb.fc.bookmarks, uri, (GCompareFunc)util_navigation_compare_uri) != NULL;
+        char *json = util_create_json(8, 
                 CHAR, "ssl", v->status->ssl == SSL_TRUSTED 
                 ? "trusted" : v->status->ssl == SSL_UNTRUSTED 
                 ? "untrusted" : "none",
                 BOOLEAN, "canGoBack", back,
                 BOOLEAN, "canGoForward", forward, 
+                BOOLEAN, "isBookmarked", has_bookmark, 
+                BOOLEAN, "isQuickmarked", has_quickmark, 
+                CHAR, "type", type, 
                 BOOLEAN, "scriptsBlocked", (v->status->scripts & SCRIPTS_BLOCKED) != 0, 
                 BOOLEAN, "pluginBlocked", (v->plugins->status & PLUGIN_STATUS_ENABLED) != 0 && 
                 (v->plugins->status & PLUGIN_STATUS_HAS_PLUGIN) != 0);
@@ -694,7 +700,7 @@ dwb_update_uri(GList *gl, gboolean emit_signal)
     if (gl != dwb.state.fview)
         return;
 
-    if (dwb_emit_status_signal(gl))
+    if (emit_signal && dwb_emit_status_signal(gl, "uri"))
         return;
 
     View *v = VIEW(gl);
@@ -722,7 +728,7 @@ dwb_update_status_text(GList *gl, GtkAdjustment *a)
 {
     g_return_if_fail(gl == dwb.state.fview);
 
-    if (dwb_emit_status_signal(gl))
+    if (dwb_emit_status_signal(gl, "status"))
         return;
 
     View *v = gl->data;

@@ -1429,11 +1429,16 @@ Emitted before the status bar is updated, if the callback returns true dwb will
 not update the statusbar so it is possible to set the statusbar from the script.
 
 _webview_;; The focused webview
-_data.ssl_;; SSL-State of the page, can either be 'trusted', 'untrusted' or 'none'
 _data.canGoBack_;; Whether it is possible to navigate back in the webview
 _data.canGoForward_;; Whether it is possible to navigate forward in the webview
-_data.scriptsBlocked_;; Whether scripts are blocked
+_data.isBookmarked_;; Whether the site is bookmarked
+_data.isQuickmarked_;; Whether the site is quickmarked
 _data.pluginsBlocked_;; Whether plugins are blocked
+_data.scriptsBlocked_;; Whether scripts are blocked
+_data.ssl_;; SSL-State of the page, can either be 'trusted', 'untrusted' or 'none'
+_data.type_;; The type of the update, can be *status* and *uri*, status means
+that statusLabel und uriLabel need to be updated, uri means that only the
+uriLabel needs to be updated.
 ****
 
 ==== tabButtonPress 
