@@ -415,7 +415,7 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     if (argc == 0) 
         return JSValueMakeBoolean(ctx, false);
 
-    WebKitWebView *wv = JSObjectGetPrivate(this);
+    WebKitWebView *wv;
     if (wv != NULL) 
     {
         char *uri = js_value_to_char(ctx, argv[0], -1, exc);
@@ -434,7 +434,7 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
 static JSValueRef 
 wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    WebKitWebView *wv = JSObjectGetPrivate(this);
+    WebKitWebView *wv;
     if (wv != NULL)
         webkit_web_view_stop_loading(wv);
     return UNDEFINED;
@@ -672,6 +672,8 @@ static JSValueRef
 wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     WebKitWebView *wv = JSObjectGetPrivate(object);
+    if (wv == NULL)
+        return NIL;
     return make_object(ctx, G_OBJECT(webkit_web_view_get_back_forward_list(wv)));
 }
 
@@ -1316,6 +1318,9 @@ history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
     if (argc > 0 && !isnan(n = JSValueToNumber(ctx, argv[0], NULL)))
     {
         WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
+
+        g_return_val_if_fail(list != NULL, NIL);
+
         return make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
     }
     return NIL;
@@ -1324,6 +1329,7 @@ static JSValueRef
 history_back_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    g_return_val_if_fail(list != NULL, NIL);
     return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_back_length(list));
 }
 static JSValueRef 
@@ -1944,6 +1950,8 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     if (argc < 2)
         return UNDEFINED;
     GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+
     if (! GTK_IS_BOX(widget))
     {
         js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
@@ -1954,7 +1962,7 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     if (jschild == NULL)
         return UNDEFINED;
     GtkWidget *child = JSObjectGetPrivate(jschild);
-    if (!child || !GTK_IS_WIDGET(child))
+    if (child == NULL || !GTK_IS_WIDGET(child))
         return UNDEFINED;
     double position = JSValueToNumber(ctx, argv[1], exc);
     if (isnan(position))
@@ -1962,6 +1970,7 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     gtk_box_reorder_child(GTK_BOX(widget), child, (int)position);
     return UNDEFINED;
 }
+
 static JSValueRef 
 widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1969,6 +1978,8 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
         return UNDEFINED;
 
     GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+
     if (! GTK_IS_BOX(widget))
     {
         js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
@@ -1979,7 +1990,7 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     if (jschild == NULL)
         return UNDEFINED;
     GtkWidget *child = JSObjectGetPrivate(jschild);
-    if (!child || !GTK_IS_WIDGET(child))
+    if (child == NULL || !GTK_IS_WIDGET(child))
         return UNDEFINED;
 
 
@@ -2001,10 +2012,13 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     g_free(name);
     return UNDEFINED;
 }
+
 static JSValueRef 
 widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+
     if (! GTK_IS_CONTAINER(widget))
     {
         js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
@@ -2014,20 +2028,22 @@ widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     if (jschild == NULL)
         return UNDEFINED;
     GtkWidget *child = JSObjectGetPrivate(jschild);
-    if (!child || !GTK_IS_WIDGET(child))
+    if (child == NULL || !GTK_IS_WIDGET(child))
         return UNDEFINED;
 
     gtk_container_add(GTK_CONTAINER(widget), child);
     return UNDEFINED;
 }
+
 static JSValueRef 
 widget_destroy(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+
     gtk_widget_destroy(widget);
     return UNDEFINED;
 }
-
 
 static JSObjectRef 
 widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
@@ -2120,6 +2136,8 @@ static JSValueRef
 download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     WebKitDownload *download = JSObjectGetPrivate(this);
+    g_return_val_if_fail(download != NULL, UNDEFINED);
+
     webkit_download_cancel(download);
     return UNDEFINED;
 }/*}}}*/
@@ -2543,8 +2561,7 @@ set_property(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueR
     g_free(name);
 
     GObject *o = JSObjectGetPrivate(object);
-    if (o == NULL)
-        return false;
+    g_return_val_if_fail(o != NULL, false);
 
     GObjectClass *class = G_OBJECT_GET_CLASS(o);
     if (class == NULL || !G_IS_OBJECT_CLASS(class))
@@ -2617,8 +2634,7 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
     g_free(name);
 
     GObject *o = JSObjectGetPrivate(jsobj);
-    if (o == NULL)
-        return NULL;
+    g_return_val_if_fail(o != NULL, NULL);
 
     GObjectClass *class = G_OBJECT_GET_CLASS(o);
     if (class == NULL || !G_IS_OBJECT_CLASS(class))
