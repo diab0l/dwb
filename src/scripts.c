@@ -415,7 +415,7 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     if (argc == 0) 
         return JSValueMakeBoolean(ctx, false);
 
-    WebKitWebView *wv;
+    WebKitWebView *wv = JSObjectGetPrivate(this);
     if (wv != NULL) 
     {
         char *uri = js_value_to_char(ctx, argv[0], -1, exc);
@@ -434,7 +434,7 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
 static JSValueRef 
 wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    WebKitWebView *wv;
+    WebKitWebView *wv = JSObjectGetPrivate(this);;
     if (wv != NULL)
         webkit_web_view_stop_loading(wv);
     return UNDEFINED;
