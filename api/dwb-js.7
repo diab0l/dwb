@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 02/16/2013
+.\"      Date: 02/18/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/16/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/18/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -2031,6 +2031,165 @@ The position of the item where 0 corresponds to the current item\&.
 .RS 4
 A WebKitWebHistoryItem\&.
 .RE
+.RE
+.SH "GTK WIDGETS"
+.sp
+It is possible to create new widgets but only widgets that are currently used by dwb can be created, the widgets used by dwb can be found under http://portix\&.bitbucket\&.org/dwb/resources/layout\&.html\&.
+.SS "Constructor"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBnew GtkWindow(String type)\fR
+.RS 4
+.sp
+Constructs a new widget
+.PP
+\fItype\fR
+.RS 4
+The type of the widget, e\&.g\&. "GtkLabel"
+.RE
+.RE
+.SS "Methods"
+.sp
+All created widgets implement the following methods:
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.destroy()\fR
+.RS 4
+.sp
+Destroys a widget\&. Note that only newly created widgets can be destroyed\&.
+.sp
+Widgets that implement the GtkBox interface implement the following methods:
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.packEnd(GtkWidget child, boolean expand, boolean fill, int padding)\fR
+.RS 4
+.sp
+Adds a widget to a GtkBox\&.
+.PP
+\fIchild\fR
+.RS 4
+The child widget
+.RE
+.PP
+\fIexpand\fR
+.RS 4
+Whether to expand the widget
+.RE
+.PP
+\fIfill\fR
+.RS 4
+Whether to fill the remaining space
+.RE
+.PP
+\fIpadding\fR
+.RS 4
+Padding in the box
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.packStart(GtkWidget child, boolean expand, boolean fill, int padding)\fR
+.RS 4
+.sp
+Adds a widget to a GtkBox\&.
+.PP
+\fIchild\fR
+.RS 4
+The child widget
+.RE
+.PP
+\fIexpand\fR
+.RS 4
+Whether to expand the widget
+.RE
+.PP
+\fIfill\fR
+.RS 4
+Whether to fill the remaining space
+.RE
+.PP
+\fIpadding\fR
+.RS 4
+Padding in the box
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.reorderChild(GtkWidget child, int postion)\fR
+.RS 4
+.sp
+Moves a widget to a new position\&.
+.PP
+\fIchild\fR
+.RS 4
+The child widget
+.RE
+.PP
+\fIposition\fR
+.RS 4
+The new position
+.RE
+.sp
+Widgets derived from GtkContainer implement the following methods:
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.containerAdd(GtkWidget child)\fR
+.RS 4
+.sp
+Adds a widget to a GtkContainer\&.
+.PP
+\fIchild\fR
+.RS 4
+The child widget
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBExample\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+var label = new GtkWidget("GtkLabel");
+gui\&.statusBox\&.packStart(label, false, false, 0);
+label\&.label = "foobar";
+label\&.visible = true;
+.fi
+.if n \{\
+.RE
+.\}
 .RE
 .SH "SIGNALS"
 .sp

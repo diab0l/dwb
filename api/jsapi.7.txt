@@ -1033,6 +1033,85 @@ _position_;; The position of the item where 0 corresponds to the current item.
 _returns_;; A WebKitWebHistoryItem.
 ****
 
+== Gtk Widgets ==
+
+It is possible to create new widgets but only widgets that are currently used by
+dwb can be created, the widgets used by dwb can be found under 
+link:http://portix.bitbucket.org/dwb/resources/layout.html[].
+
+=== Constructor === 
+
+==== new GtkWindow(String type)
+****
+
+Constructs a new widget
+
+_type_;; The type of the widget, e.g. "GtkLabel"
+****
+
+=== Methods ===
+
+All created widgets implement the following methods: 
+
+==== void GtkWidget.destroy()
+****
+
+Destroys a widget. Note that only newly created widgets can be destroyed.
+
+****
+
+
+Widgets that implement the GtkBox interface implement the following methods:
+
+==== void GtkWidget.packEnd(GtkWidget child, boolean expand, boolean fill, int padding)
+****
+
+Adds a widget to a GtkBox.
+
+_child_:: The child widget
+_expand_:: Whether to expand the widget
+_fill_:: Whether to fill the remaining space
+_padding_:: Padding in the box
+****
+
+==== void GtkWidget.packStart(GtkWidget child, boolean expand, boolean fill, int padding)
+****
+
+Adds a widget to a GtkBox.
+
+_child_:: The child widget
+_expand_:: Whether to expand the widget
+_fill_:: Whether to fill the remaining space
+_padding_:: Padding in the box
+****
+
+==== void GtkWidget.reorderChild(GtkWidget child, int postion)
+****
+
+Moves a widget to a new position.
+
+_child_:: The child widget
+_position_:: The new position
+****
+
+Widgets derived from GtkContainer implement the following methods:
+
+==== void GtkWidget.containerAdd(GtkWidget child)
+****
+
+Adds a widget to a GtkContainer.
+
+_child_:: The child widget
+****
+
+==== Example 
+
+------
+var label = new GtkWidget("GtkLabel");
+gui.statusBox.packStart(label, false, false, 0);
+label.label = "foobar";
+label.visible = true;
+------
 
 
 == SIGNALS ==

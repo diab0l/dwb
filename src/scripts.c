@@ -109,6 +109,7 @@ enum {
     CONSTRUCTOR_DEFAULT = 0,
     CONSTRUCTOR_WEBVIEW,
     CONSTRUCTOR_DOWNLOAD,
+    CONSTRUCTOR_WIDGET,
     CONSTRUCTOR_FRAME,
     CONSTRUCTOR_SOUP_MESSAGE,
     CONSTRUCTOR_DEFERRED,
@@ -124,7 +125,16 @@ static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
 static JSGlobalContextRef s_global_context;
 static GSList *s_script_list;
-static JSClassRef s_gobject_class, s_webview_class, s_frame_class, s_download_class, s_download_class, s_message_class, s_deferred_class, s_history_class;
+static JSClassRef s_gobject_class, 
+                  s_webview_class, 
+                  s_frame_class, 
+                  s_download_class, 
+                  s_download_class, 
+                  s_widget_class, 
+                  s_secure_widget_class, 
+                  s_message_class, 
+                  s_deferred_class, 
+                  s_history_class;
 static gboolean s_commandline = false;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
@@ -623,7 +633,7 @@ wv_get_tab_widget(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->tabevent), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabevent), true);
 }
 static JSValueRef 
 wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -631,7 +641,7 @@ wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->tabbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabbox), true);
 }
 static JSValueRef 
 wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -639,7 +649,7 @@ wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->tablabel), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tablabel), true);
 }
 static JSValueRef 
 wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -647,7 +657,7 @@ wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVal
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->tabicon), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabicon), true);
 }
 
 static JSValueRef 
@@ -656,7 +666,7 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(VIEW(gl)->scroll), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->scroll), true);
 }
 static JSValueRef 
 wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -1927,10 +1937,117 @@ hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const
     GObject *wv = G_OBJECT(webkit_web_view_new());
     return make_object_for_class(ctx, s_webview_class, wv, false);
 }
-static void 
-hwv_finalize(JSObjectRef o)
+
+static JSValueRef 
+widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    g_object_unref(G_OBJECT(JSObjectGetPrivate(o)));
+    if (argc < 2)
+        return UNDEFINED;
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    if (! GTK_IS_BOX(widget))
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
+        return UNDEFINED;
+    }
+
+    JSObjectRef jschild = JSValueToObject(ctx, argv[0], exc);
+    if (jschild == NULL)
+        return UNDEFINED;
+    GtkWidget *child = JSObjectGetPrivate(jschild);
+    if (!child || !GTK_IS_WIDGET(child))
+        return UNDEFINED;
+    double position = JSValueToNumber(ctx, argv[1], exc);
+    if (isnan(position))
+        return UNDEFINED;
+    gtk_box_reorder_child(GTK_BOX(widget), child, (int)position);
+    return UNDEFINED;
+}
+static JSValueRef 
+widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc <= 2)
+        return UNDEFINED;
+
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    if (! GTK_IS_BOX(widget))
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
+        return UNDEFINED;
+    }
+
+    JSObjectRef jschild = JSValueToObject(ctx, argv[0], exc);
+    if (jschild == NULL)
+        return UNDEFINED;
+    GtkWidget *child = JSObjectGetPrivate(jschild);
+    if (!child || !GTK_IS_WIDGET(child))
+        return UNDEFINED;
+
+
+    gboolean expand = JSValueToBoolean(ctx, argv[1]);
+    gboolean fill = JSValueToBoolean(ctx, argv[2]);
+
+    gdouble padding = 0;
+    if (argc > 3) 
+    {
+        padding = JSValueToNumber(ctx, argv[3], exc);
+        if (isnan(padding))
+            padding = 0;
+    }
+    char *name = js_get_string_property(ctx, function, "name");
+    if (!g_strcmp0(name, "packStart"))
+        gtk_box_pack_start(GTK_BOX(widget), child, expand, fill, (int)padding);
+    else 
+        gtk_box_pack_end(GTK_BOX(widget), child, expand, fill, (int)padding);
+    g_free(name);
+    return UNDEFINED;
+}
+static JSValueRef 
+widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    if (! GTK_IS_CONTAINER(widget))
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
+        return UNDEFINED;
+    }
+    JSObjectRef jschild = JSValueToObject(ctx, argv[0], exc);
+    if (jschild == NULL)
+        return UNDEFINED;
+    GtkWidget *child = JSObjectGetPrivate(jschild);
+    if (!child || !GTK_IS_WIDGET(child))
+        return UNDEFINED;
+
+    gtk_container_add(GTK_CONTAINER(widget), child);
+    return UNDEFINED;
+}
+static JSValueRef 
+widget_destroy(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    gtk_widget_destroy(widget);
+    return UNDEFINED;
+}
+
+
+static JSObjectRef 
+widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    GType type = 0;
+    if (argc > 0)
+    {
+        char *stype = js_value_to_char(ctx, argv[0], 128, exception);
+        if (stype == NULL)
+            return JSValueToObject(ctx, NIL, NULL);
+        type = g_type_from_name(stype);
+        if (type == 0)
+        {
+            js_make_exception(ctx, exception, EXCEPTION("Widget constructor: unknown widget type"));
+            return JSValueToObject(ctx, NIL, NULL);
+        }
+        GtkWidget *widget = gtk_widget_new(type, NULL);
+        return JSObjectMake(ctx, s_widget_class, widget);
+    }
+    return JSValueToObject(ctx, NIL, NULL);
 }
 
 /* DOWNLOAD {{{*/
@@ -2012,57 +2129,57 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
 static JSValueRef
 gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.window), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.window), true);
 }
 static JSValueRef
 gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.vbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.vbox), true);
 }
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.topbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.topbox), true);
 }
 static JSValueRef
 gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.mainbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.mainbox), true);
 }
 static JSValueRef
 gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.statusbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.statusbox), true);
 }
 static JSValueRef
 gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.alignment), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.alignment), true);
 }
 static JSValueRef
 gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.status_hbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.status_hbox), true);
 }
     static JSValueRef
 gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.lstatus), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.lstatus), true);
 }
 static JSValueRef
 gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.entry), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.entry), true);
 }
 static JSValueRef
 gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.urilabel), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.urilabel), true);
 }
 static JSValueRef
 gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_gobject_class, G_OBJECT(dwb.gui.rstatus), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.rstatus), true);
 }
 /*}}}*/
 
@@ -2188,6 +2305,8 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_message_class;
     else if (WEBKIT_IS_WEB_BACK_FORWARD_LIST(o))
         class = s_history_class;
+    else if (GTK_IS_WIDGET(o))
+        class = s_secure_widget_class;
     else 
         class = s_gobject_class;
     return make_object_for_class(ctx, class, o, true);
@@ -2731,7 +2850,6 @@ create_global_object()
     cd = kJSClassDefinitionEmpty;
     cd.className = "HiddenWebView";
     cd.staticFunctions = wv_functions;
-    cd.finalize = hwv_finalize;
     cd.parentClass = s_gobject_class;
 
     s_constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(s_global_context, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
@@ -2801,6 +2919,31 @@ create_global_object()
     s_deferred_class = JSClassCreate(&cd);
     s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(s_global_context, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
 
+    JSStaticFunction secure_widget_functions[] = { 
+        { "packStart",              widget_pack,          kJSDefaultAttributes },
+        { "packEnd",                widget_pack,          kJSDefaultAttributes },
+        { "reorderChild",           widget_reorder_child, kJSDefaultAttributes },
+        { "containerAdd",           widget_container_add, kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "SecureWidget";
+    cd.staticFunctions = secure_widget_functions;
+    cd.parentClass = s_gobject_class;
+    s_secure_widget_class = JSClassCreate(&cd);
+
+    JSStaticFunction widget_functions[] = { 
+        { "destroy",                widget_destroy,       kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "GtkWidget";
+    cd.staticFunctions = widget_functions;
+    cd.parentClass = s_secure_widget_class;
+    s_widget_class = JSClassCreate(&cd);
+    s_constructors[CONSTRUCTOR_WIDGET] = create_constructor(s_global_context, "GtkWidget", s_widget_class, widget_constructor_cb, NULL);
+
+
     JSStaticValue gui_values[] = {
         { "window",           gui_get_window, NULL, kJSDefaultAttributes }, 
         { "mainBox",          gui_get_main_box, NULL, kJSDefaultAttributes }, 
@@ -2836,6 +2979,7 @@ create_global_object()
     s_download_class = JSClassCreate(&cd);
 
     s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(s_global_context, "Download", s_download_class, download_constructor_cb, NULL);
+
     
     s_soup_session = make_object_for_class(s_global_context, s_gobject_class, G_OBJECT(webkit_get_default_session()), false);
     JSValueProtect(s_global_context, s_soup_session);
@@ -3052,6 +3196,8 @@ scripts_end()
         JSClassRelease(s_webview_class);
         JSClassRelease(s_frame_class);
         JSClassRelease(s_download_class);
+        JSClassRelease(s_widget_class);
+        JSClassRelease(s_secure_widget_class);
         JSClassRelease(s_message_class);
         JSClassRelease(s_history_class);
         JSGlobalContextRelease(s_global_context);
