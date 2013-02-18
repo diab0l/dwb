@@ -93,7 +93,8 @@ editor_watch(GPid pid, int status, EditorInfo *info)
         webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(e), content, NULL);
 
 clean:
-    disconnect_navigation(info->gl);
+    if (info->gl)
+        disconnect_navigation(info->gl);
 
     unlink(info->filename);
     g_free(info->filename);

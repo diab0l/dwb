@@ -1084,7 +1084,7 @@ global_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     msg = soup_message_new(method == NULL ? "GET" : method, uri);
     if (msg == NULL)
         goto error_out;
-    if (argc > 3 && !strcasecmp("POST", method)) 
+    if (argc > 3 && method != NULL && !strcasecmp("POST", method)) 
         set_request(ctx, msg, argv[3], exc);
 
     JSValueProtect(ctx, function);

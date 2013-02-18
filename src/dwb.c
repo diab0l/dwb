@@ -478,7 +478,9 @@ static DwbStatus
 dwb_set_scripts(GList *gl, WebSettings *s) 
 {
     dwb_webkit_setting(gl, s);
+    g_return_val_if_fail(gl != NULL, STATUS_ERROR);
     View *v = VIEW(gl);
+    g_return_val_if_fail(v != NULL, STATUS_ERROR);
     if (s->arg_local.b) 
         v->status->scripts = SCRIPTS_ALLOWED;
     else 
@@ -1462,7 +1464,7 @@ dwb_toggle_allowed(const char *filename, const char *data, GList **pers)
     char *content = util_get_file_content(filename, NULL);
     char **lines = NULL;
     gboolean allowed = false;
-    GString *buffer = g_string_new(NULL);
+    GString *buffer;
 
     if (content != NULL) 
     {
@@ -1903,7 +1905,7 @@ dwb_evaluate_hints(const char *buffer)
 gboolean
 dwb_update_hints(GdkEventKey *e) 
 {
-    char *buffer;
+    char *buffer = NULL;
     char *com = NULL;
     char *val;
     gboolean ret = false;
@@ -4253,7 +4255,7 @@ dwb_init_files()
     dwb.fc.pers_scripts = dwb_get_simple_list(NULL, dwb.files[FILES_SCRIPTS_ALLOW]);
     dwb.fc.pers_plugins = dwb_get_simple_list(NULL, dwb.files[FILES_PLUGINS_ALLOW]);
 
-    if (g_list_last(dwb.fc.searchengines)) 
+    if (g_list_last(dwb.fc.searchengines) && dwb.fc.searchengines->data) 
         dwb.misc.default_search = ((Navigation*)dwb.fc.searchengines->data)->second;
     else 
         dwb.misc.default_search = NULL;

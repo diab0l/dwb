@@ -236,7 +236,7 @@ dwb_soup_test_cookie_allowed(GList *list, SoupCookie *cookie)
 DwbStatus 
 dwb_soup_set_cookie_accept_policy(const char *policy) 
 {
-    SoupCookieJarAcceptPolicy apo = 37;
+    int apo = 37;
     DwbStatus ret = STATUS_OK;
     if (policy == NULL || ! g_ascii_strcasecmp(policy, "always")) 
         apo = SOUP_COOKIE_JAR_ACCEPT_ALWAYS;

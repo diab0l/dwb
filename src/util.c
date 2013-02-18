@@ -147,6 +147,7 @@ util_char_to_arg(char *value, DwbType type) {
         if (type == CHAR) {
           return ret;
         }
+        g_free(ret);
         return NULL;
       }
     }
