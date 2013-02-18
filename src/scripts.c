@@ -2939,7 +2939,7 @@ create_global_object()
         { "packStart",              widget_pack,          kJSDefaultAttributes },
         { "packEnd",                widget_pack,          kJSDefaultAttributes },
         { "reorderChild",           widget_reorder_child, kJSDefaultAttributes },
-        { "containerAdd",           widget_container_add, kJSDefaultAttributes },
+        { "add",           widget_container_add, kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     cd = kJSClassDefinitionEmpty;

@@ -1096,7 +1096,7 @@ _position_:: The new position
 
 Widgets derived from GtkContainer implement the following methods:
 
-==== void GtkWidget.containerAdd(GtkWidget child)
+==== void GtkWidget.add(GtkWidget child)
 ****
 
 Adds a widget to a GtkContainer.
