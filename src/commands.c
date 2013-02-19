@@ -471,6 +471,8 @@ commands_entry_history_forward(KeyMap *km, Arg *a)
 {
     if (dwb.state.mode == COMMAND_MODE) 
         return entry_history_forward(&dwb.state.last_com_history);
+    else if (dwb.state.mode == FIND_MODE)
+        return entry_history_forward(&dwb.state.last_find_history);
     else 
         return entry_history_forward(&dwb.state.last_nav_history);
 }/*}}}*/
@@ -481,6 +483,8 @@ commands_entry_history_back(KeyMap *km, Arg *a)
 {
     if (dwb.state.mode == COMMAND_MODE) 
         return entry_history_back(&dwb.fc.commands, &dwb.state.last_com_history);
+    else if (dwb.state.mode == FIND_MODE)
+        return entry_history_back(&dwb.fc.searches, &dwb.state.last_find_history);
     else 
         return entry_history_back(&dwb.fc.navigations, &dwb.state.last_nav_history);
 }/*}}}*/

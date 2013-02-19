@@ -84,6 +84,7 @@ entry_focus() {
   gtk_editable_delete_text(GTK_EDITABLE(dwb.gui.entry), 0, -1);
   dwb.state.last_com_history = NULL;
   dwb.state.last_nav_history = NULL;
+  dwb.state.last_find_history = NULL;
 }/*}}}*/
 
 /* entry_insert_text(const char *) {{{*/

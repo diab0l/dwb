@@ -3248,20 +3248,11 @@ scripts_execute_one(const char *script)
 void
 scripts_unbind(JSObjectRef obj) 
 {
+    pthread_mutex_lock(&s_context_mutex);
     if (obj != NULL) 
         JSValueUnprotect(s_global_context, obj);
+    pthread_mutex_unlock(&s_context_mutex);
 }
-//void
-//scripts_reinit()
-//{
-//    if (s_global_context || s_opt_force) 
-//    {
-//        scripts_init(s_opt_force);
-//        apply_scripts();
-//        for (GList *gl = dwb.state.views; gl; gl=gl->next) 
-//            VIEW(gl)->script_wv = make_object(s_global_context, G_OBJECT(VIEW(gl)->web));
-//    }
-//}
 
 /* scripts_end {{{*/
 void

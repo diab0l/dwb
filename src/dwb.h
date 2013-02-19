@@ -593,6 +593,7 @@ struct _State {
 
   GList *last_com_history;
   GList *last_nav_history;
+  GList *last_find_history;
 
   GList *undo_list;
 
@@ -791,6 +792,7 @@ enum Files {
   FILES_BOOKMARKS = 0,
   FILES_NAVIGATION_HISTORY,
   FILES_COMMAND_HISTORY,
+  FILES_SEARCH_HISTORY,
   FILES_COOKIES,
   FILES_COOKIES_ALLOW,
   FILES_COOKIES_SESSION_ALLOW,
@@ -834,6 +836,7 @@ struct _FileContent {
   GList *pers_scripts; 
   GList *pers_plugins; 
   GList *downloads;
+  GList *searches;
 };
 
 struct _Dwb {

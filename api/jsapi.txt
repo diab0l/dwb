@@ -2230,7 +2230,7 @@ Widgets derived from GtkContainer implement the following methods:
 
 [source,javascript]
 ----
-void GtkWidget.containerAdd(GtkWidget child)
+void GtkWidget.add(GtkWidget child)
 ----
 
 Adds a widget to a GtkContainer.
