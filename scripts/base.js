@@ -288,14 +288,17 @@ Object.freeze((function () {
             globals.active.hint.parentNode.appendChild(globals.active.overlay);
 
         var e = element.element;
-        if (e.href || e.src) 
-            globals.notify.innerText = encodeURI(e.href || e.ret);
-        else if (e.name) 
-            globals.notify.innerText = e.tagName.toLowerCase() + ", name=" + e.name;
-        else if (e.innerText && e.innerText.trim().length > 0) 
-            globals.notify.innerText = e.tagName.toLowerCase() + ": " + e.innerText.replace("\n\r", "").trim();
-        else 
-            globals.notify.innerText = e.tagName.toLowerCase();
+        if (globals.notify) 
+        {
+            if (e.href || e.src) 
+                globals.notify.innerText = encodeURI(e.href || e.ret);
+            else if (e.name) 
+                globals.notify.innerText = e.tagName.toLowerCase() + ", name=" + e.name;
+            else if (e.innerText && e.innerText.trim().length > 0) 
+                globals.notify.innerText = e.tagName.toLowerCase() + ": " + e.innerText.replace("\n\r", "").trim();
+            else 
+                globals.notify.innerText = e.tagName.toLowerCase();
+        }
 
         globals.active.overlay.style.background = globals.activeColor;
         globals.active.hint.style.fontSize = globals.bigFont;
