@@ -70,3 +70,7 @@ const Modes = {
   InsertMode  : 1<<1,
   CommandMode : 1<<2
 };
+const Selection = {
+    primary : 1, 
+    clipboard : 2
+};

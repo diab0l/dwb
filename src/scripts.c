@@ -73,7 +73,6 @@ typedef struct DeferredPriv_s
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
-
 static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_NAVIGATION, "navigation" },
     { SCRIPTS_SIG_LOAD_STATUS, "loadStatus" },
@@ -115,6 +114,10 @@ enum {
     CONSTRUCTOR_DEFERRED,
     CONSTRUCTOR_HIDDEN_WEB_VIEW,
     CONSTRUCTOR_LAST,
+};
+enum {
+    SELECTION_PRIMARY = 1,
+    SELECTION_CLIPBOARD = 2
 };
 
 static void callback(CallbackData *c);
@@ -230,6 +233,117 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     return ret;
 }/*}}}*/
 /*}}}*/
+
+/* Deferred {{{*/
+void 
+deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
+{
+    g_return_if_fail(this != NULL);
+
+    if (priv == NULL)
+        priv = JSObjectGetPrivate(this);
+    JSObjectSetPrivate(this, NULL);
+
+    g_free(priv);
+
+    JSValueUnprotect(ctx, this);
+}
+
+static JSObjectRef
+deferred_new(JSContextRef ctx) 
+{
+    DeferredPriv *priv = g_malloc(sizeof(DeferredPriv));
+    priv->resolve = priv->reject = priv->next = NULL;
+
+    JSObjectRef ret = JSObjectMake(ctx, s_deferred_class, priv);
+    JSValueProtect(ctx, ret);
+
+    return ret;
+}
+static JSValueRef 
+deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL) 
+        return NIL;
+
+    if (argc > 0)
+        priv->resolve = js_value_to_function(ctx, argv[0], NULL);
+    if (argc > 1) 
+        priv->reject = js_value_to_function(ctx, argv[1], NULL);
+
+    priv->next = deferred_new(ctx);
+
+    return priv->next;
+}
+static DeferredPriv * 
+deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
+{
+    DeferredPriv *opriv = JSObjectGetPrivate(old);
+    DeferredPriv *npriv = JSObjectGetPrivate(new);
+
+    npriv->resolve = opriv->resolve;
+    npriv->reject = opriv->reject;
+    npriv->next = opriv->next;
+
+    deferred_destroy(ctx, old, opriv);
+    return npriv;
+}
+static JSValueRef 
+deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NULL;
+
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL)
+        return UNDEFINED;
+
+    if (priv->resolve) 
+        ret = JSObjectCallAsFunction(ctx, priv->resolve, NULL, argc, argv, exc);
+
+    JSObjectRef next = priv->next;
+    deferred_destroy(ctx, this, priv);
+
+    if (next) 
+    {
+        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
+        {
+            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
+            deferred_transition(ctx, next, o)->reject = NULL;
+        }
+        else 
+            deferred_resolve(ctx, f, next, argc, argv, exc);
+    }
+    return UNDEFINED;
+}
+static JSValueRef 
+deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NULL;
+
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv == NULL)
+        return UNDEFINED;
+
+    if (priv->reject) 
+        ret = JSObjectCallAsFunction(ctx, priv->reject, NULL, argc, argv, exc);
+
+    JSObjectRef next = priv->next;
+    deferred_destroy(ctx, this, priv);
+
+    if (next) 
+    {
+        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
+        {
+            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
+            deferred_transition(ctx, next, o)->resolve = NULL;
+        }
+        else 
+            deferred_reject(ctx, f, next, argc, argv, exc);
+    }
+    return UNDEFINED;
+}/*}}}*/
+
 
 /* CALLBACK {{{*/
 /* callback_data_new {{{*/
@@ -1310,6 +1424,63 @@ util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
 }
+static GdkAtom 
+atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
+{
+    double type = JSValueToNumber(ctx, val, exc);
+    if (isnan(type))
+        return NULL;
+    int itype = (int) type;
+    if (itype == SELECTION_PRIMARY)
+        return GDK_SELECTION_PRIMARY;
+    else if (itype == SELECTION_CLIPBOARD)
+        return GDK_NONE;
+    else
+        return NULL;
+}
+static JSValueRef 
+clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 2)
+        return UNDEFINED;
+    GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
+    if (atom == NULL)
+        return UNDEFINED;
+    char *text = js_value_to_char(ctx, argv[1], -1, exc);
+    if (text != NULL)
+    {
+        GtkClipboard *cb = gtk_clipboard_get(atom);
+        gtk_clipboard_set_text(cb, text, -1);
+        g_free(text);
+    }
+    return UNDEFINED;
+}
+static void
+got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
+{
+    pthread_mutex_lock(&s_context_mutex);
+    JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
+    JSObjectCallAsFunction(s_global_context, callback, NULL, 1, args, NULL);
+    JSValueUnprotect(s_global_context, callback);
+    pthread_mutex_unlock(&s_context_mutex);
+}
+static JSValueRef 
+clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 2)
+        return UNDEFINED;
+    GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
+    if (atom == NULL)
+        return UNDEFINED;
+    JSObjectRef callback = js_value_to_function(ctx, argv[1], exc);
+    if (callback != NULL)
+    {
+        JSValueProtect(ctx, callback);
+        GtkClipboard *clipboard = gtk_clipboard_get(atom);
+        gtk_clipboard_request_text(clipboard, (GtkClipboardTextReceivedFunc)got_clipboard, callback);
+    }
+    return UNDEFINED;
+}
 
 static JSValueRef 
 history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1337,115 +1508,6 @@ history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 {
     WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
     return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_forward_length(list));
-}
-
-void 
-deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
-{
-    g_return_if_fail(this != NULL);
-
-    if (priv == NULL)
-        priv = JSObjectGetPrivate(this);
-    JSObjectSetPrivate(this, NULL);
-
-    g_free(priv);
-
-    JSValueUnprotect(ctx, this);
-}
-
-static JSObjectRef
-deferred_new(JSContextRef ctx) 
-{
-    DeferredPriv *priv = g_malloc(sizeof(DeferredPriv));
-    priv->resolve = priv->reject = priv->next = NULL;
-
-    JSObjectRef ret = JSObjectMake(ctx, s_deferred_class, priv);
-    JSValueProtect(ctx, ret);
-
-    return ret;
-}
-static JSValueRef 
-deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL) 
-        return NIL;
-
-    if (argc > 0)
-        priv->resolve = js_value_to_function(ctx, argv[0], NULL);
-    if (argc > 1) 
-        priv->reject = js_value_to_function(ctx, argv[1], NULL);
-
-    priv->next = deferred_new(ctx);
-
-    return priv->next;
-}
-static DeferredPriv * 
-deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
-{
-    DeferredPriv *opriv = JSObjectGetPrivate(old);
-    DeferredPriv *npriv = JSObjectGetPrivate(new);
-
-    npriv->resolve = opriv->resolve;
-    npriv->reject = opriv->reject;
-    npriv->next = opriv->next;
-
-    deferred_destroy(ctx, old, opriv);
-    return npriv;
-}
-static JSValueRef 
-deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NULL;
-
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL)
-        return UNDEFINED;
-
-    if (priv->resolve) 
-        ret = JSObjectCallAsFunction(ctx, priv->resolve, NULL, argc, argv, exc);
-
-    JSObjectRef next = priv->next;
-    deferred_destroy(ctx, this, priv);
-
-    if (next) 
-    {
-        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
-        {
-            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
-            deferred_transition(ctx, next, o)->reject = NULL;
-        }
-        else 
-            deferred_resolve(ctx, f, next, argc, argv, exc);
-    }
-    return UNDEFINED;
-}
-static JSValueRef 
-deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NULL;
-
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL)
-        return UNDEFINED;
-
-    if (priv->reject) 
-        ret = JSObjectCallAsFunction(ctx, priv->reject, NULL, argc, argv, exc);
-
-    JSObjectRef next = priv->next;
-    deferred_destroy(ctx, this, priv);
-
-    if (next) 
-    {
-        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_deferred_class) ) 
-        {
-            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
-            deferred_transition(ctx, next, o)->resolve = NULL;
-        }
-        else 
-            deferred_reject(ctx, f, next, argc, argv, exc);
-    }
-    return UNDEFINED;
 }
 
 /* DATA {{{*/
@@ -1592,6 +1654,7 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
     else if (WIFSTOPPED(status)) 
         fail = WSTOPSIG(status);
 
+    pthread_mutex_lock(&s_context_mutex);
     if (fail == 0)
         deferred_resolve(s_global_context, NULL, deferred, 0, NULL, NULL);
     else 
@@ -1599,6 +1662,7 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
         JSValueRef args[] = { JSValueMakeNumber(s_global_context, fail)  };
         deferred_reject(s_global_context, NULL, deferred, 1, args, NULL);
     }
+    pthread_mutex_unlock(&s_context_mutex);
 }
 
 /* system_spawn {{{*/
@@ -2809,6 +2873,15 @@ create_global_object()
     };
     class = create_class("util", util_functions, NULL);
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "util", NULL);
+    JSClassRelease(class);
+
+    JSStaticFunction clipboard_functions[] = { 
+        { "get",     clipboard_get,         kJSDefaultAttributes },
+        { "set",     clipboard_set,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    class = create_class("clipboard", clipboard_functions, NULL);
+    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
     JSClassRelease(class);
 
     /* Default gobject class */

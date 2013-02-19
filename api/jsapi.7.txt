@@ -496,6 +496,27 @@ _object_;; The object to search for
 _returns_;; The index in the array or -1 if the Object wasn't found.
 ****
 
+=== clipboard ===
+
+==== void clipboard.get(Selection selection, Function callback)
+****
+
+Gets the X11 clipboard asynchronously.
+
+_selection_;; The Selection to get
+_callback_;; Callback that will be called when the clipboard content was
+received, the first parameter will be the content of the clipboard
+****
+
+==== void clipboard.set(Selection selection, String text)
+****
+
+Sets the X11 clipboard.
+
+_selection_;; The Selection to set
+_text_;; Text that will be stored in the clipboard.
+****
+
 === gui === 
 
 Most gtk-widgets can be accessed from scripts, an overview of the layout can be
@@ -1690,6 +1711,18 @@ const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2
+};
+--------
+****
+
+=== Selection
+
+****
+[source,javascript]
+--------
+const Selection = {
+  primary   : 1,
+  clipboard : 2
 };
 --------
 ****

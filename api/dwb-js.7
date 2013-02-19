@@ -1078,6 +1078,49 @@ The object to search for
 The index in the array or \-1 if the Object wasn\(cqt found\&.
 .RE
 .RE
+.SS "clipboard"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid clipboard.get(Selection selection, Function callback)\fR
+.RS 4
+.sp
+Gets the X11 clipboard asynchronously\&.
+.PP
+\fIselection\fR
+.RS 4
+The Selection to get
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback that will be called when the clipboard content was received, the first parameter will be the content of the clipboard
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid clipboard.set(Selection selection, String text)\fR
+.RS 4
+.sp
+Sets the X11 clipboard\&.
+.PP
+\fIselection\fR
+.RS 4
+The Selection to set
+.RE
+.PP
+\fItext\fR
+.RS 4
+Text that will be stored in the clipboard\&.
+.RE
+.RE
 .SS "gui"
 .sp
 Most gtk\-widgets can be accessed from scripts, an overview of the layout can be found under https://portix\&.bitbucket\&.org/dwb/resources/layout\&.html\&.
@@ -3386,6 +3429,20 @@ const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2
+};
+.fi
+.if n \{\
+.RE
+.\}
+.SS "Selection"
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+const Selection = {
+  primary   : 1,
+  clipboard : 2
 };
 .fi
 .if n \{\
