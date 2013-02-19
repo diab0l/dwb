@@ -128,6 +128,7 @@
 #define STRCMP_FIRST_WORD(a, b)     (strncmp((a), (b), MAX(strstr((a), " ") - a, strstr((b), " ") - b)))
 
 #define FREE0(X)                     ((X == NULL) ? NULL : (X = (g_free(X), NULL)))
+#define GLIST_FREE0(X)                     ((X == NULL) ? NULL : (X = (g_list_free(X), NULL)))
 
 #define ALPHA(X)    ((X->keyval >= GDK_KEY_A && X->keyval <= GDK_KEY_Z) ||  (X->keyval >= GDK_KEY_a && X->keyval <= GDK_KEY_z) || X->keyval == GDK_KEY_space)
 #define DIGIT(X)   (X->keyval >= GDK_KEY_0 && X->keyval <= GDK_KEY_9)

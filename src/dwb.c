@@ -663,7 +663,7 @@ dwb_set_error_message(GList *gl, const char *error, ...)
         webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(VIEW(gl)->status_element), message, NULL);
     }
     dwb.state.message_id = g_timeout_add_seconds(dwb.misc.message_delay, (GSourceFunc)dwb_hide_message, NULL);
-    gtk_widget_hide(dwb.gui.entry);
+    entry_hide();
 }/*}}}*/
 
 static gboolean
@@ -1646,7 +1646,7 @@ dwb_focus_scroll(GList *gl)
 
     gtk_widget_set_can_focus(v->web, true);
     gtk_widget_grab_focus(v->web);
-    gtk_widget_hide(dwb.gui.entry);
+    entry_hide();
 }/*}}}*/
 
 /* dwb_handle_mail(const char *uri)        return: true if it is a mail-address{{{*/
@@ -2348,9 +2348,6 @@ dwb_update_layout()
 void 
 dwb_focus(GList *gl) 
 {
-    if (dwb.gui.entry) 
-        gtk_widget_hide(dwb.gui.entry);
-
     dwb.state.fview = gl;
     view_set_active_style(gl);
     dwb_focus_scroll(gl);
@@ -2825,6 +2822,9 @@ dwb_eval_override_key(GdkEventKey *e, CommandProperty prop)
     unsigned int mod; 
     gboolean isprint;
     gboolean ret = false;
+
+    if (gtk_widget_has_focus(dwb.gui.entry) && e->keyval == GDK_KEY_BackSpace)
+        entry_clear_history();
 
     if (CLEAN_STATE(e) && (key = dwb_get_key(e, &mod, &isprint)) != NULL)  
     {
@@ -4424,6 +4424,10 @@ dwb_init_vars(void)
 
     dwb.misc.bar_height = 0;
     dwb.state.last_tab = 0;
+
+    dwb.state.last_com_history = NULL;
+    dwb.state.last_nav_history = NULL;
+    dwb.state.last_find_history = NULL;
 }
 
 

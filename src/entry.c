@@ -16,19 +16,28 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
+#include <string.h>
 #include "dwb.h"
 #include "entry.h"
 static char *s_store;
+static GList *s_filterlist;
 /* dwb_entry_history_forward {{{*/
 DwbStatus
 entry_history_forward(GList **last) 
 {
+    if (s_filterlist == NULL)
+        return STATUS_ERROR;
+
     const char *text = NULL;
     GList *prev = NULL;
     if (*last != NULL) 
     {
         if ((*last)->prev == NULL) 
+        {
             text = s_store;
+            GLIST_FREE0(s_filterlist);
+        }
         else 
         {
             prev = (*last)->prev;
@@ -53,9 +62,22 @@ entry_history_back(GList **list, GList **last)
     GList *next;
     if (*last == NULL) 
     {
-        next = *list;
-        g_free(s_store);
-        s_store = g_strdup(GET_TEXT());
+        const char *text = GET_TEXT();
+        if (text && *text) {
+            for (GList *l = *list; l; l=l->next)
+            {
+                if (strstr(l->data, text)) {
+                    s_filterlist = g_list_prepend(s_filterlist, l->data);
+                }
+            }
+            if (s_filterlist)
+                s_filterlist = g_list_reverse(s_filterlist);
+        }
+        else 
+            s_filterlist = g_list_copy(*list);
+
+        next = s_filterlist;
+        s_store = g_strdup(text);
     }
     else if ((*last)->next != NULL)
         next = (*last)->next;
@@ -74,18 +96,32 @@ entry_history_back(GList **list, GList **last)
 
 /* entry_focus() {{{*/
 void 
-entry_focus() {
-  if (! (dwb.state.bar_visible & BAR_VIS_STATUS)) 
-    gtk_widget_show_all(dwb.gui.bottombox);
+entry_focus() 
+{
+    if (! (dwb.state.bar_visible & BAR_VIS_STATUS)) 
+        gtk_widget_show_all(dwb.gui.bottombox);
 
-  gtk_widget_show(dwb.gui.entry);
-  gtk_widget_grab_focus(dwb.gui.entry);
-  gtk_widget_set_can_focus(CURRENT_WEBVIEW_WIDGET(), false);
-  gtk_editable_delete_text(GTK_EDITABLE(dwb.gui.entry), 0, -1);
-  dwb.state.last_com_history = NULL;
-  dwb.state.last_nav_history = NULL;
-  dwb.state.last_find_history = NULL;
+    gtk_widget_show(dwb.gui.entry);
+    gtk_widget_grab_focus(dwb.gui.entry);
+    gtk_widget_set_can_focus(CURRENT_WEBVIEW_WIDGET(), false);
+    gtk_editable_delete_text(GTK_EDITABLE(dwb.gui.entry), 0, -1);
 }/*}}}*/
+
+void 
+entry_clear_history()
+{
+    dwb.state.last_com_history = NULL;
+    dwb.state.last_nav_history = NULL;
+    dwb.state.last_find_history = NULL;
+    FREE0(s_store);
+    GLIST_FREE0(s_filterlist);
+}
+void
+entry_hide()
+{
+    gtk_widget_hide(dwb.gui.entry);
+    entry_clear_history();
+}
 
 /* entry_insert_text(const char *) {{{*/
 void 

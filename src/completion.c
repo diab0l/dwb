@@ -765,7 +765,7 @@ completion_init_autocompletion(GList *gl)
         }
     }
     gtk_box_pack_start(GTK_BOX(dwb.gui.status_hbox), dwb.gui.autocompletion, true,  true, 10);
-    gtk_widget_hide(dwb.gui.entry);
+    entry_hide();
     gtk_widget_hide(dwb.gui.rstatus);
     gtk_widget_hide(dwb.gui.urilabel);
     gtk_widget_show(dwb.gui.autocompletion);
