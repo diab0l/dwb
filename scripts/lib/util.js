@@ -44,7 +44,10 @@
                 for (var i=1, l=text.length; i<l; ++i)
                 {
                     c = text.charAt(i);
-                    uncamelized += c.toUpperCase() == c ? "-" + c.toLowerCase() : c;
+                    if (c == "-" || c == "_" || c.toUpperCase() != c)
+                        uncamelized += c;
+                    else 
+                        uncamelized += "-" + c.toLowerCase();
                 }
                 return uncamelized;
             }
