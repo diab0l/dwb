@@ -38,12 +38,12 @@ Object.freeze((function () {
         OPEN_NEW_VIEW    : 1<<1, 
         OPEN_NEW_WINDOW  : 1<<2
     };
-    var __getTextHints = function(arr) {
+    var p_getTextHints = function(arr) {
         var length = arr.length;
         var i, j, e, text, cur, start, l, max, r;
         if (length === 0)
             return;
-        if (arr[0] instanceof __numberHint) 
+        if (arr[0] instanceof p_numberHint) 
         {
             for (i=0; i<length; i++) 
             {
@@ -52,7 +52,7 @@ Object.freeze((function () {
                 e.hint.textContent = start+i;
             }
         }
-        else if (arr[0] instanceof __letterHint) 
+        else if (arr[0] instanceof p_letterHint) 
         {
             l = globals.letterSeq.length;
             max = Math.ceil(Math.log(length)/Math.log(l));
@@ -72,12 +72,12 @@ Object.freeze((function () {
         }
     };
 
-    var __newHint = function(element, win, rect, oe) 
+    var p_newHint = function(element, win, rect, oe) 
     {
         this.element = element;
         this.overlay = null;
         this.win = win;
-        var hint = __createElement("div");
+        var hint = p_createElement("div");
         var toppos = rect.top + oe.offY;
         var leftpos = rect.left + oe.offX;
         var t = Math.max(toppos, 0);
@@ -107,7 +107,7 @@ Object.freeze((function () {
             var height = rect.height;
             var width = rect.width;
             var h = height + Math.max(0, comptop);
-            var overlay = __createElement("div");
+            var overlay = p_createElement("div");
             overlay.className = "dwb_overlay_normal";
             overlay.style.width = (compleft > 0 ? width : width + compleft) + "px";
             overlay.style.height = (comptop > 0 ? height : height + comptop) + "px";
@@ -120,7 +120,7 @@ Object.freeze((function () {
         };
         this.hint = hint;
     };
-    var __createElement = function(tagname) 
+    var p_createElement = function(tagname) 
     {
         var element = document.createElement(tagname);
         if (!element.style) 
@@ -130,9 +130,9 @@ Object.freeze((function () {
         }
         return element;
     };
-    var __numberHint = function (element, win, rect, offsetElement) 
+    var p_numberHint = function (element, win, rect, offsetElement) 
     {
-        this.varructor = __newHint;
+        this.varructor = p_newHint;
         this.varructor(element, win, rect, offsetElement);
 
         this.getStart = function(n) 
@@ -172,7 +172,7 @@ Object.freeze((function () {
                     }
                 }
             }
-            __getTextHints(globals.activeArr);
+            p_getTextHints(globals.activeArr);
             return ret;
         };
         this.matchText = function(input, matchHint) 
@@ -195,9 +195,9 @@ Object.freeze((function () {
             }
         };
     };
-    var __letterHint = function (element, win, rect, offsetElement) 
+    var p_letterHint = function (element, win, rect, offsetElement) 
     {
-        this.varructor = __newHint;
+        this.varructor = p_newHint;
         this.varructor(element, win, rect, offsetElement);
 
         this.betterMatch = function(input) {
@@ -224,7 +224,7 @@ Object.freeze((function () {
         };
     };
 
-    var __mouseEvent = function (e, ev, bubble) 
+    var p_mouseEvent = function (e, ev, bubble) 
     {
         if (e.ownerDocument != document) 
             e.focus();
@@ -234,43 +234,43 @@ Object.freeze((function () {
             globals.newTab & OpenMode.OPEN_NEW_VIEW ? 1 : 0, null);
         e.dispatchEvent(mouseEvent);
     };
-    var __clickElement = function (element, ev) 
+    var p_clickElement = function (element, ev) 
     {
         var clicked = false;
         if (arguments.length == 2) 
-            __mouseEvent(element, ev, !globals.newTab);
+            p_mouseEvent(element, ev, !globals.newTab);
         else 
         {
             if (element.hasAttribute("onclick")) 
             {
-                __mouseEvent(element, ev, !globals.newTab);
+                p_mouseEvent(element, ev, !globals.newTab);
                 clicked = true;
             }
             if (element.hasAttribute("onmousedown")) 
             {
-                __mouseEvent(element, "mousedown", !globals.newTab);
+                p_mouseEvent(element, "mousedown", !globals.newTab);
                 clicked = true;
             }
             if (element.hasAttribute("onmouseover")) 
             {
-                __mouseEvent(element, "mousedown", !globals.newTab);
+                p_mouseEvent(element, "mousedown", !globals.newTab);
                 clicked = true;
             }
             if (!clicked) 
             {
-                __mouseEvent(element, "click", !globals.newTab);
-                __mouseEvent(element, "mousedown", !globals.newTab);
-                __mouseEvent(element, "mouseover", !globals.newTab);
+                p_mouseEvent(element, "click", !globals.newTab);
+                p_mouseEvent(element, "mousedown", !globals.newTab);
+                p_mouseEvent(element, "mouseover", !globals.newTab);
             }
         }
     };
-    var __getActive = function () 
+    var p_getActive = function () 
     {
         return globals.active;
     };
-    var __setActive = function (element) 
+    var p_setActive = function (element) 
     {
-        var active = __getActive();
+        var active = p_getActive();
         if (active) 
         {
             if (globals.markHints) 
@@ -303,7 +303,7 @@ Object.freeze((function () {
         globals.active.overlay.style.background = globals.activeColor;
         globals.active.hint.style.fontSize = globals.bigFont;
     };
-    var __hexToRgb = function (color) 
+    var p_hexToRgb = function (color) 
     {
         var rgb, i;
         if (color[0] !== '#') 
@@ -328,12 +328,12 @@ Object.freeze((function () {
         }
         return "rgba(" + rgb.slice(1) + "," +  globals.hintOpacity/2 + ")";
     };
-    var __createStyleSheet = function(doc) 
+    var p_createStyleSheet = function(doc) 
     {
         if (doc.hasStyleSheet) 
             return;
 
-        var styleSheet = __createElement("style");
+        var styleSheet = p_createElement("style");
         styleSheet.innerHTML += ".dwb_hint { " +
             "position:absolute; z-index:20000;" +
             "background:" + globals.bgColor  + ";" + 
@@ -350,7 +350,7 @@ Object.freeze((function () {
         doc.head.appendChild(styleSheet);
         doc.hasStyleSheet = true;
     };
-    var __getOffsets = function(doc) 
+    var p_getOffsets = function(doc) 
     {
         var oe = new Object();
         var win = doc.defaultView;
@@ -369,7 +369,7 @@ Object.freeze((function () {
         }
         return oe;
     };
-    var __appendHint = function (hints, varructor, e, win, r, oe) 
+    var p_appendHint = function (hints, varructor, e, win, r, oe) 
     {
         var element = new varructor(e, win, r, oe);
         globals.elements.push(element);
@@ -380,7 +380,7 @@ Object.freeze((function () {
             hints.appendChild(element.overlay);
         }
     };
-    var __createMap = function (hints, varructor, e, win, r, oe) 
+    var p_createMap = function (hints, varructor, e, win, r, oe) 
     {
         var map = null, a, i, coords, offsets;
         var mapid = e.getAttribute("usemap");
@@ -404,12 +404,12 @@ Object.freeze((function () {
             coords = a.coords.split(",", 2);
             offsets = { 
                 offX : oe.offX + parseInt(coords[0], 10), 
-                offY : oe.offY + parseInt(coords[1], 10), 
+                offY : oe.offY + parseInt(coords[1], 10)
             };
-            __appendHint(hints, varructor, a, win, r, offsets);
+            p_appendHint(hints, varructor, a, win, r, offsets);
         }
     };
-    var __createHints = function(win, varructor, type) 
+    var p_createHints = function(win, varructor, type) 
     {
         var i;
         try 
@@ -417,25 +417,25 @@ Object.freeze((function () {
             var doc = win.document;
             var res = doc.body.querySelectorAll(globals.hintTypes[type]); 
             var e, r;
-            __createStyleSheet(doc);
+            p_createStyleSheet(doc);
             var hints = doc.createDocumentFragment();
-            var oe = __getOffsets(doc);
+            var oe = p_getOffsets(doc);
             for (i=0;i < res.length; i++) 
             {
                 e = res[i];
-                if ((r = __getVisibility(e, win)) === null) {
+                if ((r = p_getVisibility(e, win)) === null) {
                     continue;
                 }
                 if ( (e instanceof HTMLFrameElement || e instanceof HTMLIFrameElement)) {
-                    __createHints(e.contentWindow, varructor, type);
+                    p_createHints(e.contentWindow, varructor, type);
                     continue;
                 }
                 else if (e instanceof HTMLImageElement && type != HintTypes.HINT_T_IMAGES) {
                     if (e.hasAttribute("usemap")) 
-                        __createMap(hints, varructor, e, win, r, oe);
+                        p_createMap(hints, varructor, e, win, r, oe);
                 }
                 else {
-                    __appendHint(hints, varructor, e, win, r, oe);
+                    p_appendHint(hints, varructor, e, win, r, oe);
                 }
             }
             doc.body.appendChild(hints);
@@ -445,7 +445,7 @@ Object.freeze((function () {
             console.error(exc);
         }
     };
-    var __showHints = function (type, newTab) 
+    var p_showHints = function (type, newTab) 
     {
         var i;
         if (document.activeElement) 
@@ -453,7 +453,7 @@ Object.freeze((function () {
             document.activeElement.blur();
         }
         globals.newTab = newTab;
-        __createHints(window, globals.style == "letter" ? __letterHint : __numberHint, type);
+        p_createHints(window, globals.style == "letter" ? p_letterHint : p_numberHint, type);
         var l = globals.elements.length;
 
         if (l === 0) 
@@ -462,7 +462,7 @@ Object.freeze((function () {
         }
         else if (l == 1)  
         {
-            return  __evaluate(globals.elements[0].element, type);
+            return  p_evaluate(globals.elements[0].element, type);
         }
 
         globals.notify = document.createElement("div");
@@ -477,27 +477,27 @@ Object.freeze((function () {
         globals.notify.id = "dwb_hint_notifier";
         document.body.appendChild(globals.notify);
 
-        __getTextHints(globals.elements);
+        p_getTextHints(globals.elements);
         globals.activeArr = globals.elements;
-        __setActive(globals.elements[0]);
+        p_setActive(globals.elements[0]);
         return null;
     };
-    var __updateHints = function(input, type) 
+    var p_updateHints = function(input, type) 
     {
         var i;
         var array = [];
         var matchHint = false;
         if (!globals.activeArr.length) 
         {
-            __clear();
-            __showHints(type, globals.newTab);
+            p_clear();
+            p_showHints(type, globals.newTab);
         }
         if (globals.lastInput && (globals.lastInput.length > input.length)) 
         {
-            __clear();
+            p_clear();
             globals.lastInput = input;
-            __showHints(type, globals.newTab);
-            return __updateHints(input, type);
+            p_showHints(type, globals.newTab);
+            return p_updateHints(input, type);
         }
         globals.lastInput = input;
         if (input) 
@@ -538,21 +538,21 @@ Object.freeze((function () {
         globals.activeArr = array;
         if (array.length === 0) 
         {
-            __clear();
+            p_clear();
             return "_dwb_no_hints_";
         }
         else if (array.length == 1 && globals.autoFollow) 
         {
-            return __evaluate(array[0].element, type);
+            return p_evaluate(array[0].element, type);
         }
         else 
         {
             globals.lastPosition = array[0].betterMatch(input);
-            __setActive(array[globals.lastPosition]);
+            p_setActive(array[globals.lastPosition]);
         }
         return null;
     };
-    var __getVisibility = function (e, win) 
+    var p_getVisibility = function (e, win) 
     {
         var style = win.getComputedStyle(e, null);
         if ((style.getPropertyValue("visibility") == "hidden" || style.getPropertyValue("display") == "none" ) ) 
@@ -568,7 +568,7 @@ Object.freeze((function () {
 
         return r;
     };
-    var __clear = function() 
+    var p_clear = function() 
     {
         var p, i;
         try 
@@ -603,7 +603,7 @@ Object.freeze((function () {
             globals.notify.parentNode.removeChild(globals.notify);
         }
     };
-    var __evaluate = function (e, type) 
+    var p_evaluate = function (e, type) 
     {
         var ret = null;
         var elementType = null;
@@ -621,10 +621,10 @@ Object.freeze((function () {
             switch (type) 
             {
                 case HintTypes.HINT_T_IMAGES: 
-                    ret = e.src; __clear(); 
+                    ret = e.src; p_clear(); 
                     return ret;
                 case HintTypes.HINT_T_URL   : 
-                    ret = e.hasAttribute("href") ? e.href : e.src; __clear(); 
+                    ret = e.hasAttribute("href") ? e.href : e.src; p_clear(); 
                     return ret;
                 default: break;
             }
@@ -634,12 +634,12 @@ Object.freeze((function () {
             if (type == "radio" || type == "checkbox") 
             {
                 e.focus();
-                __clickElement(e, "click");
+                p_clickElement(e, "click");
                 ret = ret || "_dwb_check_";
             }
             else if (elementType && (elementType == "submit" || elementType == "reset" || elementType  == "button")) 
             {
-                __clickElement(e, "click");
+                p_clickElement(e, "click");
                 ret = ret || "_dwb_click_";
             }
             else 
@@ -650,55 +650,55 @@ Object.freeze((function () {
         }
         else if (e.hasAttribute("role")) 
         {
-            __clickElement(e);
+            p_clickElement(e);
             ret = ret || "_dwb_click_";
         }
         else 
         {
             if (tagname == "a" || e.hasAttribute("onclick")) 
-                __clickElement(e, "click");
+                p_clickElement(e, "click");
             else if (e.hasAttribute("onmousedown")) 
-                __clickElement(e, "mousedown");
+                p_clickElement(e, "mousedown");
             else if (e.hasAttribute("onmouseover")) 
-                __clickElement(e, "mouseover");
+                p_clickElement(e, "mouseover");
             else 
-                __clickElement(e);
+                p_clickElement(e);
             ret = ret || "_dwb_click_";
         }
-        __clear();
+        p_clear();
         return ret;
     };
-    var __focusNext = function()  
+    var p_focusNext = function()  
     {
         var newpos = globals.lastPosition === globals.activeArr.length-1 ? 0 : globals.lastPosition + 1;
-        __setActive(globals.activeArr[newpos]);
+        p_setActive(globals.activeArr[newpos]);
         globals.lastPosition = newpos;
     };
-    var __focusPrev = function()  
+    var p_focusPrev = function()  
     {
         var newpos = globals.lastPosition === 0 ? globals.activeArr.length-1 : globals.lastPosition - 1;
-        __setActive(globals.activeArr[newpos]);
+        p_setActive(globals.activeArr[newpos]);
         globals.lastPosition = newpos;
     };
-    var __addSearchEngine = function() 
+    var p_addSearchEngine = function() 
     {
         var i, j;
         try 
         {
-            __createStyleSheet(document);
+            p_createStyleSheet(document);
             var hints = document.createDocumentFragment();
             var res = document.body.querySelectorAll("form");
             var r, e;
-            var oe = __getOffsets(document);
+            var oe = p_getOffsets(document);
 
             for (i=0; i<res.length; i++) 
             {
                 var els = res[i].elements;
                 for (j=0; j<els.length; j++) 
                 {
-                    if (((r = __getVisibility(els[j], window)) !== null) && (els[j].type === "text" || els[j].type === "search")) 
+                    if (((r = p_getVisibility(els[j], window)) !== null) && (els[j].type === "text" || els[j].type === "search")) 
                     {
-                        e = new __letterHint(els[j], window, r, oe);
+                        e = new p_letterHint(els[j], window, r, oe);
                         hints.appendChild(e.hint);
                         e.hint.style.visibility = "hidden";
                         globals.elements.push(e);
@@ -724,7 +724,7 @@ Object.freeze((function () {
                 hints.appendChild(e.overlay);
             }
             document.body.appendChild(hints); 
-            __setActive(globals.elements[0]);
+            p_setActive(globals.elements[0]);
             globals.activeArr = globals.elements;
         }
         catch (exc) 
@@ -733,9 +733,9 @@ Object.freeze((function () {
         }
         return null;
     };
-    var __submitSearchEngine = function (string) 
+    var p_submitSearchEngine = function (string) 
     {
-        var e = __getActive().element;
+        var e = p_getActive().element;
         e.value = string;
         if (e.form.submit instanceof Function) 
         {
@@ -746,16 +746,16 @@ Object.freeze((function () {
         else 
         {
             var button = e.form.querySelector("input[type='submit'], button[type='submit']");
-            __clickElement(button, "click");
+            p_clickElement(button, "click");
         }
         e.value = "";
-        __clear();
+        p_clear();
         if (e.form.method.toLowerCase() == 'post') 
             return e.name;
 
         return null;
     };
-    var __focusInput = function() 
+    var p_focusInput = function() 
     {
         var i;
         var res = document.body.querySelectorAll('input[type=text], input[type=password], textarea');
@@ -783,7 +783,7 @@ Object.freeze((function () {
         globals.activeInput.focus();
         return null;
     };
-    var __init = function (letter_seq, font, style,
+    var p_init = function (letter_seq, font, style,
         fg_color, bg_color, active_color, normal_color, border,  opacity, markHints, autoFollow) 
     {
         globals.hintOpacity = opacity;
@@ -792,15 +792,15 @@ Object.freeze((function () {
         globals.style =  style.toLowerCase();
         globals.fgColor    = fg_color;
         globals.bgColor    = bg_color;
-        globals.activeColor = __hexToRgb(active_color);
-        globals.normalColor = __hexToRgb(normal_color);
+        globals.activeColor = p_hexToRgb(active_color);
+        globals.normalColor = p_hexToRgb(normal_color);
         globals.hintBorder = border;
         globals.markHints = markHints;
         globals.autoFollow = autoFollow;
         globals.bigFont = Math.ceil(font.replace(/\D/g, "") * 1.25) + "px";
         globals.fontSize = Math.ceil(font.replace(/\D/g, ""))/2;
     };
-    var __pastePrimary = function(primary) 
+    var p_pastePrimary = function(primary) 
     {
         var a = document.activeElement;
         if (a instanceof HTMLInputElement || a instanceof HTMLTextAreaElement)  
@@ -822,47 +822,47 @@ Object.freeze((function () {
     return {
         createStyleSheet : function() 
         {
-            __createStyleSheet(document);
+            p_createStyleSheet(document);
         },
         showHints : function(obj) 
         {
-            return __showHints(obj.type, obj.newTab);
+            return p_showHints(obj.type, obj.newTab);
         },
         updateHints : function (obj) 
         {
-            return __updateHints(obj.input, obj.type);
+            return p_updateHints(obj.input, obj.type);
         },
         clear : function () 
         {
-            __clear();
+            p_clear();
         },
         followActive : function (obj) 
         {
-            return __evaluate(__getActive().element, obj.type);
+            return p_evaluate(p_getActive().element, obj.type);
         },
         focusNext : function () 
         {
-            __focusNext();
+            p_focusNext();
         },
         focusPrev : function () 
         {
-            __focusPrev();
+            p_focusPrev();
         },
         addSearchEngine : function () 
         {
-            return __addSearchEngine();
+            return p_addSearchEngine();
         },
         submitSearchEngine : function (obj) 
         {
-            return __submitSearchEngine(obj.searchString);
+            return p_submitSearchEngine(obj.searchString);
         },
         focusInput : function () 
         {
-            __focusInput();
+            p_focusInput();
         },
         pastePrimary : function(selection) 
         {
-            __pastePrimary(selection);
+            p_pastePrimary(selection);
         },
         insertAdblockRule : function(rule) 
         {
@@ -872,7 +872,7 @@ Object.freeze((function () {
         },
         init : function (obj) 
         {
-            __init(obj.hintLetterSeq, obj.hintFont, obj.hintStyle, obj.hintFgColor,
+            p_init(obj.hintLetterSeq, obj.hintFont, obj.hintStyle, obj.hintFgColor,
                 obj.hintBgColor, obj.hintActiveColor, obj.hintNormalColor,
                 obj.hintBorder, obj.hintOpacity, obj.hintHighlighLinks, obj.hintAutoFollow);
         }
