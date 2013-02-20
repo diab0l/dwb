@@ -62,7 +62,7 @@ _shortcut_;; A shortcut shortcut, will be parsed the same way as if set in
 dwb:keys
 _callback_;; Callback function that will be called when the shortcut is pressed
 _name_;; A name that identifies the function on command line, optional
-_returns_;; true if the function was binded successfully
+_returns_;; true if the function was bound successfully
 ****
 
 ==== Boolean execute(String command)
@@ -226,7 +226,7 @@ _returns_;; true if the timer was stopped
 ==== Number unbind(Function func|String name)
 ****
 
-Unbind a shortcut that was previously binded with bind
+Unbind a shortcut that was previously bound with bind
 
 _func_ or _name_;; Either the function or the optional name passed to bind.
 _returns_;; true if the function was unbound
@@ -1374,6 +1374,20 @@ signals.connect("downloadStatus", function(download));
 Emitted when the DownloadStatus changes. 
 
 _download_;; The Download 
+****
+
+==== executeCommand
+****
+----
+signals.connect("executeCommand", function(commandinfo));
+----
+
+Emitted when a command is executed, return true to prevent execution.
+
+_commandinfo.command_;; The command that is executed
+_commandinfo.argument_;; An argument, if the command isn't executed from commandline this
+will always be null.
+_commandinfo.nummod_;; The numerical modifier.
 ****
 
 

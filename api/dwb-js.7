@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 02/19/2013
+.\"      Date: 02/21/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/19/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/21/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -124,7 +124,7 @@ A name that identifies the function on command line, optional
 .PP
 \fIreturns\fR
 .RS 4
-true if the function was binded successfully
+true if the function was bound successfully
 .RE
 .RE
 .sp
@@ -453,7 +453,7 @@ true if the timer was stopped
 \fBNumber unbind(Function func|String name)\fR
 .RS 4
 .sp
-Unbind a shortcut that was previously binded with bind
+Unbind a shortcut that was previously bound with bind
 .PP
 \fIfunc\fR or \fIname\fR
 .RS 4
@@ -2751,6 +2751,42 @@ Emitted when the DownloadStatus changes\&.
 \fIdownload\fR
 .RS 4
 The Download
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBexecuteCommand\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+signals\&.connect("executeCommand", function(commandinfo));
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Emitted when a command is executed, return true to prevent execution\&.
+.PP
+\fIcommandinfo\&.command\fR
+.RS 4
+The command that is executed
+.RE
+.PP
+\fIcommandinfo\&.argument\fR
+.RS 4
+An argument, if the command isn\(cqt executed from commandline this will always be null\&.
+.RE
+.PP
+\fIcommandinfo\&.nummod\fR
+.RS 4
+The numerical modifier\&.
 .RE
 .RE
 .sp
