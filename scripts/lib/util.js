@@ -84,7 +84,10 @@
             {
                 var key;
                 for (key in this) 
-                    callback(key, this[key], this); 
+                {
+                    if (this.hasOwnProperty(key))
+                        callback(key, this[key], this); 
+                }
             }
         });
     }
