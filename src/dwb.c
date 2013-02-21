@@ -3218,6 +3218,7 @@ dwb_get_scripts()
                 map->key = "";
                 map->mod = 0;
             }
+            // TODO Free navigation
             FunctionMap fm = { { n->first, n->first }, CP_DONT_SAVE | CP_COMMANDLINE | CP_USERSCRIPT, (Func)dwb_execute_user_script, NULL, POST_SM, { .arg = path }, EP_NONE, {NULL} };
             *fmap = fm;
             map->map = fmap;
@@ -3324,7 +3325,11 @@ dwb_clean_up()
     {
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
+        {
             scripts_unbind(m->map->arg.p);
+            g_free(m->map->n.first);
+            g_free(m->map->n.second);
+        }
         if (m->map->prop & (CP_USERSCRIPT | CP_SCRIPT))
             g_free(m->map);
         g_free(m);

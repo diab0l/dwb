@@ -975,6 +975,17 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     return STATUS_OK;
 }/*}}}*/
 
+static void 
+unbind_free_keymap(JSContextRef ctx, GList *l)
+{
+    KeyMap *m = l->data;
+    JSValueUnprotect(ctx, m->map->arg.p);
+    g_free(m->map->n.first);
+    g_free(m->map->n.second);
+    g_free(m->map);
+    g_free(m);
+    dwb.keymap = g_list_delete_link(dwb.keymap, l);
+}
 /* global_unbind{{{*/
 static JSValueRef 
 global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -983,7 +994,6 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
         return JSValueMakeBoolean(ctx, false);
 
     GList *l = NULL;
-    KeyMap *m;
     if (JSValueIsString(ctx, argv[0])) 
     {
         char *name = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
@@ -1000,13 +1010,13 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     }
     if (l != NULL) 
     {
-        m = l->data;
-        JSValueUnprotect(ctx, m->map->arg.p);
-        g_free(m->map->n.first);
-        g_free(m->map->n.second);
-        g_free(m->map);
-        g_free(m);
-        dwb.keymap = g_list_delete_link(dwb.keymap, l);
+        for (GList *gl = dwb.override_keys; gl; gl=gl->next)
+        {
+            KeyMap *m = gl->data;
+            if (m->map->prop & CP_SCRIPT) 
+                dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
+        }
+        unbind_free_keymap(ctx, l->data);
         return JSValueMakeBoolean(ctx, true);
     }
     return JSValueMakeBoolean(ctx, false);
@@ -3436,11 +3446,7 @@ scripts_end()
             next = next->next;
             KeyMap *m = l->data;
             if (m->map->prop & CP_SCRIPT) {
-                scripts_unbind(m->map->arg.p);
-                g_free(m->map);
-                g_free(m);
-                m = NULL;
-                dwb.keymap = g_list_delete_link(dwb.keymap, l);
+                unbind_free_keymap(s_global_context, l);
             }
         }
         // signals
