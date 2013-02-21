@@ -925,19 +925,18 @@ DwbStatus
 scripts_eval_key(KeyMap *m, Arg *arg) 
 {
     char *json = NULL;
-    CLEAR_COMMAND_TEXT();
+    if (! (m->map->prop & CP_OVERRIDE))
+        CLEAR_COMMAND_TEXT();
     if (arg->p == NULL) 
         json = util_create_json(1, INTEGER, "nummod", dwb.state.nummod);
     else 
         json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
 
-    pthread_mutex_lock(&s_context_mutex);
     if (s_global_context) 
     {
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
         JSObjectCallAsFunction(s_global_context, arg->js, NULL, 1, argv, NULL);
     }
-    pthread_mutex_unlock(&s_context_mutex);
 
     g_free(json);
     return STATUS_OK;
@@ -987,6 +986,7 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     gboolean ret = false;
     char *name = NULL, *callback = NULL;
     guint option = CP_DONT_SAVE | CP_SCRIPT;
+    gboolean override = false;
 
     if (argc < 2) 
         return JSValueMakeBoolean(ctx, false);
@@ -999,13 +999,25 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
 
     if (argc > 2) 
     {
-        name = js_value_to_char(ctx, argv[2], JS_STRING_MAX, exc);
-        if (name != NULL) 
-        { 
-            option |= CP_COMMANDLINE;
-            callback_name = js_get_string_property(ctx, func, "name");
-            callback = g_strdup_printf("JavaScript: %s", callback_name == NULL || *callback_name == 0 ? "[anonymous]" : callback_name);
-            g_free(callback_name);
+        if (JSValueIsNumber(ctx, argv[2]) )
+        {
+            double additional_option = JSValueToNumber(ctx, argv[2], exc);
+            if (!isnan(additional_option) && (int) additional_option & CP_OVERRIDE)
+            {
+                option |= (int)additional_option & CP_OVERRIDE;
+                override = true;
+            }
+        }
+        else 
+        {
+            name = js_value_to_char(ctx, argv[2], JS_STRING_MAX, exc);
+            if (name != NULL) 
+            { 
+                option |= CP_COMMANDLINE;
+                callback_name = js_get_string_property(ctx, func, "name");
+                callback = g_strdup_printf("JavaScript: %s", callback_name == NULL || *callback_name == 0 ? "[anonymous]" : callback_name);
+                g_free(callback_name);
+            }
         }
     }
     if (keystr == NULL && name == NULL) 
@@ -1025,6 +1037,8 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     map->map = fmap;
 
     dwb.keymap = g_list_prepend(dwb.keymap, map);
+    if (override)
+        dwb.override_keys = g_list_prepend(dwb.override_keys, map);
 
     ret = true;
 error_out:

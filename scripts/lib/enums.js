@@ -74,3 +74,8 @@ const Selection = {
     primary : 1, 
     clipboard : 2
 };
+const OverrideKey = {
+    insertMode : 1<<5,
+    entryFocus : 1<<6,
+    all        : 1<<7
+};
