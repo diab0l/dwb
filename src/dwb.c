@@ -3239,9 +3239,12 @@ dwb_reload_userscripts(void)
 {
     dwb_free_list(dwb.misc.userscripts, (void_func) dwb_navigation_free);
     dwb.misc.userscripts = NULL;
+
     g_list_foreach(dwb.misc.userscripts, (GFunc)dwb_navigation_free, NULL);
     g_list_free(dwb.misc.userscripts);
     dwb.misc.userscripts = NULL;
+
+    scripts_end();
     KeyMap *m;
     GSList *delete = NULL;
     for (GList *l = dwb.keymap; l; l=l->next) 
@@ -3259,6 +3262,7 @@ dwb_reload_userscripts(void)
     
     g_slist_free(delete);
     dwb.keymap = g_list_concat(dwb.keymap, dwb_get_scripts());
+    scripts_reapply();
     dwb_set_normal_message(dwb.state.fview, true, "Userscripts reloaded");
 }/*}}}*/
 
@@ -3321,7 +3325,7 @@ dwb_clean_up()
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
             scripts_unbind(m->map->arg.p);
-        if (m->map->prop & CP_USERSCRIPT)
+        if (m->map->prop & (CP_USERSCRIPT | CP_SCRIPT))
             g_free(m->map);
         g_free(m);
         m = NULL;

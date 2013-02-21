@@ -16,11 +16,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#define _XOPEN_SOURCE 600
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <glib.h>
 #include "dwb.h"
@@ -40,13 +42,19 @@
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
 #define PROP_LENGTH 128
 #define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
+#define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) != EBUSY && s_global_context != NULL)
+#define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
 
-static pthread_mutex_t s_context_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 typedef struct Sigmap_s {
     int sig;
     const char *name;
 } Sigmap;
+typedef struct SigData_s {
+    gulong id; 
+    GObject *instance;
+} SigData;
 
 typedef struct _CallbackData CallbackData;
 typedef struct _SSignal SSignal;
@@ -145,9 +153,9 @@ static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
 static JSObjectRef s_init_before, s_init_after;
 static JSObjectRef s_constructors[CONSTRUCTOR_LAST];
-static gboolean s_opt_force = false;
 static JSObjectRef s_soup_session;
 static GSList *s_timers = NULL;
+static GPtrArray *s_gobject_signals = NULL;
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -345,17 +353,40 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
     return UNDEFINED;
 }/*}}}*/
 
+void
+sigdata_append(gulong sigid, GObject *instance)
+{
+    SigData *data = g_malloc(sizeof(SigData));
+    data->id = sigid;
+    data->instance = instance;
+    g_ptr_array_add(s_gobject_signals, data);
+
+}
+void
+sigdata_remove(gulong sigid, GObject *instance)
+{
+    for (guint i=0; i<s_gobject_signals->len; i++)
+    {
+        SigData *data = g_ptr_array_index(s_gobject_signals, i);
+        if (data->id == sigid && data->instance == instance)
+        {
+            g_ptr_array_remove_index_fast(s_gobject_signals, i);
+            g_free(data);
+            return;
+        }
+    }
+}
 
 /* CALLBACK {{{*/
 /* callback_data_new {{{*/
 static CallbackData * 
 callback_data_new(GObject *gobject, JSObjectRef object, JSObjectRef callback, StopCallbackNotify notify)  
 {
-    CallbackData *c = g_malloc(sizeof(CallbackData));
-    c->gobject = gobject != NULL ? g_object_ref(gobject) : NULL;
-    pthread_mutex_lock(&s_context_mutex); 
-    if (s_global_context) 
+    CallbackData *c = NULL;
+    if (TRY_CONTEXT_LOCK)
     {
+        CallbackData *c = g_malloc(sizeof(CallbackData));
+        c->gobject = gobject != NULL ? g_object_ref(gobject) : NULL;
         if (object != NULL) 
         {
             JSValueProtect(s_global_context, object);
@@ -366,9 +397,9 @@ callback_data_new(GObject *gobject, JSObjectRef object, JSObjectRef callback, St
             JSValueProtect(s_global_context, callback);
             c->callback = callback;
         }
+        c->notify = notify;
+        CONTEXT_UNLOCK;
     }
-    pthread_mutex_unlock(&s_context_mutex);
-    c->notify = notify;
     return c;
 }/*}}}*/
 
@@ -380,16 +411,15 @@ callback_data_free(CallbackData *c)
     {
         if (c->gobject != NULL) 
             g_object_unref(c->gobject);
-        pthread_mutex_lock(&s_context_mutex);
-        if (s_global_context)
+        if (TRY_CONTEXT_LOCK)
         {
             if (c->object != NULL) 
                 JSValueUnprotect(s_global_context, c->object);
             JSValueUnprotect(s_global_context, c->object);
             if (c->object != NULL) 
                 JSValueUnprotect(s_global_context, c->callback);
+            CONTEXT_UNLOCK;
         }
-        pthread_mutex_unlock(&s_context_mutex);
         g_free(c);
     }
 }/*}}}*/
@@ -399,15 +429,14 @@ ssignal_free(SSignal *sig)
 {
     if (sig != NULL) 
     {
-        pthread_mutex_lock(&s_context_mutex);
-        if (s_global_context) 
+        if (TRY_CONTEXT_LOCK)
         {
             if (sig->func)
                 JSValueUnprotect(s_global_context, sig->func);
             if (sig->object)
                 JSValueUnprotect(s_global_context, sig->object);
+            CONTEXT_UNLOCK;
         }
-        pthread_mutex_unlock(&s_context_mutex);
         g_free(sig->query);
         g_free(sig);
     }
@@ -446,14 +475,18 @@ static void
 callback(CallbackData *c) 
 {
     gboolean ret = false;
-    JSValueRef val[] = { c->object != NULL ? c->object : NIL };
-    JSValueRef jsret = JSObjectCallAsFunction(s_global_context, c->callback, NULL, 1, val, NULL);
-    if (JSValueIsBoolean(s_global_context, jsret))
-        ret = JSValueToBoolean(s_global_context, jsret);
-    if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
+    if (TRY_CONTEXT_LOCK)
     {
-        g_signal_handlers_disconnect_by_func(c->gobject, callback, c);
-        callback_data_free(c);
+        JSValueRef val[] = { c->object != NULL ? c->object : NIL };
+        JSValueRef jsret = JSObjectCallAsFunction(s_global_context, c->callback, NULL, 1, val, NULL);
+        if (JSValueIsBoolean(s_global_context, jsret))
+            ret = JSValueToBoolean(s_global_context, jsret);
+        if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
+        {
+            g_signal_handlers_disconnect_by_func(c->gobject, callback, c);
+            callback_data_free(c);
+        }
+        CONTEXT_UNLOCK;
     }
 }/*}}}*/
 /*}}}*/
@@ -927,18 +960,20 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     char *json = NULL;
     if (! (m->map->prop & CP_OVERRIDE))
         CLEAR_COMMAND_TEXT();
-    if (arg->p == NULL) 
-        json = util_create_json(1, INTEGER, "nummod", dwb.state.nummod);
-    else 
-        json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
-
-    if (s_global_context) 
+    if (TRY_CONTEXT_LOCK)
     {
+        if (arg->p == NULL) 
+            json = util_create_json(1, INTEGER, "nummod", dwb.state.nummod);
+        else 
+            json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
+
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
         JSObjectCallAsFunction(s_global_context, arg->js, NULL, 1, argv, NULL);
+
+        CONTEXT_UNLOCK;
+        g_free(json);
     }
 
-    g_free(json);
     return STATUS_OK;
 }/*}}}*/
 
@@ -1142,7 +1177,7 @@ error_out:
 
 
 /* global_send_request {{{*/
-static JSObjectRef 
+static JSValueRef 
 get_message_data(SoupMessage *msg) 
 {
     const char *name, *value;
@@ -1150,30 +1185,39 @@ get_message_data(SoupMessage *msg)
     JSObjectRef o, ho;
     JSStringRef s;
 
-    o = JSObjectMake(s_global_context, NULL, NULL);
-    js_set_object_property(s_global_context, o, "body", msg->response_body->data, NULL);
+    if (TRY_CONTEXT_LOCK)
+    {
+        o = JSObjectMake(s_global_context, NULL, NULL);
+        js_set_object_property(s_global_context, o, "body", msg->response_body->data, NULL);
 
-    ho = JSObjectMake(s_global_context, NULL, NULL);
+        ho = JSObjectMake(s_global_context, NULL, NULL);
 
-    soup_message_headers_iter_init(&iter, msg->response_headers);
-    while (soup_message_headers_iter_next(&iter, &name, &value)) 
-        js_set_object_property(s_global_context, ho, name, value, NULL);
+        soup_message_headers_iter_init(&iter, msg->response_headers);
+        while (soup_message_headers_iter_next(&iter, &name, &value)) 
+            js_set_object_property(s_global_context, ho, name, value, NULL);
 
-    s = JSStringCreateWithUTF8CString("headers");
-    JSObjectSetProperty(s_global_context, o, s, ho, kJSDefaultProperty, NULL);
-    JSStringRelease(s);
-    return o;
+        s = JSStringCreateWithUTF8CString("headers");
+        JSObjectSetProperty(s_global_context, o, s, ho, kJSDefaultProperty, NULL);
+        JSStringRelease(s);
+        CONTEXT_UNLOCK;
+        return o;
+    }
+    return NIL;
 }
 static void
 request_callback(SoupSession *session, SoupMessage *message, JSObjectRef function) 
 {
-    if (message->response_body->data != NULL) 
+    if (TRY_CONTEXT_LOCK)
     {
-        JSObjectRef o = get_message_data(message);
-        JSValueRef vals[] = { o, make_object(s_global_context, G_OBJECT(message))  };
-        JSObjectCallAsFunction(s_global_context, function, NULL, 2, vals, NULL);
+        if (message->response_body->data != NULL) 
+        {
+            JSValueRef o = get_message_data(message);
+            JSValueRef vals[] = { o, make_object(s_global_context, G_OBJECT(message))  };
+            JSObjectCallAsFunction(s_global_context, function, NULL, 2, vals, NULL);
+        }
+        JSValueUnprotect(s_global_context, function);
+        CONTEXT_UNLOCK;
     }
-    JSValueUnprotect(s_global_context, function);
 }
 static void 
 set_request(JSContextRef ctx, SoupMessage *msg, JSValueRef val, JSValueRef *exc)
@@ -1218,7 +1262,7 @@ global_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     msg = soup_message_new(method == NULL ? "GET" : method, uri);
     if (msg == NULL)
         goto error_out;
-    if (argc > 3 && method != NULL && !strcasecmp("POST", method)) 
+    if (argc > 3 && method != NULL && !g_ascii_strcasecmp("POST", method)) 
         set_request(ctx, msg, argv[3], exc);
 
     JSValueProtect(ctx, function);
@@ -1237,6 +1281,7 @@ global_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject
     char *method = NULL, *uri = NULL;
     SoupMessage *msg;
     guint status;
+    JSValueRef val;
     JSObjectRef o;
     JSStringRef js_key;
     JSValueRef js_value;
@@ -1256,10 +1301,12 @@ global_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject
         set_request(ctx, msg, argv[2], exc);
 
     status = soup_session_send_message(webkit_get_default_session(), msg);
-    o = get_message_data(msg);
+    val = get_message_data(msg);
 
     js_key = JSStringCreateWithUTF8CString("status");
     js_value = JSValueMakeNumber(ctx, status);
+
+    o = JSValueToObject(ctx, val, exc);
     JSObjectSetProperty(ctx, o, js_key, js_value, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly, exc);
 
     JSStringRelease(js_key);
@@ -1268,11 +1315,15 @@ global_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject
 void 
 scripts_completion_activate(void) 
 {
-    const char *text = GET_TEXT();
-    JSValueRef val[] = { js_char_to_value(s_global_context, text) };
-    JSObjectCallAsFunction(s_global_context, s_completion_callback, NULL, 1, val, NULL);
-    completion_clean_completion(false);
-    dwb_change_mode(NORMAL_MODE, true);
+    if (TRY_CONTEXT_LOCK) 
+    {
+        const char *text = GET_TEXT();
+        JSValueRef val[] = { js_char_to_value(s_global_context, text) };
+        JSObjectCallAsFunction(s_global_context, s_completion_callback, NULL, 1, val, NULL);
+        completion_clean_completion(false);
+        dwb_change_mode(NORMAL_MODE, true);
+        CONTEXT_UNLOCK;
+    }
 }
 static JSValueRef 
 global_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1336,12 +1387,16 @@ error_out:
 static gboolean
 timeout_callback(JSObjectRef obj) 
 {
-    gboolean ret;
-    JSValueRef val = JSObjectCallAsFunction(s_global_context, obj, NULL, 0, NULL, NULL);
-    if (val == NULL)
-        ret = false;
-    else 
-        ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
+    gboolean ret = false;
+    if (TRY_CONTEXT_LOCK)
+    {
+        JSValueRef val = JSObjectCallAsFunction(s_global_context, obj, NULL, 0, NULL, NULL);
+        if (val == NULL)
+            ret = false;
+        else 
+            ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
+        CONTEXT_UNLOCK;
+    }
 
     return ret;
 }/*}}}*/
@@ -1371,7 +1426,11 @@ global_timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_
 void 
 timer_stopped_cb(JSObjectRef func)
 {
-    JSValueUnprotect(s_global_context, func);
+    if (TRY_CONTEXT_LOCK)
+    {
+        JSValueUnprotect(s_global_context, func);
+        CONTEXT_UNLOCK;
+    }
 }
 
 /* global_timer_start {{{*/
@@ -1478,11 +1537,13 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 static void
 got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
 {
-    pthread_mutex_lock(&s_context_mutex);
-    JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
-    JSObjectCallAsFunction(s_global_context, callback, NULL, 1, args, NULL);
-    JSValueUnprotect(s_global_context, callback);
-    pthread_mutex_unlock(&s_context_mutex);
+    if (TRY_CONTEXT_LOCK)
+    {
+        JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
+        JSObjectCallAsFunction(s_global_context, callback, NULL, 1, args, NULL);
+        JSValueUnprotect(s_global_context, callback);
+        CONTEXT_UNLOCK;
+    }
 }
 static JSValueRef 
 clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1631,7 +1692,7 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
         g_io_channel_unref(channel);
         return false;
     }
-    else if (g_io_channel_read_to_end(channel, &content, &length, NULL) == G_IO_STATUS_NORMAL && content != NULL)  
+    else if (g_io_channel_read_to_end(channel, &content, &length, NULL) == G_IO_STATUS_NORMAL && content != NULL && TRY_CONTEXT_LOCK)  
     {
         JSValueRef arg = js_char_to_value(s_global_context, content);
         if (arg != NULL) 
@@ -1640,6 +1701,7 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
             JSObjectCallAsFunction(s_global_context, callback, NULL, 1,  argv , NULL);
         }
         g_free(content);
+        CONTEXT_UNLOCK;
         return true;
     }
     return false;
@@ -1688,15 +1750,17 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
     else if (WIFSTOPPED(status)) 
         fail = WSTOPSIG(status);
 
-    pthread_mutex_lock(&s_context_mutex);
-    if (fail == 0)
-        deferred_resolve(s_global_context, NULL, deferred, 0, NULL, NULL);
-    else 
+    if (TRY_CONTEXT_LOCK)
     {
-        JSValueRef args[] = { JSValueMakeNumber(s_global_context, fail)  };
-        deferred_reject(s_global_context, NULL, deferred, 1, args, NULL);
+        if (fail == 0)
+            deferred_resolve(s_global_context, NULL, deferred, 0, NULL, NULL);
+        else 
+        {
+            JSValueRef args[] = { JSValueMakeNumber(s_global_context, fail)  };
+            deferred_reject(s_global_context, NULL, deferred, 1, args, NULL);
+        }
+        CONTEXT_UNLOCK;
     }
-    pthread_mutex_unlock(&s_context_mutex);
 }
 
 /* system_spawn {{{*/
@@ -1711,8 +1775,12 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     JSObjectRef oc = NULL, ec = NULL;
     GPid pid;
 
+
     if (argc == 0) 
         return NIL;
+
+    if (!TRY_CONTEXT_LOCK)
+        return ret;
 
     if (argc > 1) 
     {
@@ -1755,6 +1823,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     ret = deferred;
 
 error_out:
+    CONTEXT_UNLOCK;
     g_free(cmdline);
     g_strfreev(srgv);
     return ret;
@@ -2340,6 +2409,10 @@ scripts_emit(ScriptSignal *sig)
     if (function == NULL)
         return false;
 
+    if (!TRY_CONTEXT_LOCK)
+        return false;
+
+    gboolean ret = false;
     int additional = sig->jsobj != NULL ? 2 : 1;
     int numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
     JSValueRef val[numargs];
@@ -2362,9 +2435,11 @@ scripts_emit(ScriptSignal *sig)
     JSValueRef js_ret = JSObjectCallAsFunction(s_global_context, function, NULL, numargs, val, NULL);
 
     if (JSValueIsBoolean(s_global_context, js_ret)) 
-        return JSValueToBoolean(s_global_context, js_ret);
+        ret = JSValueToBoolean(s_global_context, js_ret);
 
-    return false;
+    CONTEXT_UNLOCK;
+
+    return ret;
 }/*}}}*/
 /*}}}*/
 
@@ -2373,13 +2448,12 @@ scripts_emit(ScriptSignal *sig)
 static void 
 object_destroy_cb(JSObjectRef o) 
 {
-    pthread_mutex_lock(&s_context_mutex);
-    if (s_global_context) 
+    if (TRY_CONTEXT_LOCK)
     {
         JSObjectSetPrivate(o, NULL);
         JSValueUnprotect(s_global_context, o);
+        CONTEXT_UNLOCK;
     }
-    pthread_mutex_unlock(&s_context_mutex);
 }
 
 static JSObjectRef 
@@ -2393,7 +2467,7 @@ make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean p
     if (protect) 
     {
         g_object_set_qdata_full(o, s_ref_quark, retobj, (GDestroyNotify)object_destroy_cb);
-        JSValueProtect(s_global_context, retobj);
+        JSValueProtect(ctx, retobj);
     }
     else 
         g_object_set_qdata_full(o, s_ref_quark, retobj, NULL);
@@ -2434,6 +2508,10 @@ connect_callback(SSignal *sig, ...)
     va_list args;
     JSValueRef cur;
     JSValueRef argv[sig->query->n_params + 1];
+    gboolean result = false;
+
+    if (!TRY_CONTEXT_LOCK)
+        return result;
     va_start(args, sig);
 #define CHECK_NUMBER(GTYPE, TYPE) G_STMT_START if (gtype == G_TYPE_##GTYPE) { \
     TYPE MM_value = va_arg(args, TYPE); \
@@ -2485,9 +2563,10 @@ apply:
     JSValueRef ret = JSObjectCallAsFunction(s_global_context, sig->func, NULL, sig->query->n_params+1, argv, NULL);
     if (JSValueIsBoolean(s_global_context, ret)) 
     {
-        return JSValueToBoolean(s_global_context, ret);
+        result = JSValueToBoolean(s_global_context, ret);
     }
-    return false;
+    CONTEXT_UNLOCK;
+    return result;
 }
 static void
 on_disconnect_object(SSignal *sig, GClosure *closure)
@@ -2496,16 +2575,21 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
 }
 static void on_disconnect_notify(JSObjectRef func, GClosure *closure)
 {
-    pthread_mutex_lock(&s_context_mutex);
-    if (s_global_context)
+    if (TRY_CONTEXT_LOCK)
+    {
         JSValueUnprotect(s_global_context, func);
-    pthread_mutex_unlock(&s_context_mutex);
+        CONTEXT_UNLOCK;
+    }
 }
 static void
 notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
 {
-    JSValueRef argv[] = { make_object(s_global_context, o) };
-    JSObjectCallAsFunction(s_global_context, func, NULL, 1, argv, NULL);
+    if (TRY_CONTEXT_LOCK) 
+    {
+        JSValueRef argv[] = { make_object(s_global_context, o) };
+        JSObjectCallAsFunction(s_global_context, func, NULL, 1, argv, NULL);
+        CONTEXT_UNLOCK;
+    }
 }
 static JSValueRef 
 gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2536,8 +2620,9 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
 
     if (strncmp(name, "notify::", 8) == 0) 
     {
-        JSValueProtect(s_global_context, func);
+        JSValueProtect(ctx, func);
         id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), func, (GClosureNotify)on_disconnect_notify, flags);
+        sigdata_append(id, o); 
     }
     else
     {
@@ -2560,14 +2645,15 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
         }
 
         sig->func = func;
-        JSValueProtect(s_global_context, func);
+        JSValueProtect(ctx, func);
 
         id = g_signal_connect_data(o, name, G_CALLBACK(connect_callback), sig, (GClosureNotify)on_disconnect_object, flags);
         if (id > 0) 
         {
             sig->id = id;
-            JSValueProtect(s_global_context, this);
+            JSValueProtect(ctx, this);
             sig->object = this;
+            sigdata_append(id, o);
         }
         else 
             ssignal_free(sig);
@@ -2611,6 +2697,7 @@ gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL && g_signal_handler_is_connected(o, id)) 
         {
+            sigdata_remove(id, o);
             g_signal_handler_disconnect(o, id);
             return JSValueMakeBoolean(ctx, true);
         }
@@ -2645,6 +2732,16 @@ create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSClassAttrib
     js_set_property(ctx, obj, name, ret, attr, NULL);
     return ret;
 }/*}}}*/
+
+static void 
+finalize(JSObjectRef o)
+{
+    GObject *ob = JSObjectGetPrivate(o);
+    if (ob != NULL)
+    {
+        g_object_steal_qdata(ob, s_ref_quark);
+    }
+}
 
 /* set_property {{{*/
 static bool
@@ -2805,6 +2902,7 @@ create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallA
 static void 
 create_global_object() 
 {
+    pthread_rwlock_wrlock(&s_context_lock);
     s_ref_quark = g_quark_from_static_string("dwb_js_ref");
 
     JSStaticValue global_values[] = {
@@ -2931,6 +3029,7 @@ create_global_object()
     cd.staticFunctions = default_functions;
     cd.getProperty = get_property;
     cd.setProperty = set_property;
+    cd.finalize = finalize;
     s_gobject_class = JSClassCreate(&cd);
 
     s_constructors[CONSTRUCTOR_DEFAULT] = create_constructor(s_global_context, "GObject", s_gobject_class, NULL, NULL);
@@ -3106,6 +3205,7 @@ create_global_object()
     
     s_soup_session = make_object_for_class(s_global_context, s_gobject_class, G_OBJECT(webkit_get_default_session()), false);
     JSValueProtect(s_global_context, s_soup_session);
+    pthread_rwlock_unlock(&s_context_lock);
 }/*}}}*/
 /*}}}*/
 
@@ -3179,7 +3279,7 @@ scripts_create_tab(GList *gl)
 void 
 scripts_remove_tab(JSObjectRef obj) 
 {
-    if (obj != NULL) 
+    if (obj != NULL && TRY_CONTEXT_LOCK) 
     {
         if (EMIT_SCRIPT(CLOSE_TAB)) 
         {
@@ -3187,6 +3287,7 @@ scripts_remove_tab(JSObjectRef obj)
             scripts_emit(&signal);
         }
         JSValueUnprotect(s_global_context, obj);
+        CONTEXT_UNLOCK;
     }
 }/*}}}*/
 
@@ -3210,9 +3311,13 @@ scripts_init_script(const char *path, const char *script)
 void
 evaluate(const char *script) 
 {
-    JSStringRef js_script = JSStringCreateWithUTF8CString(script);
-    JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
-    JSStringRelease(js_script);
+    if (TRY_CONTEXT_LOCK) 
+    {
+        JSStringRef js_script = JSStringCreateWithUTF8CString(script);
+        JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
+        JSStringRelease(js_script);
+        CONTEXT_UNLOCK;
+    }
 }
 
 JSObjectRef 
@@ -3228,20 +3333,36 @@ get_private(JSContextRef ctx, char *name)
     JSStringRelease(js_name);
     return ret;
 }
+void
+scripts_reapply()
+{
+    if (scripts_init(false)) 
+    {
+        for (GList *gl = dwb.state.views; gl; gl=gl->next)
+        {
+            JSObjectRef o = make_object(s_global_context, G_OBJECT(VIEW(gl)->web));
+            JSValueProtect(s_global_context, o);
+            VIEW(gl)->script_wv = o;
+        }
+        apply_scripts();
+    }
+    
+}
 
 /* scripts_init {{{*/
-void 
+gboolean 
 scripts_init(gboolean force) 
 {
     dwb.misc.script_signals = 0;
-    s_opt_force = force;
     if (s_global_context == NULL) 
     {
         if (force) 
             create_global_object();
         else 
-            return;
+            return false;
     }
+    s_gobject_signals = g_ptr_array_new();
+
     dwb.state.script_completion = NULL;
 
     char *dir = util_get_data_dir(LIBJS_DIR);
@@ -3269,6 +3390,7 @@ scripts_init(gboolean force)
     JSObjectRef o = JSObjectMakeArray(s_global_context, 0, NULL, NULL);
     s_array_contructor = js_get_object_property(s_global_context, o, "constructor");
     JSValueProtect(s_global_context, s_array_contructor); 
+    return true;
 }/*}}}*/
 
 gboolean 
@@ -3282,19 +3404,63 @@ scripts_execute_one(const char *script)
 void
 scripts_unbind(JSObjectRef obj) 
 {
-    pthread_mutex_lock(&s_context_mutex);
-    if (obj != NULL) 
-        JSValueUnprotect(s_global_context, obj);
-    pthread_mutex_unlock(&s_context_mutex);
+    if (TRY_CONTEXT_LOCK)
+    {
+        if (obj != NULL) 
+            JSValueUnprotect(s_global_context, obj);
+        CONTEXT_UNLOCK;
+    }
 }
 
 /* scripts_end {{{*/
 void
 scripts_end() 
 {
-    pthread_mutex_lock(&s_context_mutex);
+    pthread_rwlock_wrlock(&s_context_lock);
     if (s_global_context != NULL) 
     {
+        GList *next, *l;
+
+        next = dwb.override_keys;
+        while (next != NULL)
+        {
+            l = next;
+            next = next->next;
+            KeyMap *m = l->data;
+            if (m->map->prop & CP_SCRIPT) 
+                dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
+
+        }
+        next = dwb.keymap;
+        while(next != NULL) 
+        {
+            l = next;
+            next = next->next;
+            KeyMap *m = l->data;
+            if (m->map->prop & CP_SCRIPT) {
+                scripts_unbind(m->map->arg.p);
+                g_free(m->map);
+                g_free(m);
+                m = NULL;
+                dwb.keymap = g_list_delete_link(dwb.keymap, l);
+            }
+        }
+        for (GList *gl = dwb.state.views; gl; gl=gl->next)
+        {
+            JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
+            VIEW(gl)->script_wv = NULL;
+        }
+        for (guint i=0; i<s_gobject_signals->len; i++)
+        {
+            SigData *data = g_ptr_array_index(s_gobject_signals, i);
+            g_signal_handler_disconnect(data->instance, data->id);
+            g_free(data);
+        }
+        g_ptr_array_free(s_gobject_signals, false);
+
+        g_slist_free(s_script_list);
+        s_script_list = NULL;
+        s_gobject_signals = NULL;
         for (int i=0; i<CONSTRUCTOR_LAST; i++) 
             JSValueUnprotect(s_global_context, s_constructors[i]);
         for (int i=SCRIPTS_SIG_FIRST; i<SCRIPTS_SIG_LAST; ++i)
@@ -3317,5 +3483,5 @@ scripts_end()
         JSGlobalContextRelease(s_global_context);
         s_global_context = NULL;
     }
-    pthread_mutex_unlock(&s_context_mutex);
+    pthread_rwlock_unlock(&s_context_lock);
 }/*}}}*//*}}}*/
