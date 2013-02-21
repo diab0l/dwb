@@ -63,7 +63,7 @@ commands_simple_command(KeyMap *km, const char *argument)
                 INTEGER, "nummod", dwb.state.nummod);
 
         ScriptSignal sig = { .jsobj = NULL, SCRIPTS_SIG_META(json, EXECUTE_COMMAND, 0) };
-        SCRIPTS_EMIT_RETURN_ARG(sig, json, STATUS_OK);
+        SCRIPTS_EMIT_RETURN(sig, json, STATUS_OK);
     }
 
     ret = func(km, arg);

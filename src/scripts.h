@@ -74,13 +74,7 @@ gboolean scripts_execute_one(const char *script);
 void scripts_completion_activate(void);
 
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1<<SCRIPTS_SIG_##sig)))
-#define SCRIPTS_EMIT_RETURN(signal, json) G_STMT_START  \
-  if (scripts_emit(&signal)) { \
-    g_free(json); \
-    return true; \
-  } else g_free(json); \
-G_STMT_END
-#define SCRIPTS_EMIT_RETURN_ARG(signal, json, val) G_STMT_START  \
+#define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \
   if (scripts_emit(&signal)) { \
     g_free(json); \
     return val; \
