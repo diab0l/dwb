@@ -1473,17 +1473,31 @@ got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
 static JSValueRef 
 clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    if (argc < 2)
+    if (argc < 1)
         return UNDEFINED;
     GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
     if (atom == NULL)
         return UNDEFINED;
-    JSObjectRef callback = js_value_to_function(ctx, argv[1], exc);
-    if (callback != NULL)
+    GtkClipboard *clipboard = gtk_clipboard_get(atom);
+    if (argc > 1) 
     {
-        JSValueProtect(ctx, callback);
-        GtkClipboard *clipboard = gtk_clipboard_get(atom);
-        gtk_clipboard_request_text(clipboard, (GtkClipboardTextReceivedFunc)got_clipboard, callback);
+        JSObjectRef callback = js_value_to_function(ctx, argv[1], exc);
+        if (callback != NULL)
+        {
+            JSValueProtect(ctx, callback);
+            gtk_clipboard_request_text(clipboard, (GtkClipboardTextReceivedFunc)got_clipboard, callback);
+        }
+    }
+    else 
+    {
+        JSValueRef ret = NIL;
+        char *text = gtk_clipboard_wait_for_text(clipboard);
+        if (text != NULL)
+        {
+            ret = js_char_to_value(ctx, text);
+            g_free(text);
+        }
+        return ret;
     }
     return UNDEFINED;
 }

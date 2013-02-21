@@ -498,14 +498,17 @@ _returns_;; The index in the array or -1 if the Object wasn't found.
 
 === clipboard ===
 
-==== void clipboard.get(Selection selection, Function callback)
+==== void clipboard.get(Selection selection, [Function callback])
 ****
 
-Gets the X11 clipboard asynchronously.
+Gets the X11 clipboard.
 
 _selection_;; The Selection to get
-_callback_;; Callback that will be called when the clipboard content was
-received, the first parameter will be the content of the clipboard
+_callback_;; If a callback function is used the clipboard will be fetched
+asynchronously, the first parameter will be the content of the clipboard, else
+it will be fetched synchronously
+_returns_;; If no callback was provided it returns the text content of the
+clipboard.
 ****
 
 ==== void clipboard.set(Selection selection, String text)

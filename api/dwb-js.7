@@ -1085,10 +1085,10 @@ The index in the array or \-1 if the Object wasn\(cqt found\&.
 .nr an-break-flag 1
 .br
 .ps +1
-\fBvoid clipboard.get(Selection selection, Function callback)\fR
+\fBvoid clipboard.get(Selection selection, [Function callback])\fR
 .RS 4
 .sp
-Gets the X11 clipboard asynchronously\&.
+Gets the X11 clipboard\&.
 .PP
 \fIselection\fR
 .RS 4
@@ -1097,7 +1097,12 @@ The Selection to get
 .PP
 \fIcallback\fR
 .RS 4
-Callback that will be called when the clipboard content was received, the first parameter will be the content of the clipboard
+If a callback function is used the clipboard will be fetched asynchronously, the first parameter will be the content of the clipboard, else it will be fetched synchronously
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+If no callback was provided it returns the text content of the clipboard\&.
 .RE
 .RE
 .sp
