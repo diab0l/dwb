@@ -110,9 +110,6 @@ static Sigmap s_sigmap[] = {
     { 0, NULL },
 };
 
-
-static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
-
 enum {
     CONSTRUCTOR_DEFAULT = 0,
     CONSTRUCTOR_WEBVIEW,
@@ -132,6 +129,7 @@ enum {
 static void callback(CallbackData *c);
 static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception);
 static JSObjectRef make_object(JSContextRef ctx, GObject *o);
+static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
 
 /* Static variables */
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
@@ -3419,8 +3417,8 @@ scripts_end()
     pthread_rwlock_wrlock(&s_context_lock);
     if (s_global_context != NULL) 
     {
+        // keys
         GList *next, *l;
-
         next = dwb.override_keys;
         while (next != NULL)
         {
@@ -3445,11 +3443,7 @@ scripts_end()
                 dwb.keymap = g_list_delete_link(dwb.keymap, l);
             }
         }
-        for (GList *gl = dwb.state.views; gl; gl=gl->next)
-        {
-            JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
-            VIEW(gl)->script_wv = NULL;
-        }
+        // signals
         for (guint i=0; i<s_gobject_signals->len; i++)
         {
             SigData *data = g_ptr_array_index(s_gobject_signals, i);
@@ -3457,17 +3451,19 @@ scripts_end()
             g_free(data);
         }
         g_ptr_array_free(s_gobject_signals, false);
-
-        g_slist_free(s_script_list);
-        s_script_list = NULL;
         s_gobject_signals = NULL;
+
+        
         for (int i=0; i<CONSTRUCTOR_LAST; i++) 
             JSValueUnprotect(s_global_context, s_constructors[i]);
+
         for (int i=SCRIPTS_SIG_FIRST; i<SCRIPTS_SIG_LAST; ++i)
             s_sig_objects[i] = 0;
         dwb.misc.script_signals = 0;
+
         for (GSList *timer = s_timers; timer; timer=timer->next)
             g_source_remove(GPOINTER_TO_INT(timer->data));
+
         JSValueUnprotect(s_global_context, s_array_contructor);
         JSValueUnprotect(s_global_context, UNDEFINED);
         JSValueUnprotect(s_global_context, NIL);
