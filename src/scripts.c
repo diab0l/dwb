@@ -931,8 +931,13 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     else 
         json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
 
-    JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
-    JSObjectCallAsFunction(s_global_context, arg->js, NULL, 1, argv, NULL);
+    pthread_mutex_lock(&s_context_mutex);
+    if (s_global_context) 
+    {
+        JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
+        JSObjectCallAsFunction(s_global_context, arg->js, NULL, 1, argv, NULL);
+    }
+    pthread_mutex_unlock(&s_context_mutex);
 
     g_free(json);
     return STATUS_OK;
