@@ -3494,6 +3494,32 @@ scripts_unbind(JSObjectRef obj)
         JSValueUnprotect(s_global_context, obj);
     CONTEXT_UNLOCK;
 }
+void
+scripts_check_syntax(char **scripts)
+{
+    scripts_init(true);
+    for (int i=0; scripts[i]; i++)
+    {
+        char *content = util_get_file_content(scripts[i], NULL);
+        if (content != NULL)
+        {
+            const char *tmp = content;
+            if (g_str_has_prefix(tmp, "#!javascript"))
+                tmp += 12;
+            JSValueRef exc = NULL;
+            JSStringRef script = JSStringCreateWithUTF8CString(tmp);
+            JSEvaluateScript(s_global_context, script, NULL,  NULL, 0, &exc);
+            if (exc)
+            {
+                fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", scripts[i]);
+                js_print_exception(s_global_context, exc);
+            }
+            g_free(content);
+        }
+    }
+
+    scripts_end();
+}
 
 /* scripts_end {{{*/
 void

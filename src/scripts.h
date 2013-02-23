@@ -73,6 +73,7 @@ DwbStatus scripts_eval_key(KeyMap *m, Arg *arg);
 gboolean scripts_execute_one(const char *script);
 void scripts_completion_activate(void);
 void scripts_reapply(void);
+void scripts_check_syntax(char **scripts);
 
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \

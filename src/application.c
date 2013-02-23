@@ -39,8 +39,10 @@ static gboolean s_opt_force = false;
 static gboolean s_opt_enable_scripts = false;
 static gchar *s_opt_restore = NULL;
 static gchar **s_opt_exe = NULL;
+static gchar **s_scripts;
 static GIOChannel *s_fallback_channel;
 static GOptionEntry options[] = {
+    { "check-script", 'c', 0, G_OPTION_ARG_FILENAME_ARRAY, &s_scripts, "Check script syntax of scripts", "script"},
     { "embed", 'e', 0, G_OPTION_ARG_INT64, &dwb.gui.wid, "Embed into window with window id wid", "wid"},
     { "force", 'f', 0, G_OPTION_ARG_NONE, &s_opt_force, "Force restoring a saved session, even if another process has restored the session", NULL },
     { "list-sessions", 'l', 0, G_OPTION_ARG_NONE, &s_opt_list_sessions, "List saved sessions and exit", NULL },
@@ -177,6 +179,11 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     if (s_opt_version) 
     {
         dwb_version();
+        return true;
+    }
+    if (s_scripts)
+    {
+        scripts_check_syntax(s_scripts);
         return true;
     }
     dwb_init_vars();

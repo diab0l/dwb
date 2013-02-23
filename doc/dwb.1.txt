@@ -23,6 +23,10 @@ keyboard-driven.
 
 OPTIONS
 -------
+*-c, --check-script*='script'::
+  Checks if a script that uses the javascript api is correct, the script is checked for syntactic
+  errors and executed once.
+
 *-e, --embed*='wid'::
   Embed dwb into <wid>.
 
