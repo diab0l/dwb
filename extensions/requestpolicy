@@ -366,7 +366,10 @@ var resourceCB = (function ()
         if (!message)
             return false;
 
-        firstParty = util.domainFromHost(message.firstParty.host);
+        if (message.firstParty) 
+            firstParty = util.domainFromHost(message.firstParty.host);
+        else 
+            firstParty = wv.mainFrame.domain;
         domain = util.domainFromHost(message.uri.host);
         if (firstParty == domain)
             return false;

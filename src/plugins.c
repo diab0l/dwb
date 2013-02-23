@@ -95,9 +95,9 @@ plugins_create_click_element(WebKitDOMElement *element, GList *gl)
     char *left = webkit_dom_css_style_declaration_get_property_value(style, "left");
     char *position = webkit_dom_css_style_declaration_get_property_value(style, "position");
     int w, h;
-    if (sscanf(width, "%dpx", &w) == 1 && w<72) 
+    if (*width == '\0' || (sscanf(width, "%dpx", &w) == 1 && w<72)) 
         w = 72;
-    if (sscanf(height, "%dpx", &h) == 1 && h<24) 
+    if (*height == '\0' || (sscanf(height, "%dpx", &h) == 1 && h<24)) 
         h = 24;
 
 
