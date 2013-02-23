@@ -186,6 +186,18 @@ uncamelize(char *uncamel, const char *camel, char rep, size_t length)
     return ret;
 }/*}}}*/
 
+static JSValueRef 
+call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
+{
+    JSValueRef exc = NULL;
+    JSValueRef ret = JSObjectCallAsFunction(ctx, func, this, argc, argv, &exc);
+    if (exc != NULL) 
+    {
+        js_print_exception(ctx, exc);
+    }
+    return ret;
+}
+
 /* inject {{{*/
 static JSValueRef
 inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -487,7 +499,7 @@ callback(CallbackData *c)
     if (s_global_context != NULL)
     {
         JSValueRef val[] = { c->object != NULL ? c->object : NIL };
-        JSValueRef jsret = JSObjectCallAsFunction(s_global_context, c->callback, NULL, 1, val, NULL);
+        JSValueRef jsret = call_as_function_debug(s_global_context, c->callback, NULL, 1, val);
         if (JSValueIsBoolean(s_global_context, jsret))
             ret = JSValueToBoolean(s_global_context, jsret);
         if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
@@ -981,7 +993,7 @@ scripts_eval_key(KeyMap *m, Arg *arg)
             json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
-        JSObjectCallAsFunction(s_global_context, arg->js, NULL, 1, argv, NULL);
+        call_as_function_debug(s_global_context, arg->js, NULL, 1, argv);
     }
 
     CONTEXT_UNLOCK;
@@ -1185,6 +1197,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
         {
             JSObjectRef this = JSObjectMake(ctx, NULL, NULL);
             JSValueProtect(ctx, this);
+            js_set_object_property(ctx, this, "path", path, exc);
             ret = JSObjectCallAsFunction(ctx, function, this, 0, NULL, exc);
         }
     }
@@ -1244,7 +1257,7 @@ request_callback(SoupSession *session, SoupMessage *message, JSObjectRef functio
         {
             JSValueRef o = get_message_data(message);
             JSValueRef vals[] = { o, make_object(s_global_context, G_OBJECT(message))  };
-            JSObjectCallAsFunction(s_global_context, function, NULL, 2, vals, NULL);
+            call_as_function_debug(s_global_context, function, NULL, 2, vals);
         }
         JSValueUnprotect(s_global_context, function);
     }
@@ -1353,7 +1366,7 @@ scripts_completion_activate(void)
     {
         const char *text = GET_TEXT();
         JSValueRef val[] = { js_char_to_value(s_global_context, text) };
-        JSObjectCallAsFunction(s_global_context, s_completion_callback, NULL, 1, val, NULL);
+        call_as_function_debug(s_global_context, s_completion_callback, NULL, 1, val);
         completion_clean_completion(false);
         dwb_change_mode(NORMAL_MODE, true);
     }
@@ -1427,7 +1440,7 @@ timeout_callback(JSObjectRef obj)
 
     if (s_global_context != NULL)
     {
-        JSValueRef val = JSObjectCallAsFunction(s_global_context, obj, NULL, 0, NULL, NULL);
+        JSValueRef val = call_as_function_debug(s_global_context, obj, NULL, 0, NULL);
         if (val == NULL)
             ret = false;
         else 
@@ -1581,7 +1594,7 @@ got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
     if (s_global_context != NULL)
     {
         JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
-        JSObjectCallAsFunction(s_global_context, callback, NULL, 1, args, NULL);
+        call_as_function_debug(s_global_context, callback, NULL, 1, args);
         JSValueUnprotect(s_global_context, callback);
     }
     CONTEXT_UNLOCK;
@@ -1742,7 +1755,7 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
             if (arg != NULL) 
             {
                 JSValueRef argv[] = { arg };
-                JSObjectCallAsFunction(s_global_context, callback, NULL, 1,  argv , NULL);
+                call_as_function_debug(s_global_context, callback, NULL, 1,  argv);
             }
         }
         CONTEXT_UNLOCK;
@@ -2486,7 +2499,7 @@ scripts_emit(ScriptSignal *sig)
         JSValueRef vson = js_json_to_value(s_global_context, sig->json);
         val[i++] = vson == NULL ? NIL : vson;
 
-        JSValueRef js_ret = JSObjectCallAsFunction(s_global_context, function, NULL, numargs, val, NULL);
+        JSValueRef js_ret = call_as_function_debug(s_global_context, function, NULL, numargs, val);
 
         if (JSValueIsBoolean(s_global_context, js_ret)) 
             ret = JSValueToBoolean(s_global_context, js_ret);
@@ -2619,7 +2632,7 @@ apply:
     }
 #undef CHECK_NUMBER
     argv[0] = sig->object;
-    JSValueRef ret = JSObjectCallAsFunction(s_global_context, sig->func, NULL, sig->query->n_params+1, argv, NULL);
+    JSValueRef ret = call_as_function_debug(s_global_context, sig->func, NULL, sig->query->n_params+1, argv);
     if (JSValueIsBoolean(s_global_context, ret)) 
     {
         result = JSValueToBoolean(s_global_context, ret);
@@ -2651,7 +2664,7 @@ notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
     if (s_global_context != NULL)
     {
         JSValueRef argv[] = { make_object(s_global_context, o) };
-        JSObjectCallAsFunction(s_global_context, func, NULL, 1, argv, NULL);
+        call_as_function_debug(s_global_context, func, NULL, 1, argv);
     }
     CONTEXT_UNLOCK;
 }
@@ -3365,7 +3378,10 @@ scripts_init_script(const char *path, const char *script)
     if (s_global_context == NULL) 
         create_global_object();
 
-    debug = g_strdup_printf("\ntry{/*<dwb*/%s/*dwb>*/}catch(e){io.debug({message:\"In file %s\",error:e});};", script, path);
+    debug = g_strdup_printf("\n"
+            "try{var self=this;"
+            "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});" 
+            "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
     JSObjectRef function = js_make_function(s_global_context, debug);
 
     if (function != NULL) 

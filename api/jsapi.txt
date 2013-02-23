@@ -3119,6 +3119,40 @@ foo();  // fails
 
 For sharing data between scripts either signals or modules can be created.
 
+=== self and this ===
+In every script the variable *self* refers to *this*, the encapsulating
+function (at least if it's not overwritten). The encapsulating function itself
+has the following properties and methods: 
+
+
+****
+[float]
+==== *path* ====
+
+[source,javascript]
+----
+this.path        string     read
+self.path        string     read
+----
+
+The path of the script.
+****
+
+****
+[[thisdebug]]
+[float]
+==== *debug()* ==== 
+
+[source,javascript]
+----
+void this.debug(Object params)
+void self.debug(Object params)
+----
+
+Same as io.debug, but also prints the path of the script.
+****
+
+
 [[Modules]]
 == Modules == 
 

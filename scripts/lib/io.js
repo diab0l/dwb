@@ -1,5 +1,6 @@
 (function () {
         var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
+        var prefixFile        = "\n==> DEBUG [IN FILE]    : ";
         var prefixError       = "\n==> DEBUG [ERROR]      : ";
         var prefixStack       = "\n==> DEBUG [STACK]      : ";
         var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
@@ -18,6 +19,10 @@
                     if (params.message) 
                     {
                         message += prefixMessage + params.message;
+                    }
+                    else if (this.path) 
+                    {
+                        message += prefixFile + this.path;
                     }
                     if (params.error && params.error instanceof Error) 
                     {
@@ -64,4 +69,4 @@
             }
         });
 })();
-Object.freeze(io);
+//Object.freeze(io);
