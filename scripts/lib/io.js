@@ -16,18 +16,24 @@
                     var message = new String();
                     params = params || {};
                     var offset = params.offset || 0;
-                    if (params.message) 
-                    {
-                        message += prefixMessage + params.message;
+                    var error;
+                    if (params instanceof Error)
+                        error = params;
+                    else {
+                        if (params.message) 
+                        {
+                            message += prefixMessage + params.message;
+                        }
+                        if (params.error instanceof Error)
+                            error = params.error;
                     }
-                    else if (this.path) 
-                    {
+
+                    if (this.path) 
                         message += prefixFile + this.path;
-                    }
-                    if (params.error && params.error instanceof Error) 
+
+                    if (error)
                     {
-                        var line = params.error.line || params.error.line === 0 ? params.error.line : "?";
-                        var error = params.error;
+                        var line = error.line || error.line === 0 ? error.line : "?";
                         if (!error.stack) 
                         {
                             try 
