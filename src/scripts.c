@@ -3514,6 +3514,10 @@ scripts_check_syntax(char **scripts)
                 fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", scripts[i]);
                 js_print_exception(s_global_context, exc);
             }
+            else 
+            {
+                fprintf(stderr, "Execution of %s successful.\n", scripts[i]);
+            }
             g_free(content);
         }
     }
