@@ -684,6 +684,7 @@ struct _View {
 struct _Color {
   DwbColor active_fg;
   DwbColor active_bg;
+  DwbColor private_bg;
   DwbColor ssl_trusted;
   DwbColor ssl_untrusted;
   DwbColor tab_active_fg;

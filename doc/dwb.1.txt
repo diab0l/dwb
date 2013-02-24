@@ -1444,6 +1444,9 @@ color-string, default value: '#eeeeee'.
 *print-previewer*::
 Program used for printing previews, default value: 'NULL'.
 
+*private-color*::
+Statusbar color used when private browsing is enabled, default value: '#505050'.
+
 *proxy*::
 Whether to use a HTTP-proxy. Possible values: true/false,
 default value: 'false'.

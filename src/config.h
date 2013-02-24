@@ -987,6 +987,8 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,  COLOR_CHAR, { .p = "#ffffff"         },    (S_Func) dwb_reload_layout,   { 0 }, },
   { { "background-color",                         "Background color of the active tab", },                              
     SETTING_GLOBAL,  COLOR_CHAR, { .p = "#000000"         },    (S_Func) dwb_reload_layout,  { 0 }, },
+  { { "private-color",                         "Statusbar background color in private browsing mode", },                              
+    SETTING_GLOBAL,  COLOR_CHAR, { .p = "#505050"         },    (S_Func) dwb_reload_layout,  { 0 }, },
 
   { { "tab-active-fg-color",                     "Foreground color of the active tab", },                           
     SETTING_GLOBAL,  COLOR_CHAR, { .p = "#ffffff"         },    (S_Func) dwb_reload_layout,  { 0 }, },

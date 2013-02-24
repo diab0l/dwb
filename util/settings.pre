@@ -58,6 +58,7 @@ error-color text Color for error messages
 foreground-color text Foreground color of the statusbar
 normal-completion-bg-color text Background color of normal completion items
 normal-completion-fg-color text Foreground color of normal completion items
+private-color text Statusbar color used with enable-private-browsing enabled
 progress-bar-empty-color text Color of the empty part of the progress bar
 progress-bar-full-color text Color of the full part of the progress bar
 prompt-color text Color for prompt messages

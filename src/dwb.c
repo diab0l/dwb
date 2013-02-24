@@ -79,6 +79,7 @@ static DwbStatus dwb_set_find_delay(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_do_not_track(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
+static void dwb_set_statusbar_color();
 //static DwbStatus dwb_set_javascript_debugging(GList *gl, WebSettings *s);
 #ifdef WITH_LIBSOUP_2_38
 static DwbStatus dwb_set_dns_lookup(GList *gl, WebSettings *s);
@@ -285,6 +286,7 @@ dwb_set_private_browsing(GList *gl, WebSettings *s)
 {
     dwb.misc.private_browsing = s->arg_local.b;
     dwb_webkit_setting(gl, s);
+    dwb_set_statusbar_color();
     return STATUS_OK;
 }/*}}}*/
 
@@ -3829,6 +3831,7 @@ dwb_init_style()
     /* Statusbar */
     DWB_COLOR_PARSE(&dwb.color.active_fg, GET_CHAR("foreground-color"));
     DWB_COLOR_PARSE(&dwb.color.active_bg, GET_CHAR("background-color"));
+    DWB_COLOR_PARSE(&dwb.color.private_bg, GET_CHAR("private-color"));
 
     /* Tabs */
     DWB_COLOR_PARSE(&dwb.color.tab_active_fg, GET_CHAR("tab-active-fg-color"));
@@ -3879,16 +3882,29 @@ dwb_init_style()
     SET_FONT(dwb.font.fd_entry, "font-entry");
     SET_FONT(dwb.font.fd_completion, "font-completion");
 #undef SET_FONT
-    } /*}}}*/
+} /*}}}*/
 
+
+static void 
+dwb_set_statusbar_color()
+{
+    if (dwb.misc.private_browsing)
+    {
+        DWB_WIDGET_OVERRIDE_BACKGROUND(dwb.gui.statusbox, GTK_STATE_NORMAL, &dwb.color.private_bg);
+        DWB_WIDGET_OVERRIDE_BASE(dwb.gui.entry, GTK_STATE_NORMAL, &dwb.color.private_bg);
+    }
+    else 
+    {
+        DWB_WIDGET_OVERRIDE_BACKGROUND(dwb.gui.statusbox, GTK_STATE_NORMAL, &dwb.color.active_bg);
+        DWB_WIDGET_OVERRIDE_BASE(dwb.gui.entry, GTK_STATE_NORMAL, &dwb.color.active_bg);
+    }
+}
 static void
 dwb_apply_style() 
 {
     DWB_WIDGET_OVERRIDE_FONT(dwb.gui.entry, dwb.font.fd_entry);
-    DWB_WIDGET_OVERRIDE_BASE(dwb.gui.entry, GTK_STATE_NORMAL, &dwb.color.active_bg);
     DWB_WIDGET_OVERRIDE_TEXT(dwb.gui.entry, GTK_STATE_NORMAL, &dwb.color.active_fg);
 
-    DWB_WIDGET_OVERRIDE_BACKGROUND(dwb.gui.statusbox, GTK_STATE_NORMAL, &dwb.color.active_bg);
     DWB_WIDGET_OVERRIDE_COLOR(dwb.gui.rstatus, GTK_STATE_NORMAL, &dwb.color.active_fg);
     DWB_WIDGET_OVERRIDE_COLOR(dwb.gui.lstatus, GTK_STATE_NORMAL, &dwb.color.active_fg);
     DWB_WIDGET_OVERRIDE_FONT(dwb.gui.rstatus, dwb.font.fd_active);
@@ -3896,6 +3912,8 @@ dwb_apply_style()
     DWB_WIDGET_OVERRIDE_FONT(dwb.gui.lstatus, dwb.font.fd_active);
 
     DWB_WIDGET_OVERRIDE_BACKGROUND(dwb.gui.window, GTK_STATE_NORMAL, &dwb.color.active_bg);
+
+    dwb_set_statusbar_color();
 }
 
 DwbStatus
