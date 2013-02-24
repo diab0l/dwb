@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2012 Adam Ehlers Nyholm Thomsen
+ * Copyright (c) 2013 Stefan Bolte <portix@gmx.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+#define _XOPEN_SOURCE 700
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -30,26 +50,20 @@ typedef enum _cert_type {
  */
 GHashTable *pins;
 
-const char * cert_filename     = "transport_security_state_static.certs";
-const char * json_filename     = "transport_security_state_static.json";
-const char * certificate_begin = "-----BEGIN CERTIFICATE-----";
-const char * certificate_end   = "-----END CERTIFICATE-----";
-const char * sha1_prefix       = "sha1/";
-const char * cert_template     = "static const char s_hsts_cert_hash_%s[] = \"%s\";\n";
+#define cert_filename             "transport_security_state_static.certs"
+#define json_filename             "transport_security_state_static.json"
+#define certificate_begin         "-----BEGIN CERTIFICATE-----"
+#define certificate_end           "-----END CERTIFICATE-----"
+#define sha1_prefix               "sha1/"
+#define cert_template             "static const char s_hsts_cert_hash_%s[] = \"%s\";\n"
 
-const char * cert_list_template_begin =
-    "static const char * const s_hsts_cert_list_%s_%s[] = {\n";
-const char * cert_list_template_entry =
-    "    s_hsts_cert_hash_%s,\n";
-const char * cert_list_template_end   =
-    "    NULL,\n};\n\n";
+#define cert_list_template_begin "static const char * const s_hsts_cert_list_%s_%s[] = {\n"
+#define cert_list_template_entry "    s_hsts_cert_hash_%s,\n"
+#define cert_list_template_end   "    NULL,\n};\n\n"
 
-const char * entry_list_begin =
-    "static const HSTSPreloadEntry s_hsts_preload[] = {\n";
-const char * entry_list_end   = 
-    "};\n";
-const char * entry_list_length =
-    "static const size_t s_hsts_preload_length = %zu\n;";
+#define entry_list_begin  "static const HSTSPreloadEntry s_hsts_preload[] = {\n"
+#define entry_list_end    "};\n"
+#define entry_list_length "static const size_t s_hsts_preload_length = %zu\n;"
 
 const char *gboolean_to_string(gboolean val){
     return val ? "true" : "false";

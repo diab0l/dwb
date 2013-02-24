@@ -37,7 +37,7 @@ settings.in: settings.pre
 
 $(HSTS): $(HSTS).c
 	@echo "${CC} $<"
-	@$(CC) -Wall -Wextra $(shell pkg-config --cflags --libs glib-2.0 gnutls json) -o $(HSTS) $(HSTS).c
+	@$(CC) $(CFLAGS) $(shell pkg-config --cflags --libs glib-2.0 gnutls json) -o $(HSTS) $(HSTS).c
 
 $(HSTS_PRELOAD): $(HSTS) transport_security_state_static.certs transport_security_state_static.json
 	./$(HSTS) > $(HSTS_PRELOAD)
