@@ -23,9 +23,8 @@ keyboard-driven.
 
 OPTIONS
 -------
-*-c, --check-script*='script'::
-  Checks if a script that uses the javascript api is correct, the script is checked for syntactic
-  errors and executed once.
+*-c, --check-script-syntax*='script'::
+  Checks if a the syntax of a script that uses the javascript api is correct
 
 *-e, --embed*='wid'::
   Embed dwb into <wid>.
