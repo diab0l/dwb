@@ -2344,19 +2344,17 @@ Overall return value from all connected callback functions
 .nr an-break-flag 1
 .br
 .ps +1
-\fBBoolean signals.disconnect(Number id)\fR
+\fBBoolean signals.disconnect(Number id|Function callback)\fR
 .RS 4
 .sp
-disconnect from a signal
+Disconnect from a signal
 .PP
-\fIid\fR
+\fIid|callback\fR
 .RS 4
-The id returned from connect
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-true if the signal was disconnected, false if the signal wasn\(cqt found or was already disconnected\&.
+The id returned from
+\fBconnect\fR
+or the callback function passed to
+\fBconnect\fR\&. Note that if the same callback is used more than once the signal must be disconnected by id, otherwise the behaviour is undefined\&.
 .RE
 .RE
 .sp
@@ -2365,31 +2363,10 @@ true if the signal was disconnected, false if the signal wasn\(cqt found or was 
 .nr an-break-flag 1
 .br
 .ps +1
-\fBBoolean signals.disconnectByFunction(Function callback)\fR
+\fBvoid signals.disconnectByName(String signal)\fR
 .RS 4
 .sp
-disconnect from all signals with matching callback function
-.PP
-\fIcallback\fR
-.RS 4
-The callback function passed to connect
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-true if signals were disconnected, false if no signal was disconnected
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBBoolean signals.disconnectByName(String signal)\fR
-.RS 4
-.sp
-disconnect from all signals with matching name, It should be avoided to call disconnectByName on signals implemented by dwb since it will completely stop the emission of the signal in all scripts\&.
+Disconnect from all signals with matching name, It should be avoided to call disconnectByName on signals implemented by dwb since it will completely stop the emission of the signal in all scripts\&.
 .PP
 \fIsignal\fR
 .RS 4

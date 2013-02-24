@@ -1,6 +1,8 @@
 (function ()  
 {
     var _registered = {};
+    var _blocked = false;
+    var _pending = [];
     function _disconnect(sig) 
     {
         signals[sig] = null;
@@ -9,6 +11,11 @@
     var _disconnectByProp = function(prop, obj) 
     {
         var sig, i, sigs;
+        if (_blocked)
+        {
+            _pending.push({prop : prop, obj : obj});
+            return;
+        }
         for (sig in _registered) 
         {
             sigs = _registered[sig];
@@ -22,13 +29,12 @@
                     }
                     else 
                     {
-                        sigs[i].connected = false;
+                        sigs.splice(i, 1);
                     }
-                    return true;
+                    return;
                 }
             }
         }
-        return false;
     };
     Object.defineProperties(signals, 
     {
@@ -37,24 +43,24 @@
             value : function(sig, args) 
             {
                 var sigs = _registered[sig];
+                var currentSig, pending;
                 var ret = false;
-                var i = 0, l=sigs.length;
-                do 
+                var i, l;
+                _blocked = true;
+                for (i=0, l=sigs.length; i<l; i++)
                 {
-                    if (sigs[i].connected) 
-                    {
-                        ret = sigs[i].callback.apply(sigs[i].callback, args) || ret;
-                        i++;
-                    }
-                    else 
-                    {
-                        sigs.splice(i, 1);
-                    }
-                } while (i<l);
-
-                if (_registered[sig].length === 0) 
+                    currentSig = sigs[i];
+                    ret = currentSig.callback.apply(currentSig.callback, args) || ret;
+                } 
+                _blocked = false;
+                if (_pending.length > 0)
                 {
-                    _disconnect(sig);
+                    for (i=_pending.length-1; i>=0; --i)
+                    {
+                        pending = _pending[i];
+                        _disconnectByProp(pending.prop, pending.obj);
+                    }
+                    _pending = [];
                 }
                 return ret;
             }
@@ -76,7 +82,7 @@
                         _registered[sig] = [];
                         signals[sig] = function () { return signals.emit(sig, arguments); };
                     }
-                    _registered[sig].push({callback : func, id : id, connected : true });
+                    _registered[sig].push({ callback : func, id : id });
                     return id;
                 };
             })()
@@ -92,12 +98,14 @@
         },
         "disconnect" : 
         {
-            value : _disconnectByProp.bind(null, "id")
+            value : function(obj) {
+                if (typeof obj == "function")
+                    _disconnectByProp("callback", obj);
+                else 
+                    _disconnectByProp("id", obj);
+
+            }
         },
-        "disconnectByFunction" : 
-        {
-            value : _disconnectByProp.bind(null, "callback")
-        }, 
         "disconnectByName" : 
         {
             value : function (name) 

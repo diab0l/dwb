@@ -2363,34 +2363,16 @@ _returns_;; Overall return value from all connected callback functions
 
 [source,javascript]
 ----
-Boolean signals.disconnect(Number id) 
+void signals.disconnect(Number id|Function callback) 
 ----
-disconnect from a signal 
+
+Disconnect from a signal 
 
  ::
 
-_id_;; The id returned from <<connect>>
-_returns_;; +true+ if the signal was disconnected, +false+ if the signal
-wasn't found or was already disconnected. 
-****
-
-
-****
-[[disconnectByFunction]]
-[float]
-==== *disconnectByFunction()* ==== 
-
-[source,javascript]
-----
-Boolean signals.disconnectByFunction(Function callback) 
-----
-disconnect from all signals with matching callback function
-
- ::
-
-_callback_;; The callback function passed to <<connect>>
-_returns_;; +true+ if signals were disconnected, +false+ if no signal
-was disconnected
+_id|callback_;; The id returned from <<connect>> or the callback function passed
+to <<connect>>. Note that if the same callback is used more than once
+the signal must be disconnected by id, otherwise the behaviour is undefined. 
 ****
 
 ****
@@ -3750,7 +3732,7 @@ return {
 
   end : function () {
     unbind(bar);
-    signals.disconnectByFunction(loadStatusCallback);
+    signals.disconnect(loadStatusCallback);
     return true;
   }
 };

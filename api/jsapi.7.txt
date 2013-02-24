@@ -1209,29 +1209,21 @@ _..._;; Objects passed to the callback function
 _returns_;; Overall return value from all connected callback functions
 ****
 
-==== Boolean signals.disconnect(Number id) 
-****
-disconnect from a signal 
-
-_id_;; The id returned from connect
-_returns_;; true if the signal was disconnected, false if the signal
-wasn't found or was already disconnected. 
+==== Boolean signals.disconnect(Number id|Function callback) 
 ****
 
+Disconnect from a signal 
 
-==== Boolean signals.disconnectByFunction(Function callback) 
-****
-disconnect from all signals with matching callback function
-
-_callback_;; The callback function passed to connect
-_returns_;; true if signals were disconnected, false if no signal
-was disconnected
+_id|callback_;; The id returned from *connect* or the callback function passed
+to *connect*. Note that if the same callback is used more than once 
+the signal must be disconnected by id, otherwise the behaviour is undefined. 
 ****
 
-==== Boolean signals.disconnectByName(String signal) 
+
+==== void signals.disconnectByName(String signal) 
 ****
 
-disconnect from all signals with matching name,
+Disconnect from all signals with matching name,
 It should be avoided to call disconnectByName
 on signals implemented by dwb since it will completely stop the emission of the
 signal in all scripts. 
