@@ -68,7 +68,8 @@ const FileTest = {
 const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
-  CommandMode : 1<<2
+  CommandMode : 1<<2,
+  HintMode    : 1<<3
 };
 const Selection = {
     primary : 1, 

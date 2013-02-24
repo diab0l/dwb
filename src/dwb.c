@@ -284,9 +284,13 @@ dwb_set_widget_packing(GList *gl, WebSettings *s)
 static DwbStatus
 dwb_set_private_browsing(GList *gl, WebSettings *s) 
 {
+    static gboolean init = true;
     dwb.misc.private_browsing = s->arg_local.b;
     dwb_webkit_setting(gl, s);
-    dwb_set_statusbar_color();
+    if (!init) 
+        dwb_set_statusbar_color();
+    else 
+        init = false;
     return STATUS_OK;
 }/*}}}*/
 
@@ -1976,7 +1980,7 @@ dwb_show_hints(Arg *arg)
             if (ret == STATUS_END) 
                 return ret;
         }
-        dwb.state.mode = HINT_MODE;
+        dwb_change_mode(HINT_MODE);
         dwb.state.hint_type = arg->i;
         entry_focus();
     }
@@ -2926,6 +2930,7 @@ dwb_change_mode(Mode mode, ...)
             break;
         case INSERT_MODE:   ret = dwb_insert_mode(); break;
         case COMMAND_MODE:  ret = dwb_command_mode(); break;
+        case HINT_MODE:     dwb.state.mode = HINT_MODE; break;
         default: PRINT_DEBUG("Unknown mode: %d", mode); break;
     }
     return ret;
