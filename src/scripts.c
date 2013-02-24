@@ -1154,6 +1154,32 @@ global_exit(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     return UNDEFINED;
 }/*}}}*/
 
+/*{{{*/
+static JSValueRef
+settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRef *exc) 
+{
+    char buffer[PROP_LENGTH];
+    char *name = js_string_to_char(ctx, js_name, PROP_LENGTH);
+    if (name != NULL)
+    {
+        uncamelize(buffer, name, '-', PROP_LENGTH);
+        WebSettings *s = g_hash_table_lookup(dwb.settings, buffer);
+        g_free(name);
+        if (s == NULL) 
+            return NIL;
+        switch (s->type) 
+        {
+            case INTEGER : return JSValueMakeNumber(ctx, s->arg_local.i);
+            case DOUBLE : return JSValueMakeNumber(ctx, s->arg_local.d);
+            case BOOLEAN : return JSValueMakeBoolean(ctx, s->arg_local.b);
+            case CHAR : return js_char_to_value(ctx, s->arg_local.p);
+            default : return NIL;
+        }
+    }
+    return NIL;
+}
+/*}}}*/
+
 /* global_include {{{*/
 static JSValueRef 
 global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2980,6 +3006,7 @@ static void
 create_global_object() 
 {
     pthread_rwlock_wrlock(&s_context_lock);
+    JSClassDefinition cd; 
     s_ref_quark = g_quark_from_static_string("dwb_js_ref");
 
     JSStaticValue global_values[] = {
@@ -3022,6 +3049,13 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "data", NULL);
     JSClassRelease(class);
 
+    cd = kJSClassDefinitionEmpty;
+    cd.getProperty = settings_get;
+    cd.setProperty = set_property_cb;
+    class = JSClassCreate(&cd);
+    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "settings", NULL);
+    JSClassRelease(class);
+
     JSStaticFunction io_functions[] = { 
         { "print",     io_print,            kJSDefaultAttributes },
         { "prompt",    io_prompt,           kJSDefaultAttributes },
@@ -3062,7 +3096,7 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "tabs", NULL);
     JSClassRelease(class);
 
-    JSClassDefinition cd = kJSClassDefinitionEmpty;
+    cd = kJSClassDefinitionEmpty;
     cd.className = "signals";
     cd.setProperty = signal_set;
     class = JSClassCreate(&cd);

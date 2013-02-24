@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 02/23/2013
+.\"      Date: 02/24/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/23/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/24/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1507,6 +1507,20 @@ Deferred\&.when(syncOperation(), function() {\&.\&.\&.});
 .RE
 .\}
 .RE
+.SS "settings"
+.sp
+Readonly object that can be used to query dwb\(cqs current settings, all settings can also be used in camelcase, to modify settings \fBexecute\fR can be used\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+if (settings\&.enablePrivateBrowsing == true)
+    execute("set enable\-private\-browsing false");
+.fi
+.if n \{\
+.RE
+.\}
 .SH "WEBKIT OBJECTS"
 .sp
 All webkit objects correspond to gobject objects, i\&.e\&. they have the same properties, but the javascript properties are all camelcase\&. For example, a WebKitWebView has the property \fBzoom\-level\fR, the corresponding javascript property is \fBzoomLevel\fR:

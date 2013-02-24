@@ -1403,6 +1403,22 @@ Deferred.when(asyncOperation(), function() {...});
 Deferred.when(syncOperation(), function() {...});
 ---------------------------------
 
+[[settings]] 
+=== settings ===
+
+Readonly object that can be used to query dwb's current settings, all settings
+can also be used in camelcase, to modify settings *execute* can be used.
+
+.Example
+
+====
+[source,javascript]
+---------------------------------
+if (settings.enablePrivateBrowsing == true)
+    execute("set enable-private-browsing false");
+---------------------------------
+====
+
 
 [[Webkitobjects]]
 == Webkit objects ==
