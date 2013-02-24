@@ -48,6 +48,7 @@
 #include "application.h"
 #include "scripts.h"
 #include "dom.h"
+#include "hsts.h"
 
 /* DECLARATIONS {{{*/
 static DwbStatus dwb_webkit_setting(GList *, WebSettings *);
@@ -179,6 +180,18 @@ dwb_set_accept_language(GList *gl, WebSettings *s)
     g_object_set(webkit_get_default_session(), "accept-language", s->arg_local.p, NULL);
     return STATUS_OK;
 }/*}}}*/
+void
+dwb_set_hsts(GList *gl, WebSettings *s) 
+{
+    if (s->arg_local.b) 
+    {
+        hsts_activate();
+    }
+    else 
+    {
+        hsts_deactivate();
+    }
+}
 
 /*{{{*/
 //static DwbStatus 
@@ -3323,8 +3336,8 @@ dwb_clean_up()
     // 'execute' can crash
     scripts_end();
     
-    for (GList *l = dwb.keymap; l; l=l->next) 
-    {
+    hsts_end(); /* Assumes it has access to dwb.settings */
+    for (GList *l = dwb.keymap; l; l=l->next) {
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
         {
@@ -4272,6 +4285,8 @@ dwb_init_files()
     dwb_check_create(dwb.files[FILES_PLUGINS_ALLOW]);
     dwb.files[FILES_CUSTOM_KEYS]     = g_build_filename(profile_path, "custom_keys",      NULL);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
+    dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
+    dwb_check_create(dwb.files[FILES_HSTS]);
 
     userscripts               = g_build_filename(path, "userscripts",   NULL);
     dwb.files[FILES_USERSCRIPTS]     = util_check_directory(userscripts);
@@ -4482,6 +4497,7 @@ dwb_init()
     dwb_init_hints(NULL, NULL);
 
     dwb_soup_init();
+    hsts_init();
 } /*}}}*/ /*}}}*/
 
 /* FIFO {{{*/
