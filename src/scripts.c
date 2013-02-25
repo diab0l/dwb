@@ -3410,7 +3410,7 @@ scripts_init_script(const char *path, const char *script)
     {
         debug = g_strdup_printf("\n"
                 "try{const script=this;"
-                "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});Object.freeze(this);" 
+                "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)},'_arguments':{value:arguments}});Object.freeze(this);" 
                 "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
         JSObjectRef function = js_make_function(s_global_context, debug);
 

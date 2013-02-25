@@ -8,11 +8,12 @@
         var prefixSource      = "\n==> DEBUG [SOURCE]\n";
         var prefixFunction = "\n------>";
         var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
-        var prefixEditor = "    ";
+        var prefixEditor    = "    ";
+        var prefixHighlight = "--> ";
         var formatLine = function(line, max) 
         {
                 var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
-                return prefixEditor + Array(size).join(" ") + line + " > ";
+                return Array(size).join(" ") + line + " > ";
         };
 
         Object.defineProperties(io, {
@@ -41,8 +42,8 @@
                             error = params.error;
                     }
 
-                    if (params.path || this.path) 
-                        outMessage += prefixFile + (params.path || this.path);
+                    if (this.path) 
+                        outMessage += prefixFile + this.path;
                     if (message)
                         outMessage += prefixMessage + message;
 
@@ -83,9 +84,9 @@
                         outMessage += prefixStack + stack;
                     }
 
-                    if ((params.callee || this.arguments) && line >= 0)
+                    if (this._arguments && line >= 0)
                     {
-                        caller = (params.callee || String(this.arguments.callee)).replace(regHasDwb, "$1", "");
+                        caller = String(this._arguments.callee).replace(regHasDwb, "$1", "");
                         source = caller.split("\n");
                         var length = source.length;
                         var max = Math.ceil(Math.log(source.length+1)/Math.log(10));
@@ -95,15 +96,15 @@
                         {
                             if (length >= line-4)
                                 outMessage += prefixEditor + "...\n";
-                            outMessage += formatLine(line-1, max) +  source[line-3] + "\n";
+                            outMessage += prefixEditor + formatLine(line-1, max) +  source[line-3] + "\n";
                         }
                         else 
-                            outMessage += formatLine(line-1, max) + "#!javascript\n";
+                            outMessage += prefixEditor + formatLine(line-1, max) + "#!javascript\n";
                         if (length > line-2)
-                            outMessage += formatLine(line, max) + source[line-2] + "     <-----\n";
+                            outMessage += prefixHighlight + formatLine(line, max) + source[line-2] + "\n";
                         if (length > line-1 && length != line) 
                         {
-                            outMessage += formatLine(line+1, max) + source[line-1];
+                            outMessage += prefixEditor + formatLine(line+1, max) + source[line-1];
                             if (length > line + 1)
                                 outMessage += "\n" + prefixEditor + "...";
                             else 

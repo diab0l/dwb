@@ -218,27 +218,19 @@
         Object.defineProperty(Function.prototype, "debug", {
                 value : function(scope)
                 {
-                    var callee, path; 
-                    var self = this;
-                    if (scope)
-                    {
-                        if (scope.arguments && scope.arguments.callee) 
-                            callee = String(scope.arguments.callee);
-                        if (scope.path)
-                            path = scope.path;
-                    }
                     return function() {
                         try 
                         {
-                            self.apply(self, arguments);
+                            this.apply(this, arguments);
                         }
                         catch (e) 
                         { 
-                            e.callee = callee || undefined;
-                            e.path = path || undefined;
-                            io.debug(e);
+                            if (scope)
+                                scope.debug(e);
+                            else 
+                                io.debug(e);
                         }
-                    };
+                    }.bind(this);
                 }
         });
     }
