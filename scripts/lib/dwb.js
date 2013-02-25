@@ -218,10 +218,15 @@
         Object.defineProperty(Function.prototype, "debug", {
                 value : function(scope)
                 {
-                    var callee; 
+                    var callee, path; 
                     var self = this;
-                    if (scope && scope.arguments && scope.arguments.callee)
-                        callee = String(scope.arguments.callee);
+                    if (scope)
+                    {
+                        if (scope.arguments && scope.arguments.callee) 
+                            callee = String(scope.arguments.callee);
+                        if (scope.path)
+                            path = scope.path;
+                    }
                     return function() {
                         try 
                         {
@@ -229,8 +234,8 @@
                         }
                         catch (e) 
                         { 
-                            if (callee)
-                                e.callee = callee;
+                            e.callee = callee || undefined;
+                            e.path = path || undefined;
                             io.debug(e);
                         }
                     };

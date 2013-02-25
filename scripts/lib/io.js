@@ -40,8 +40,8 @@
                             error = params.error;
                     }
 
-                    if (this.path) 
-                        outMessage += prefixFile + this.path;
+                    if (params.path || this.path) 
+                        outMessage += prefixFile + (params.path || this.path);
                     if (message)
                         outMessage += prefixMessage + message;
 
