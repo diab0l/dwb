@@ -3406,7 +3406,7 @@ scripts_init_script(const char *path, const char *script)
     if (s_global_context == NULL) 
         create_global_object();
 
-    if (js_check_syntax(s_global_context, script, path, 1)) 
+    if (js_check_syntax(s_global_context, script, path, 2)) 
     {
         debug = g_strdup_printf("\n"
                 "try{const script=this;"
