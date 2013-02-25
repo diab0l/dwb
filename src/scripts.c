@@ -3406,14 +3406,17 @@ scripts_init_script(const char *path, const char *script)
     if (s_global_context == NULL) 
         create_global_object();
 
-    debug = g_strdup_printf("\n"
-            "try{const self=this;"
-            "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});Object.freeze(this);" 
-            "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
-    JSObjectRef function = js_make_function(s_global_context, debug);
+    if (js_check_syntax(s_global_context, script, path, 1)) 
+    {
+        debug = g_strdup_printf("\n"
+                "try{const script=this;"
+                "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});Object.freeze(this);" 
+                "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
+        JSObjectRef function = js_make_function(s_global_context, debug);
 
-    if (function != NULL) 
-        s_script_list = g_slist_prepend(s_script_list, function);
+        if (function != NULL) 
+            s_script_list = g_slist_prepend(s_script_list, function);
+    }
 
     g_free(debug);
 }/*}}}*/
@@ -3534,20 +3537,10 @@ scripts_check_syntax(char **scripts)
             const char *tmp = content;
             if (g_str_has_prefix(tmp, "#!javascript"))
                 tmp += 12;
-
-            JSValueRef exc = NULL;
-            JSStringRef script = JSStringCreateWithUTF8CString(tmp);
-
-            if (!JSCheckScriptSyntax(s_global_context, script, NULL, 0, &exc))
-            {
-                fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", scripts[i]);
-                js_print_exception(s_global_context, exc);
-            }
-            else 
+            if (js_check_syntax(s_global_context, tmp, scripts[i], 0)) 
             {
                 fprintf(stderr, "Syntax of %s is correct.\n", scripts[i]);
             }
-            JSStringRelease(script);
             g_free(content);
         }
     }

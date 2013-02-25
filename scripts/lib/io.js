@@ -10,7 +10,7 @@
         var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
         var formatLine = function(line, max) 
         {
-                var size = max - Math.max(1, Math.ceil(Math.log(line+1)/Math.log(10))) + 1; 
+                var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
                 return Array(size).join(" ") + line + " >  ";
         };
 
@@ -82,9 +82,9 @@
                         outMessage += prefixStack + stack;
                     }
 
-                    if (this.arguments && line >= 0)
+                    if ((params.callee || this.arguments) && line >= 0)
                     {
-                        caller = String(this.arguments.callee).replace(regHasDwb, "$1", "");
+                        caller = (params.callee || String(this.arguments.callee)).replace(regHasDwb, "$1", "");
                         source = caller.split("\n");
                         var length = source.length;
                         var max = Math.ceil(Math.log(source.length+1)/Math.log(10));
@@ -105,6 +105,8 @@
                             outMessage += formatLine(line+1, max) + source[line-1];
                             if (length > line + 1)
                                 outMessage += "\n...";
+                            else 
+                                outMessage += "\nEOF";
                         }
                         else 
                             outMessage += "EOF";

@@ -341,3 +341,18 @@ js_value_to_function(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     return NULL;
 }
 
+gboolean 
+js_check_syntax(JSContextRef ctx, const char *script, const char *filename, int lineOffset)
+{
+    JSValueRef exc = NULL;
+    JSStringRef jsscript = JSStringCreateWithUTF8CString(script);
+    gboolean correct = JSCheckScriptSyntax(ctx, jsscript, NULL, lineOffset, &exc);
+    if (!correct)
+    {
+        fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", filename);
+        js_print_exception(ctx, exc);
+    }
+    JSStringRelease(jsscript);
+    return correct;
+}
+

@@ -213,5 +213,29 @@
                     return callback(value);
             }
     });
+    if (!Function.prototype.debug) 
+    {
+        Object.defineProperty(Function.prototype, "debug", {
+                value : function(scope)
+                {
+                    var callee; 
+                    var self = this;
+                    if (scope && scope.arguments && scope.arguments.callee)
+                        callee = String(scope.arguments.callee);
+                    return function() {
+                        try 
+                        {
+                            self.apply(self, arguments);
+                        }
+                        catch (e) 
+                        { 
+                            if (callee)
+                                e.callee = callee;
+                            io.debug(e);
+                        }
+                    };
+                }
+        });
+    }
 })();
 Object.preventExtensions(this);

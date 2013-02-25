@@ -928,6 +928,43 @@ _object_;; The object to search for
 _returns_;; The index in the array or +-1+ if the Object wasn't found.
 ****
 
+****
+[[fastLastIndexOf]]
+[float]
+==== *Function.debug()* ==== 
+[source,javascript]
+----
+void Function.debug([Object scope])
+----
+
+A wrapper method for debugging callbacks, espacially useful if it is combined
+with <<scriptandthis,script>>. 
+
+ :: 
+
+_scope_;; *script* or *this*, optional
+_returns_;; A new function that calls script.debug on errors.
+****
+
+****
+.Example
+[source,javascript]
+----
+bind("x", function() { ... }.debug(script));
+
+// is a shorthand for
+
+bind("x", function () { 
+    try { 
+        ... 
+    }
+    catch (e) { 
+        script.debug(e); 
+    }
+});
+----
+****
+
 [[clipboard]]
 === clipboard ===
 
@@ -3117,9 +3154,10 @@ foo();  // fails
 
 For sharing data between scripts either signals or modules can be created.
 
-=== self and this ===
-In every script the variable *self* refers to *this*, the encapsulating
-function. The encapsulating function itself has the following properties and methods: 
+[[scriptandthis]]
+=== script and this ===
+In every script the variable *script* refers to *this*, the encapsulating
+function, it has the following properties and methods:
 
 
 ****
@@ -3128,8 +3166,7 @@ function. The encapsulating function itself has the following properties and met
 
 [source,javascript]
 ----
-this.path        string     read
-self.path        string     read
+script.path        string     read
 ----
 
 The path of the script.
@@ -3142,12 +3179,11 @@ The path of the script.
 
 [source,javascript]
 ----
-void this.debug(Object params)
-void self.debug(Object params)
+void script.debug(Object params)
 ----
 
 Same as io.debug but also prints additional information, e.g. if the object is
-an Error, this function will also print the corresponding source of the error.
+an Error, this method will also print the corresponding source of the error.
 ****
 
 .Example 
@@ -3164,7 +3200,7 @@ try
 }
 catch(e) 
 {
-    self.debug(e);
+    script.debug(e);
 }
 -------
 

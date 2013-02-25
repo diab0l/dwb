@@ -1078,6 +1078,30 @@ The object to search for
 The index in the array or \-1 if the Object wasn\(cqt found\&.
 .RE
 .RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Function.debug([Object scope])\fR
+.RS 4
+.sp
+A wrapper method for debugging callbacks, espacially useful if it is combined with script\&.
+.PP
+\fIscope\fR
+.RS 4
+
+\fBscript\fR
+or
+\fBthis\fR, optional
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A new function that calls script\&.debug on errors\&.
+.RE
+.RE
 .SS "clipboard"
 .sp
 .it 1 an-trap
@@ -3509,16 +3533,11 @@ foo();  // fails
 .\}
 .sp
 For sharing data between scripts either signals or modules can be created\&.
-.SS "self and this"
+.SS "script and this"
 .sp
-In every script the variable \fBself\fR refers to \fBthis\fR, the encapsulating function\&. The encapsulating function itself has the following properties and methods:
+In every script the variable \fBscript\fR refers to \fBthis\fR, the encapsulating function, it has the following properties and methods:
 .PP
-\fIthis\&.path (Object, read)\fR
-.RS 4
-The path of the script\&.
-.RE
-.PP
-\fIself\&.path (Object, read)\fR
+\fIscript\&.path (Object, read)\fR
 .RS 4
 The path of the script\&.
 .RE
@@ -3528,10 +3547,10 @@ The path of the script\&.
 .nr an-break-flag 1
 .br
 .ps +1
-\fBvoid this.debug(Object params)\fR
+\fBvoid script.debug(Object params)\fR
 .RS 4
 .sp
-Same as io\&.debug but also prints additional information, e\&.g\&. if the object is an Error, this function will also print the corresponding source of the error\&.
+Same as io\&.debug but also prints additional information, e\&.g\&. if the object is an Error, this method will also print the corresponding source of the error\&.
 .RE
 .SH "MODULES"
 .sp

@@ -39,6 +39,7 @@ JSObjectRef js_make_function(JSContextRef ctx, const char *script);
 JSValueRef js_json_to_value(JSContextRef ctx, const char *text);
 JSValueRef js_context_change(JSContextRef, JSContextRef, JSValueRef, JSValueRef *);
 JSObjectRef js_value_to_function(JSContextRef, JSValueRef, JSValueRef *);
+gboolean js_check_syntax(JSContextRef ctx, const char *script, const char *filename, int lineOffset);
 
 typedef struct js_array_iterator_s {
   JSContextRef ctx;
