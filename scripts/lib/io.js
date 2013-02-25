@@ -21,6 +21,8 @@
             {
                 value : function (params) 
                 {
+                    if (typeof params == "function" && this._arguments)
+                        return params.bind(this);
                     var outMessage = new String();
                     params = params || {};
                     var offset = params.offset || 0;
