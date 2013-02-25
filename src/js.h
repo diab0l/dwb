@@ -34,8 +34,8 @@ char * js_call_as_function(WebKitWebFrame *, JSObjectRef, const char *string, co
 JSValueRef js_char_to_value(JSContextRef ctx, const char *text);
 char * js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc);
 JSValueRef js_execute(JSContextRef ctx, const char *, JSValueRef *exc);
-gboolean js_print_exception(JSContextRef ctx, JSValueRef exception);
-JSObjectRef js_make_function(JSContextRef ctx, const char *script);
+gboolean js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bs, int *line);
+JSObjectRef js_make_function(JSContextRef ctx, const char *script, const char *path, int line);
 JSValueRef js_json_to_value(JSContextRef ctx, const char *text);
 JSValueRef js_context_change(JSContextRef, JSContextRef, JSValueRef, JSValueRef *);
 JSObjectRef js_value_to_function(JSContextRef, JSValueRef, JSValueRef *);

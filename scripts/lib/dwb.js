@@ -113,11 +113,18 @@
             {
                 value : function(contexts) 
                 {
-                    _contexts = contexts;
+                    _contexts = contexts
                     Object.freeze(this);
                 },
                 configurable : true
-            }
+            },
+            //"_private" : 
+            //{
+            //    value : function() 
+            //    {
+            //        io.print(arguments);
+            //    }
+            //}
     });
     Object.defineProperties(GObject.prototype, {
             "setPrivate" : 

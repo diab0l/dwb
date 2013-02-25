@@ -17,6 +17,7 @@
  */
 
 #include <JavaScriptCore/JavaScript.h>
+#include <string.h>
 #include "dwb.h"
 #include "util.h"
 #include "js.h"
@@ -251,7 +252,7 @@ js_value_to_char(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *e
 
 /* print_exception {{{*/
 gboolean
-js_print_exception(JSContextRef ctx, JSValueRef exception) 
+js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bufferSize, int *linenumber)
 {
     if (exception == NULL) 
         return false;
@@ -263,26 +264,43 @@ js_print_exception(JSContextRef ctx, JSValueRef exception)
 
     gint line = (int)js_get_double_property(ctx, o, "line");
     gchar *message = js_get_string_property(ctx, o, "message");
+    char *sourceURL = js_get_string_property(ctx, o, "sourceURL");
+    if (sourceURL)
+        fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", sourceURL);
     fprintf(stderr, "DWB SCRIPT EXCEPTION: in line %d: %s\n", line, message == NULL ? "unknown" : message);
+    if (sourceURL != NULL && buffer != NULL)
+    {
+        strncpy(buffer, message, bufferSize-1);
+        buffer[bufferSize-1] = '\0';
+    }
+    if (linenumber)
+        *linenumber = line;
     g_free(message);
+    g_free(sourceURL);
     return true;
 }
 /*}}}*/
 
 
 JSObjectRef  
-js_make_function(JSContextRef ctx, const char *script) 
+js_make_function(JSContextRef ctx, const char *script, const char *sourceurl, int linenumber) 
 {
     JSValueRef exc;
     JSObjectRef ret = NULL;
     JSStringRef body = JSStringCreateWithUTF8CString(script);
-    JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, body, NULL, 0, &exc);
+    JSStringRef source = NULL;
+    if (sourceurl)
+        JSStringCreateWithUTF8CString(sourceurl);
+
+    JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, body, source, linenumber, &exc);
     if (function != NULL) 
         ret = function;
     else 
-        js_print_exception(ctx, exc);
-    
+        js_print_exception(ctx, exc, NULL, 0, NULL);
+
     JSStringRelease(body);
+    if (source != NULL)
+        JSStringRelease(source);
     return ret;
 }
 
@@ -310,7 +328,7 @@ js_json_to_value(JSContextRef ctx, const char *text)
 JSValueRef
 js_execute(JSContextRef ctx, const char *script, JSValueRef *exc) 
 {
-    JSObjectRef function = js_make_function(ctx, script);
+    JSObjectRef function = js_make_function(ctx, script, NULL, 0);
     if (function != NULL) 
         return JSObjectCallAsFunction(ctx, function, NULL, 0, NULL, exc); 
     
@@ -346,13 +364,19 @@ js_check_syntax(JSContextRef ctx, const char *script, const char *filename, int 
 {
     JSValueRef exc = NULL;
     JSStringRef jsscript = JSStringCreateWithUTF8CString(script);
-    gboolean correct = JSCheckScriptSyntax(ctx, jsscript, NULL, lineOffset, &exc);
+    JSStringRef jssource = NULL; 
+    if (filename != NULL)
+        jssource = JSStringCreateWithUTF8CString(filename);
+
+    gboolean correct = JSCheckScriptSyntax(ctx, jsscript, jssource, lineOffset, &exc);
     if (!correct)
     {
-        fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", filename);
-        js_print_exception(ctx, exc);
+        js_print_exception(ctx, exc, NULL, 0, NULL);
     }
     JSStringRelease(jsscript);
+    if (jssource != NULL)
+        JSStringRelease(jssource);
+
     return correct;
 }
 
