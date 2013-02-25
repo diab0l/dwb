@@ -5,13 +5,14 @@
         var prefixStack       = "\n==> DEBUG [STACK]      : ";
         var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
         var prefixCaller      = "\n==> DEBUG [CALLER]";
-        var prefixSource      = "\n==> DEBUG [SOURCE]     : \n";
+        var prefixSource      = "\n==> DEBUG [SOURCE]\n";
         var prefixFunction = "\n------>";
         var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
+        var prefixEditor = "    ";
         var formatLine = function(line, max) 
         {
                 var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
-                return Array(size).join(" ") + line + " >  ";
+                return prefixEditor + Array(size).join(" ") + line + " > ";
         };
 
         Object.defineProperties(io, {
@@ -93,7 +94,7 @@
                         if (length >= line-3 && line-3 >= 0)
                         {
                             if (length >= line-4)
-                                outMessage += "...\n";
+                                outMessage += prefixEditor + "...\n";
                             outMessage += formatLine(line-1, max) +  source[line-3] + "\n";
                         }
                         else 
@@ -104,12 +105,12 @@
                         {
                             outMessage += formatLine(line+1, max) + source[line-1];
                             if (length > line + 1)
-                                outMessage += "\n...";
+                                outMessage += "\n" + prefixEditor + "...";
                             else 
-                                outMessage += "\nEOF";
+                                outMessage += "\n" + prefixEditor + "EOF";
                         }
                         else 
-                            outMessage += "EOF";
+                            outMessage += prefixEditor + "EOF";
                     }
                     else if (params.arguments) 
                     {

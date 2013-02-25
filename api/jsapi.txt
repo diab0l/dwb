@@ -937,7 +937,7 @@ _returns_;; The index in the array or +-1+ if the Object wasn't found.
 void Function.debug([Object scope])
 ----
 
-A wrapper method for debugging callbacks, espacially useful if it is combined
+A wrapper method for debugging callbacks, especially useful if it is combined
 with <<scriptandthis,script>>. 
 
  :: 
