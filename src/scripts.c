@@ -3331,13 +3331,10 @@ apply_scripts()
     int i=0;
 
     // XXX Not needed?
-    JSValueRef *scripts = g_malloc(length * sizeof(JSValueRef));
     JSObjectRef *objects = g_malloc(length * sizeof(JSObjectRef));
     for (GSList *l=s_script_list; l; l=l->next, i++) 
     {
-        scripts[i] = JSObjectMake(s_global_context, NULL, NULL);
         objects[i] = JSObjectMake(s_global_context, NULL, NULL);
-        js_set_property(s_global_context, objects[i], "self", scripts[i], 0, NULL);
         js_set_property(s_global_context, objects[i], "func", l->data, 0, NULL);
     }
     if (s_init_before != NULL) 
@@ -3347,13 +3344,9 @@ apply_scripts()
         JSValueUnprotect(s_global_context, s_init_before);
     }
 
-    i=0;
-    for (GSList *l = s_script_list; l; l=l->next, i++) 
+    for (GSList *l = s_script_list; l; l=l->next) 
     {
-
-        JSObjectRef apply = js_get_object_property(s_global_context, l->data, "apply");
-        JSValueRef argv[] = { scripts[i] };
-        JSObjectCallAsFunction(s_global_context, apply, l->data, 1, argv, NULL);
+        JSObjectCallAsFunction(s_global_context, l->data, l->data, 0, NULL, NULL);
     }
     g_slist_free(s_script_list);
     s_script_list = NULL;
@@ -3363,7 +3356,6 @@ apply_scripts()
         JSObjectCallAsFunction(s_global_context, s_init_after, NULL, 0, NULL, NULL);
         JSValueUnprotect(s_global_context, s_init_after);
     }
-    g_free(scripts);
     g_free(objects);
 }/*}}}*/
 
@@ -3415,8 +3407,8 @@ scripts_init_script(const char *path, const char *script)
         create_global_object();
 
     debug = g_strdup_printf("\n"
-            "try{var self=this;"
-            "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});" 
+            "try{const self=this;"
+            "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)}});Object.freeze(this);" 
             "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
     JSObjectRef function = js_make_function(s_global_context, debug);
 
@@ -3587,9 +3579,8 @@ scripts_end()
             l = next;
             next = next->next;
             KeyMap *m = l->data;
-            if (m->map->prop & CP_SCRIPT) {
+            if (m->map->prop & CP_SCRIPT) 
                 unbind_free_keymap(s_global_context, l);
-            }
         }
         // signals
         for (guint i=0; i<s_gobject_signals->len; i++)

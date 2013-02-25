@@ -5,35 +5,52 @@
         var prefixStack       = "\n==> DEBUG [STACK]      : ";
         var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
         var prefixCaller      = "\n==> DEBUG [CALLER]";
+        var prefixSource      = "\n==> DEBUG [SOURCE]     : \n";
         var prefixFunction = "\n------>";
         var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
+        var formatLine = function(line, max) 
+        {
+                var size = max - Math.max(1, Math.ceil(Math.log(line+1)/Math.log(10))) + 1; 
+                return Array(size).join(" ") + line + " >  ";
+        };
 
         Object.defineProperties(io, {
             "debug" : 
             {
                 value : function (params) 
                 {
-                    var message = new String();
+                    var outMessage = new String();
                     params = params || {};
                     var offset = params.offset || 0;
-                    var error;
-                    if (params instanceof Error)
+                    var error, message;
+                    var line = -1;
+                    var showLine;
+                    var caller, source;
+                    var stack;
+
+                    if (typeof params == "string")
+                        message = params;
+                    else if (params instanceof Error)
                         error = params;
-                    else {
+                    else 
+                    {
                         if (params.message) 
-                        {
-                            message += prefixMessage + params.message;
-                        }
+                            message = params.message;
                         if (params.error instanceof Error)
                             error = params.error;
                     }
 
                     if (this.path) 
-                        message += prefixFile + this.path;
+                        outMessage += prefixFile + this.path;
+                    if (message)
+                        outMessage += prefixMessage + message;
 
                     if (error)
                     {
-                        var line = error.line || error.line === 0 ? error.line : "?";
+                        if (error.line || error.line === 0)
+                            line = showLine = error.line;
+                        else 
+                            showLine = "?";
                         if (!error.stack) 
                         {
                             try 
@@ -46,8 +63,8 @@
                             }
                             offset += 1;
                         }
-                        message += prefixError + "Exception in line " + line + ": " + error.message + 
-                            prefixStack + "[" + error.stack.match(/[^\n]+/g).slice(offset).join("] [")+"]"; 
+                        outMessage += prefixError + "Exception in line " + showLine + ": " + error.message;
+                        stack = "[" + error.stack.match(/[^\n]+/g).slice(offset).join("] [")+"]"; 
                     }
                     else 
                     {
@@ -57,19 +74,51 @@
                         }
                         catch(e) 
                         {
-                            message += prefixStack + "[" + e.stack.match(/[^\n]+/g).slice(offset + 1).join("] [")+"]"; 
+                            stack =  "[" + e.stack.match(/[^\n]+/g).slice(offset + 2).join("] [")+"]"; 
                         }
                     }
-                    if (params.arguments) 
+                    if (stack) 
                     {
-                        message += prefixArguments + JSON.stringify(params.arguments);
-                        var caller = String(params.arguments.callee.caller);
-                        message += prefixCaller;
-                        message += prefixFunction + "\n";
-                        message += caller.replace(regHasDwb, "$1").replace(/\n/gm, "\n  ");
-                        message += prefixFunction;
+                        outMessage += prefixStack + stack;
                     }
-                    io.print(message + "\n", "stderr");
+
+                    if (this.arguments && line >= 0)
+                    {
+                        caller = String(this.arguments.callee).replace(regHasDwb, "$1", "");
+                        source = caller.split("\n");
+                        var length = source.length;
+                        var max = Math.ceil(Math.log(source.length+1)/Math.log(10));
+
+                        outMessage += prefixSource;
+                        if (length >= line-3 && line-3 >= 0)
+                        {
+                            if (length >= line-4)
+                                outMessage += "...\n";
+                            outMessage += formatLine(line-1, max) +  source[line-3] + "\n";
+                        }
+                        else 
+                            outMessage += formatLine(line-1, max) + "#!javascript\n";
+                        if (length > line-2)
+                            outMessage += formatLine(line, max) + source[line-2] + "     <-----\n";
+                        if (length > line-1 && length != line) 
+                        {
+                            outMessage += formatLine(line+1, max) + source[line-1];
+                            if (length > line + 1)
+                                outMessage += "\n...";
+                        }
+                        else 
+                            outMessage += "EOF";
+                    }
+                    else if (params.arguments) 
+                    {
+                        outMessage += prefixArguments + JSON.stringify(params.arguments);
+                        caller = String(params.arguments.callee.caller);
+                        outMessage += prefixCaller;
+                        outMessage += prefixFunction + "\n";
+                        outMessage += caller.replace(regHasDwb, "$1").replace(/\n/gm, "\n  ");
+                        outMessage += prefixFunction;
+                    }
+                    io.print(outMessage + "\n", "stderr");
                 }
 
             }

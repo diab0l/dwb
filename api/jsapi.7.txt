@@ -1778,8 +1778,7 @@ For sharing data between scripts either signals or modules can be created.
 
 === self and this
 In every script the variable *self* refers to *this*, the encapsulating
-function (at least if it's not overwritten). The encapsulating function itself
-has the following properties and methods: 
+function. The encapsulating function itself has the following properties and methods: 
 
 
 _this.path (Object, read)_;; The path of the script.
@@ -1788,7 +1787,8 @@ _self.path (Object, read)_;; The path of the script.
 ==== void this.debug(Object params)
 ****
 
-Same as io.debug, but also prints the path of the script.
+Same as io.debug but also prints additional information, e.g. if the object is
+an Error, this function will also print the corresponding source of the error.
 ****
 
 == Modules == 

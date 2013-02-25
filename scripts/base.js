@@ -138,9 +138,9 @@ Object.freeze((function () {
         this.getStart = function(n) 
         {
             var start = parseInt(Math.log(n) / Math.log(10), 10)*10;
-            if (n > 10*start-start) {
+            if (n > 10*start-start) 
                 start*=10;
-            }
+            
             return Math.max(start, 1);
         };
         this.betterMatch = function(input) 
