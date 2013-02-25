@@ -40,6 +40,13 @@
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
+#define DEBUG_TEMPLATE_START "try{const script=this;Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)},'_arguments':{value:arguments}});Object.freeze(this);/*<dwb*/"
+
+#define DEBUG_TEMPLATE_END "%s/*dwb>*/}catch(e){this.debug({error:e});};"
+
+#define DEBUG_TEMPLATE DEBUG_TEMPLATE_START"//!javascript\n"DEBUG_TEMPLATE_END
+#define DEBUG_TEMPLATE_INCLUDE DEBUG_TEMPLATE_START DEBUG_TEMPLATE_END
+
 #define SCRIPT_WEBVIEW(o) (WEBVIEW(((GList*)JSObjectGetPrivate(o))))
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
 #define PROP_LENGTH 128
@@ -1228,13 +1235,16 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
         tmp++;
     }
 
-    script = JSStringCreateWithUTF8CString(tmp);
-
     if (global) 
+    {
+        script = JSStringCreateWithUTF8CString(tmp);
         ret = JSEvaluateScript(ctx, script, NULL, NULL, 0, exc);
+    }
     else 
     {
-        JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, script, NULL, 0, exc);
+        char *debug = g_strdup_printf(DEBUG_TEMPLATE_INCLUDE, path, tmp);
+        script = JSStringCreateWithUTF8CString(debug);
+        JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, script, NULL, 1, exc);
         if (function != NULL) 
         {
             JSObjectRef this = JSObjectMake(ctx, NULL, NULL);
@@ -1242,6 +1252,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
             js_set_object_property(ctx, this, "path", path, exc);
             ret = JSObjectCallAsFunction(ctx, function, this, 0, NULL, exc);
         }
+        g_free(debug);
     }
     JSStringRelease(script);
 
@@ -3422,10 +3433,7 @@ scripts_init_script(const char *path, const char *script)
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
-        debug = g_strdup_printf("\n"
-                "try{const script=this;"
-                "Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)},'_arguments':{value:arguments}});Object.freeze(this);" 
-                "/*<dwb*/%s/*dwb>*/}catch(e){this.debug({error:e});};", path, script);
+        debug = g_strdup_printf(DEBUG_TEMPLATE, path, script);
         JSObjectRef function = js_make_function(s_global_context, debug, path, 1);
 
         if (function != NULL) 

@@ -94,20 +94,22 @@
                         var max = Math.ceil(Math.log(source.length+1)/Math.log(10));
 
                         outMessage += prefixSource;
-                        if (length >= line-3 && line-3 >= 0)
+                        if (length >= line-2 && line-2 >= 0)
                         {
-                            if (length >= line-4)
+                            if (line > 2)
                                 outMessage += prefixEditor + "...\n";
-                            outMessage += prefixEditor + formatLine(line-1, max) +  source[line-3] + "\n";
+                            else 
+                                outMessage += prefixEditor + "BOF\n";
+                            outMessage += prefixEditor + formatLine(line-1, max) +  source[line-2] + "\n";
                         }
                         else 
-                            outMessage += prefixEditor + formatLine(line-1, max) + "#!javascript\n";
-                        if (length > line-2)
-                            outMessage += prefixHighlight + formatLine(line, max) + source[line-2] + "\n";
-                        if (length > line-1 && length != line) 
+                            outMessage += prefixEditor + "BOF\n"
+                        if (length > line-1)
+                            outMessage += prefixHighlight + formatLine(line, max) + source[line-1] + "\n";
+                        if (length > line && length != line+1) 
                         {
-                            outMessage += prefixEditor + formatLine(line+1, max) + source[line-1];
-                            if (length > line + 1)
+                            outMessage += prefixEditor + formatLine(line+1, max) + source[line];
+                            if (length > line + 2)
                                 outMessage += "\n" + prefixEditor + "...";
                             else 
                                 outMessage += "\n" + prefixEditor + "EOF";
