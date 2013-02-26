@@ -10,7 +10,7 @@
         var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
         var prefixEditor    = "    ";
         var prefixHighlight = "--> ";
-        var formatLine = function(line, max) 
+        var _formatLine = function(max, line) 
         {
                 var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
                 return Array(size).join(" ") + line + " > ";
@@ -91,7 +91,7 @@
                         caller = String(this._arguments.callee).replace(regHasDwb, "$1", "");
                         source = caller.split("\n");
                         var length = source.length;
-                        var max = Math.ceil(Math.log(source.length+1)/Math.log(10));
+                        var formatLine = _formatLine.bind(null, Math.ceil(Math.log(source.length+1)/Math.log(10)));
 
                         outMessage += prefixSource;
                         if (length >= line-2 && line-2 >= 0)
@@ -100,15 +100,15 @@
                                 outMessage += prefixEditor + "...\n";
                             else 
                                 outMessage += prefixEditor + "BOF\n";
-                            outMessage += prefixEditor + formatLine(line-1, max) +  source[line-2] + "\n";
+                            outMessage += prefixEditor + formatLine(line-1) +  source[line-2] + "\n";
                         }
                         else 
-                            outMessage += prefixEditor + "BOF\n"
+                            outMessage += prefixEditor + "BOF\n";
                         if (length > line-1)
-                            outMessage += prefixHighlight + formatLine(line, max) + source[line-1] + "\n";
+                            outMessage += prefixHighlight + formatLine(line) + source[line-1] + "\n";
                         if (length > line && length != line+1) 
                         {
-                            outMessage += prefixEditor + formatLine(line+1, max) + source[line];
+                            outMessage += prefixEditor + formatLine(line+1) + source[line];
                             if (length > line + 2)
                                 outMessage += "\n" + prefixEditor + "...";
                             else 
@@ -127,6 +127,7 @@
                         outMessage += prefixFunction;
                     }
                     io.print(outMessage + "\n", "stderr");
+                    return undefined;
                 }
 
             }
