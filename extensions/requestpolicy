@@ -448,7 +448,8 @@ return {
             }
             catch (e) 
             {
-                extensions.debug(me, e, "Error parsing persistentList");
+                script.debug(e);
+                return false;
             }
         }
         persistentList = persistentList || {};

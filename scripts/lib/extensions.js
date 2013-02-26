@@ -1,6 +1,5 @@
 (function () {
   var _config = {};
-  var _debug = false;
   var _registered = {};
   var _configLoaded = false;
 
@@ -60,22 +59,6 @@
           value : function (name, message) 
           {
               io.print("\033[1mDWB EXTENSION WARNING: \033[0mextension  \033[1m" + name + "\033[0m: " + message, "stderr");
-          }
-      }, 
-      "enableDebugging" : 
-      {
-          set : function (value) 
-          {
-              if (typeof value == "boolean")
-                  _debug = value;
-          }
-      },
-      "debug" : 
-      {
-          value : function (name, message) {
-              if (_debug) {
-                  io.print("\033[1mDWB EXTENSION DEBUG: \033[0mextension  \033[1m" + name + "\033[0m\n" + getStack(1), "stderr");
-              }
           }
       }, 
       "error" : 
@@ -223,14 +206,6 @@
           {
               for (var key in _registered) 
                   _unload(key, true);
-          }
-      }, 
-      "reload" : 
-      {
-          value : function () 
-          {
-              _unload(arguments[0], false);
-              return extensions.load.apply(this, arguments);
           }
       }, 
       "toggle" : 

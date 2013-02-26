@@ -3523,21 +3523,7 @@ extensions.bind("mySecondExtension", "Control M");
 The default searchpaths for extensions are +$XDG_DATA_HOME/dwb/extensions/+ and
 +/usr/share/dwb/extensions/+.
 
-The +extensions+ object has the following properties and functions
-
-=== Properties === 
-
-****
-[float]
-==== *enableDebugging* ==== 
-
-[source,javascript]
-----
-extensions.enableDebugging         Boolean      read
-----
-
-Whether to enable debugging messages.
-****
+The +extensions+ object has the following functions
 
 === Methods ===
 
@@ -3559,24 +3545,6 @@ _options_;; An optional object with options where possible options are
 options.load::: Whether to load the extension on startup, default true
 options.config::: Config passed to extensions.load
 options.command::: Command that can be used on commandline
-****
-
-****
-[[extensiondebug,debug]]
-[float]
-==== *debug()* ====
-
-[source,javascript]
-----
-void extensions.debug(String name, String message) 
-----
-Prints a debug message and the call stack to stdout, +enableDebugging+ must be
-set to +true+ in order to print debug messages. 
-
- ::
-
-_name_;; Name of the extension
-_message_;; The debug message to print.
 ****
 
 ****
@@ -3626,25 +3594,6 @@ _name_;; Name of the extension
 _config_;; The config for the script, if omitted the config is read from
 $XDG_CONFIG_HOME/dwb/extensionrc, optional
 _returns_;;  True if the extension was loaded
-****
-
-****
-[[extensionload,reload]]
-[float]
-==== *reload()* ====
-
-[source,javascript]
-----
-Boolean extensions.reload(String name, [Object config]) 
-----
-Reloads an extension
-
- ::
-
-_name_;; Name of the extension
-_config_;; The new config for the script, if omitted the old config is used,
-optional
-_returns_;;  True if the extension was successfully reloaded
 ****
 
 ****

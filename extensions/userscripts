@@ -262,7 +262,7 @@ function handle(frame, array, isMainFrame) //{{{
         }
         catch (e) 
         {
-            extensions.debug(me);
+            script.debug(e);
         }
     }
 }//}}}
@@ -381,25 +381,25 @@ function parseScript(path) //{{{
     var userscript;
     var i, items, key, value, idx, m, matches = [], numVal;
 
-    var script = io.read(path);
-    if (!script || (/^\s*$/).test(script)) 
+    var curScript = io.read(path);
+    if (!curScript || (/^\s*$/).test(curScript)) 
       return;
 
-    var metaStart = script.search(/(^|\n)\/\/\s*==UserScript==/);
-    var metaEnd = script.search(/\n\/\/\s*==\/UserScript==/);
+    var metaStart = curScript.search(/(^|\n)\/\/\s*==UserScript==/);
+    var metaEnd = curScript.search(/\n\/\/\s*==\/UserScript==/);
 
     userscript = new UserScript();
 
     if (metaStart == -1 || metaEnd == -1) 
     {
-        userscript.script = script; 
+        userscript.script = curScript; 
         userscript.include = [ { regExp : /.*/, isTld : false} ];
         onEnd.push(userscript);
         return;
     }
 
-    var meta = script.substring(metaStart, metaEnd).split("\n");
-    var scriptStart = script.substring(metaEnd+1).indexOf("\n") + metaEnd + 1;
+    var meta = curScript.substring(metaStart, metaEnd).split("\n");
+    var scriptStart = curScript.substring(metaEnd+1).indexOf("\n") + metaEnd + 1;
 
     var regValue = /\s[^\/@]\S?/;
     var regIsRule = /^\s*\/\/\s*@/;
@@ -432,7 +432,7 @@ function parseScript(path) //{{{
                         userscript[key] = numVal;
                 }
                 catch (e) {
-                    extensions.debug(me, e);
+                    script.debug(e);
                 }
             }
             else if (key == "unwrap") 
@@ -446,7 +446,7 @@ function parseScript(path) //{{{
         }
         catch(e) 
         {
-            extensions.debug(me, e);
+            script.debug(e);
         }
 
     }
@@ -464,8 +464,8 @@ function parseScript(path) //{{{
         userscript.scriptId = userscript.namespace + "::" + userscript.name;
     userscript.scriptId = userscript.scriptId.replace(/\s+/g, "_");
     userscript.script = "var DWB_scriptId = '" + userscript.scriptId + "';" +  
-        util.getBody(GM_compatability) + script.substring(0, metaStart) + 
-        script.substring(scriptStart);
+        util.getBody(GM_compatability) + curScript.substring(0, metaStart) + 
+        curScript.substring(scriptStart);
 
     getRequirements(userscript);
 
