@@ -2647,6 +2647,12 @@ dwb_get_key(GdkEventKey *e, unsigned int *mod_mask, gboolean *isprint)
     *isprint = false;
     if (key != NULL) 
     {
+        char *tmp = key;
+        if (*key == '@')
+        {
+            key = g_strdup("\\@");
+            g_free(tmp);
+        }
         *mod_mask = CLEAN_STATE(e);
         *isprint = true;
     }

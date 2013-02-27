@@ -53,6 +53,8 @@
 #define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
 #define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) == 0)
 #define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
+#define IS_KEY_EVENT(X) (((int)(X)) == GDK_KEY_PRESS || ((int)(X)) == GDK_KEY_RELEASE)
+#define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE)
 
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
@@ -1607,6 +1609,38 @@ util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
 }
+
+static JSValueRef 
+util_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    gboolean result = false;
+    if (argc < 3)
+        return JSValueMakeBoolean(ctx, false);
+    double type = JSValueToNumber(ctx, argv[0], exc); 
+    if (isnan(type) || (!(IS_KEY_EVENT(type))))
+        return JSValueMakeBoolean(ctx, false);
+
+    GdkEvent *e = gdk_event_new((int)type);
+    GdkWindow *window = gtk_widget_get_window(dwb.gui.window);
+    ((GdkEventAny*)e)->window = window;
+
+    double state = JSValueToNumber(ctx, argv[1], exc);
+    if (isnan(state))
+        goto error_out;
+    ((GdkEventKey*)e)->state = state;
+    if (IS_KEY_EVENT(type)) 
+    {
+        double keyval = JSValueToNumber(ctx, argv[2], exc);
+        if (isnan(keyval))
+            goto error_out;
+        ((GdkEventKey*)e)->keyval = keyval;
+        gdk_event_put(e);
+        result = true;
+    }
+    // TODO button event
+error_out:
+    return JSValueMakeBoolean(ctx, result);
+}
 static GdkAtom 
 atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
 {
@@ -3139,6 +3173,7 @@ create_global_object()
         { "domainFromHost",   util_domain_from_host,         kJSDefaultAttributes },
         { "markupEscape",     util_markup_escape,         kJSDefaultAttributes },
         { "getMode",          util_get_mode,         kJSDefaultAttributes },
+        { "dispatchEvent",      util_dispatch_event,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL);

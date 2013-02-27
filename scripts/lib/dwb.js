@@ -228,7 +228,7 @@
                     return function() {
                         try 
                         {
-                            this.apply(this, arguments);
+                            return this.apply(this, arguments);
                         }
                         catch (e) 
                         { 
@@ -237,6 +237,7 @@
                             else 
                                 io.debug(e);
                         }
+                        return undefined;
                     }.bind(this);
                 }
         });
