@@ -951,6 +951,8 @@ _returns_;; A new function that calls script.debug on errors.
 [source,javascript]
 ----
 bind("x", function() { ... }.debug(script));
+// or equivalently 
+bind("x", script.debug(function() { ... }));
 
 // is a shorthand for
 
@@ -3212,11 +3214,11 @@ Will produce the following output:
                          (evaluating 'x.foo.bar') 
 ==> DEBUG [STACK]      : [anonymous] [[native code]]
 ==> DEBUG [SOURCE]     : 
-...
- 5 >      var x = {};
- 6 >      var y = x.foo.bar;     <-----
- 7 >      var z = 33;
-...
+    ...
+    5 >      var x = {};
+--> 6 >      var y = x.foo.bar;   
+    7 >      var z = 33;
+    ...
 ------
 
 

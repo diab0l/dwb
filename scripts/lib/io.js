@@ -1,6 +1,6 @@
 (function () {
         var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
-        var prefixFile        = "\n==> DEBUG [IN FILE]    : ";
+        var prefixFile        = "\n==> DEBUG [FILE]       : ";
         var prefixError       = "\n==> DEBUG [ERROR]      : ";
         var prefixStack       = "\n==> DEBUG [STACK]      : ";
         var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
@@ -67,7 +67,7 @@
                             }
                             offset += 1;
                         }
-                        outMessage += prefixError + "Exception in line " + showLine + ": " + error.message;
+                        outMessage += prefixError + "Error in line " + showLine + ": " + error.message;
                         stack = "[" + error.stack.match(/[^\n]+/g).slice(offset).join("] [")+"]"; 
                     }
                     else 
