@@ -1648,10 +1648,9 @@ atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     double type = JSValueToNumber(ctx, val, exc);
     if (isnan(type))
         return NULL;
-    int itype = (int) type;
-    if (itype == SELECTION_PRIMARY)
+    if ((int)type == SELECTION_PRIMARY)
         return GDK_SELECTION_PRIMARY;
-    else if (itype == SELECTION_CLIPBOARD)
+    else if ((int)type == SELECTION_CLIPBOARD)
         return GDK_NONE;
     else
         return NULL;
@@ -1726,7 +1725,6 @@ history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
     if (argc > 0 && !isnan(n = JSValueToNumber(ctx, argv[0], NULL)))
     {
         WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
-
         g_return_val_if_fail(list != NULL, NIL);
 
         return make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
@@ -1744,6 +1742,7 @@ static JSValueRef
 history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     WebKitWebBackForwardList *list = JSObjectGetPrivate(object);
+    g_return_val_if_fail(list != NULL, NIL);
     return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_forward_length(list));
 }
 
