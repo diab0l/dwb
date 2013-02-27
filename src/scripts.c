@@ -1620,21 +1620,22 @@ util_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     if (isnan(type) || (!(IS_KEY_EVENT(type))))
         return JSValueMakeBoolean(ctx, false);
 
-    GdkEvent *e = gdk_event_new((int)type);
-    GdkWindow *window = gtk_widget_get_window(dwb.gui.window);
-    ((GdkEventAny*)e)->window = window;
 
     double state = JSValueToNumber(ctx, argv[1], exc);
     if (isnan(state))
         goto error_out;
-    ((GdkEventKey*)e)->state = state;
     if (IS_KEY_EVENT(type)) 
     {
         double keyval = JSValueToNumber(ctx, argv[2], exc);
         if (isnan(keyval))
             goto error_out;
-        ((GdkEventKey*)e)->keyval = keyval;
-        gdk_event_put(e);
+        GdkEventKey e = {
+            .type = type,
+            .window = gtk_widget_get_window(dwb.gui.window),
+            .keyval = keyval,
+            .state = state,
+        };
+        gdk_event_put((GdkEvent*)&e);
         result = true;
     }
     // TODO button event
