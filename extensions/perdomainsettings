@@ -100,7 +100,7 @@ var me = "perdomainsettings";
 var domains = null;
 var hosts = null;
 var uris = null;
-var defaults = null;
+var defaults = {};
 var webviews = [];
 var sigNavigation = -1;
 var sigCloseTab = -1;
@@ -204,6 +204,19 @@ function onCloseTab(wv) {
         }
     }
 }
+function getDefaultValue(object) 
+{
+    var key, s, o;
+    for(key in object)
+    {
+        o = object[key];
+        for (s in o)
+        {
+            if (!defaults[s])
+                defaults[s] = global.settings[s];
+        }
+    }
+}
 
 return {
     init : function (config) 
@@ -214,9 +227,14 @@ return {
             return false;
         }
         domains = config.domains || defaultConfig.domains;
+        domains && getDefaultValue(domains);
+
         hosts = config.hosts || defaultConfig.hosts;
+        hosts && getDefaultValue(hosts);
+
         uris = config.uris || defaultConfig.uris;
-        defaults = config.defaults || defaultConfig.defaults;
+        uris && getDefaultValue(uris);
+
         sigNavigation = signals.connect("navigation", onNavigation);
         sigCloseTab = signals.connect("closeTab", onCloseTab);
         return true;
