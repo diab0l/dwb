@@ -96,33 +96,51 @@
 Change webkit-settings automatically on domain or url basis
 INFO>*/
 
-var me = "perdomainsettings";
 var domains = null;
 var hosts = null;
 var uris = null;
+var exports = {}; 
 var defaults = {};
-var webviews = [];
-var sigNavigation = -1;
-var sigCloseTab = -1;
+
 
 var defaultConfig = {
 //<DEFAULT_CONFIG
-  // Settings applied based on the second level domain, e.g.
-  // domains : { "example.com" : { autoLoadImages : true } }, 
-  domains : {},
+// Only webkit builtin settings can be set, for a list of settings see 
+// http://webkitgtk.org/reference/webkitgtk/unstable/WebKitWebSettings.html
+// All settings can also be used in camelcase, otherwise they must be quoted.
+// 
+// The special domain suffix .tld matches all top level domains, e.g. 
+// example.tld matches example.com, example.co.uk, example.it ... 
+//
+// Settings based on uri will override host based settings and host based
+// settings will override domain based settings. Settings for domains/hosts/uris
+// with without tld suffix will override settings for
+// domains/hosts/uris with tld suffix respectively, e.g. 
+//      "example.com" : { enableScripts : true }, 
+//      "example.tld" : { enableScripts : false } 
+// will enable scripts on example.com but not on example.co.uk, example.it, ... 
+//
+// Settings applied based on the second level domain, e.g.
+// domains : { 
+//      "example.com" : { "auto-load-images" : false }, 
+//      "google.tld" : { enableScripts : false }, 
+// }, 
+domains : {},
 
-  //Settings applied based on the hostname
-  // hosts : { "www.example.com" : { autoLoadImages : true } }, 
-  hosts : {},
+//Settings applied based on the hostname
+// hosts : { 
+//    "www.example.com" : { autoLoadImages : true } 
+// }, 
+hosts : {},
 
-  // Settings applied based on the uri
-  // uris : { "http://www.example.com/foo/" : { autoLoadImages : true } }, 
-  uris : {},
+// Settings applied based on the uri
+// uris : { "http://www.example.com/foo/" : { autoLoadImages : true } }, 
+uris : {},
 
-  // Default settings, for each setting in domains, hosts and uris a
-  // default-value should be specified, e.g.
-  // defaults : { autoLoadImages : false }, 
-  defaults : {}
+// Default settings, for each setting in domains, hosts and uris a
+// default-value should be specified, e.g.
+// defaults : { autoLoadImages : false }, 
+defaults : {}
 
 //>DEFAULT_CONFIG
 };
@@ -147,62 +165,58 @@ function apply(o, settings)
 
 function onNavigation(wv, frame, request, action) 
 {
-    var length = webviews.length; 
-    var i, host, domain;
-    var found = false;
-    var o = null;
-    for (i=0; i<length && o === null; i++) 
-    {
-        if (webviews[i].webview === wv) 
-            o = webviews[i];
-    }
-    if (o === null) 
+    if (wv.mainFrame != frame)
+        return false;
+
+    var value;
+
+    var o = wv.getPrivate("pds", script);
+    if (! o)
     {
         o = { webview : wv, defaults : false, settings : wv.settings };
-        webviews.push(o);
+        wv.setPrivate("pds", o, script);
     }
     o.set = {};
-    if (frame === wv.mainFrame) 
+    var uri = request.uri;
+    var host = request.message.uri.host;
+    var domain = util.domainFromHost(host);
+    var rTld = new RegExp(domain.substring(domain.indexOf(".") + 1) + "$");
+    var domainTld = domain.replace(rTld, "tld");
+    var hostTld = host.replace(rTld, "tld");
+    var uriTld = uri.replace(new RegExp("(https?://)" + RegExp.escape(host)), "$1" + hostTld);
+    if ((value = domains[domain]))
     {
-        try 
-        {
-            var uri = request.uri;
-            host = request.message.uri.host;
-            domain = util.domainFromHost(host);
-            if (domains[domain]) 
-            {
-                apply(o, domains[domain]);
-                o.defaults = false;
-            }
-            if (hosts[host]) 
-            {
-                apply(o, hosts[host]);
-                o.defaults = false;
-            }
-            if (uris[uri]) 
-            {
-                apply(o, uris[uri]);
-                o.defaults = false;
-            }
-            if (o.defaults === false && apply(o, defaults)) 
-                o.defaults = true;
-        }
-        catch (e) 
-        {
-            extensions.error(me, e);
-        }
+        apply(o, value);
+        o.defaults = false;
     }
-}
-function onCloseTab(wv) {
-    var i;
-    for (i=0; i<webviews.length; i++) 
+    if ((value = domains[domainTld]))
     {
-        if (webviews[i].webview === wv) 
-        {
-            webviews.splice(i, 1);
-            return;
-        }
+        apply(o, value);
+        o.defaults = false;
     }
+    if ((value = hosts[host])) 
+    {
+        apply(o, value);
+        o.defaults = false;
+    }
+    if ((value = hosts[hostTld]))
+    {
+        apply(o, value);
+        o.defaults = false;
+    }
+    if ((value = uris[uri])) 
+    {
+        apply(o, value);
+        o.defaults = false;
+    }
+    if ((value = uris[uriTld])) 
+    {
+        apply(o, value);
+        o.defaults = false;
+    }
+    if (o.defaults === false && apply(o, defaults)) 
+        o.defaults = true;
+    return false;
 }
 function getDefaultValue(object) 
 {
@@ -219,38 +233,27 @@ function getDefaultValue(object)
 }
 
 return {
+    exports : exports, 
     init : function (config) 
     {
         if (!config) 
-        {
-            extensions.error(me, "Missing config");
             return false;
-        }
-        domains = config.domains || defaultConfig.domains;
+
+        exports.domains = domains = config.domains || defaultConfig.domains;
         domains && getDefaultValue(domains);
 
-        hosts = config.hosts || defaultConfig.hosts;
+        exports.hosts = hosts = config.hosts || defaultConfig.hosts;
         hosts && getDefaultValue(hosts);
 
-        uris = config.uris || defaultConfig.uris;
+        exports.uris = uris = config.uris || defaultConfig.uris;
         uris && getDefaultValue(uris);
 
-        sigNavigation = signals.connect("navigation", onNavigation);
-        sigCloseTab = signals.connect("closeTab", onCloseTab);
+        signals.connect("navigation", onNavigation.debug(script));
         return true;
     },
     end : function () 
     {
-        if (sigNavigation >= 0) 
-        {
-            signals.disconnect(sigNavigation);
-            sigNavigation = -1;
-        }
-        if (sigCloseTab >= 0) 
-        {
-            signals.disconnect(sigCloseTab);
-            sigCloseTab = -1;
-        }
+        signals.disconnect(onNavigation);
     }
 };
 
