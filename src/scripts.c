@@ -1834,21 +1834,24 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
         g_io_channel_unref(channel);
         return false;
     }
-    else if (g_io_channel_read_to_end(channel, &content, &length, NULL) == G_IO_STATUS_NORMAL && content != NULL && TRY_CONTEXT_LOCK)  
+    else if (g_io_channel_read_line(channel, &content, &length, NULL, NULL) == G_IO_STATUS_NORMAL && content != NULL)  
     {
-        if (s_global_context != NULL)
+        if (TRY_CONTEXT_LOCK)
         {
-            JSValueRef arg = js_char_to_value(s_global_context, content);
-            if (arg != NULL) 
+            if (s_global_context != NULL)
             {
-                JSValueRef argv[] = { arg };
-                call_as_function_debug(s_global_context, callback, callback, 1,  argv);
+                JSValueRef arg = js_char_to_value(s_global_context, content);
+                if (arg != NULL) 
+                {
+                    JSValueRef argv[] = { arg };
+                    call_as_function_debug(s_global_context, callback, callback, 1,  argv);
+                }
             }
         }
         CONTEXT_UNLOCK;
         result = true;
+        g_free(content);
     }
-    g_free(content);
     return result;
 }/*}}}*/
 
