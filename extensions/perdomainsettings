@@ -119,23 +119,23 @@ var defaultConfig = {
 //      "example.com" : { enableScripts : true }, 
 //      "example.tld" : { enableScripts : false } 
 // will enable scripts on example.com but not on example.co.uk, example.it, ... 
-//
-// Settings applied based on the second level domain, e.g.
-// domains : { 
+
+
+// Settings applied based on the second level domain
+domains : {
 //      "example.com" : { "auto-load-images" : false }, 
-//      "google.tld" : { enableScripts : false }, 
-// }, 
-domains : {},
+//      "google.tld" : { enableScripts : false, autoLoadImages : false }, 
+},
 
 //Settings applied based on the hostname
-// hosts : { 
+hosts : {
 //    "www.example.com" : { autoLoadImages : true } 
-// }, 
-hosts : {},
+},
 
 // Settings applied based on the uri
-// uris : { "http://www.example.com/foo/" : { autoLoadImages : true } }, 
-uris : {},
+uris : {
+//  "http://www.example.com/foo/" : { autoLoadImages : true } }, 
+},
 
 //>DEFAULT_CONFIG
 };
