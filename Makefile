@@ -13,16 +13,17 @@ options:
 
 $(TARGET): $(SUBDIRS:%=%.subdir-make)
 
-%.subdir-make:
+%.subdir-make: $(SUBDIR_BUILD_FIRST:%=%.subdir-buildfirst)
 	@$(MAKE) $(MFLAGS) -C $*
 
-#@$(MAKE) -C $(SRCDIR)
-#@$(MAKE) -C $(UTILDIR)
+%.subdir-buildfirst:
+	@$(MAKE) $(MFLAGS) -C $*
 
-clean:  $(SUBDIRS:%=%.subdir-clean)
+clean:  $(SUBDIRS:%=%.subdir-clean) $(SUBDIR_BUILD_FIRST:%=%.subdir-cleanfirst)
 
-%.subdir-clean:
+%.subdir-clean %.subdir-cleanfirst:
 	@$(MAKE) $(MFLAGS) clean -C $*
+
 
 install: $(TARGET) install-man install-data
 	@# Install binaries

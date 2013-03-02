@@ -1,6 +1,9 @@
 # See COPYING for copyright and license details
 
-include ../config.mk
+BASEDIR=..
+
+include $(BASEDIR)/config.mk
+
 
 DEPS=$(patsubst %.o, %.d, $(OBJ))
 
