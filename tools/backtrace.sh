@@ -21,6 +21,8 @@ else
   hg up
 fi
  
+cd ${BUILDDIR}/dwb/util
+make
 cd ${BUILDDIR}/dwb/src
 make debug
 gdb -batch -ex "set logging on ${LOGFILE}" -ex "run" -ex "bt" -ex "quit" dwb_d 
