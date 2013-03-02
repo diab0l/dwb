@@ -121,7 +121,6 @@ CFLAGS := $(CFLAGS)
 CFLAGS += -Wall 
 CFLAGS += -Werror=format-security 
 CFLAGS += -pipe
-CFLAGS += $(shell pkg-config --cflags $(LIBS))
 CFLAGS += --ansi
 CFLAGS += -std=c99
 CFLAGS += -D_POSIX_SOURCE
@@ -129,6 +128,8 @@ CFLAGS += -O2
 CFLAGS += -g
 CFLAGS += -D_BSD_SOURCE
 CFLAGS += -D_NETBSD_SOURCE
+
+CFLAGS += $(shell pkg-config --cflags $(LIBS))
 
 ifeq ($(shell pkg-config --exists '$(LIBSOUP) >= 2.38' && echo 1), 1)
 M4FLAGS += --define=WITH_LIBSOUP_2_38=1 -G

@@ -2,6 +2,7 @@
 
 BASE_DIR=../..
 include $(BASE_DIR)/config.mk
+
 TLDS_H=$(BASE_DIR)/$(SRCDIR)/tlds.h
 TLDS_IN=tlds.in
 MKTLDS=mktlds-header
@@ -11,6 +12,10 @@ HSTS=convert_transport_security
 HSTS_PRELOAD=$(BASE_DIR)/$(SRCDIR)/hsts_preload.h
 TRANSPORT_SECURITY_JSON=transport_security_state_static.json
 TRANSPORT_SECURITY_CERTS=transport_security_state_static.certs
+
+LIBS=glib-2.0 gnutls json
+CFLAGS+=$(shell pkg-config --cflags $(LIBS))
+LDFLAGS=$(shell pkg-config --libs $(LIBS))
 
 OUTFILES=$(HSTS_PRELOAD) $(TLDS_H)
 GEN_TOOLS=$(HSTS) $(MKTLDS)
@@ -31,7 +36,7 @@ $(HSTS_PRELOAD): $(HSTS) $(TRANSPORT_SECURITY_CERTS) $(TRANSPORT_SECURITY_JSON)
 
 $(HSTS): $(HSTS).c
 	@echo "${CC} $<"
-	@$(CC) $(CFLAGS) $(shell pkg-config --cflags --libs glib-2.0 gnutls json) -o $(HSTS) $(HSTS).c
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -o $(HSTS) $(HSTS).c $(LDFLAGS)
 
 clean: 
 	$(RM) $(OUTFILES) $(GEN_TOOLS)
