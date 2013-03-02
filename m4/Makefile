@@ -7,13 +7,13 @@ OUTFILES=$(SETTINGS) $(KEYS)
 
 all: $(OUTFILES)
 
-$(KEYS): keys.in
+$(KEYS): keys.m4
 	@echo gen keys.html
-	@awk -f generate_keys.awk $< > $@
+	@m4 $(M4FLAGS) $< > $@
 
-$(SETTINGS): settings.in
+$(SETTINGS): settings.m4
 	@echo gen settings.html
-	@awk -f generate_settings.awk $< > $@
+	@m4 $(M4FLAGS) $< > $@
 
 settings.in: settings.pre
 	@$(shell if pkg-config --exists 'libsoup-2.4 >= 2.38'; then \

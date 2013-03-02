@@ -1,0 +1,122 @@
+#!bash
+#
+# dwb completion support.
+
+__script() {
+    [[ -d ~/.config/dwb/userscripts/ ]] || return 0
+    files=( ~/.config/dwb/userscripts/*.js )
+    COMPREPLY=( $( compgen -W "$files" -- $cur ) )
+}
+
+__profile() {
+    COMPREPLY=( $( compgen -W "$( while read line; do
+        [[ "$line" == \[* ]] && {
+            line="${line#\[}"
+            printf "${line%\]}"
+        } done < "${HOME}/.config/dwb/settings" )" -- $cur ) )
+}
+
+__session() {
+    COMPREPLY=( $( compgen -W "$( while read line; do
+        [[ "$line" == \[* ]] && {
+            line="${line#\[}"
+            line="${line%\]}"
+            while read l; do
+                [[ "$l" == 'g:'* ]] && printf "${l#g\:} "
+            done < "${HOME}/.config/dwb/${line}/session"
+        } done < "${HOME}/.config/dwb/settings" )" -- $cur ) )
+}
+
+__execute() {
+    local cmds=""
+    COMPREPLY=( $( compgen -W "${cmds}" -- $cur ) )
+}
+
+__extension() {
+    COMPREPLY=( $( compgen -W "$( while read line; do
+        printf "${line% *} "
+    done < "${HOME}/.local/share/dwb/extensions/.metadata" )" -- $cur ) )
+}
+
+__installed_extension() {
+    COMPREPLY=( $( compgen -W "$( while read line; do
+        printf "${line% *} "
+    done < "${HOME}/.local/share/dwb/extensions/.installed" )" -- $cur ) )
+}
+
+_dwb() {
+    local cur prev opts lopts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h -c -e -f -l -n -r -R -p -x -v -S"
+    lopts="--help --check-script --embed --force --list-sessions --new-instance
+    --restore --override-restore --profile --execute --version --enable-scripts"
+
+    case "${prev}" in
+        -c|--check-script)
+            __script
+            return 0;;
+        -r|--restore)
+            __session
+            return 0;;
+        -p|--profile)
+            __profile
+            return 0;;
+        -x|--execute)
+            __execute
+            return 0;;
+    esac
+
+    case "${cur}" in
+        --*)
+            COMPREPLY=( $( compgen -W "${lopts}" -- $cur ) )
+            return 0;;
+        -*)
+            COMPREPLY=( $( compgen -W "${opts} ${lopts}" -- $cur ) )
+            return 0;;
+        *)
+            _filedir
+            return 0;;
+    esac
+}
+
+_dwbem() {
+    local cur prev opts lopts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts="-h -a -b -B -c -d -e -E -i -I -l -L -n -N -r -p -u -U"
+    lopts="--help --list-all --bind --setbind --config --disable --enable --edit
+    --install --info --list-installed --setload --no-config --no-confirm
+    --remove --proxy --upgrade --update"
+
+    extinstops=" -B --setbind -c --config -d --disable -e --enable -E --edit
+    -L --setload -r --remove -U --update "
+    extallops=" -i --install -I --info "
+
+    [[ "${extinstops}" == *" ${prev} "* ]] && {
+        __installed_extension
+        return 0
+    }
+    [[ "${extinstops}${extallops}" == *" ${prev} "* ]] && {
+        __extension
+        return 0
+    }
+
+    case "${cur}" in
+        --*)
+            COMPREPLY=( $( compgen -W "${lopts}" -- $cur ) )
+            return 0;;
+        *)
+            COMPREPLY=( $( compgen -W "${opts} ${lopts}" -- $cur ) )
+            return 0;;
+    esac
+}
+
+complete -F _dwb dwb
+complete -F _dwbem dwbem
+
+return 0

@@ -290,7 +290,9 @@ html_settings_fill(char *key, WebSettings *s, WebKitWebView *wv)
     //WebKitDOMDOMWindow *win = webkit_dom_document_get_default_view(doc);
     WebKitDOMElement *e = webkit_dom_document_get_element_by_id(doc, key);
     if (s->type == BOOLEAN) 
+    {
         webkit_dom_html_input_element_set_checked(WEBKIT_DOM_HTML_INPUT_ELEMENT(e), s->arg.b);
+    }
     else if (WEBKIT_DOM_IS_HTML_INPUT_ELEMENT(e)) 
         webkit_dom_html_input_element_set_value(WEBKIT_DOM_HTML_INPUT_ELEMENT(e), value ? value : "");
     else if (WEBKIT_DOM_IS_HTML_SELECT_ELEMENT(e)) 

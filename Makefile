@@ -16,6 +16,8 @@ $(TARGET): $(SUBDIRS:%=%.subdir-make)
 %.subdir-make: $(SUBDIR_BUILD_FIRST:%=%.subdir-buildfirst)
 	@$(MAKE) $(MFLAGS) -C $*
 
+#$(SRCDIR)/%: $(SUBDIR_BUILD_FIRST:%=%.subdir-buildfirst)
+
 %.subdir-buildfirst:
 	@$(MAKE) $(MFLAGS) -C $*
 
@@ -36,7 +38,7 @@ install-man: all
 	install -m 644 $(DOCDIR)/$(MANFILE) $(DESTDIR)$(MAN1DIR)/$(MANFILE)
 	install -m 644 $(DOCDIR)/$(EXTENSION_MANAGER).1 $(DESTDIR)$(MAN1DIR)/$(EXTENSION_MANAGER).1
 	install -d $(DESTDIR)$(MAN7DIR)
-	install -m 644 $(APIDIR)/$(MANAPI) $(DESTDIR)$(MAN7DIR)/$(MANAPI)
+	install -m 644 $(DOCDIR)/$(MANAPI) $(DESTDIR)$(MAN7DIR)/$(MANAPI)
 
 install-data: all
 	@# Lib

@@ -7,18 +7,18 @@ LICENSE="GNU General Public License, version 3 or later"
 # dirs
 DISTDIR=$(REAL_NAME)-$(REAL_VERSION)
 DOCDIR=doc
-APIDIR=api
+APIDIR=$(DOCDIR)/api
 SRCDIR=src
 JSDIR=scripts
 LIBDIR=lib
 LIBJSDIR=$(JSDIR)/$(LIBDIR)
 LIBJSFILES=$(LIBJSDIR)/signals.js $(LIBJSDIR)/enums.js $(LIBJSDIR)/data.js 
 SHAREDIR=share
-UTILDIR=util
-UTILSRC=$(UTILDIR)/src
+M4DIR=m4
+UTILDIR=$(SRCDIR)/util
 TOOLDIR=tools
-SUBDIRS=$(UTILDIR) $(SRCDIR) $(TOOLDIR) 
-SUBDIR_BUILD_FIRST=$(UTILSRC)
+SUBDIRS=$(M4DIR) $(SRCDIR) $(TOOLDIR) 
+SUBDIR_BUILD_FIRST=$(UTILDIR)
 EXTENSIONDIR=extensions
 
 EXTENSION_MANAGER=dwbem
@@ -131,6 +131,7 @@ CFLAGS += -D_BSD_SOURCE
 CFLAGS += -D_NETBSD_SOURCE
 
 ifeq ($(shell pkg-config --exists '$(LIBSOUP) >= 2.38' && echo 1), 1)
+M4FLAGS += --define=WITH_LIBSOUP_2_38=1 -G
 CFLAGS += -DWITH_LIBSOUP_2_38=1
 endif
 
@@ -178,7 +179,7 @@ DCFLAGS += -O0
 DCFLAGS += -Wextra -Wno-unused-parameter
 
 # Makeflags
-MFLAGS=--no-print-directory
+MFLAGS= --no-print-directory
 
 #Input 
 SOURCE = $(wildcard *.c) 
