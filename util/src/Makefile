@@ -8,7 +8,7 @@ MKTLDS=mktlds-header
 MKTLDS_SRC=mktlds-header.c
 
 HSTS=convert_transport_security
-HSTS_PRELOAD=$(BASE_DIR)/hsts_preload.h
+HSTS_PRELOAD=$(BASE_DIR)/$(SRCDIR)/hsts_preload.h
 TRANSPORT_SECURITY_JSON=transport_security_state_static.json
 TRANSPORT_SECURITY_CERTS=transport_security_state_static.certs
 
