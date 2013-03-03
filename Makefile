@@ -65,8 +65,8 @@ install-data: all
 		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 	done
 ifdef bashcompletion
-	install -d $(bashcompletion)
-	install -m 644 $(CONTRIBDIR)/bash-completion $(bashcompletion)/dwb
+	install -d $(DESTDIR)/$(bashcompletion)
+	install -m 644 $(CONTRIBDIR)/bash-completion $(DESTDIR)/$(bashcompletion)/dwb
 endif
 
 
@@ -84,6 +84,9 @@ uninstall-data:
 	$(RM) -r $(DESTDIR)$(DATADIR)/$(REAL_NAME)
 	$(RM) -r $(DESTDIR)$(DATADIR)/applications/dwb.desktop
 	$(RM) -r $(DESTDIR)$(DATADIR)/pixmaps/dwb.png
+ifdef bashcompletion
+	$(RM) $(DESTDIR)$(bashcompletion)/dwb
+endif
 
 distclean: clean
 
