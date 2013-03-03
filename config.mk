@@ -20,6 +20,9 @@ TOOLDIR=tools
 SUBDIRS=$(M4DIR) $(SRCDIR) $(TOOLDIR) 
 SUBDIR_BUILD_FIRST=$(UTILDIR)
 EXTENSIONDIR=extensions
+CONTRIBDIR=contrib
+
+
 
 EXTENSION_MANAGER=dwbem
 
@@ -99,6 +102,12 @@ ifeq ($(shell pkg-config --exists $(GNUTLS) && echo 1), 1)
 LIBS+=$(GNUTLS)
 else
 $(error Cannot find $(GNUTLS))
+endif
+
+ifeq ($(shell pkg-config --exists json && echo 1), 1)
+LIBS+=$(GNUTLS)
+else
+$(error Cannot find json-c)
 endif
 
 

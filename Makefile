@@ -64,6 +64,11 @@ install-data: all
 	for file in $(EXTENSIONDIR)/*; do \
 		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 	done
+ifdef BASHCOMPLETION
+	install -d $(dir BASHCOMPLETION)
+	install -m 644 $(CONTRIBDIR)/dwb $(BASHCOMPLETION)
+endif
+
 
 uninstall: uninstall-man uninstall-data
 	@echo "Removing executable from $(subst //,/,$(DESTDIR)$(BINDIR))"
