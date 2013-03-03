@@ -16,15 +16,27 @@ __profile() {
         } done < "${HOME}/.config/dwb/settings" )" -- $cur ) )
 }
 
+
 __session() {
-    COMPREPLY=( $( compgen -W "$( while read line; do
-        [[ "$line" == \[* ]] && {
-            line="${line#\[}"
-            line="${line%\]}"
-            while read l; do
-                [[ "$l" == 'g:'* ]] && printf "${l#g\:} "
-            done < "${HOME}/.config/dwb/${line}/session"
-        } done < "${HOME}/.config/dwb/settings" )" -- $cur ) )
+    local s p_found profile
+    s=${#COMP_WORDS[*]}
+    p_found=false
+
+    for (( i=1; i <= s; i++ )); do
+        $p_found && { profile=${COMP_WORDS[$i]}; break;}
+        [[ ${COMP_WORDS[$i]} == -p ]] ||\
+        [[ ${COMP_WORDS[$i]} == --profile ]] &&\
+            p_found=true
+    done
+    $p_found || profile=default
+
+    COMPREPLY=( $( compgen -W "$(
+        while read line; do
+            [[ "$line" == 'g:'* ]] && {
+                line="${line#g\:}"
+                printf "${line#\*} "
+            }
+        done < "${HOME}/.config/dwb/${profile}/session" )" -- $cur ) )
 }
 
 __execute() {
@@ -38,10 +50,35 @@ __extension() {
     done < "${HOME}/.local/share/dwb/extensions/.metadata" )" -- $cur ) )
 }
 
-__installed_extension() {
-    COMPREPLY=( $( compgen -W "$( while read line; do
+__get_installed() {
+    while read line; do
         printf "${line% *} "
-    done < "${HOME}/.local/share/dwb/extensions/.installed" )" -- $cur ) )
+    done < "${HOME}/.local/share/dwb/extensions/.installed"
+}
+
+__get_disabled() {
+    if [ -f "${HOME}/.config/dwb/userscripts/extension_loader.js" ]; then
+        while read line; do
+            if [[ "$line" == '/*<'*'__DISABLED' ]]; then
+                line="${line#/\*<}"
+                printf "${line%___DISABLED} "
+            fi
+        done < ${HOME}/.config/dwb/userscripts/extension_loader.js
+    fi
+}
+
+__installed_extension() {
+    COMPREPLY=( $( compgen -W "$(__get_installed)" -- $cur ) )
+}
+
+__disabled_extension() {
+    COMPREPLY=( $( compgen -W "$(__get_disabled)" -- $cur ) )
+}
+__enabled_extension() {
+    local disabled="$(__get_disabled)"
+    COMPREPLY=( $( compgen -W "$( for installed in $(__get_installed); do 
+        [[  " ${disabled} " != *" ${installed} "* ]] && printf "${installed} "
+    done)" -- $cur ) )
 }
 
 _dwb() {
@@ -97,6 +134,14 @@ _dwbem() {
     -L --setload -r --remove -U --update "
     extallops=" -i --install -I --info "
 
+    [[ " -d --disable " == *" ${prev} "* ]] && {
+        __enabled_extension
+        return 0
+    }
+    [[ " -e --enable " == *" ${prev} "* ]] && {
+        __disabled_extension
+        return 0
+    }
     [[ "${extinstops}" == *" ${prev} "* ]] && {
         __installed_extension
         return 0
@@ -105,6 +150,7 @@ _dwbem() {
         __extension
         return 0
     }
+
 
     case "${cur}" in
         --*)
