@@ -83,10 +83,6 @@ _dwb() {
     local cur prev opts lopts
     _init_completion || return 
 
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-
     opts="-h -c -e -f -l -n -r -R -p -x -v -S"
     lopts="--help --check-script --embed --force --list-sessions --new-instance
     --restore --override-restore --profile --execute --version --enable-scripts"
@@ -124,10 +120,6 @@ _dwbem() {
     local cur prev opts lopts
     _init_completion || return 
 
-    COMPREPLY=()
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
-
     opts="-h -a -b -B -c -d -e -E -i -I -l -L -n -N -r -p -u -U"
     lopts="--help --list-all --bind --setbind --config --disable --enable --edit
     --install --info --list-installed --setload --no-config --no-confirm
@@ -153,7 +145,6 @@ _dwbem() {
         __extension
         return 0
     }
-
 
     case "${cur}" in
         --*)
