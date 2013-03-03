@@ -1,5 +1,3 @@
-#!bash
-#
 # dwb completion support.
 
 __script() {
@@ -83,6 +81,8 @@ __enabled_extension() {
 
 _dwb() {
     local cur prev opts lopts
+    _init_completion || return 
+
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -117,10 +117,13 @@ _dwb() {
             _filedir
             return 0;;
     esac
-}
+} &&
+complete -F _dwb dwb
 
 _dwbem() {
     local cur prev opts lopts
+    _init_completion || return 
+
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -160,9 +163,5 @@ _dwbem() {
             COMPREPLY=( $( compgen -W "${opts} ${lopts}" -- $cur ) )
             return 0;;
     esac
-}
-
-complete -F _dwb dwb
+} && 
 complete -F _dwbem dwbem
-
-return 0
