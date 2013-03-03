@@ -64,9 +64,9 @@ install-data: all
 	for file in $(EXTENSIONDIR)/*; do \
 		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 	done
-ifdef BASHCOMPLETION
-	install -d $(dir BASHCOMPLETION)
-	install -m 644 $(CONTRIBDIR)/dwb $(BASHCOMPLETION)
+ifdef bashcompletion
+	install -d $(bashcompletion)
+	install -m 644 $(CONTRIBDIR)/bash-completion $(bashcompletion)/dwb
 endif
 
 
