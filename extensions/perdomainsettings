@@ -160,7 +160,7 @@ function apply(o, settings)
 
 function onNavigation(wv, frame, request, action) 
 {
-    if (wv.mainFrame != frame)
+    if (wv.mainFrame != frame || !request.message)
         return false;
 
     var value;
