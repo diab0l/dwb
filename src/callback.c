@@ -174,7 +174,7 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
     else if (gtk_widget_has_focus(dwb.gui.entry) || mode & COMPLETION_MODE) 
         ret = false;
     else if (webkit_web_view_has_selection(CURRENT_WEBVIEW()) && e->keyval == GDK_KEY_Return) 
-        dwb_follow_selection();
+        dwb_follow_selection(e);
     else if (dwb.state.mode & AUTO_COMPLETE && DWB_TAB_KEY(e)) 
     {
         completion_autocomplete(dwb.keymap, e);

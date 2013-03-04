@@ -1240,7 +1240,7 @@ dwb_sync_files(gpointer data)
 
 /* dwb_follow_selection() {{{*/
 void 
-dwb_follow_selection() 
+dwb_follow_selection(GdkEventKey *e) 
 {
     char *href = NULL;
     WebKitDOMNode *n = NULL, *tmp;
@@ -1257,9 +1257,15 @@ dwb_follow_selection()
     WebKitDOMNode *document_element = WEBKIT_DOM_NODE(webkit_dom_document_get_document_element(doc));
 
     n = webkit_dom_range_get_start_container(range, NULL); 
-    while( n && n != document_element && href == NULL) {
-        if (WEBKIT_DOM_IS_HTML_ANCHOR_ELEMENT(n)) {
+    while( n && n != document_element && href == NULL) 
+    {
+        if (WEBKIT_DOM_IS_HTML_ANCHOR_ELEMENT(n)) 
+        {
             href = webkit_dom_html_anchor_element_get_href(WEBKIT_DOM_HTML_ANCHOR_ELEMENT(n));
+            if (e->state & GDK_CONTROL_MASK)
+                dwb.state.nv = OPEN_NEW_VIEW;
+            else if (e->state & GDK_SHIFT_MASK)
+                dwb.state.nv = OPEN_BACKGROUND | OPEN_NEW_VIEW;
             dwb_load_uri(dwb.state.fview, href);
         }
         tmp = n;

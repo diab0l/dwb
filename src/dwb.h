@@ -963,7 +963,7 @@ void dwb_set_hsts(GList *, WebSettings *);
 gboolean dwb_eval_key(GdkEventKey *);
 gboolean dwb_eval_override_key(GdkEventKey *e, CommandProperty prop);
 char * dwb_get_key(GdkEventKey *, unsigned int *, gboolean *);
-void dwb_follow_selection(void);
+void dwb_follow_selection(GdkEventKey *);
 void dwb_update_layout(void);
 const char * dwb_parse_nummod(const char *);
 void dwb_init_custom_keys(gboolean);
