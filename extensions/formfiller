@@ -282,10 +282,11 @@ function onRead() { return null; }
 function getFormData(callback) //{{{
 {
     var stat, ret;
+    var data;
     if (config.useGPG) 
     {
-        if (formData !== null) 
-            return formData;
+        if (data !== null) 
+            return data;
         if ((formData = exports.onRead())) 
             return JSON.parse(formData.replace(/\\"/g, '"'));
 
@@ -318,8 +319,8 @@ function getFormData(callback) //{{{
     {
         try 
         {
-            if ((formData = onRead()))
-                return JSON.parse(formData);
+            if ((data = onRead()))
+                return JSON.parse(data);
             else 
                 return JSON.parse(io.read(config.formData));
         }
