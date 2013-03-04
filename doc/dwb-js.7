@@ -3568,7 +3568,7 @@ The private value
 \fBvoid script.setPrivate(Object object, String key, String value)\fR
 .RS 4
 .sp
-Convenience method to set a private property on an object that doesn\(cqt conflict with properties set in other scripts, it uses a random unique id to set the property, so the property can most likely be only retrieved with \fBscript\&.getPrivate\fR\&. This is mostly useful for objects derived from GObject since GObjects are shared between all scripts\&.
+Convenience function to set a private property on an object that doesn\(cqt conflict with properties set in other scripts, it uses a random unique id to set the property, so the property can most likely be only retrieved with \fBscript\&.getPrivate\fR\&. This is mostly useful for objects derived from GObject since GObjects are shared between all scripts\&.
 .PP
 \fIobject\fR
 .RS 4

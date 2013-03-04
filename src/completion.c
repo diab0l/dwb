@@ -492,8 +492,6 @@ completion_get_quickmarks(int back)
             list = g_list_append(list, c);
         }
     }
-    if (back)
-        list = g_list_reverse(list);
     return list;
 }/*}}}*/
 

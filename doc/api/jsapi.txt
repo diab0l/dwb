@@ -3201,7 +3201,7 @@ _returns_;; The private value
 void script.setPrivate(Object object, String key, Object value)
 ----
 
-Convenience method to set a private property on an object that doesn't conflict
+Convenience function to set a private property on an object that doesn't conflict
 with properties set in other scripts, it uses a random unique id to set
 the property, so the property can most likely only be retrieved with
 <<getPrivate,script.getPrivate>>. 
