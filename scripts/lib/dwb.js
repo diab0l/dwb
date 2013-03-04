@@ -27,21 +27,26 @@
                 callback.apply(this, modules);
         }
     };
-
-    var _privProps = [];
-    var _getPrivateIdx = function(object, key, identifier) 
+    var _contexts = {};
+    var _setPrivate = function(id, object, key, value)
     {
-        var p;
-        for (var i=0, l=_privProps.length; i<l; ++i) 
+        var realKey = key + id;
+        if (object) 
         {
-            p = _privProps[i];
-            if (p.object == object && p.key == key && p.identifier === identifier)
-                return i;
+            if (object[realKey])
+            {
+                object[realKey] = value;
+            }
+            else 
+            {
+                Object.defineProperty(object, realKey, { value : value, writable : true });
+            }
         }
-        return -1;
     };
-    var _contexts;
-
+    var _getPrivate = function(id, object, key)
+    {
+        return object[key+id];
+    };
     Object.defineProperties(this, { 
             "provide" : 
             { 
@@ -95,6 +100,30 @@
                         _applyRequired(names, callback);
                 }
             },
+            "_initNewContext" : 
+            {
+                value : (function() {
+                    var lastId = Math.ceil(Math.random() * 314159) + 271828;
+                    var nextId = function() {
+                            lastId++;
+                            return String(Math.floor(Math.random() * 89999) + 10000) + lastId + 
+                                String(Math.floor(Math.random() * 89999) + 10000); 
+                    };
+                    return function(self, arguments, path) {
+                        var id = nextId();
+                        _contexts[id] = self;
+                        Object.defineProperties(self, { 
+                                "path" : { value : path },
+                                "debug" : { value : io.debug.bind(this) }, 
+                                "_arguments" : { value : arguments },
+                                "setPrivate" : { value : _setPrivate.bind(this, String(id)) }, 
+                                "getPrivate" : { value : _getPrivate.bind(this, String(id)) }
+                        });
+                        Object.freeze(self);
+
+                    };
+                })() 
+            },
             // Called after all scripts have been loaded and executed
             // Immediately deleted from the global object, so it is not callable
             // from other scripts
@@ -102,8 +131,9 @@
             { 
                 value : function() 
                 {
+                    var i;
                     _initialized = true;
-                    for (var i=0, l=_callbacks.length; i<l; i++) 
+                    for (i=0, l=_callbacks.length; i<l; i++) 
                         _applyRequired(_callbacks[i].names, _callbacks[i].callback);
 
                 },
@@ -113,58 +143,13 @@
             {
                 value : function(contexts) 
                 {
-                    _contexts = contexts
+                    //_contexts = contexts;
                     Object.freeze(this);
                 },
                 configurable : true
-            },
-            //"_private" : 
-            //{
-            //    value : function() 
-            //    {
-            //        io.print(arguments);
-            //    }
-            //}
+            }
     });
     Object.defineProperties(GObject.prototype, {
-            "setPrivate" : 
-            { 
-                value : function(key, value, identifier) 
-                {
-                    if (!(identifier instanceof Object) && !(identifier instanceof Function)) 
-                        throw new Error("[setPrivate] identifier is not an Object or Function");
-
-                    var i = _getPrivateIdx(this, key, identifier);
-                    if (i === -1) 
-                    {
-                        if (value !== undefined && value !== null)
-                            _privProps.push({ 
-                                    object : this, 
-                                    key : key, 
-                                    identifier : identifier, 
-                                    value : value 
-                            });
-                    }
-                    else if (value !== null) 
-                    {
-                        _privProps[i].value = value;
-                    }
-                    else 
-                    {
-                        _privProps.splice(i);
-                    }
-                }
-            },
-            "getPrivate" : 
-            { 
-                value : function(key, identifier) 
-                {
-                    var i = _getPrivateIdx(this, key, identifier);
-                    if (i !== -1) 
-                        return _privProps[i].value;
-                    return undefined;
-                }
-            },
             "notify" : 
             { 
                 value : function(name, callback, after) 

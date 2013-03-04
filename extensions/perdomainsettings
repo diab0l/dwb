@@ -165,11 +165,11 @@ function onNavigation(wv, frame, request, action)
 
     var value;
 
-    var o = wv.getPrivate("pds", script);
+    var o = script.getPrivate(wv, "pds");
     if (! o)
     {
         o = { webview : wv, defaults : false, settings : wv.settings };
-        wv.setPrivate("pds", o, script);
+        script.setPrivate(wv, "pds");
     }
     o.set = {};
     var uri = request.uri;

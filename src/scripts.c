@@ -40,12 +40,12 @@
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
-#define DEBUG_TEMPLATE_START "try{const script=this;Object.defineProperties(this,{'path':{value:'%s'},'debug':{value:io.debug.bind(this)},'_arguments':{value:arguments}});Object.freeze(this);/*<dwb*/"
+#define SCRIPT_TEMPLATE_START "try{_initNewContext(this, arguments, '%s');const script=this;/*<dwb*/"
 
-#define DEBUG_TEMPLATE_END "%s/*dwb>*/}catch(e){this.debug({error:e});};"
+#define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){this.debug({error:e});};"
 
-#define DEBUG_TEMPLATE DEBUG_TEMPLATE_START"//!javascript\n"DEBUG_TEMPLATE_END
-#define DEBUG_TEMPLATE_INCLUDE DEBUG_TEMPLATE_START DEBUG_TEMPLATE_END
+#define SCRIPT_TEMPLATE SCRIPT_TEMPLATE_START"//!javascript\n"SCRIPT_TEMPLATE_END
+#define SCRIPT_TEMPLATE_INCLUDE SCRIPT_TEMPLATE_START SCRIPT_TEMPLATE_END
 
 #define SCRIPT_WEBVIEW(o) (WEBVIEW(((GList*)JSObjectGetPrivate(o))))
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
@@ -1244,7 +1244,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
     }
     else 
     {
-        char *debug = g_strdup_printf(DEBUG_TEMPLATE_INCLUDE, path, tmp);
+        char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, path, tmp);
         script = JSStringCreateWithUTF8CString(debug);
         JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, script, NULL, 1, exc);
         if (function != NULL) 
@@ -3471,7 +3471,7 @@ scripts_init_script(const char *path, const char *script)
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
-        debug = g_strdup_printf(DEBUG_TEMPLATE, path, script);
+        debug = g_strdup_printf(SCRIPT_TEMPLATE, path, script);
         JSObjectRef function = js_make_function(s_global_context, debug, path, 1);
 
         if (function != NULL) 

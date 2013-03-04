@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 03/02/2013
+.\"      Date: 03/04/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "03/02/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "03/04/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1737,58 +1737,6 @@ Whether to install the handler after the default handler, default after\&.
 \fIreturns\fR
 .RS 4
 The signal id of the signal\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBObject GObject.getPrivate(String key, Object identifier)\fR
-.RS 4
-.sp
-Gets a value previously set with GObject\&.setPrivate\&.
-.PP
-\fIkey\fR
-.RS 4
-The property name
-.RE
-.PP
-\fIidentifier\fR
-.RS 4
-The identifier passed to setPrivate
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-The object set with setPrivate or null\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBvoid GObject.setPrivate(String key, String value, Object identifier)\fR
-.RS 4
-.sp
-Associates a private value with an object that can only be retrieved in the calling script\&.
-.PP
-\fIkey\fR
-.RS 4
-The property name
-.RE
-.PP
-\fIvalue\fR
-.RS 4
-The property value
-.RE
-.PP
-\fIidentifier\fR
-.RS 4
-A local object to identify the calling script, the identifier must either be of type Object or of type Function\&.
 .RE
 .RE
 .sp
@@ -3551,6 +3499,58 @@ The path of the script\&.
 .RS 4
 .sp
 Same as io\&.debug but also prints additional information, e\&.g\&. if the object is an Error, this method will also print the corresponding source of the error\&.
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid script.getPrivate(Object object, String key)\fR
+.RS 4
+.sp
+Gets a private property of an object previously set with \fBscript\&.setPrivate\fR
+.PP
+\fIobject\fR
+.RS 4
+The object on which the value was set\&.
+.RE
+.PP
+\fIkey\fR
+.RS 4
+The property name
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The private value
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid script.setPrivate(Object object, String key, String value)\fR
+.RS 4
+.sp
+Sets a private property on an object, this is mostly useful for objects derived from GObject since GObjects are shared between all scripts\&.
+.PP
+\fIobject\fR
+.RS 4
+The object on which the value should be set\&.
+.RE
+.PP
+\fIkey\fR
+.RS 4
+The property name
+.RE
+.PP
+\fIvalue\fR
+.RS 4
+The value to set\&.
+.RE
 .RE
 .SH "MODULES"
 .sp

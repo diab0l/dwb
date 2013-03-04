@@ -120,19 +120,16 @@ var sigs = {
 var persistentList = null;
 var tmpList = {};
 
-var getPrivate = (function ()  
+var getPrivate = function (wv)  
 {
-    var identifier = {};
-    return function (wv) {
-        var p = wv.getPrivate("foo", identifier);
-        if (!p) 
-        {
-            p = { domains : [], blocked : 0 };
-            wv.setPrivate("foo", p, identifier);
-        }
-        return p;
-    };
-})();
+    var p = script.getPrivate(wv, "foo");
+    if (!p) 
+    {
+        p = { domains : [], blocked : 0 };
+        script.setPrivate(wv, "foo", p);
+    }
+    return p;
+};
 
 function listAdd(o, key, value, doWrite) 
 {

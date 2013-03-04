@@ -1635,42 +1635,6 @@ _returns_;; The signal id of the signal.
 
 
 ****
-[[getPrivate]]
-[float]
-==== *getPrivate()* ==== 
-[source,javascript]
-----
-Object GObject.getPrivate(key, identifier)
-----
-
-Gets a value previously set with GObject.setPrivate.
-
- :: 
-
-_key_;; The property name
-_identifier_;; The identifier passed to <<setPrivate>>
-_returns_;; The object set with <<setPrivate>> or +null+.
-****
-
-****
-[[setPrivate]]
-[float]
-==== *setPrivate()* ==== 
-[source,javascript]
-----
-void GObject.setPrivate(key, value, identifier)
-----
-
-Associates a private value with an object only in the calling script.
- :: 
-
-_key_;; The property name
-_value_;; The property value
-_identifier_;; A local object to identify the calling script, the identifier
-must either be of type object or of type function.
-****
-
-****
 [float]
 ==== *unblockSignal()* ==== 
 
@@ -1712,19 +1676,6 @@ signals.connect("createTab", function(wv) {
         if (/google\.com/.test(request.uri))
             return true;
     });
-});
-------------
-
-Setting/getting private values:
-
-[source,javascript]
-------------
-var self = this;
-signals.connect("loadCommitted", function(wv) {
-  wv.setPrivate("foo", "bar", self);
-});
-signals.connect("loadFinished", function(wv) {
-  io.print(wv.getPrivate("foo", self));
 });
 ------------
 ====
@@ -3188,6 +3139,47 @@ Same as io.debug but also prints additional information, e.g. if the object is
 an Error, this method will also print the corresponding source of the error.
 ****
 
+****
+[[thissetprivate]]
+[float]
+==== *getPrivate()* ==== 
+
+[source,javascript]
+----
+Object script.getPrivate(Object object, String key, Object value)
+----
+
+Gets a private property of an object previously set with <<setPrivate>>.
+
+ ::
+
+_object_;; The object on which the value was set.
+_key_;; The property name
+_returns_;; The private value
+****
+
+
+****
+[[setPrivate]]
+[float]
+==== *setPrivate()* ==== 
+
+[source,javascript]
+----
+void script.setPrivate(Object object, String key, Object value)
+----
+
+Sets a private property on an object, this is mostly useful for objects derived
+from GObject since GObjects are shared between all scripts. 
+
+ ::
+
+_object_;; The object on which the value should be set.
+_key_;; The property name
+_value_;; The value to set.
+****
+
+
 .Example 
 ****
 [source,javascript]
@@ -3221,6 +3213,18 @@ Will produce the following output:
     ...
 ------
 
+Setting/getting private values:
+
+[source,javascript]
+------------
+var self = this;
+signals.connect("loadCommitted", function(wv) {
+  script.setPrivate(wv, "foo", "bar");
+});
+signals.connect("loadFinished", function(wv) {
+  io.print(script.getPrivate(wv, "foo"));
+});
+------------
 
 ****
 

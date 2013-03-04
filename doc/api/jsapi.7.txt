@@ -891,29 +891,6 @@ after.
 _returns_;; The signal id of the signal.
 ****
 
-==== Object GObject.getPrivate(String key, Object identifier)
-****
-
-Gets a value previously set with GObject.setPrivate.
-
-_key_;; The property name
-_identifier_;; The identifier passed to setPrivate
-_returns_;; The object set with setPrivate or null.
-****
-
-
-==== void GObject.setPrivate(String key, String value, Object identifier)
-****
-
-Associates a private value with an object that can only be retrieved in the
-calling script.
-
-_key_;; The property name
-_value_;; The property value
-_identifier_;; A local object to identify the calling script, the identifier
-must either be of type Object or of type Function.
-****
-
 ==== void object.unblockSignal(Number signalid)
 ****
 
@@ -1798,6 +1775,27 @@ _script.path (Object, read)_;; The path of the script.
 
 Same as io.debug but also prints additional information, e.g. if the object is
 an Error, this method will also print the corresponding source of the error.
+****
+
+==== void script.getPrivate(Object object, String key)
+****
+
+Gets a private property of an object previously set with *script.setPrivate*
+
+_object_;; The object on which the value was set.
+_key_;; The property name
+_returns_;; The private value
+****
+
+==== void script.setPrivate(Object object, String key, String value)
+****
+
+Sets a private property on an object, this is mostly useful for objects derived
+from GObject since GObjects are shared between all scripts. 
+
+_object_;; The object on which the value should be set.
+_key_;; The property name
+_value_;; The value to set.
 ****
 
 == Modules == 
