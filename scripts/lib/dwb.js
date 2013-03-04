@@ -24,7 +24,7 @@
                 modules.push(_modules[name]);
             } 
             if (callback)
-                callback.apply(this, modules);
+                callback.apply(callback, modules);
         }
     };
     var _contexts = {};
@@ -134,11 +134,12 @@
             { 
                 value : function() 
                 {
-                    var i;
+                    var i, l;
                     _initialized = true;
                     for (i=0, l=_callbacks.length; i<l; i++) 
+                    {
                         _applyRequired(_callbacks[i].names, _callbacks[i].callback);
-
+                    }
                 },
                 configurable : true
             },

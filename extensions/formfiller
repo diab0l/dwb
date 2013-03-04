@@ -45,6 +45,8 @@
  * useGPG         : Whether to use gpg2 to encrypt the formData file with a
  *                  password.
  *
+ * GPGAgent      : Whether to use a GPG agent.
+ *
  * GPGOptEncrypt : Additional options that will be passed to gpg2 for
  *                 encryption, the default gpg2 options are:
  *                 --passphrase <password> --batch --no-tty --yes -c --output <formData>
@@ -111,6 +113,9 @@ formData : data.configDir + "/forms",
 // whether to use a gpg-encrypted file
 useGPG : false,
 
+// whether to use a GPG agent
+GPGAgent : true,
+
 // additional arguments passed to gpg2 when encrypting the formdata
 GPGOptEncrypt : "",
 
@@ -128,6 +133,7 @@ keepFormdata : false
 var config = {};
 var passWord = null;
 var formData = null;
+var exports = { };
 
 var injectGetForm = function () //{{{
 {
@@ -261,6 +267,7 @@ var injectFillForm = function () //{{{
     return form !== null;
 };//}}}
 
+function onRead() { return null; }
 function getFormData(callback) //{{{
 {
     var stat, ret;
@@ -268,9 +275,12 @@ function getFormData(callback) //{{{
     {
         if (formData !== null) 
             return formData;
+        if ((formData = exports.onRead())) 
+            return JSON.parse(formData.replace(/\\"/g, '"'));
 
-        getPassWord();
-        stat = system.spawnSync("gpg2 " + config.GPGOptDecrypt + " --passphrase " + passWord + " --batch --no-tty --yes -d " + config.formData);
+        if (!config.GPGAgent)
+            getPassWord();
+        stat = system.spawnSync("gpg2 " + config.GPGOptDecrypt + (config.GPGAgent ? " " : " --passphrase " + passWord) + " --batch --no-tty --yes -d " + config.formData);
         if (stat.status == 512) 
         {
             io.error("Wrong password");
@@ -295,7 +305,10 @@ function getFormData(callback) //{{{
     {
         try 
         {
-            return JSON.parse(io.read(config.formData));
+            if ((formData = onRead()))
+                return JSON.parse(formData);
+            else 
+                return JSON.parse(io.read(config.formData));
         }
         catch(e) 
         {
@@ -311,18 +324,25 @@ function getPassWord() //{{{
     if (passWord === null) 
         passWord = io.prompt("Password :", false);
 }//}}}
-
+function onWrite() { return false; }
 function writeFormData(object) //{{{
 {
     var written = true, ret;
+        io.print("foo");
     if (config.useGPG) 
     {
-        getPassWord();
-        if (passWord === null) 
-            return false;
+        var data = JSON.stringify(object).replace(/"/g, "\\\"");
+        if (exports.onWrite(data))
+            return true;
+        if (!config.GPGAgent)
+        {
+            getPassWord();
+            if (passWord === null) 
+                return false;
+        }
 
-        ret = system.spawnSync("sh -c \"echo '" + JSON.stringify(object).replace(/"/g, "\\\"") + 
-            "' | gpg2 " + config.GPGOptEncrypt + " --passphrase " + passWord + " --batch --no-tty --yes -c --output " + config.formData + "\"");
+        ret = system.spawnSync("sh -c \"echo '" + data + 
+            "' | gpg2 " + config.GPGOptEncrypt + (config.GPGAgent ? " " : " --passphrase " + passWord) + " --batch --no-tty --yes -c --output " + config.formData + "\"");
         if (ret.status == 512) 
         {
             io.error("Wrong password");
@@ -332,7 +352,11 @@ function writeFormData(object) //{{{
         written = ret.status === 0;
     }
     else 
+    {
+        if (exports.onWrite(config.formData))
+            return true;
         written = io.write(config.formData, "w", JSON.stringify(object, null, 2));
+    }
     
     return written;
 }//}}}
@@ -437,10 +461,14 @@ function fillForm() //{{{
 // init {{{
 return {
     defaultConfig : defaultConfig,
+    exports : exports,
     init : function (c) {
         config = c;
         bind(config.scGetForm, getForm, "formfillerGet");
         bind(config.scFillForm, fillForm, "formfillerFill");
+        exports.config = config;
+        exports.onRead = onRead;
+        exports.onWrite = onWrite;
         return true;
     }, 
     end : function () {
@@ -450,3 +478,4 @@ return {
     }
 }//}}}
 // vim: set ft=javascript:
+
