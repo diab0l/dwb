@@ -156,3 +156,5 @@ _dwbem() {
     esac
 } && 
 complete -F _dwbem dwbem
+
+# vim: set ft=sh:

@@ -271,7 +271,7 @@ local_show_directory(GList *gl, const char *path, gboolean add_to_history)
     g_string_append_len(path_buffer, tmp, match-tmp);
     g_string_append(path_buffer, "</a>");
 
-    local_file = util_get_data_file(LOCAL_FILE, "lib");
+    local_file = util_get_data_file(LOCAL_FILE, "html");
     filecontent = util_get_file_content(local_file, NULL);
     if (filecontent == NULL) /* File doesn't exist or is a directory */
         return;

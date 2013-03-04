@@ -10,6 +10,7 @@ DOCDIR=doc
 APIDIR=$(DOCDIR)/api
 SRCDIR=src
 JSDIR=scripts
+HTMLDIR=html
 LIBDIR=lib
 LIBJSDIR=$(JSDIR)/$(LIBDIR)
 LIBJSFILES=$(LIBJSDIR)/signals.js $(LIBJSDIR)/enums.js $(LIBJSDIR)/data.js 

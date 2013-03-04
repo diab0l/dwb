@@ -42,8 +42,8 @@ install-man: all
 
 install-data: all
 	@# Lib
-	install -d $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(LIBDIR)
-	for file in $(LIBDIR)/*; do \
+	install -d $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(HTMLDIR)
+	for file in $(HTMLDIR)/*; do \
 		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 	done
 	@# Share

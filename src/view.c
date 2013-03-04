@@ -853,7 +853,7 @@ view_load_error_cb(WebKitWebView *web, WebKitWebFrame *frame, char *uri, GError 
             || weberror->code == WEBKIT_POLICY_ERROR_FRAME_LOAD_INTERRUPTED_BY_POLICY_CHANGE) 
         return false;
 
-    char *errorfile = util_get_data_file(ERROR_FILE, "lib");
+    char *errorfile = util_get_data_file(ERROR_FILE, "html");
     if (errorfile == NULL) 
         return false;
 
