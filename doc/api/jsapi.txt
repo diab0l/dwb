@@ -89,6 +89,25 @@ _name_;; A name that identifies the function on command line, optional
 _returns_;; +true+ if the function was bound successfully
 ****
 
+****
+[[checksum]]
+[float]
+==== *checksum()* ==== 
+
+[source,javascript]
+----
+String checksum(String data, [ChecksumType type])
+----
+
+Computes a checksum for given data.
+
+ ::
+
+_shortcut_;; The to compute the checksum for.
+_type_;; The type of the checksum, optional, defaults to ChecksumType.sha256
+_returns_;; The checksum
+****
+
 
 ****
 [[execute]]
@@ -3126,6 +3145,18 @@ The path of the script.
 ****
 
 ****
+[float]
+==== *_arguments* ====
+
+[source,javascript]
+----
+script._arguments        string     read
+----
+
+*arguments* object of the encapsulating function
+****
+
+****
 [[thisdebug]]
 [float]
 ==== *debug()* ==== 
@@ -3140,7 +3171,7 @@ an Error, this method will also print the corresponding source of the error.
 ****
 
 ****
-[[thissetprivate]]
+[[getPrivate]]
 [float]
 ==== *getPrivate()* ==== 
 
@@ -3149,7 +3180,8 @@ an Error, this method will also print the corresponding source of the error.
 Object script.getPrivate(Object object, String key, Object value)
 ----
 
-Gets a private property of an object previously set with <<setPrivate>>.
+Gets a private property of an object previously set with
+<<setPrivate,script.setPrivate>>.
 
  ::
 
@@ -3169,8 +3201,12 @@ _returns_;; The private value
 void script.setPrivate(Object object, String key, Object value)
 ----
 
-Sets a private property on an object, this is mostly useful for objects derived
-from GObject since GObjects are shared between all scripts. 
+Convenience method to set a private property on an object that doesn't conflict
+with properties set in other scripts, it uses a random unique id to set
+the property, so the property can most likely only be retrieved with
+<<getPrivate,script.getPrivate>>. 
+This is mostly useful for objects derived from GObject since GObjects are shared
+between all scripts. 
 
  ::
 

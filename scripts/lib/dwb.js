@@ -28,25 +28,6 @@
         }
     };
     var _contexts = {};
-    var _setPrivate = function(id, object, key, value)
-    {
-        var realKey = key + id;
-        if (object) 
-        {
-            if (object[realKey])
-            {
-                object[realKey] = value;
-            }
-            else 
-            {
-                Object.defineProperty(object, realKey, { value : value, writable : true });
-            }
-        }
-    };
-    var _getPrivate = function(id, object, key)
-    {
-        return object[key+id];
-    };
     Object.defineProperties(this, { 
             "provide" : 
             { 
@@ -103,21 +84,43 @@
             "_initNewContext" : 
             {
                 value : (function() {
-                    var lastId = Math.ceil(Math.random() * 314159) + 271828;
-                    var nextId = function() {
-                            lastId++;
-                            return String(Math.floor(Math.random() * 89999) + 10000) + lastId + 
-                                String(Math.floor(Math.random() * 89999) + 10000); 
-                    };
+                    var lastId = Math.ceil(Math.random() * 35897932) + 28459025;
+                    // get a random unique id, avoids conflicts with real properties 
+                    function nextId() 
+                    {
+                        lastId += Math.round(Math.random() * 37);
+                        return String(Math.floor(Math.random() * 8999999) + 1000000) + lastId + 
+                            String(Math.floor(Math.random() * 8999999) + 1000000); 
+                    }
                     return function(self, arguments, path) {
-                        var id = nextId();
+                        var id = "_" + nextId();
                         _contexts[id] = self;
                         Object.defineProperties(self, { 
                                 "path" : { value : path },
                                 "debug" : { value : io.debug.bind(this) }, 
                                 "_arguments" : { value : arguments },
-                                "setPrivate" : { value : _setPrivate.bind(this, String(id)) }, 
-                                "getPrivate" : { value : _getPrivate.bind(this, String(id)) }
+                                "setPrivate" : 
+                                { 
+                                    value : function(id, object, key, value) 
+                                    {
+                                        var realKey = key + id;
+                                        if (object[realKey]) 
+                                            object[realKey] = value;
+                                        else 
+                                        {
+                                            Object.defineProperty(object, realKey, {
+                                                    value : value, writable : true
+                                            });
+                                        }
+                                    }.bind(self, id)
+                                }, 
+                                "getPrivate" : 
+                                { 
+                                    value : function(id, object, key) 
+                                    { 
+                                        return object[key + id];
+                                    }.bind(self, id)
+                                }
                         });
                         Object.freeze(self);
 

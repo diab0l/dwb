@@ -133,6 +133,32 @@ true if the function was bound successfully
 .nr an-break-flag 1
 .br
 .ps +1
+\fBString checksum(String data, [ChecksumType type])\fR
+.RS 4
+.sp
+Computes a checksum for given data\&.
+.PP
+\fIshortcut\fR
+.RS 4
+The to compute the checksum for\&.
+.RE
+.PP
+\fItype\fR
+.RS 4
+The type of the checksum, optional, defaults to ChecksumType\&.sha256
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The checksum
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBBoolean execute(String command)\fR
 .RS 4
 .sp
@@ -3489,6 +3515,13 @@ In every script the variable \fBscript\fR refers to \fBthis\fR, the encapsulatin
 .RS 4
 The path of the script\&.
 .RE
+.PP
+\fIscript\&._arguments (Object, read)\fR
+.RS 4
+
+\fBarguments\fR
+object of the encapsulating function
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -3535,7 +3568,7 @@ The private value
 \fBvoid script.setPrivate(Object object, String key, String value)\fR
 .RS 4
 .sp
-Sets a private property on an object, this is mostly useful for objects derived from GObject since GObjects are shared between all scripts\&.
+Convenience method to set a private property on an object that doesn\(cqt conflict with properties set in other scripts, it uses a random unique id to set the property, so the property can most likely be only retrieved with \fBscript\&.getPrivate\fR\&. This is mostly useful for objects derived from GObject since GObjects are shared between all scripts\&.
 .PP
 \fIobject\fR
 .RS 4
