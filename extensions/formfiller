@@ -47,9 +47,17 @@
  *
  * GPGAgent      : Whether to use a GPG agent.
  *
+ * GPGKeyID      : Your GPG key ID (leave empty to use a symmetric cipher).
+ *
+ * GPGAgent      : Whether to use a GPG agent. Requires a non-empty GPGKeyID.
+ *
  * GPGOptEncrypt : Additional options that will be passed to gpg2 for
  *                 encryption, the default gpg2 options are:
+ *                 With GPGKeyID set:
+ *                 --passphrase <password> --batch --no-tty --yes --encrypt --recipient <GPGKeyID> --output <formData>
+ *                  With empty GPGKeyID:
  *                 --passphrase <password> --batch --no-tty --yes -c --output <formData>
+ *
  *                 default value: ""
  *
  * GPGOptDecrypt : Additional options that will be passed to gpg2 for
@@ -113,8 +121,11 @@ formData : data.configDir + "/forms",
 // whether to use a gpg-encrypted file
 useGPG : false,
 
-// whether to use a GPG agent
-GPGAgent : true,
+// your GPG key ID (leave empty to use a symmetric cipher)
+GPGKeyID : "",
+
+// whether to use a GPG agent (requires non-empty GPGKeyID to work)
+GPGAgent : false,
 
 // additional arguments passed to gpg2 when encrypting the formdata
 GPGOptEncrypt : "",
@@ -280,7 +291,9 @@ function getFormData(callback) //{{{
 
         if (!config.GPGAgent)
             getPassWord();
-        stat = system.spawnSync("gpg2 " + config.GPGOptDecrypt + (config.GPGAgent ? " " : " --passphrase " + passWord) + " --batch --no-tty --yes -d " + config.formData);
+        stat = system.spawnSync("gpg2 " + config.GPGOptDecrypt +
+            (config.GPGAgent ? "" : " --passphrase " + passWord) +
+            " --batch --no-tty --yes -d " + config.formData);
         if (stat.status == 512) 
         {
             io.error("Wrong password");
@@ -334,7 +347,7 @@ function writeFormData(object) //{{{
         var data = JSON.stringify(object).replace(/"/g, "\\\"");
         if (exports.onWrite(data))
             return true;
-        if (!config.GPGAgent)
+        if (!(config.GPGAgent || config.GPGKeyID))
         {
             getPassWord();
             if (passWord === null) 
@@ -342,7 +355,11 @@ function writeFormData(object) //{{{
         }
 
         ret = system.spawnSync("sh -c \"echo '" + data + 
-            "' | gpg2 " + config.GPGOptEncrypt + (config.GPGAgent ? " " : " --passphrase " + passWord) + " --batch --no-tty --yes -c --output " + config.formData + "\"");
+            "' | gpg2 " + config.GPGOptEncrypt +
+            ((config.GPGAgent || config.GPGKeyID) ? " " : " --passphrase " + passWord) +
+            " --batch --no-tty --yes " +
+            (config.GPGKeyID ? " --encrypt --recipient " + config.GPGKeyID : " --symmetric ") +
+            " --output " + config.formData + "\"");
         if (ret.status == 512) 
         {
             io.error("Wrong password");
