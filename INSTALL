@@ -1,0 +1,52 @@
+REQUIREMENTS: 
+
+  Runtime libraries: 
+   * webkitgtk2 or webkitgtk3 
+   * JavaScriptCore 
+  
+  Buildtime dependencies, libraries including header files:
+   * webkitgtk2 or webkitgtk3
+   * JavaScriptCore
+   * gtk2 or gtk3 
+   * gnutls
+   * libsoup
+   * glib2
+   * json-c
+  
+  Build tools: 
+   * gcc or compatible c compiler
+   * make
+   * m4
+
+INSTALLATION: 
+
+  dwb can be built and installed with 
+  
+      make install
+  
+  The default build process will try to link against gtk2, if gtk2 isn't
+  installed it will link against gtk3. To force linking against GTK3 run 
+      
+      make install GTK=3
+  
+  The default PREFIX is /usr. To choose a different installation location run 
+  
+      make PREFIX=/path/to/installation install
+  
+  To install to a different rootdirectory run 
+  
+      make DESTDIR=/path/to/root install
+  
+  If the variable BASHCOMPLETION is set, contrib/bash-completion will be
+  installed to $(BASHCOMPLETION)/dwb and a symlink to $(BASHCOMPLETION)/dwbem
+  will be created.
+  
+LOCAL BUILD WITHOUT INSTALLATION:
+  
+  To have a fully functional build without installation some directories must be
+  copied or symlinked to $XDG_DATA_HOME/dwb (in most cases ~/.local/share/dwb), 
+  namely
+
+      scripts     ->  $XDG_DATA_HOME/dwb/scripts
+      html        ->  $XDG_DATA_HOME/dwb/html
+      extensions  ->  $XDG_DATA_HOME/dwb/extensions            

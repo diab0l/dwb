@@ -209,8 +209,8 @@ var injectFillForm = function () //{{{
             input.checked=(value.toLowerCase() !== "false" && value !== "0");
         else 
             input.value = value;
-        
     }
+        
     function setValues(form) 
     {
         var input, value;
@@ -487,6 +487,8 @@ return {
         exports.config = config;
         exports.onRead = onRead;
         exports.onWrite = onWrite;
+        exports.getForm = getForm;
+        exports.fillForm = fillForm;
         return true;
     }, 
     end : function () {
