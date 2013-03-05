@@ -84,8 +84,6 @@
 Block requests from thirdparty domains permanently or just for a session, whitelisting support
 INFO>*/
 
-var me = "requestpolicy";
-
 var defaultConfig = {
     //<DEFAULT_CONFIG
     // path to a whitelist 
@@ -431,7 +429,7 @@ function disconnect()
         }
     });
 }//}}}
-return {
+var requestpolicy = {
     defaultConfig : defaultConfig, 
     init : function(c) 
     {
@@ -464,4 +462,5 @@ return {
         unbind("requestpolicyUnblockAll");
     }
 };
+return requestpolicy;
 // vim: set ft=javascript:

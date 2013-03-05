@@ -38,18 +38,9 @@
             {
                 if (! text || text.length === 0)
                     return text;
-
-                var c = text.charAt(0);
-                var uncamelized = c == c.toUpperCase() ? c.toLowerCase() : c;
-                for (var i=1, l=text.length; i<l; ++i)
-                {
-                    c = text.charAt(i);
-                    if (c == "-" || c == "_" || c.toUpperCase() != c)
-                        uncamelized += c;
-                    else 
-                        uncamelized += "-" + c.toLowerCase();
-                }
-                return uncamelized;
+                return text.replace(/(.)?([A-Z])/g, function(x, s, m) { 
+                    return s ? s + "-" + m.toLowerCase() : m.toLowerCase(); 
+                });
             }
         },
         "camelize" : 
@@ -58,19 +49,9 @@
             {
                 if (! text || text.length === 0)
                     return text;
-
-                var camelized = "", c;
-                for (var i=0, l=text.length; i<l; ++i)
-                {
-                    c = text.charAt(i);
-                    if (c == "-" || c == "_") {
-                        i++;
-                        camelized += text.charAt(i).toUpperCase();
-                    }
-                    else 
-                        camelized += c;
-                }
-                return camelized;
+                return text.replace(/[-_]+(.)?/g, function(a, b) { 
+                    return b ? b.toUpperCase() : ""; 
+                });
             }
         }
     });

@@ -16,6 +16,6 @@ $(SETTINGS): settings.m4
 	@m4 $(M4FLAGS) $< > $@
 
 clean: 
-	$(RM) $(OUTFILES) settings.in
+	$(RM) $(OUTFILES)
 
 .PHONY: clean

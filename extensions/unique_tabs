@@ -98,7 +98,7 @@ var toggleAutoFocus = function()
     }
 };
 
-return {
+var uniqueTabs = {
     defaultConfig : defaultConfig, 
     init : function(c) {
         if (c.shortcutRemoveDuplicates || c.commandRemoveDuplicates)
@@ -120,6 +120,7 @@ return {
         disconnectAutoFocus();
         return true;
     }
-}
+};
+return uniqueTabs;
 
 // vim:set ft=javascript:

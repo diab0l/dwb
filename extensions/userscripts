@@ -202,7 +202,7 @@ function matchIncludeExclude(frame, items) //{{{
         }
         catch(e) 
         {
-            extensions.error(me, e);
+            script.debug(e);
         }
     }
     return false;
@@ -535,7 +535,7 @@ function parseScripts(scripts) //{{{
     return userscriptsStart();
 }//}}}
 
-return {
+var userscripts = {
     init : function (c) {
         return parseScripts(c ? c.scripts || [] : []);
     },
@@ -551,5 +551,7 @@ return {
 
     }
 };
+
+return userscripts;
 
 // vim: set ft=javascript:

@@ -144,7 +144,6 @@ keepFormdata : false
 var config = {};
 var passWord = null;
 var formData = null;
-var exports = { };
 
 var injectGetForm = function () //{{{
 {
@@ -285,10 +284,10 @@ function getFormData(callback) //{{{
     var data;
     if (config.useGPG) 
     {
-        if (data !== null) 
-            return data;
-        if ((formData = exports.onRead())) 
-            return JSON.parse(formData.replace(/\\"/g, '"'));
+        if (formData !== null) 
+            return formData;
+        if ((data = formfiller.exports.onRead())) 
+            return JSON.parse(data.replace(/\\"/g, '"'));
 
         if (!config.GPGAgent)
             getPassWord();
@@ -319,7 +318,7 @@ function getFormData(callback) //{{{
     {
         try 
         {
-            if ((data = onRead()))
+            if ((data = formfiller.exports.onRead()))
                 return JSON.parse(data);
             else 
                 return JSON.parse(io.read(config.formData));
@@ -342,11 +341,10 @@ function onWrite() { return false; }
 function writeFormData(object) //{{{
 {
     var written = true, ret;
-        io.print("foo");
     if (config.useGPG) 
     {
         var data = JSON.stringify(object).replace(/"/g, "\\\"");
-        if (exports.onWrite(data))
+        if (formfiller.exports.onWrite(data))
             return true;
         if (!(config.GPGAgent || config.GPGKeyID))
         {
@@ -371,7 +369,7 @@ function writeFormData(object) //{{{
     }
     else 
     {
-        if (exports.onWrite(config.formData))
+        if (formfiller.exports.onWrite(config.formData))
             return true;
         written = io.write(config.formData, "w", JSON.stringify(object, null, 2));
     }
@@ -476,19 +474,19 @@ function fillForm() //{{{
     io.notify("Executed formfiller");
 }//}}}
 
-// init {{{
-return {
+var formfiller = {
     defaultConfig : defaultConfig,
-    exports : exports,
+    exports : {
+        onRead : onRead, 
+        onWrite : onWrite,
+        getForm : getForm, 
+        fillForm : fillForm
+    },
     init : function (c) {
         config = c;
         bind(config.scGetForm, getForm, "formfillerGet");
         bind(config.scFillForm, fillForm, "formfillerFill");
-        exports.config = config;
-        exports.onRead = onRead;
-        exports.onWrite = onWrite;
-        exports.getForm = getForm;
-        exports.fillForm = fillForm;
+        this.exports.config = config;
         return true;
     }, 
     end : function () {
@@ -496,6 +494,8 @@ return {
         unbind("formfillerFill");
         return true;
     }
-}//}}}
+};
+
+return formfiller;
 // vim: set ft=javascript:
 

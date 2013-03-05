@@ -227,7 +227,7 @@ function getDefaultValue(object)
     }
 }
 
-return {
+var perdomainsettings = {
     exports : exports, 
     init : function (config) 
     {
@@ -251,5 +251,6 @@ return {
         signals.disconnect(onNavigation);
     }
 };
+return perdomainsettings;
 
 // vim: set ft=javascript:
