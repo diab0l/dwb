@@ -125,7 +125,7 @@ html_input(enable-scripts, checkbox, Enable embedded scripting languages)
 html_input(hsts, checkbox, Whether HSTS support should be enabled)
 html_input(javascript-can-access-clipboard, checkbox, Whether javascript can access the clipboard)
 html_input(javascript-can-open-windows-automatically, checkbox, Whether javascript can open windows)
-html_input(javascript-schemes, checkbox, Whether to allow loading url with scheme 'javascript')
+html_input(javascript-schemes, checkbox, Whether to allow loading url with scheme "javascript")
 html_input(plugin-blocker, checkbox, Whether to block plugins and replace them with a clickable element)
 dnl 
 html_header(Completion)
