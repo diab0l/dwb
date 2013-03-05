@@ -42,7 +42,7 @@
 
 #define SCRIPT_TEMPLATE_START "try{_initNewContext(this, arguments, '%s');const script=this;/*<dwb*/"
 
-#define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){this.debug({error:e});};"
+#define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
 #define SCRIPT_TEMPLATE SCRIPT_TEMPLATE_START"//!javascript\n"SCRIPT_TEMPLATE_END
 #define SCRIPT_TEMPLATE_INCLUDE SCRIPT_TEMPLATE_START SCRIPT_TEMPLATE_END
@@ -3521,7 +3521,6 @@ scripts_reapply()
         }
         apply_scripts();
     }
-    
 }
 
 /* scripts_init {{{*/

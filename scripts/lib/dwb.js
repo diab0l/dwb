@@ -97,7 +97,7 @@
                         _contexts[id] = self;
                         Object.defineProperties(self, { 
                                 "path" : { value : path },
-                                "debug" : { value : io.debug.bind(this) }, 
+                                "debug" : { value : io.debug.bind(self) }, 
                                 "_arguments" : { value : arguments },
                                 "setPrivate" : 
                                 { 
