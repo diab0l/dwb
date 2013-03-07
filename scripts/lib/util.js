@@ -1,22 +1,6 @@
 (function () {
     Object.defineProperties(util, 
     { 
-        "getBody" :  
-        { 
-            value :  function(f) 
-            {
-                if (f && f instanceof Function) 
-                {
-                    var m = f.toString().match(/\{([\s\S]*)\}/m)[1];
-                    m = m.replace(/^[ \t\r\v\f]*/, '');
-                    if (m[0] == "\n")
-                        return m.substring(1);
-                    else 
-                        return m;
-                }
-                return null;
-            }
-        },
         "getSelection" : 
         {
             value : function() 

@@ -23,6 +23,7 @@
 void js_make_exception(JSContextRef ctx, JSValueRef *exception, const gchar *format, ...);
 char * js_string_to_char(JSContextRef ctx, JSStringRef jsstring, size_t );
 char * js_value_to_char(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *);
+char * js_value_to_string(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *);
 JSObjectRef js_get_object_property(JSContextRef ctx, JSObjectRef arg, const char *name);
 void js_set_property(JSContextRef ctx, JSObjectRef arg, const char *name, JSValueRef value, JSClassAttributes attr, JSValueRef *);
 void js_set_object_property(JSContextRef ctx, JSObjectRef arg, const char *name, const char *value, JSValueRef *);
@@ -34,7 +35,7 @@ char * js_call_as_function(WebKitWebFrame *, JSObjectRef, const char *string, co
 JSValueRef js_char_to_value(JSContextRef ctx, const char *text);
 char * js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc);
 JSValueRef js_execute(JSContextRef ctx, const char *, JSValueRef *exc);
-gboolean js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bs, int *line);
+gboolean js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bs, int starting_line, int *line);
 JSObjectRef js_make_function(JSContextRef ctx, const char *script, const char *path, int line);
 JSValueRef js_json_to_value(JSContextRef ctx, const char *text);
 JSValueRef js_context_change(JSContextRef, JSContextRef, JSValueRef, JSValueRef *);

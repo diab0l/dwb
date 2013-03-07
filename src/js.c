@@ -233,6 +233,17 @@ error_out:
     return ret;
 }/*}}}*/
 
+char *
+js_value_to_string(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc)
+{
+    JSStringRef jsstring = JSValueToStringCopy(ctx, value, exc);
+    if (jsstring == NULL) 
+        return NULL;
+
+    char *ret = js_string_to_char(ctx, jsstring, limit);
+    JSStringRelease(jsstring);
+    return ret;
+}
 /*{{{*/
 char *
 js_value_to_char(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc) 
@@ -241,18 +252,12 @@ js_value_to_char(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *e
         return NULL;
     if (! JSValueIsString(ctx, value)) 
         return NULL;
-    JSStringRef jsstring = JSValueToStringCopy(ctx, value, exc);
-    if (jsstring == NULL) 
-        return NULL;
-
-    char *ret = js_string_to_char(ctx, jsstring, limit);
-    JSStringRelease(jsstring);
-    return ret;
+    return js_value_to_string(ctx, value, limit, exc);
 }/*}}}*/
 
 /* print_exception {{{*/
 gboolean
-js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bufferSize, int *linenumber)
+js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bufferSize, int starting_line, int *linenumber)
 {
     if (exception == NULL) 
         return false;
@@ -267,7 +272,7 @@ js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t 
     char *sourceURL = js_get_string_property(ctx, o, "sourceURL");
     if (sourceURL)
         fprintf(stderr, "DWB SCRIPT EXCEPTION: in file %s\n", sourceURL);
-    fprintf(stderr, "DWB SCRIPT EXCEPTION: in line %d: %s\n", line, message == NULL ? "unknown" : message);
+    fprintf(stderr, "DWB SCRIPT EXCEPTION: in line %d: %s\n", line + starting_line, message == NULL ? "unknown" : message);
     if (sourceURL != NULL && buffer != NULL)
     {
         strncpy(buffer, message, bufferSize-1);
@@ -296,7 +301,7 @@ js_make_function(JSContextRef ctx, const char *script, const char *sourceurl, in
     if (function != NULL) 
         ret = function;
     else 
-        js_print_exception(ctx, exc, NULL, 0, NULL);
+        js_print_exception(ctx, exc, NULL, 0, 0, NULL);
 
     JSStringRelease(body);
     if (source != NULL)
@@ -371,7 +376,7 @@ js_check_syntax(JSContextRef ctx, const char *script, const char *filename, int 
     gboolean correct = JSCheckScriptSyntax(ctx, jsscript, jssource, lineOffset, &exc);
     if (!correct)
     {
-        js_print_exception(ctx, exc, NULL, 0, NULL);
+        js_print_exception(ctx, exc, NULL, 0, 0, NULL);
     }
     JSStringRelease(jsscript);
     if (jssource != NULL)

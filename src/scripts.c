@@ -198,6 +198,37 @@ uncamelize(char *uncamel, const char *camel, char rep, size_t length)
     return ret;
 }/*}}}*/
 
+static char * 
+get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc)
+{
+    char *sfunc = NULL, *result = NULL;
+    if (func == NULL)
+        return NULL;
+    JSStringRef js_string = JSValueToStringCopy(ctx, func, exc);
+    sfunc = js_string_to_char(ctx, js_string, -1);
+    if (!sfunc)
+        goto error_out;
+    const char *start = strchr(sfunc, '{');
+    const char *end = strrchr(sfunc, '}');
+    if (!start || !end || start == end)
+        goto error_out;
+    if (start)
+        start++;
+    
+    // Skip first empty line, needed for correct line numbers
+    for (; *start && g_ascii_isspace(*start) && *start != '\n'; start++)
+        ;
+    if (*start == '\n')
+        start++;
+
+    result = g_strndup(start, end - start);
+
+error_out:
+    g_free(sfunc);
+    JSStringRelease(js_string);
+    return result;
+}
+
 static JSValueRef 
 call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
 {
@@ -208,7 +239,7 @@ call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, siz
     if (exc != NULL) 
     {
         if (!s_debugging)
-            js_print_exception(ctx, exc, path, PATH_MAX, &line);
+            js_print_exception(ctx, exc, path, PATH_MAX, 0, &line);
         else 
         {
             //JSObjectRef p = JSObjectMake(ctx, NULL, NULL);
@@ -230,7 +261,12 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     JSValueRef ret = NIL;
     gboolean global = false;
     JSValueRef args[1];
+    JSObjectRef f;
+    JSStringRef script;
+    char *name = NULL;
+    char *body = NULL;
     int count = 0;
+    double debug = -1;
     if (argc < 1) 
     {
         js_make_exception(ctx, exc, EXCEPTION("inject: missing argument"));
@@ -241,30 +277,40 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
         args[0] = js_context_change(ctx, wctx, argv[1], exc);
         count = 1;
     }
-    if (argc > 2 && JSValueIsBoolean(ctx, argv[2])) 
+    if (argc > 2)
+        debug = JSValueToNumber(ctx, argv[2], exc);
+    if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
         global = JSValueToBoolean(ctx, argv[2]);
 
-    JSStringRef script = JSValueToStringCopy(ctx, argv[0], exc);
-    if (script == NULL) 
-        return NIL;
+    if (JSValueIsObject(ctx, argv[0]) && (f = js_value_to_function(ctx, argv[0], exc)) != NULL)
+    {
+        body = get_body(ctx, f, exc);
+        if (body == NULL)
+            return NIL;
+        script = JSStringCreateWithUTF8CString(body);
+        name = js_get_string_property(ctx, f, "name");
+    }
+    else 
+    {
+        script = JSValueToStringCopy(ctx, argv[0], exc);
+        if (script == NULL) 
+            return NIL;
+    }
 
+
+    JSValueRef e = NULL;
     if (global) 
-        JSEvaluateScript(wctx, script, NULL, NULL, 0, NULL);
+        JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
     else 
     {
         JSObjectRef func = JSObjectMakeFunction(wctx, NULL, 0, NULL, script, NULL, 0, NULL);
         if (func != NULL && JSObjectIsFunction(ctx, func)) 
         {
-            JSValueRef exc = NULL;
-            JSValueRef wret = JSObjectCallAsFunction(wctx, func, func, count, count == 1 ? args : NULL, &exc) ;
+            JSValueRef wret = JSObjectCallAsFunction(wctx, func, func, count, count == 1 ? args : NULL, &e) ;
             if (exc != NULL) 
             {
-                fputs("DWB SCRIPT EXCEPTION: An error occured injecting a script.\n", stderr);
-                js_print_exception(wctx, exc, NULL, 0, NULL);
-            }
-            else {
-                // This could be replaced with js_context_change
                 char *retx = js_value_to_json(wctx, wret, -1, NULL);
+                // This could be replaced with js_context_change
                 if (retx) 
                 {
                     ret = js_char_to_value(ctx, retx);
@@ -273,6 +319,26 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
             }
         }
     }
+    if (e != NULL && !isnan(debug) && debug > 0)
+    {
+        int line = 0;
+        fprintf(stderr, "DWB SCRIPT EXCEPTION: An error occured injecting %s.\n", name == NULL || *name == '\0' ? "[anonymous]" :  name);
+        js_print_exception(wctx, e, NULL, 0, (int)(debug-1), &line);
+
+        fputs("==> DEBUG [SOURCE]\n", stderr);
+        if (body == NULL)
+            body = js_string_to_char(ctx, script, -1);
+        char **lines = g_strsplit(body, "\n", -1);
+
+        fprintf(stderr, "    %s\n", line < 3 ? "BOF" : "...");
+        for (int i=MAX(line-2, 0); lines[i] != NULL && i < line + 1; i++)
+            fprintf(stderr, "%s %d > %s\n", i == line-1 ? "-->" : "   ", i+ ((int) debug), lines[i]);
+        fprintf(stderr, "    %s\n", line + 2 >= g_strv_length(lines) ? "EOF" : "...");
+
+        g_strfreev(lines);
+    }
+    g_free(body);
+    g_free(name);
     JSStringRelease(script);
     return ret;
 }/*}}}*/
@@ -1567,7 +1633,7 @@ global_timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size
 /* UTIL {{{*/
 /* util_domain_from_host {{{*/
 static JSValueRef 
-util_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+sutil_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     if (argc < 1) 
     {
@@ -1584,7 +1650,7 @@ util_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
     return ret;
 }/*}}}*//*}}}*/
 static JSValueRef 
-util_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+sutil_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     char *string = NULL, *escaped = NULL;
     if (argc > 0) 
@@ -1605,13 +1671,28 @@ util_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size
     return NIL;
 }
 static JSValueRef 
-util_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+sutil_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
 }
 
 static JSValueRef 
-util_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc == 0)
+        return NIL;
+    JSValueRef ret = NIL;
+    JSObjectRef func = js_value_to_function(ctx, argv[0], exc);
+    char *body = get_body(ctx, func, exc);
+    if (body != NULL)
+    {
+        ret = js_char_to_value(ctx, body);
+        g_free(body);
+    }
+    return ret;
+}
+static JSValueRef 
+sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     gboolean result = false;
     if (argc < 3)
@@ -3173,10 +3254,11 @@ create_global_object()
     JSClassRelease(class);
 
     JSStaticFunction util_functions[] = { 
-        { "domainFromHost",   util_domain_from_host,         kJSDefaultAttributes },
-        { "markupEscape",     util_markup_escape,         kJSDefaultAttributes },
-        { "getMode",          util_get_mode,         kJSDefaultAttributes },
-        { "dispatchEvent",      util_dispatch_event,         kJSDefaultAttributes },
+        { "domainFromHost",   sutil_domain_from_host,         kJSDefaultAttributes },
+        { "markupEscape",     sutil_markup_escape,         kJSDefaultAttributes },
+        { "getMode",          sutil_get_mode,         kJSDefaultAttributes },
+        { "getBody",          sutil_get_body,         kJSDefaultAttributes },
+        { "dispatchEvent",      sutil_dispatch_event,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL);

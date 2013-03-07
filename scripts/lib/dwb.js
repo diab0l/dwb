@@ -99,6 +99,15 @@
                                 "path" : { value : path },
                                 "debug" : { value : io.debug.bind(self) }, 
                                 "_arguments" : { value : arguments },
+                                "generateId" : { 
+                                    value : (function() {
+                                        var id = 0;
+                                        var timeStamp = new Date().getTime();
+                                        return function() {
+                                            return checksum(timeStamp + (id++) + this.path, ChecksumType.sha1);
+                                        };
+                                    })()
+                                },
                                 "setPrivate" : 
                                 { 
                                     value : function(id, object, key, value) 

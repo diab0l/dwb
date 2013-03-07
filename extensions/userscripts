@@ -65,8 +65,6 @@ INFO>*/
 var me = "userscripts";
 var onStart = []; 
 var onEnd = []; 
-var sigDocument = -1;
-var sigCommitted = -1;
 /*
 //<DEFAULT_CONFIG
   // paths to userscripts, this extension will also load all scripts in from 
@@ -105,6 +103,7 @@ function UserScript()
     this.delay = 0;
     this.noframes = false;
     this.priority = 0;
+    this.offset = 0;
 }
 
 // Reused regular expressions
@@ -165,21 +164,21 @@ var GM_compatability = function ()
     var GM_info = function () { return undefined; };
     var GM_registerMenuCommand = function () { return undefined; };
     var GM_openInTab = function (url) { return null; };
-    var GM_getResourceText = function (name) 
-    {
-        // TODO implemnt
-        return ""; 
-    };
-    var GM_getResourceURL = function (name) 
-    {
-        // TODO implemnt
-        return ""; 
-    };
-    var GM_xmlHttpRequest = function (details) 
-    {
-        // TODO implemnt
-        return null;
-    };
+    //var GM_getResourceText = function (name) 
+    //{
+    //    // TODO implemnt
+    //    return ""; 
+    //};
+    //var GM_getResourceURL = function (name) 
+    //{
+    //    // TODO implemnt
+    //    return ""; 
+    //};
+    //var GM_xmlHttpRequest = function (details) 
+    //{
+    //    // TODO implemnt
+    //    return null;
+    //};
 };
 
 function matchIncludeExclude(frame, items) //{{{
@@ -234,12 +233,12 @@ function doInject(frame, item)
   if (item.delay > 0) 
   {
       timerStart(item.delay, function() {
-          frame.inject(item.script, null, item.unwrap);
+          frame.inject(item.script, null, item.offset, item.unwrap);
           return false;
       });
   }
   else 
-    frame.inject(item.script, null, item.unwrap);
+      frame.inject(item.script, null, item.offset, item.unwrap);
 }
 
 function handle(frame, array, isMainFrame) //{{{
@@ -393,6 +392,7 @@ function parseScript(path) //{{{
     if (metaStart == -1 || metaEnd == -1) 
     {
         userscript.script = curScript; 
+        userscript.offset = 1;
         userscript.include = [ { regExp : /.*/, isTld : false} ];
         onEnd.push(userscript);
         return;
@@ -464,8 +464,9 @@ function parseScript(path) //{{{
         userscript.scriptId = userscript.namespace + "::" + userscript.name;
     userscript.scriptId = userscript.scriptId.replace(/\s+/g, "_");
     userscript.script = "var DWB_scriptId = '" + userscript.scriptId + "';" +  
-        util.getBody(GM_compatability) + curScript.substring(0, metaStart) + 
-        curScript.substring(scriptStart);
+        curScript.substring(0, metaStart) + 
+        curScript.substring(scriptStart) + util.getBody(GM_compatability);
+    userscript.offset = meta.length + 1;
 
     getRequirements(userscript);
 
@@ -488,13 +489,13 @@ function userscriptsStart()
     if (onStart.length > 0) 
     {
         onStart.sort(function(a, b) { return b.priority - a.priority; });
-        sigCommitted = signals.connect("loadCommitted", loadCommittedCallback);
+        signals.connect("loadCommitted", loadCommittedCallback);
         ret = true;
     }
     if (onEnd.length > 0) 
     {
         onEnd.sort(function(a, b) { return b.priority - a.priority; });
-        sigDocument = signals.connect("documentLoaded", loadFinishedCallback);
+        signals.connect("documentLoaded", loadFinishedCallback);
         ret = true;
     }
     //metaData = {};
@@ -540,15 +541,8 @@ var userscripts = {
         return parseScripts(c ? c.scripts || [] : []);
     },
     end : function () {
-        if (sigDocument >= 0) {
-            signals.disconnect(sigDocument);
-            sigDocument = -1;
-        }
-        if (sigCommitted >= 0) {
-            signals.disconnect(sigCommitted);
-            sigCommitted = -1;
-        }
-
+        signals.disconnect(loadFinishedCallback);
+        signals.disconnect(loadCommittedCallback);
     }
 };
 
