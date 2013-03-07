@@ -8,7 +8,6 @@
                 if (f && f instanceof Function) 
                 {
                     var m = f.toString().match(/\{([\s\S]*)\}/m)[1];
-                    m = m.replace(/^\s*\/\/.*$/mg, '');
                     m = m.replace(/^[ \t\r\v\f]*/, '');
                     if (m[0] == "\n")
                         return m.substring(1);

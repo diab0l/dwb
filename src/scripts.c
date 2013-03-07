@@ -1690,10 +1690,10 @@ static JSValueRef
 clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     if (argc < 1)
-        return UNDEFINED;
+        return NIL;
     GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
     if (atom == NULL)
-        return UNDEFINED;
+        return NIL;
     GtkClipboard *clipboard = gtk_clipboard_get(atom);
     if (argc > 1) 
     {
@@ -1715,7 +1715,7 @@ clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
         }
         return ret;
     }
-    return UNDEFINED;
+    return NIL;
 }
 
 static JSValueRef 
