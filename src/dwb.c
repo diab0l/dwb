@@ -872,7 +872,6 @@ DwbStatus/*{{{*/
 dwb_scheme_handler(GList *gl, WebKitNetworkRequest *request) 
 {
     GError *error = NULL;
-    GSList *list = NULL;
     DwbStatus ret = STATUS_OK;
 
     const char *handler = GET_CHAR("scheme-handler");
@@ -895,24 +894,25 @@ dwb_scheme_handler(GList *gl, WebKitNetworkRequest *request)
     argv[i++] = (char*)uri;
     argv[i++] = NULL;
 
-    list = g_slist_append(list, dwb_navigation_new("DWB_URI", uri));
-    list = g_slist_prepend(list, dwb_navigation_new("DWB_COOKIES", dwb.files[FILES_COOKIES]));
+    char **envp = g_get_environ();
+    envp = g_environ_setenv(envp, "DWB_URI", uri, true);
+    envp = g_environ_setenv(envp, "DWB_COOKIES", uri, true);
 
     char *scheme = g_uri_parse_scheme(uri);
     if (scheme) 
     {
-        list = g_slist_append(list, dwb_navigation_new("DWB_SCHEME", scheme));
+        envp = g_environ_setenv(envp, "DWB_SCHEME", scheme, true);
         g_free(scheme);
     }
     const char *referer = soup_get_header_from_request(request, "Referer");
     if (referer)
-        list = g_slist_append(list, dwb_navigation_new("DWB_REFERER", uri));
+        envp = g_environ_setenv(envp, "DWB_REFERER", referer, true);
 
     const char *user_agent = soup_get_header_from_request(request, "User-Agent");
     if (user_agent)
-        list = g_slist_append(list, dwb_navigation_new("DWB_USER_AGENT", uri));
+        envp = g_environ_setenv(envp, "DWB_USER_AGENT", user_agent, true);
 
-    if (! g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, (GSpawnChildSetupFunc)dwb_setup_environment, list, NULL, &error)) 
+    if (! g_spawn_async(NULL, argv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)) 
     {
         dwb_set_error_message(gl, "Spawning scheme handler failed");
         fprintf(stderr, "Scheme handler failed: %s", error->message);
@@ -924,6 +924,7 @@ dwb_scheme_handler(GList *gl, WebKitNetworkRequest *request)
         g_free(argv[i]);
     g_free(scheme_handler);
     g_free(argv);
+    g_strfreev(envp);
 
     return ret;
 }/*}}}*/
@@ -3055,21 +3056,6 @@ dwb_user_script_cb(GIOChannel *channel, GIOCondition condition, UserScripEnv *en
     return true;
 }/*}}}*/
 
-/* dwb_setup_environment(GSList *list) {{{*/
-void
-dwb_setup_environment(GSList *list) 
-{
-    Navigation *n;
-    for (GSList *l = list; l; l=l->next) 
-    {
-        n = l->data;
-        g_setenv(n->first, n->second, false);
-        dwb_navigation_free(n);
-    }
-    g_slist_free(list);
-
-}/*}}}*/
-
 /* dwb_execute_user_script(Arg *a) {{{*/
 void
 dwb_execute_user_script(KeyMap *km, Arg *a) 
@@ -3077,39 +3063,39 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     GError *error = NULL;
     char nummod[64];
     GPid pid;
-    GSList *list = NULL;
     char *fifo;
 
     snprintf(nummod, sizeof(nummod), "%d", NUMMOD);
     char *argv[] = { a->arg, (char*)webkit_web_view_get_uri(CURRENT_WEBVIEW()), (char *)webkit_web_view_get_title(CURRENT_WEBVIEW()), (char *)dwb.misc.profile, nummod, a->p, NULL } ;
 
+    char **envp = g_get_environ();
     const char *uri = webkit_web_view_get_uri(CURRENT_WEBVIEW());
     if (uri != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_URI",     uri));
+        envp = g_environ_setenv(envp, "DWB_URI", uri, true);
 
     const char *title = webkit_web_view_get_title(CURRENT_WEBVIEW());
     if (title != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_TITLE",   webkit_web_view_get_title(CURRENT_WEBVIEW())));
+        envp = g_environ_setenv(envp, "DWB_TITLE", title, true);
 
-    list = g_slist_append(list, dwb_navigation_new("DWB_PROFILE", dwb.misc.profile));
-    list = g_slist_append(list, dwb_navigation_new("DWB_NUMMOD",  nummod));
+    envp = g_environ_setenv(envp, "DWB_PROFILE", dwb.misc.profile, true);
+    envp = g_environ_setenv(envp, "DWB_NUMMOD", nummod, true);
 
     if (a->p != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_ARGUMENT",  a->p));
+        envp = g_environ_setenv(envp, "DWB_ARGUMENT", a->p, true);
 
     const char *referer = soup_get_header(dwb.state.fview, "Referer");
     if (referer != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_REFERER",  referer));
+        envp = g_environ_setenv(envp, "DWB_REFERER", referer, true);
 
     const char *user_agent = soup_get_header(dwb.state.fview, "User-Agent");
     if (user_agent != NULL)
-        list = g_slist_append(list, dwb_navigation_new("DWB_USER_AGENT",  user_agent));
+        envp = g_environ_setenv(envp, "DWB_USER_AGENT", user_agent, true);
 
     fifo = util_get_temp_filename("fifo_");
-    list = g_slist_append(list, dwb_navigation_new("DWB_FIFO",  fifo));
+    envp = g_environ_setenv(envp, "DWB_FIFO", fifo, true);
     mkfifo(fifo, 0600);
 
-    if (g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, (GSpawnChildSetupFunc)dwb_setup_environment, list, &pid, &error)) 
+    if (g_spawn_async(NULL, argv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, &error)) 
     {
         UserScripEnv *env = g_malloc(sizeof(UserScripEnv));
         env->fifo = fifo;
@@ -3133,11 +3119,8 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     else 
     {
         fprintf(stderr, "Cannot execute %s: %s\n", (char*)a->p, error->message);
-        for (GSList *l = list; l; l=l->next) {
-            dwb_navigation_free(l->data);
-        }
-        g_slist_free(list);
     }
+    g_strfreev(envp);
     g_clear_error(&error);
 }/*}}}*/
 

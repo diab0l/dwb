@@ -968,7 +968,6 @@ void dwb_update_layout(void);
 const char * dwb_parse_nummod(const char *);
 void dwb_init_custom_keys(gboolean);
 void dwb_update_tabs(void);
-void dwb_setup_environment(GSList *);
 void dwb_check_auto_insert(GList *);
 void dwb_version();
 DwbStatus dwb_pack(const char *layout, gboolean rebuild);

@@ -89,10 +89,10 @@ download_spawn_external(const char *uri, const char *filename, WebKitDownload *d
     char *proxy = GET_CHAR("proxy-url");
     gboolean has_proxy = GET_BOOL("proxy");
 
-    GSList *list = g_slist_prepend(NULL, dwb_navigation_new("DWB_URI", uri));
-    list = g_slist_prepend(list, dwb_navigation_new("DWB_FILENAME", filename));
-    list = g_slist_prepend(list, dwb_navigation_new("DWB_COOKIES", dwb.files[FILES_COOKIES]));
-
+    char **envp = g_get_environ();
+    envp = g_environ_setenv(envp, "DWB_URI", uri, true);
+    envp = g_environ_setenv(envp, "DWB_FILENAME", filename, true);
+    envp = g_environ_setenv(envp, "DWB_COOKIES", dwb.files[FILES_COOKIES], true);
 
     if ( (newcommand = util_string_replace(command, "dwb_uri", uri)) ) 
     {
@@ -111,7 +111,7 @@ download_spawn_external(const char *uri, const char *filename, WebKitDownload *d
     }
     if (referer != NULL) 
     {
-        list = g_slist_prepend(list, dwb_navigation_new("DWB_REFERER", referer));
+        envp = g_environ_setenv(envp, "DWB_REFERER", referer, true);
     }
     if ( (newcommand = util_string_replace(command, "dwb_referer", referer == NULL ? "" : referer)) ) 
     {
@@ -124,21 +124,23 @@ download_spawn_external(const char *uri, const char *filename, WebKitDownload *d
         command = newcommand;
     }
     if (user_agent != NULL) 
-        list = g_slist_prepend(list, dwb_navigation_new("DWB_USER_AGENT", user_agent));
+        envp = g_environ_setenv(envp, "DWB_USER_AGENT", user_agent, true);
 
-    list = g_slist_prepend(list, dwb_navigation_new("DWB_MIME_TYPE", dwb.state.mimetype_request));
+    if (dwb.state.mimetype_request)
+        envp = g_environ_setenv(envp, "DWB_MIME_TYPE", dwb.state.mimetype_request, true);
     if (proxy != NULL && has_proxy) 
-        list = g_slist_prepend(list, dwb_navigation_new("DWB_PROXY", proxy));
+        envp = g_environ_setenv(envp, "DWB_PROXY", proxy, true);
     
 
     g_shell_parse_argv(command, &argc, &argv, NULL);
     g_free(command);
-    if (!g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, (GSpawnChildSetupFunc)dwb_setup_environment, list, NULL, &error)) 
+    if (!g_spawn_async(NULL, argv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)) 
     {
         perror(error->message);
         ret = false;
     }
     g_strfreev(argv);
+    g_strfreev(envp);
     return ret;
 }
 
