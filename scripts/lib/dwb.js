@@ -84,30 +84,21 @@
             "_initNewContext" : 
             {
                 value : (function() {
-                    var lastId = Math.ceil(Math.random() * 35897932) + 28459025;
-                    // get a random unique id, avoids conflicts with real properties 
-                    function nextId() 
-                    {
-                        lastId += Math.round(Math.random() * 37);
-                        return String(Math.floor(Math.random() * 8999999) + 1000000) + lastId + 
-                            String(Math.floor(Math.random() * 8999999) + 1000000); 
-                    }
                     return function(self, arguments, path) {
-                        var id = "_" + nextId();
+                        var generateId = (function() {
+                            var id = 0;
+                            var timeStamp = new Date().getTime();
+                            return function() {
+                                return checksum(timeStamp + (++id) + path, ChecksumType.sha1);
+                            };
+                        })();
+                        var id = "_" + generateId();
                         _contexts[id] = self;
                         Object.defineProperties(self, { 
                                 "path" : { value : path },
                                 "debug" : { value : io.debug.bind(self) }, 
                                 "_arguments" : { value : arguments },
-                                "generateId" : { 
-                                    value : (function() {
-                                        var id = 0;
-                                        var timeStamp = new Date().getTime();
-                                        return function() {
-                                            return checksum(timeStamp + (id++) + this.path, ChecksumType.sha1);
-                                        };
-                                    })()
-                                },
+                                "generateId" : { value : generateId },
                                 "setPrivate" : 
                                 { 
                                     value : function(id, object, key, value) 
