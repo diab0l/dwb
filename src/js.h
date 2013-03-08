@@ -20,6 +20,23 @@
 #define JS_H
 #include <JavaScriptCore/JavaScript.h>
 
+typedef struct js_iterator_s js_array_iterator;
+typedef struct js_property_iterator_s js_property_iterator;
+
+struct js_iterator_s {
+  JSContextRef ctx;
+  JSObjectRef array;
+  int current_index;
+  int length;
+};
+struct js_property_iterator_s {
+  JSContextRef ctx;
+  JSPropertyNameArrayRef array;
+  JSObjectRef object;
+  int current_index;
+  int length;
+};
+
 void js_make_exception(JSContextRef ctx, JSValueRef *exception, const gchar *format, ...);
 char * js_string_to_char(JSContextRef ctx, JSStringRef jsstring, size_t );
 char * js_value_to_char(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *);
@@ -42,14 +59,12 @@ JSValueRef js_context_change(JSContextRef, JSContextRef, JSValueRef, JSValueRef 
 JSObjectRef js_value_to_function(JSContextRef, JSValueRef, JSValueRef *);
 gboolean js_check_syntax(JSContextRef ctx, const char *script, const char *filename, int lineOffset);
 
-typedef struct js_array_iterator_s {
-  JSContextRef ctx;
-  JSObjectRef array;
-  int current_index;
-  int length;
-} js_array_iterator;
 void js_array_iterator_init(JSContextRef ctx, js_array_iterator *iter, JSObjectRef object);
 JSValueRef js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc);
+
+void js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSObjectRef object);
+JSValueRef js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname, char **name, JSValueRef *exc);
+void js_property_iterator_finish(js_property_iterator *iter);
 
 #define  JS_STRING_MAX 1024
 

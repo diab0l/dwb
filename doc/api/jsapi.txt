@@ -674,7 +674,7 @@ _returns_;; +true+ if creation was successful or directory already existed
 
 [source,javascript]
 ----
-Deferred system.spawn(String command, [Function stdin], [Function stderr])
+Deferred system.spawn(String command, [Function stdin], [Function stderr], [Object environ])
 ----
 
 Executes a shell command using the default search path
@@ -685,6 +685,8 @@ _command_;; The command to execute
 _stdout(String)_;; Callback function for stdin, pass +null+ if only stderr is
 needed, optional
 _stderr(String)_;; Callback function for stderr, optional
+_environ_;; Object that can be used to add environment variables to the childs
+environment, optional.
 _returns_;; A deferred, it will be resolved if the child exits
 normally, it will be rejected if the child process exits abnormally, the first
 parameter of the reject function will be the status code of the child process. 
@@ -697,7 +699,7 @@ parameter of the reject function will be the status code of the child process.
 
 [source,javascript]
 ----
-Object system.spawnSync(String command)
+Object system.spawnSync(String command, [Object environment])
 ----
 
 Executes a shell command synchronously using the default search path
@@ -705,6 +707,8 @@ Executes a shell command synchronously using the default search path
  ::
 
 _command_;; The command to execute
+_environment_;; Object that can be used to add environment variables to the childs
+environment, optional.
 _returns_;; An object that contains +stdout+, +stderr+ and +status+.
 ****
 

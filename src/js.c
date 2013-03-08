@@ -21,7 +21,6 @@
 #include "dwb.h"
 #include "util.h"
 #include "js.h"
-
 void
 js_make_exception(JSContextRef ctx, JSValueRef *exception, const gchar *format, ...) 
 {
@@ -355,6 +354,49 @@ js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc)
 
     return JSObjectGetPropertyAtIndex(iter->ctx, iter->array, iter->current_index++, exc);
 }
+void 
+js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSObjectRef object) 
+{
+    iter->ctx = ctx;
+    iter->array = JSObjectCopyPropertyNames(ctx, object);
+    JSPropertyNameArrayRetain(iter->array);
+    iter->object = object;
+    JSValueProtect(ctx, object);
+    iter->current_index = 0;
+    iter->length = JSPropertyNameArrayGetCount(iter->array);
+}
+
+JSValueRef 
+js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname_ret, char **name_ret, JSValueRef *exc) 
+{
+    g_return_val_if_fail(iter != NULL && iter->array != NULL, NULL);
+
+    if (iter->current_index < iter->length)
+    {
+        JSStringRef js_name = JSPropertyNameArrayGetNameAtIndex(iter->array, iter->current_index++);
+        JSValueRef ret = JSObjectGetProperty(iter->ctx, iter->object, js_name, exc);
+
+        if (name_ret)
+            *name_ret = js_string_to_char(iter->ctx, js_name, -1);
+
+        if (jsname_ret)
+            *jsname_ret = js_name;
+        else 
+            JSStringRelease(js_name);
+        return ret;
+    }
+
+    if (name_ret)
+        *name_ret = NULL;
+    return NULL;
+}
+void 
+js_property_iterator_finish(js_property_iterator *iter)
+{
+    JSValueUnprotect(iter->ctx, iter->object);
+    JSPropertyNameArrayRelease(iter->array);
+}
+
 JSObjectRef 
 js_value_to_function(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
 {

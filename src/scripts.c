@@ -1936,6 +1936,36 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
     return result;
 }/*}}}*/
 
+static char **
+get_environment(JSContextRef ctx, JSValueRef v, JSValueRef *exc)
+{
+    js_property_iterator iter;
+    char *name = NULL, *value = NULL;
+    JSValueRef current;
+
+    char **envp = g_get_environ();
+    JSObjectRef o = JSValueToObject(ctx, v, exc);
+    if (o)
+    {
+        js_property_iterator_init(ctx, &iter, o);
+        while ((current = js_property_iterator_next(&iter, NULL, &name, exc)) != NULL)
+        {
+            if (name) 
+            {
+                value = js_value_to_char(ctx, current, -1, exc);
+                if (value)
+                {
+                    envp = g_environ_setenv(envp, name, value, true);
+                    g_free(value);
+                }
+                g_free(name);
+            }
+        }
+        js_property_iterator_finish(&iter);
+    }
+    return envp;
+}
+
 /* {{{*/
 static JSValueRef 
 system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1946,13 +1976,16 @@ system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
     JSObjectRef ret = NULL;
     int srgc, status;
     char **srgv = NULL, *command = NULL, *out, *err;
+    char **envp = NULL;
 
     command = js_value_to_char(ctx, argv[0], -1, exc);
     if (command == NULL) 
         return NIL;
+    if (argc > 1)
+        envp = get_environment(ctx, argv[1], exc);
 
     if (g_shell_parse_argv(command, &srgc, &srgv, NULL) && 
-            g_spawn_sync(NULL, srgv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, &out, &err, &status, NULL)) 
+            g_spawn_sync(NULL, srgv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, &out, &err, &status, NULL)) 
     {
         ret = JSObjectMake(ctx, NULL, NULL);
         js_set_object_property(ctx, ret, "stdout", out, exc);
@@ -1961,6 +1994,7 @@ system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
     }
     g_free(command);
     g_strfreev(srgv);
+    g_strfreev(envp);
 
     if (ret == NULL)
         return NIL;
@@ -2003,6 +2037,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     JSValueRef ret = NIL; 
     int outfd, errfd;
     char **srgv = NULL, *cmdline = NULL;
+    char **envp = NULL;
     int srgc;
     GIOChannel *out_channel, *err_channel;
     JSObjectRef oc = NULL, ec = NULL;
@@ -2030,9 +2065,13 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     {
         goto error_out;
     }
+    if (argc > 3)
+    {
+        envp = get_environment(ctx, argv[3], exc);
+    }
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
-            !g_spawn_async_with_pipes(NULL, srgv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
+            !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
                 NULL, NULL, &pid, NULL, 
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
@@ -2060,6 +2099,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 
 error_out:
     CONTEXT_UNLOCK;
+    g_strfreev(envp);
     g_free(cmdline);
     g_strfreev(srgv);
     return ret;
