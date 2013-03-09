@@ -31,11 +31,12 @@
     Object.defineProperties(this, { 
             "Glob" : 
             { 
-                value : function(pattern) { 
-                    var pre = pattern.replace(/[-\/\\^$+.()|[\]{}]/g, '\\$&');
-                    var regex = new RegExp("^" + pre.replace(/(\\)?([*?])/g, function (m, f, s) {
-                        return s == "?" ? (f ? "\?" : ".") : (f ? "\*" : ".*");
-                    }) + "$");
+                value : function(p) { 
+                    var cnstr = function (m, f, s) { 
+                        return s == "?" ? (f ? "\?" : ".") : (f ? "\*" : ".*"); 
+                    };
+                    var regex = new RegExp("^" + p.replace(/[-\/\\^$+.()|[\]{}]/g, '\\$&').
+                                                   replace(/(\\)?([*?])/g, cnstr) + "$");
                     return Object.create(Object.prototype, {
                             match : { value : function(string) { return regex.test(string); } }, 
                             toString : { value : function() { return pattern; } }
