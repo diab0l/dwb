@@ -34,16 +34,15 @@
                 value : (function() {
                     var esc = new RegExp("[-\/\\^$+.()|[\]{}]", "g");
                     var matcher = new RegExp("(\\\\)?([*?])", "g");
+                    var cnstr = function (m, f, s) { 
+                        return f ? m : s == "?" ? "." : ".*";
+                    };
                     return function(p) { 
-                        var cnstr = function (m, f, s) { 
-                            return f ? m : s == "?" ? "." : ".*";
-                        };
                         var regex = new RegExp("^" + p.replace(esc, '\\$&').replace(matcher, cnstr) + "$");
                         return Object.create(Object.prototype, {
                                 match : { value : function(string) { return regex.test(string); } }, 
                                 toString : { value : function() { return p; } }
                         });
-
                     };
                 })()
             },
