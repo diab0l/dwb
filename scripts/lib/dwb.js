@@ -31,17 +31,21 @@
     Object.defineProperties(this, { 
             "Glob" : 
             { 
-                value : function(p) { 
-                    var cnstr = function (m, f, s) { 
-                        return s == "?" ? (f ? "\?" : ".") : (f ? "\*" : ".*"); 
+                value : (function() {
+                    var esc = new RegExp("[-\/\\^$+.()|[\]{}]", "g");
+                    var matcher = new RegExp("(\\\\)?([*?])", "g");
+                    return function(p) { 
+                        var cnstr = function (m, f, s) { 
+                            return f ? m : s == "?" ? "." : ".*";
+                        };
+                        var regex = new RegExp("^" + p.replace(esc, '\\$&').replace(matcher, cnstr) + "$");
+                        return Object.create(Object.prototype, {
+                                match : { value : function(string) { return regex.test(string); } }, 
+                                toString : { value : function() { return p; } }
+                        });
+
                     };
-                    var regex = new RegExp("^" + p.replace(/[-\/\\^$+.()|[\]{}]/g, '\\$&').
-                                                   replace(/(\\)?([*?])/g, cnstr) + "$");
-                    return Object.create(Object.prototype, {
-                            match : { value : function(string) { return regex.test(string); } }, 
-                            toString : { value : function() { return pattern; } }
-                    });
-                }
+                })()
             },
             "provide" : 
             { 
@@ -103,7 +107,8 @@
                             var id = 0;
                             var timeStamp = new Date().getTime();
                             return function() {
-                                return checksum(timeStamp + (++id) + path, ChecksumType.sha1);
+                                id++;
+                                return checksum(timeStamp + (id) + path, ChecksumType.sha1);
                             };
                         })();
                         var id = "_" + generateId();
