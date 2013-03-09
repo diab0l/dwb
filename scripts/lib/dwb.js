@@ -36,7 +36,6 @@
                     var regex = new RegExp("^" + pre.replace(/(\\)?([*?])/g, function (m, f, s) {
                         return s == "?" ? (f ? "\?" : ".") : (f ? "\*" : ".*");
                     }) + "$");
-                    io.print(regex.toString());
                     return Object.create(Object.prototype, {
                             match : { value : function(string) { return regex.test(string); } }, 
                             toString : { value : function() { return pattern; } }
