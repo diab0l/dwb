@@ -29,6 +29,20 @@
     };
     var _contexts = {};
     Object.defineProperties(this, { 
+            "Glob" : 
+            { 
+                value : function(pattern) { 
+                    var pre = pattern.replace(/[-\/\\^$+.()|[\]{}]/g, '\\$&');
+                    var regex = new RegExp("^" + pre.replace(/(\\)?([*?])/g, function (m, f, s) {
+                        return s == "?" ? (f ? "\?" : ".") : (f ? "\*" : ".*");
+                    }) + "$");
+                    io.print(regex.toString());
+                    return Object.create(Object.prototype, {
+                            match : { value : function(string) { return regex.test(string); } }, 
+                            toString : { value : function() { return pattern; } }
+                    });
+                }
+            },
             "provide" : 
             { 
                 value : function(name, module) 

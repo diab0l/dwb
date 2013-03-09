@@ -786,6 +786,39 @@ Deferred.when(asyncOperation(), function() {...});
 Deferred.when(syncOperation(), function() {...});
 ---------------------------------
 
+=== Glob ===
+
+Globs can be used for pattern matching, they are much simpler than regular
+expressions, there are only two special characters, the wildcard character '\*' which
+matches any number of unknown characters and the joker character '?' which matches exactly one
+unknown character. To match the literal characters "*" and "?" they can be escaped with "\\";
+
+
+==== new Glob(String pattern)
+****
+
+Constructs a new Glob.
+
+_pattern_;; The pattern to match against.
+****
+
+==== Boolean Glob.match(String string)
+****
+
+Matches against a string
+
+_string_;; The string to match against.
+_returns_;; True if the string matches the Glob.
+****
+
+==== String Glob.toString()
+****
+
+Converts a Glob to string.
+
+_returns_;; A string represantation of the Glob.
+****
+
 === settings ===
 
 Readonly object that can be used to query dwb's current settings, all settings

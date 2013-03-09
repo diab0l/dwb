@@ -1465,6 +1465,78 @@ Deferred.when(asyncOperation(), function() {...});
 Deferred.when(syncOperation(), function() {...});
 ---------------------------------
 
+[[Glob]]
+=== Glob ===
+
+Globs can be used for pattern matching, they are much simpler than regular
+expressions, there are only two special characters, the wildcard character '\*' which
+matches any number of unknown characters and the joker character '?' which matches exactly one
+unknown character. To match the literal characters "*" and "?" they can be escaped with "\\";
+
+==== Constructor ====
+
+****
+[float]
+==== *Glob()* ==== 
+[source,javascript]
+----
+new Glob(String pattern)
+----
+
+Constructs a new Glob
+
+ ::
+_pattern_;; The pattern to match against
+****
+
+==== Methods ====
+
+****
+[float]
+==== *match()* ==== 
+
+[source,javascript]
+----
+Boolean Glob.match(String string)
+----
+
+Matches against a string
+
+ ::
+
+_string_;; The string to match against.
+_returns_;; True if the string matches the Glob.
+****
+
+****
+[float]
+==== *toString()* ==== 
+
+[source,javascript]
+----
+String Glob.toString()
+----
+
+Converts a Glob to string.
+
+ ::
+
+_returns_;; A string represantation of the Glob.
+****
+
+.Example 
+
+====
+[source,javascript]
+---------------------------------
+var glob = new Glob("foo*ba?");
+glob.match("foobarbaz");       // true
+glob.match("foobaz");          // true
+glob.match("foobarbazx");      // false
+glob.match("fooba");           // false
+---------------------------------
+====
+
 [[settings]] 
 === settings ===
 
