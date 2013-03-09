@@ -61,6 +61,7 @@ gboolean js_check_syntax(JSContextRef ctx, const char *script, const char *filen
 
 void js_array_iterator_init(JSContextRef ctx, js_array_iterator *iter, JSObjectRef object);
 JSValueRef js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc);
+void js_array_iterator_finish(js_array_iterator *iter);
 
 void js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSObjectRef object);
 JSValueRef js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname, char **name, JSValueRef *exc);

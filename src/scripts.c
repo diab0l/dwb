@@ -1539,6 +1539,8 @@ global_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     completion_complete(COMP_SCRIPT, false);
 
 error_out:
+    js_array_iterator_finish(&iter);
+
     for (GList *l = dwb.state.script_completion; l; l=l->next) 
     {
         n = l->data;

@@ -341,27 +341,43 @@ js_execute(JSContextRef ctx, const char *script, JSValueRef *exc)
 void 
 js_array_iterator_init(JSContextRef ctx, js_array_iterator *iter, JSObjectRef object) 
 {
+    g_return_if_fail(ctx != NULL && object != NULL);
     iter->ctx = ctx;
+
     iter->array = object;
+    JSValueProtect(ctx, iter->array);
+
     iter->current_index = 0;
     iter->length = js_get_double_property(ctx, object, "length");
 }
 JSValueRef 
 js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc) 
 {
+    g_return_val_if_fail(iter != NULL && iter->array != NULL, NULL);
+
     if (iter->current_index == iter->length)
         return NULL;
 
     return JSObjectGetPropertyAtIndex(iter->ctx, iter->array, iter->current_index++, exc);
 }
 void 
+js_array_iterator_finish(js_array_iterator *iter)
+{
+    g_return_if_fail(iter != NULL);
+
+    JSValueUnprotect(iter->ctx, iter->array);
+}
+void 
 js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSObjectRef object) 
 {
     iter->ctx = ctx;
+
     iter->array = JSObjectCopyPropertyNames(ctx, object);
     JSPropertyNameArrayRetain(iter->array);
+
     iter->object = object;
     JSValueProtect(ctx, object);
+
     iter->current_index = 0;
     iter->length = JSPropertyNameArrayGetCount(iter->array);
 }
