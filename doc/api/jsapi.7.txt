@@ -791,7 +791,7 @@ Deferred.when(syncOperation(), function() {...});
 Globs can be used for pattern matching, they are much simpler than regular
 expressions, there are only two special characters, the wildcard character '\*' which
 matches any number of unknown characters and the joker character '?' which matches exactly one
-unknown character. To match the literal characters "*" and "?" they can be escaped with "\\";
+unknown character. The literal characters "*" and "?" must be escaped with "\\";
 
 
 ==== new Glob(String pattern)
