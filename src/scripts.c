@@ -89,6 +89,12 @@ typedef struct DeferredPriv_s
     JSObjectRef resolve;
     JSObjectRef next;
 } DeferredPriv;
+
+typedef struct _SpawnChannel {
+    JSObjectRef callback; 
+    int infd;
+} SpawnChannel;
+
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
@@ -344,6 +350,24 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
 }/*}}}*/
 /*}}}*/
 
+SpawnChannel *
+spawn_channel_new(JSObjectRef callback, int infd) 
+{
+    SpawnChannel *channel = g_malloc(sizeof(SpawnChannel));
+    channel->callback = callback;
+    JSValueProtect(s_global_context, callback);
+    if (infd >= 0)
+        channel->infd = dup(infd);
+
+    return channel;
+}
+void
+spawn_channel_close(SpawnChannel *channel) 
+{
+    JSValueUnprotect(s_global_context, channel->callback);
+    close(channel->infd);
+    g_free(channel);
+}
 /* Deferred {{{*/
 void 
 deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
@@ -1907,14 +1931,16 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 
 /* spawn_output {{{*/
 static gboolean
-spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback) 
+spawn_output(GIOChannel *channel, GIOCondition condition, SpawnChannel *sc) 
 {
     char *content = NULL; 
     gboolean result = false;
     gsize length;
+    char *output = NULL;
     if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
     {
         g_io_channel_unref(channel);
+        spawn_channel_close(sc);
         return false;
     }
     else if (g_io_channel_read_line(channel, &content, &length, NULL, NULL) == G_IO_STATUS_NORMAL && content != NULL)  
@@ -1927,7 +1953,15 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
                 if (arg != NULL) 
                 {
                     JSValueRef argv[] = { arg };
-                    call_as_function_debug(s_global_context, callback, callback, 1,  argv);
+                    JSValueRef ret = call_as_function_debug(s_global_context, sc->callback, sc->callback, 1,  argv);
+                    output = js_value_to_char(s_global_context, ret, -1, NULL);
+                    if (output && sc->infd != -1)
+                    {
+                        size_t r = write(sc->infd, output, strlen(output));
+                        if (output[r-1] != '\n')
+                            write(sc->infd, "\n", 1);
+                    }
+                    g_free(output);
                 }
             }
         }
@@ -2037,11 +2071,12 @@ static JSValueRef
 system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     JSValueRef ret = NIL; 
-    int outfd, errfd;
+    int outfd, errfd, infd = -1;
     char **srgv = NULL, *cmdline = NULL;
     char **envp = NULL;
     int srgc;
     GIOChannel *out_channel, *err_channel;
+    SpawnChannel *out = NULL, *err = NULL;
     JSObjectRef oc = NULL, ec = NULL;
     GPid pid;
 
@@ -2055,26 +2090,24 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (s_global_context == NULL)
         goto error_out;
 
-    if (argc > 1) 
-    {
-        oc = js_value_to_function(ctx, argv[1], NULL);
-    }
-    if (argc > 2) {
-        ec = js_value_to_function(ctx, argv[2], NULL);
-    }
     cmdline = js_value_to_char(ctx, argv[0], -1, exc);
     if (cmdline == NULL) 
-    {
         goto error_out;
-    }
+
+    if (argc > 1) 
+        oc = js_value_to_function(ctx, argv[1], NULL);
+    
+    if (argc > 2) 
+        ec = js_value_to_function(ctx, argv[2], NULL);
+    
     if (argc > 3)
-    {
         envp = get_environment(ctx, argv[3], exc);
-    }
+    
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
-                NULL, NULL, &pid, NULL, 
+                NULL, NULL, &pid,  
+                oc != NULL || ec != NULL ? &infd : NULL,
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
     {
@@ -2085,15 +2118,19 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (oc != NULL) 
     {
         out_channel = g_io_channel_unix_new(outfd);
-        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, oc);
+        out = spawn_channel_new(oc, infd);
+        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, out);
         g_io_channel_set_close_on_unref(out_channel, true);
     }
     if (ec != NULL) 
     {
         err_channel = g_io_channel_unix_new(errfd);
-        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, ec);
+        err = spawn_channel_new(ec, infd);
+        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
+    if (infd != -1)
+        close(infd);
     JSObjectRef deferred = deferred_new(s_global_context);
 
     g_child_watch_add(pid, (GChildWatchFunc)watch_spawn, deferred);

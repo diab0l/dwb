@@ -674,7 +674,7 @@ _returns_;; +true+ if creation was successful or directory already existed
 
 [source,javascript]
 ----
-Deferred system.spawn(String command, [Function stdin], [Function stderr], [Object environ])
+Deferred system.spawn(String command, [Function stdout], [Function stderr], [Object environ])
 ----
 
 Executes a shell command using the default search path
@@ -682,9 +682,12 @@ Executes a shell command using the default search path
  ::
 
 _command_;; The command to execute
-_stdout(String)_;; Callback function for stdin, pass +null+ if only stderr is
-needed, optional
-_stderr(String)_;; Callback function for stderr, optional
+_stdout(String)_;; Callback function for stdin, any strings returned from the
+callback are passed to stdin of the spawned process, pass +null+ if only stderr
+is needed, optional 
+_stderr(String)_;; Callback function for stderr, any strings returned from the
+callback are passed to stdin of the process, pass +null+ if stderr is not needed
+and environment variables should be set, optional
 _environ_;; Object that can be used to add environment variables to the childs
 environment, optional.
 _returns_;; A deferred, it will be resolved if the child exits
