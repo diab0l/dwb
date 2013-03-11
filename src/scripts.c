@@ -365,7 +365,8 @@ void
 spawn_channel_close(SpawnChannel *channel) 
 {
     JSValueUnprotect(s_global_context, channel->callback);
-    close(channel->infd);
+    if (channel->infd >= 0) 
+        close(channel->infd);
     g_free(channel);
 }
 /* Deferred {{{*/
@@ -1958,8 +1959,17 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnChannel *sc)
                     if (output && sc->infd != -1)
                     {
                         size_t r = write(sc->infd, output, strlen(output));
-                        if (output[r-1] != '\n')
-                            write(sc->infd, "\n", 1);
+                        if (r > 0 && output[r-1] != '\n') 
+                        {
+                            r = write(sc->infd, "\n", 1);
+
+                        }
+                        if (r == -1) 
+                        {
+                            fputs("Error cannot write to stdin", stderr);
+                            close(sc->infd);
+                            sc->infd = -1;
+                        }
                     }
                     g_free(output);
                 }

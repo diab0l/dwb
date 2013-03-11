@@ -8,6 +8,8 @@ all: web man webman
 
 web: jsapi.html
 
+latex: jsapi.tex
+
 man: dwb-js.7
 
 webman: jsapi.7.html
