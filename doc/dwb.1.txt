@@ -1419,6 +1419,9 @@ default value: 'true'.
 Whether to defer loading of a tab until a tab is focused, especially
 useful on startup and with slow internet connections, default value: 'false'.
 
+*max-visible-completions*::
+The maximum number of visible completions, default value: '11'.
+
 *message-delay*::
 The duration messages are shown. Possible values: duration in seconds (integer),
 default value: '2'.

@@ -761,7 +761,6 @@ struct _Misc {
   GIOChannel *si_channel;
   GList *userscripts;
 
-  int max_c_items;
   int message_delay;
   int tabbar_delay;
   int history_length;

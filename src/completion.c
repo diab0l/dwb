@@ -305,7 +305,7 @@ completion_show_completion(int back)
     if (back) 
     {
         dwb.comps.active_comp = g_list_last(dwb.comps.completions);
-        for (GList *l = dwb.comps.active_comp; l && i<dwb.misc.max_c_items; l=l->prev, i++) 
+        for (GList *l = dwb.comps.active_comp; l && i<GET_INT("max-visible-completions"); l=l->prev, i++) 
         {
             gtk_widget_show_all(((Completion*)l->data)->event);
         }
@@ -313,7 +313,7 @@ completion_show_completion(int back)
     else 
     {
         dwb.comps.active_comp = g_list_first(dwb.comps.completions);
-        for (GList *l = dwb.comps.active_comp; l && i<dwb.misc.max_c_items; l=l->next, i++) 
+        for (GList *l = dwb.comps.active_comp; l && i<GET_INT("max-visible-completions"); l=l->next, i++) 
         {
             gtk_widget_show_all(((Completion*)l->data)->event);
         }
@@ -684,7 +684,7 @@ completion_complete(CompletionType type, int back)
         dwb.comps.view = dwb.state.fview;
     }
     else if (dwb.comps.completions && dwb.comps.active_comp) 
-        dwb.comps.active_comp = completion_update_completion(dwb.gui.compbox, dwb.comps.completions, dwb.comps.active_comp, dwb.misc.max_c_items, back);
+        dwb.comps.active_comp = completion_update_completion(dwb.gui.compbox, dwb.comps.completions, dwb.comps.active_comp, GET_INT("max-visible-completions"), back);
 
     return ret;
 }/*}}}*/

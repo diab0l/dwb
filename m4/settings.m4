@@ -134,6 +134,7 @@ html_input(complete-bookmarks, checkbox, Whether to enable tabcompletion for boo
 html_input(complete-history, checkbox, Whether to enable tabcompletion for browsing history)
 html_input(complete-searchengines, checkbox, Whether to enable tabcompletion for searchengines)
 html_input(complete-userscripts, checkbox, Whether to enable tabcompletion for userscripts)
+html_input(max-visible-completions, text, The maximal number of visible completions)
 dnl 
 html_header(Miscellaneous)
 html_input(auto-insert-mode, checkbox, Whether to automatically go in insert mode if an editable element has focus after loading)

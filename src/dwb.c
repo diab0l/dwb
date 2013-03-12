@@ -134,7 +134,6 @@ static gboolean dwb_user_script_cb(GIOChannel *channel, GIOCondition condition, 
 
 
 static int signals[] = { SIGFPE, SIGILL, SIGINT, SIGQUIT, SIGTERM, SIGALRM, SIGSEGV};
-static int MAX_COMPLETIONS = 11;
 /*}}}*/
 
 #include "config.h"
@@ -4453,7 +4452,6 @@ dwb_init_vars(void)
     dwb.comps.active_comp = NULL;
     dwb.comps.view = NULL;
 
-    dwb.misc.max_c_items = MAX_COMPLETIONS;
     dwb.misc.userscripts = NULL;
     dwb.misc.proxyuri = NULL;
 
