@@ -1770,7 +1770,7 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
         return UNDEFINED;
     GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
     if (atom == NULL)
-        return UNDEFINED;
+        atom = GDK_NONE;
     char *text = js_value_to_char(ctx, argv[1], -1, exc);
     if (text != NULL)
     {
