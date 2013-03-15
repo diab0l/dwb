@@ -232,7 +232,7 @@ function doInject(frame, item)
 {
   if (item.delay > 0) 
   {
-      timerStart(item.delay, function() {
+      timer.start(item.delay, function() {
           frame.inject(item.script, null, item.offset, item.unwrap);
           return false;
       });

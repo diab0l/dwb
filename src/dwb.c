@@ -691,6 +691,45 @@ dwb_emit_status_signal(GList *gl, const char *type)
     View *v = VIEW(gl);
     if (EMIT_SCRIPT(STATUS_BAR)) 
     {
+        /** 
+         * Emitted before the status bar is updated.          
+         * @event statusBarChange
+         * @memberOf signals
+         * @param {signals~onStatusBarChange} callback
+         *      Callback called when the signal is emitted
+         * */
+        /**
+         * Callback called before dwb updates the status bar
+         * If the callback returns true dwb will not update the statusbar so it
+         * is possible to set the statusbar from the script.
+         *
+         * @callback signals~onStatusBarChange
+         *
+         * @param {WebKitWebView} webview The focused webview
+         * @param  {Object} data Data
+         * @param {boolean} data.canGoBack
+         *         Whether it is possible to navigate back in the webview
+         * @param {Boolean} data.canGoForward
+         *          Whether it is possible to navigate forward in the webview
+         * @param {Boolean} data.isBookmarked
+         *          Whether the site is bookmarked
+         * @param {Boolean} data.isQuickmarked
+         *          Whether the site is quickmarked
+         * @param {Boolean} data.pluginsBlocked
+         *          Whether plugins are blocked
+         * @param {Boolean} data.scriptsBlocked
+         *          Whether scripts are blocked
+         * @param {String} data.ssl
+         *          SSL-State of the page, can either be <i>"trusted"</i>, <i>"untrusted"</i> 
+         *          or <i>"none"</i>
+         * @param {String} data.type
+         *          The type of the update, can be <i>"status</i> and </>uri<i>, status means
+         *          that statusLabel und uriLabel need to be updated, uri means
+         *          that only the uriLabel needs to be updated.
+         *
+         * @returns {Boolean}
+         *      Return true to prevent dwb to update the statusbar
+         * */
         gboolean back = webkit_web_view_can_go_back(WEBKIT_WEB_VIEW(v->web));
         gboolean forward = webkit_web_view_can_go_forward(WEBKIT_WEB_VIEW(v->web));
         const char *uri = webkit_web_view_get_uri(WEBVIEW(gl));
@@ -1453,6 +1492,29 @@ dwb_focus_view(GList *gl, const char *event)
     {
         if (EMIT_SCRIPT(TAB_FOCUS)) 
         {
+            /**
+             * Emitted before a tab gets focus
+             * @event  tabFocus
+             * @memberOf signals
+             * @param {signals~onTabFocus} callback 
+             *      Callback function that will be called when the signal is emitted
+             *
+             * */
+            /**
+             * Callback called before a tab gets focus
+             * @callback signals~onTabFocus
+             *
+             * @param {WebKitWebView} new   The webview that will get focus
+             * @param {WebKitWebView} last  The webview that has focus
+             * @param {Object} data 
+             * @param {String} data.event  
+             *      The event either a command name <i>button_press</i>,
+             *      <i>tab_button_press</i>, <i>close_tab</i> or <i>new_tab</i>
+             *
+             * @returns {Boolean} 
+             *      Return true to prevent the focus
+             * */
+
             char *json = util_create_json(1, CHAR, "event", event);
             //ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { SCRIPTS_WV(dwb.state.fview) }, SCRIPTS_SIG_META(NULL, TAB_FOCUS, 1) };
             ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(VIEW(dwb.state.fview)->web)  }, SCRIPTS_SIG_META(json, TAB_FOCUS, 1) };
@@ -2940,6 +3002,27 @@ dwb_change_mode(Mode mode, ...)
         completion_clean_autocompletion();
     if (EMIT_SCRIPT(CHANGE_MODE)) 
     {
+        /**
+         * Emitted before the mode changes
+         * @event  changeMode
+         * @memberOf signals
+         * @param {signals~onChangeMode} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called before the mode changes
+         * @callback signals~onChangeMode
+         *
+         * @param {WebKitWebView} new   
+         *      The webview that currently has focus
+         * @param {Modes}         mode
+         *      A {@link Enums and Flags|Mode} 
+         *
+         * @returns {Boolean} 
+         *      Return true to prevent changing mode
+         * */
+
         char buffer[] = { BASIC_MODES(mode) + 48, 0 };
         ScriptSignal sig = { SCRIPTS_WV(dwb.state.fview), SCRIPTS_SIG_META(buffer, CHANGE_MODE, 0) };
         if (scripts_emit(&sig))
@@ -3560,6 +3643,18 @@ dwb_end()
     }
     if (EMIT_SCRIPT(CLOSE)) 
     {
+        /**
+         * Emitted when dwb is closed
+         * @event  close
+         * @memberOf signals
+         * @param {signals~onClose} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called when dwb is closed
+         * @callback signals~onClose
+         * */
         ScriptSignal s = { .jsobj = NULL, SCRIPTS_SIG_META(NULL, CLOSE, 0) };
         scripts_emit(&s);
     }

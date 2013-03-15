@@ -1,10 +1,71 @@
-const LoadStatus = { 
-  provisional : 0, 
-  committed : 1,
-  finished : 2,
-  firstVisualLayout : 3,
-  failed : 4
+/** 
+ * All enums and flags are global, the type <i>Enum</i> just
+ * means that it is a number, the type <i>Flag</i> means that it is a number
+ * that can be used in a bitmask.
+ * @namespace
+ * @name Enums and Flags
+ * @static
+ * @example 
+ * signals.connect("loadStatus", function(wv) {
+ *      if (wv.loadStatus == LoadStatus.finished)
+ *      {
+ *          ...
+ *      }
+ * });
+ * signals.connect("keyPress", function(wv, event) {
+ *      // Check if Control and Mod1 is pressed
+ *      if (event.state & (Modifier.Control | Modifier.Mod1))
+ *      {
+ *          ...
+ *      }
+ * });
+ * */
+/**
+ * Loadstatus of a WebKitWebView or WebKitWebFrame
+ * @constant
+ * @name LoadStatus 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum}  provisional 
+ * @property {Enum}  committed 
+ * @property {Enum}  finished 
+ * @property {Enum}  firstVisualLayout 
+ * @property {Enum}  failed 
+ * */
+const LoadStatus = 
+{ 
+    provisional : 0, 
+    committed : 1,
+    finished : 2,
+    firstVisualLayout : 3,
+    failed : 4
 };
+Object.freeze(LoadStatus);
+/**
+ * Gdk modifier flag
+ * @constant
+ * @name Modifier 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Flag} Shift    
+ * @property {Flag} Lock	    
+ * @property {Flag} Control  
+ * @property {Flag} Mod1	    
+ * @property {Flag} Mod2	    
+ * @property {Flag} Mod3	    
+ * @property {Flag} Mod4	    
+ * @property {Flag} Mod5	    
+ * @property {Flag} Button1  
+ * @property {Flag} Button2  
+ * @property {Flag} Button3  
+ * @property {Flag} Button4  
+ * @property {Flag} Button5  
+ * @property {Flag} Super    
+ * @property {Flag} Hyper    
+ * @property {Flag} Meta     
+ * @property {Flag} Release  
+ * @property {Flag} Modifier 
+ * */
 const Modifier = {
   Shift    : 1 << 0,
   Lock	    : 1 << 1,
@@ -25,6 +86,20 @@ const Modifier = {
   Release  : 1 << 30,
   Modifier : 0x5c001fff
 };
+Object.freeze(Modifier);
+/**
+ * ButtonContext flag
+ * @constant
+ * @name ButtonContext 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Flag} document   
+ * @property {Flag} link       
+ * @property {Flag} image      
+ * @property {Flag} media      
+ * @property {Flag} selection  
+ * @property {Flag} editable   
+ * */
 const ButtonContext = {
   document   : 1 << 1,
   link       : 1 << 2,
@@ -33,11 +108,36 @@ const ButtonContext = {
   selection  : 1 << 5,
   editable   : 1 << 6
 };
+Object.freeze(ButtonContext);
+/**
+ * ClickType
+ * @constant
+ * @name ClickType 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum} click       
+ * @property {Enum} doubleClick 
+ * @property {Enum} tripleClick 
+ * */
 const ClickType = {
   click       : 4,
   doubleClick : 5,
   tripleClick : 6
 };
+Object.freeze(ClickType);
+/**
+ * NavigationReason
+ * @constant
+ * @name NavigationReason 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum} linkClicked     
+ * @property {Enum} formSubmitted   
+ * @property {Enum} backForward     
+ * @property {Enum} reload          
+ * @property {Enum} formResubmitted 
+ * @property {Enum} other           
+ * */
 const NavigationReason = {
   linkClicked     : 0,
   formSubmitted   : 1,
@@ -46,6 +146,19 @@ const NavigationReason = {
   formResubmitted : 4,
   other           : 5
 };
+Object.freeze(NavigationReason);
+/**
+ * Status of a download
+ * @constant
+ * @name DownloadStatus 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum} error       
+ * @property {Enum} created   
+ * @property {Enum} started   
+ * @property {Enum} cancelled 
+ * @property {Enum} finished  
+ * */
 const DownloadStatus = {
   error       : -1,
   created   : 0,
@@ -53,11 +166,36 @@ const DownloadStatus = {
   cancelled : 2,
   finished  : 3
 };
+Object.freeze(DownloadStatus);
+/**
+ * Type of checksum
+ * @constant
+ * @name ChecksumType 
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum} md5     
+ * @property {Enum} sha1    
+ * @property {Enum} sha256  
+ * */
 const ChecksumType = {
   md5     : 0, 
   sha1    : 1, 
   sha256  : 2 
 };
+Object.freeze(ChecksumType);
+/**
+ * Filetest flag, multiple flags can be set on a file
+ * @constant 
+ * @name FileTest 
+ * @memberOf Enums and Flags
+ * @type Object
+ *
+ * @property {Flag} regular   regular file
+ * @property {Flag} symlink   symbolic link
+ * @property {Flag} dir       directory
+ * @property {Flag} executable       executable File
+ * @property {Flag} exists       Whether the file exists
+ * */
 const FileTest = {
   regular    : 1 << 0,
   symlink    : 1 << 1,
@@ -65,18 +203,57 @@ const FileTest = {
   executable : 1 << 3,
   exists     : 1 << 4
 };
+Object.freeze(FileTest);
+/**
+ * A mode 
+ * @constant 
+ * @name Modes 
+ * @memberOf Enums and Flags
+ * @type Object
+ *
+ * @property {Flag} NormalMode normal mode
+ * @property {Flag} InsertMode insert mode
+ * @property {Flag} CommandMode command mode
+ * @property {Flag} HintMode hint mode
+ * */
 const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2,
   HintMode    : 1<<3
 };
+Object.freeze(Modes);
+/**
+ * Clipboard selection
+ * @constant 
+ * @name Selection
+ * @memberOf Enums and Flags
+ * @type {Object}
+ *
+ * @property {Enum} primary   The primary selection
+ * @property {Enum} clipboard The clipboard
+ * */
 const Selection = {
     primary : 1, 
     clipboard : 2
 };
+Object.freeze(Selection);
+/**
+ * Override certain conditions when binding a shortcut with bind
+ * @constant 
+ * @name OverrideKey
+ * @memberOf Enums and Flags
+ * @type {Object}
+ * @property {Flag} insertMode    
+ *      Executes a shortcut also in insertmode
+ * @property {Flag} entryFocus    
+ *      Executes a shortcut also when the entry has focus
+ * @property {Flag} all           
+ *      Always executes a shortcut
+ * */
 const OverrideKey = {
     insertMode : 1<<5,
     entryFocus : 1<<6,
     all        : 1<<7
 };
+Object.freeze(OverrideKey);

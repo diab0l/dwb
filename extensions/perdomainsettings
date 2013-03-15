@@ -174,7 +174,7 @@ function onNavigation(wv, frame, request, action)
     o.set = {};
     var uri = request.uri;
     var host = request.message.uri.host;
-    var domain = util.domainFromHost(host);
+    var domain = net.domainFromHost(host);
     var rTld = new RegExp(domain.substring(domain.indexOf(".") + 1) + "$");
     var domainTld = domain.replace(rTld, "tld");
     var hostTld = host.replace(rTld, "tld");

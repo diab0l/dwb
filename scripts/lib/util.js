@@ -1,6 +1,14 @@
 (function () {
     Object.defineProperties(util, 
     { 
+        /** 
+         * Get the selected text in a webview
+         * @name getSelection
+         * @memberOf util
+         * @function
+         *
+         * @returns {String} The selected text or null if no text was selected
+         * */
         "getSelection" : 
         {
             value : function() 
@@ -15,6 +23,15 @@
                 return null;
             }
         },
+        /** 
+         * Converts camel-case string for usage with GObject properties to a
+         * non-camel-case String
+         * @name uncamelize 
+         * @memberOf util 
+         * @function
+         *
+         * @returns {String} The uncamelized String
+         * */
         "uncamelize" : 
         {
             value : function(text) 
@@ -26,6 +43,16 @@
                 });
             }
         },
+        /** 
+         * Converts non-camel-case string to a camel-case string
+         * non-camel-case String
+         *
+         * @name camelize 
+         * @memberOf util 
+         * @function
+         *
+         * @returns {String} A camelcase String
+         * */
         "camelize" : 
         {
             value : function(text) 
@@ -52,44 +79,6 @@
                     if (this.hasOwnProperty(key))
                         callback(key, this[key], this); 
                 }
-            }
-        });
-    }
-    if (Array.prototype.fastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=0, l=this.length; i<l; ++i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
-    if (Array.prototype.fastLastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastLastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=this.length-1; i>=0; --i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
-    if (! RegExp.escape)
-    {
-        Object.defineProperty(RegExp, "escape", 
-        {
-            value : function(string)
-            {
-                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
             }
         });
     }

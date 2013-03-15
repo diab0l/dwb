@@ -80,6 +80,27 @@ view_resource_request_cb(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebReso
 {
     if (EMIT_SCRIPT(RESOURCE))  
     {
+        /**
+         * Emitted before a resource is loaded
+         * @event resource
+         * @memberOf signals
+         * @param {signals~onResource} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called before a resource is loaded
+         * @callback signals~onResource
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the requesting frame
+         * @param {WebKitWebFrame}  frame 
+         *      The frame that requested the resource
+         * @param {WebKitNetworkRequest}  request 
+         *      The request, setting request.uri to "about:blank" will prevent
+         *      the request from being loaded.
+         * @param {WebKitNetworkResponse}  response 
+         *      The response, note that response will always be null unless the
+         *      request comes from a redirect
+         * */
         ScriptSignal signal = {
             SCRIPTS_WV(gl), .objects = { G_OBJECT(frame), G_OBJECT(request), G_OBJECT(response) }, SCRIPTS_SIG_META(NULL, RESOURCE, 3) };
         scripts_emit(&signal);
@@ -97,6 +118,22 @@ view_document_finished(WebKitWebView *wv, WebKitWebFrame *frame, GList *gl)
 {
     if (EMIT_SCRIPT(DOCUMENT_LOADED)) 
     {
+        /**
+         * Emitted when a document of a frame has been loaded. Use this
+         * event to inject scripts that need a fully populated DOM-tree
+         * @event documentLoaded
+         * @memberOf signals
+         * @param {signals~onDocumentLoaded} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the document of a frame has been loaded.
+         * @callback signals~onDocumentLoaded
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the frame
+         * @param {WebKitWebFrame}  frame 
+         *      The frame that emitted the signal
+         * */
         ScriptSignal signal = { SCRIPTS_WV(gl), { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, DOCUMENT_LOADED, 1) };
         scripts_emit(&signal);
     }
@@ -163,6 +200,44 @@ view_button_press_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
     s_click_time = e->time;
     if (EMIT_SCRIPT(BUTTON_PRESS)) 
     {
+        /**
+         * Emitted when a mouse button was pressed
+         *
+         * @event buttonPress
+         * @memberOf signals
+         * @param {signals~onButtonPress} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when a mouse button was pressed on a webview
+         * @callback signals~onButtonPress
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {WebKitHitTestResult} result 
+         *      A hit test result
+         * @param {GtkEventBox} tabwidget
+         *      The tabwidget
+         * @param {Object} event
+         * @param {Number} event.button 
+         *      The button that was pressed, usually a value between 1 and 5
+         * @param {Modifier} event.state 
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifiers} pressed
+         * @param {Number} event.time 
+         *      The time in milliseconds when the button was pressed
+         * @param {ClickType} event.type 
+         *      A {@link Enums and Flags.ClickType|ClickType}
+         * @param {Number} event.x 
+         *      x-position relative to the window
+         * @param {Number} event.xRoot
+         *      x-position relative to the screen
+         * @param {Number} event.y 
+         *      y-position relative to the window
+         * @param {Number} event.yRoot
+         *      y-position relative to the screen
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the default action
+         * */
         char *json = util_create_json(8, 
                 UINTEGER, "time", e->time, UINTEGER,    "type", e->type, 
                 DOUBLE,   "x", e->x, DOUBLE,            "y", e->y, 
@@ -246,6 +321,40 @@ view_button_release_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
 
     if (EMIT_SCRIPT(BUTTON_RELEASE)) 
     {
+        /**
+         * Emitted when a mouse button was released
+         *
+         * @event buttonRelease
+         * @memberOf signals
+         * @param {signals~onButtonRelease} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the load-status of a WebKitWebView changes
+         * @callback signals~onButtonRelease
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {WebKitHitTestResult} result
+         *      The hit test result
+         * @param {Object} event
+         * @param {Number} event.button 
+         *      The button that was pressed, usually a value between 1 and 5
+         * @param {Modifier} event.state 
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifiers} pressed
+         * @param {Number} event.time 
+         *      The time in milliseconds when the button was pressed
+         * @param {Number} event.x 
+         *      x-position relative to the window
+         * @param {Number} event.xRoot
+         *      x-position relative to the screen
+         * @param {Number} event.y 
+         *      y-position relative to the window
+         * @param {Number} event.yRoot
+         *      y-position relative to the screen
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the default action
+         * */
         char *json = util_create_json(7, 
                 UINTEGER, "time", e->time, 
                 DOUBLE,   "x", e->x, DOUBLE,            "y", e->y, 
@@ -287,6 +396,22 @@ view_frame_committed_cb(WebKitWebFrame *frame, GList *gl)
 {
     if (EMIT_SCRIPT(FRAME_STATUS)) 
     {
+        /**
+         * Emitted when the load status of a frame changes
+         *
+         * @event frameStatus
+         * @memberOf signals
+         * @param {signals~onFrameStatus} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the load-status of a WebKitWebFrame changes
+         * @callback signals~onFrameStatus
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the frame
+         * @param {WebKitWebFrame} frame 
+         *      The frame that emitted the signal
+         * */
         ScriptSignal signal = { SCRIPTS_WV(gl), 
             .objects = { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, FRAME_STATUS, 1) };
         scripts_emit(&signal);
@@ -297,7 +422,24 @@ view_frame_committed_cb(WebKitWebFrame *frame, GList *gl)
 static void 
 view_frame_created_cb(WebKitWebView *wv, WebKitWebFrame *frame, GList *gl) 
 {
-    if (EMIT_SCRIPT(FRAME_CREATED)) {
+    if (EMIT_SCRIPT(FRAME_CREATED)) 
+    {
+        /**
+         * Emitted when a frame is created
+         *
+         * @event frameCreated
+         * @memberOf signals
+         * @param {signals~onFrameCreated} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when a WebKitWebFrame is created
+         * @callback signals~onFrameCreated
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the frame
+         * @param {WebKitWebFrame} frame 
+         *      The created frame
+         * */
         ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, FRAME_CREATED, 1) };
         scripts_emit(&signal);
     }
@@ -346,6 +488,28 @@ view_download_requested_cb(WebKitWebView *web, WebKitDownload *download, GList *
 {
     if (EMIT_SCRIPT(DOWNLOAD)) 
     {
+        /**
+         * Emitted before a download starts
+         *
+         * @event download
+         * @memberOf signals
+         * @param {signals~onDownload} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called before a download starts, will be called before the
+         * a path/application was chosen
+         * @callback signals~onDownload
+         * @param {WebKitWebView}  webview 
+         *      The webview emitted the signal
+         * @param {WebKitDownload} frame 
+         *      The download
+         * @param {Object} data 
+         * @param {String} data.referer
+         *      The referer
+         * @param {String} data.mimeType
+         *      The mime type of the download
+         * */
         char *json = util_create_json(2, 
                 CHAR, "referer", soup_get_header_from_request(webkit_download_get_network_request(download), "Referer"), 
                 CHAR, "mimeType", dwb.state.mimetype_request);
@@ -437,7 +601,32 @@ view_mime_type_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwor
 
     if (EMIT_SCRIPT(MIME_TYPE)) 
     {
-        char *json = util_create_json(1, CHAR, "mimeType", mimetype);
+        /**
+         * Emitted when a mime type decision is requested
+         * @event mimeType
+         * @memberOf signals
+         * @param {signals~onMimeType} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when a mimetype decision has to be made
+         * @callback signals~onMimeType
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the frame
+         * @param {WebKitWebFrame}  frame 
+         *      The frame that emitted the signal
+         * @param {WebKitNetworkRequest}  request 
+         *      The network request
+         * @param {Object}  data 
+         * @param {Boolean}  data.canShowMimeType
+         *      Whether the webview can show the mimetype
+         * @param {String}  data.mimeType
+         *      The mime type
+         *
+         * @returns {Boolean}
+         *      Return true to ignore the request
+         * */
+        char *json = util_create_json(2, CHAR, "mimeType", mimetype, BOOLEAN, "canShowMimeType", webkit_web_view_can_show_mime_type(web, mimetype));
         ScriptSignal signal = { SCRIPTS_WV(gl), { G_OBJECT(frame), G_OBJECT(request) }, SCRIPTS_SIG_META(json, MIME_TYPE, 2) };
         if (scripts_emit(&signal)) 
         {
@@ -469,6 +658,30 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
 
     if (EMIT_SCRIPT(NAVIGATION)) 
     {
+        /**
+         * Emitted before a new site or a new frame is loaded
+         * @event navigation
+         * @memberOf signals
+         * @param {signals~onNavigation} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called before a new navigation starts
+         * @callback signals~onNavigation
+         * @param {WebKitWebView}  webview 
+         *      The webview that contains the frame, to check if a new site will
+         *      be loaded check if {@linkcode webview.mainFrame == frame}
+         * @param {WebKitWebFrame}  frame 
+         *      The frame that emitted the signal
+         * @param {WebKitNetworkRequest}  request 
+         *      The network request
+         * @param {WebKitWebNavigationAction}  action 
+         *      A navigation action that started the request
+         *
+         * @returns {Boolean}
+         *      Return true to stop the emission and prevent the site from being
+         *      loaded
+         * */
         ScriptSignal signal = { SCRIPTS_WV(gl), { G_OBJECT(frame), G_OBJECT(request), G_OBJECT(action) }, SCRIPTS_SIG_META(NULL, NAVIGATION, 3) };
         if (scripts_emit(&signal)) 
         {
@@ -804,6 +1017,22 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             {
                 plugins_disconnect(gl);
             }
+            /**
+             * Emitted when the load has just been commited, no data has been loaded
+             * when this signal is emitted. This is the preferred signal for
+             * injected scripts that do not manipulate the DOM.
+             *
+             * @event loadCommitted
+             * @memberOf signals
+             * @param {signals~onLoadCommitted} callback
+             *      Callback function that will be called when the signal is emitted
+             * */
+            /**
+             * Callback called when the load of a site has just been committed.
+             * @callback signals~onLoadCommitted
+             * @param {WebKitWebView}  webview 
+             *      The webview that emitted the signal
+             * */
             if (EMIT_SCRIPT(LOAD_COMMITTED)) 
             {
                 ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(NULL, LOAD_COMMITTED, 0) };
@@ -826,6 +1055,20 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             if (dwb.state.auto_insert_mode) 
                 dwb_check_auto_insert(gl);
 
+            /**
+             * Emitted when the site has completely loaded.
+             *
+             * @event loadFinished
+             * @memberOf signals
+             * @param {signals~onLoadFinished} callback
+             *      Callback function that will be called when the signal is emitted
+             * */
+            /**
+             * Callback called when a site has completely loaded
+             * @callback signals~onLoadFinished
+             * @param {WebKitWebView}  webview 
+             *      The webview that emitted the signal
+             * */
             if (EMIT_SCRIPT(LOAD_FINISHED)) 
             {
                 ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(NULL, LOAD_FINISHED, 0) };
@@ -839,6 +1082,20 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
     }
     if (EMIT_SCRIPT(LOAD_STATUS)) 
     {
+        /**
+         * Emitted whenever the loadstatus changes
+         *
+         * @event loadStatus
+         * @memberOf signals
+         * @param {signals~onLoadStatus} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the load-status of a WebKitWebView changes
+         * @callback signals~onLoadStatus
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * */
         ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(NULL, LOAD_STATUS, 0) };
         scripts_emit(&signal);
     }
@@ -889,6 +1146,38 @@ static gboolean
 view_motion_notify_cb(WebKitWebView *web, GdkEventButton *e, GList *gl) 
 {
     if (EMIT_SCRIPT(MOUSE_MOVE)) {
+        /**
+         * Emitted when the mouse was moved
+         *
+         * @event mouseMove
+         * @memberOf signals
+         * @param {signals~onMouseMove} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the mouse was moved
+         * @callback signals~onMouseMove
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {Object} event
+         * @param {Number} event.button 
+         *      The button that was pressed, usually a value between 1 and 5
+         * @param {Modifier} event.state 
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifiers} pressed
+         * @param {Number} event.time 
+         *      The time in milliseconds when the button was pressed
+         * @param {Number} event.x 
+         *      x-position relative to the window
+         * @param {Number} event.xRoot
+         *      x-position relative to the screen
+         * @param {Number} event.y 
+         *      y-position relative to the window
+         * @param {Number} event.yRoot
+         *      y-position relative to the screen
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the movement
+         * */
         char *json = util_create_json(7, 
                 UINTEGER, "time", e->time, 
                 DOUBLE,   "x", e->x, DOUBLE,            "y", e->y, 
@@ -911,6 +1200,42 @@ view_tab_button_press_cb(GtkWidget *tabevent, GdkEventButton *e, GList *gl)
 {
     if (EMIT_SCRIPT(TAB_BUTTON_PRESS)) 
     {
+        /**
+         * Emitted when the mouse was pressed on a tab label
+         *
+         * @event tabButtonPress
+         * @memberOf signals
+         * @param {signals~onTabButtonPress} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when a button was pressed on a tablabel
+         * @callback signals~onTabButtonPress
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {GtkEventBox} tabwidget
+         *      The tabwidget
+         * @param {Object} event
+         * @param {Number} event.button 
+         *      The button that was pressed, usually a value between 1 and 5
+         * @param {Modifier} event.state 
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifiers} pressed
+         * @param {Number} event.time 
+         *      The time in milliseconds when the button was pressed
+         * @param {ClickType} event.type 
+         *      A {@link Enums and Flags.ClickType|ClickType}
+         * @param {Number} event.x 
+         *      x-position relative to the window
+         * @param {Number} event.xRoot
+         *      x-position relative to the screen
+         * @param {Number} event.y 
+         *      y-position relative to the window
+         * @param {Number} event.yRoot
+         *      y-position relative to the screen
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the default action
+         * */
         char *json = util_create_json(8, 
                 UINTEGER, "time", e->time, UINTEGER,    "type", e->type, 
                 DOUBLE,   "x", e->x, DOUBLE,            "y", e->y, 
@@ -1413,6 +1738,23 @@ view_add(const char *uri, gboolean background)
     }
     if (EMIT_SCRIPT(CREATE_TAB)) 
     {
+        /**
+         * Emitted when a tab is created
+         * @event createTab
+         * @memberOf signals
+         * @param {signals~onCreateTab} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when a tab is created
+         * @callback signals~onCreateTab
+         * @param {WebKitWebView}  webview 
+         *      The webview that was created
+         * @param {Object} data
+         * @param {Object} data.uri 
+         *      The uri that will be loaded or <i>null</i> if an empty tab or
+         *      the startpage will be loaded
+         * */
         char *json = util_create_json(1, CHAR, "uri", uri);
         ScriptSignal signal = { VIEW(ret)->script_wv, SCRIPTS_SIG_META(json, CREATE_TAB, 0) };
         scripts_emit(&signal);

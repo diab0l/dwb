@@ -1,136 +1,150 @@
 (function () {
-        var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
-        var prefixFile        = "\n==> DEBUG [FILE]       : ";
-        var prefixError       = "\n==> DEBUG [ERROR]      : ";
-        var prefixStack       = "\n==> DEBUG [STACK]      : ";
-        var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
-        var prefixCaller      = "\n==> DEBUG [CALLER]";
-        var prefixSource      = "\n==> DEBUG [SOURCE]\n";
-        var prefixFunction = "\n------>";
-        var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
-        var prefixEditor    = "    ";
-        var prefixHighlight = "--> ";
-        var _formatLine = function(max, line) 
+    var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
+    var prefixFile        = "\n==> DEBUG [FILE]       : ";
+    var prefixError       = "\n==> DEBUG [ERROR]      : ";
+    var prefixStack       = "\n==> DEBUG [STACK]      : ";
+    var prefixArguments   = "\n==> DEBUG [ARGUMENTS]  : ";
+    var prefixCaller      = "\n==> DEBUG [CALLER]";
+    var prefixSource      = "\n==> DEBUG [SOURCE]\n";
+    var prefixFunction = "\n------>";
+    var regHasDwb = new RegExp("[^]*/\\*<dwb\\*/([^]*)/\\*dwb>\\*/[^]*");
+    var prefixEditor    = "    ";
+    var prefixHighlight = "--> ";
+    var _formatLine = function(max, line) 
+    {
+            var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
+            return Array(size).join(" ") + line + " > ";
+    };
+
+    /**
+     * Prints a debug messsage and the callstack to stderr
+     *
+     * @name debug 
+     * @memberOf io
+     * @function
+     * @type void 
+     *
+     * @param {Object} detail Message details
+     * @param {String} detail.message A message
+     * @param {Error} detail.error    A javascript Error object
+     * @param {Error} detail.arguments    Arguments, only useful for the
+     *                                    internal api 
+     * */
+    Object.defineProperties(io, {
+        "debug" : 
         {
-                var size = max - Math.ceil(Math.log(line+1)/Math.log(10)) + 1; 
-                return Array(size).join(" ") + line + " > ";
-        };
-
-        Object.defineProperties(io, {
-            "debug" : 
+            value : function (params) 
             {
-                value : function (params) 
+                if (typeof params == "function" && this._arguments)
+                    return params.bind(this);
+                var outMessage = new String();
+                params = params || {};
+                var offset = params.offset || 0;
+                var error, message;
+                var line = -1;
+                var showLine;
+                var caller, source;
+                var stack;
+
+                if (typeof params == "string")
+                    message = params;
+                else if (params instanceof Error)
+                    error = params;
+                else 
                 {
-                    if (typeof params == "function" && this._arguments)
-                        return params.bind(this);
-                    var outMessage = new String();
-                    params = params || {};
-                    var offset = params.offset || 0;
-                    var error, message;
-                    var line = -1;
-                    var showLine;
-                    var caller, source;
-                    var stack;
+                    if (params.message) 
+                        message = params.message;
+                    if (params.error instanceof Error)
+                        error = params.error;
+                }
 
-                    if (typeof params == "string")
-                        message = params;
-                    else if (params instanceof Error)
-                        error = params;
+                if (this.path) 
+                    outMessage += prefixFile + this.path;
+                if (message)
+                    outMessage += prefixMessage + message;
+
+                if (error)
+                {
+                    if (error.line || error.line === 0)
+                        line = showLine = error.line;
                     else 
-                    {
-                        if (params.message) 
-                            message = params.message;
-                        if (params.error instanceof Error)
-                            error = params.error;
-                    }
-
-                    if (this.path) 
-                        outMessage += prefixFile + this.path;
-                    if (message)
-                        outMessage += prefixMessage + message;
-
-                    if (error)
-                    {
-                        if (error.line || error.line === 0)
-                            line = showLine = error.line;
-                        else 
-                            showLine = "?";
-                        if (!error.stack) 
-                        {
-                            try 
-                            {
-                                throw new Error(error.message);
-                            }
-                            catch(e) 
-                            { 
-                                error = e;
-                            }
-                            offset += 1;
-                        }
-                        outMessage += prefixError + "Error in line " + showLine + ": " + error.message;
-                        stack = "[" + error.stack.match(/[^\n]+/g).slice(offset).join("] [")+"]"; 
-                    }
-                    else 
+                        showLine = "?";
+                    if (!error.stack) 
                     {
                         try 
                         {
-                            throw new Error();
+                            throw new Error(error.message);
                         }
                         catch(e) 
-                        {
-                            stack =  "[" + e.stack.match(/[^\n]+/g).slice(offset + 2).join("] [")+"]"; 
+                        { 
+                            error = e;
                         }
+                        offset += 1;
                     }
-                    if (stack) 
+                    outMessage += prefixError + "Error in line " + showLine + ": " + error.message;
+                    stack = "[" + error.stack.match(/[^\n]+/g).slice(offset).join("] [")+"]"; 
+                }
+                else 
+                {
+                    try 
                     {
-                        outMessage += prefixStack + stack;
+                        throw new Error();
                     }
-
-                    if (this._arguments && line >= 0)
+                    catch(e) 
                     {
-                        caller = String(this._arguments.callee).replace(regHasDwb, "$1", "");
-                        source = caller.split("\n");
-                        var length = source.length;
-                        var formatLine = _formatLine.bind(null, Math.ceil(Math.log(source.length+1)/Math.log(10)));
-
-                        outMessage += prefixSource;
-                        if (length >= line-2 && line-2 >= 0)
-                        {
-                            if (line > 2)
-                                outMessage += prefixEditor + "...\n";
-                            else 
-                                outMessage += prefixEditor + "BOF\n";
-                            outMessage += prefixEditor + formatLine(line-1) +  source[line-2] + "\n";
-                        }
-                        else 
-                            outMessage += prefixEditor + "BOF\n";
-                        if (length > line-1)
-                            outMessage += prefixHighlight + formatLine(line) + source[line-1] + "\n";
-                        if (length > line && length != line+1) 
-                        {
-                            outMessage += prefixEditor + formatLine(line+1) + source[line];
-                            if (length > line + 2)
-                                outMessage += "\n" + prefixEditor + "...";
-                            else 
-                                outMessage += "\n" + prefixEditor + "EOF";
-                        }
-                        else 
-                            outMessage += prefixEditor + "EOF";
+                        stack =  "[" + e.stack.match(/[^\n]+/g).slice(offset + 2).join("] [")+"]"; 
                     }
-                    else if (params.arguments) 
-                    {
-                        outMessage += prefixArguments + JSON.stringify(params.arguments);
-                        caller = String(params.arguments.callee.caller);
-                        outMessage += prefixCaller;
-                        outMessage += prefixFunction + "\n";
-                        outMessage += caller.replace(regHasDwb, "$1").replace(/\n/gm, "\n  ");
-                        outMessage += prefixFunction;
-                    }
-                    io.print(outMessage + "\n", "stderr");
-                    return undefined;
+                }
+                if (stack) 
+                {
+                    outMessage += prefixStack + stack;
                 }
 
+                if (this._arguments && line >= 0)
+                {
+                    caller = String(this._arguments.callee).replace(regHasDwb, "$1", "");
+                    source = caller.split("\n");
+                    var length = source.length;
+                    var formatLine = _formatLine.bind(null, Math.ceil(Math.log(source.length+1)/Math.log(10)));
+
+                    outMessage += prefixSource;
+                    if (length >= line-2 && line-2 >= 0)
+                    {
+                        if (line > 2)
+                            outMessage += prefixEditor + "...\n";
+                        else 
+                            outMessage += prefixEditor + "BOF\n";
+                        outMessage += prefixEditor + formatLine(line-1) +  source[line-2] + "\n";
+                    }
+                    else 
+                        outMessage += prefixEditor + "BOF\n";
+                    if (length > line-1)
+                        outMessage += prefixHighlight + formatLine(line) + source[line-1] + "\n";
+                    if (length > line && length != line+1) 
+                    {
+                        outMessage += prefixEditor + formatLine(line+1) + source[line];
+                        if (length > line + 2)
+                            outMessage += "\n" + prefixEditor + "...";
+                        else 
+                            outMessage += "\n" + prefixEditor + "EOF";
+                    }
+                    else 
+                        outMessage += prefixEditor + "EOF";
+                }
+                else if (params.arguments) 
+                {
+                    outMessage += prefixArguments + JSON.stringify(params.arguments);
+                    caller = String(params.arguments.callee.caller);
+                    outMessage += prefixCaller;
+                    outMessage += prefixFunction + "\n";
+                    outMessage += caller.replace(regHasDwb, "$1").replace(/\n/gm, "\n  ");
+                    outMessage += prefixFunction;
+                }
+                io.print(outMessage + "\n", "stderr");
+                return undefined;
             }
-        });
+
+        }
+    });
 })();
 //Object.freeze(io);

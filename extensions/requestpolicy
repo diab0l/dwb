@@ -275,7 +275,7 @@ function showMenu()
         });
     }
 
-    tabComplete("Requestpolicy:", labels, function (response) {
+    util.tabComplete("Requestpolicy:", labels, function (response) {
         var i, l, len;
         for (i=0, len = labels.length; i<len; ++i) 
         {
@@ -307,7 +307,7 @@ function unblockCurrent()
     }
     if (labels.length > 0) 
     {
-        tabComplete("Unblock:", labels, function(response) {
+        util.tabComplete("Unblock:", labels, function(response) {
             listRemove(persistentList, "_alwaysBlock", response, true);
             if (config.autoreload) 
                 tabs.current.reload();
@@ -331,7 +331,7 @@ function unblockAll()
 
     if (labels.length > 0) 
     {
-        tabComplete("Unblock:", labels, function(response) {
+        util.tabComplete("Unblock:", labels, function(response) {
             listRemove(persistentList, "_alwaysBlock", response, true);
             if (config.autoreload) 
                 tabs.current.reload();
@@ -362,10 +362,10 @@ var resourceCB = (function ()
             return false;
 
         if (message.firstParty) 
-            firstParty = util.domainFromHost(message.firstParty.host);
+            firstParty = net.domainFromHost(message.firstParty.host);
         else 
             firstParty = wv.mainFrame.domain;
-        domain = util.domainFromHost(message.uri.host);
+        domain = net.domainFromHost(message.uri.host);
         if (firstParty == domain)
             return false;
 

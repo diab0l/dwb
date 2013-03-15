@@ -303,6 +303,24 @@ download_status_cb(WebKitDownload *download, GParamSpec *p, DwbDownloadStatus *d
     gboolean script_handled = false;
     if (EMIT_SCRIPT(DOWNLOAD_STATUS)) 
     {
+        /**
+         * Emitted when the status of a download handled by dwb changes.
+         * @event  downloadStatus
+         * @memberOf signals
+         * @param {signals~onDownloadStatus} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called when the download status changes
+         * @callback signals~onDownloadStatus
+         *
+         * @param {WebKitDownload} download   The download
+         *
+         * @returns {Boolean} 
+         *      Return true to stop dwb from handling the download when the
+         *      download has finished
+         * */
         ScriptSignal signal = { .jsobj = NULL, { G_OBJECT(download) }, SCRIPTS_SIG_META(NULL, DOWNLOAD_STATUS, 1) };
         script_handled = scripts_emit(&signal);
     }
@@ -450,6 +468,35 @@ download_start(const char *path)
 
     if (EMIT_SCRIPT(DOWNLOAD_START)) 
     {
+        /**
+         * Emitted before a download starts, after the user has chosen a path or
+         * application
+         * @event  downloadStart
+         * @memberOf signals
+         * @param {signals~onDownloadStart} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called when the download status changes
+         * @callback signals~onDownloadStart
+         *
+         * @param {WebKitDownload} download   The download
+         * @param {Object} data   
+         * @param {String} data.application 
+         *      The application that will be spawned when the download has
+         *      finished or <i>null</i> if no application will be spawned.
+         * @param {String} data.destinationUri 
+         *      The destination uri of the download or <i>null</i> if an
+         *      application is spawned when the download has finished
+         * @param {String} data.mimeType 
+         *      The mimetype of the download
+         * @param {String} data.referer 
+         *      The referer
+         *
+         * @returns {Boolean} 
+         *      Return true to stop dwb from handling the download 
+         * */
         if (dwb.state.dl_action == DL_ACTION_EXECUTE) 
         {
             json = util_create_json(4, 
