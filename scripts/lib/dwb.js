@@ -201,54 +201,101 @@
                     _applyRequired(names, callback);
             }
         },
+        /**
+         * @name timerStart
+         * @function
+         * @deprecated use {@link timer.start} 
+         * */
         "timerStart" :
         {
             value : function() 
             {
-                return _deprecated("timerStart", "timer.start", timer.start, arguments);
+                return _deprecated("timerStart", "timer.start", arguments);
             }
         },
+        /**
+         * @name timerStop
+         * @function
+         * @deprecated use {@link timer.stop} 
+         * */
         "timerStop" :
         {
             value : function() 
             {
-                return _deprecated("timerStop", "timer.stop", timer.stop, arguments);
+                return _deprecated("timerStop", "timer.stop", arguments);
             }
         },
+        /**
+         * @name tabComplete
+         * @function
+         * @deprecated use {@link util.tabComplete} 
+         * */
+        "tabComplete" :
+        {
+            value : function() 
+            {
+                return _deprecated("tabComplete", "util.tabComplete", arguments);
+            }
+        },
+        /**
+         * @name domainFromHost
+         * @function
+         * @deprecated use {@link net.domainFromHost} 
+         * */
         "domainFromHost" :
         {
             value : function() 
             {
-                return _deprecated("domainFromHost", "net.domainFromHost", net.domainFromHost, arguments);
+                return _deprecated("domainFromHost", "net.domainFromHost", arguments);
             }
         },
+        /**
+         * @name checksum
+         * @function
+         * @deprecated use {@link util.checksum} 
+         * */
         "checksum" :
         {
             value : function() 
             {
-                return _deprecated("checksum", "util.checksum", util.checksum, arguments);
+                return _deprecated("checksum", "util.checksum", arguments);
             }
         },
+        /**
+         * @name sendRequest
+         * @function
+         * @deprecated use {@link net.sendRequest} 
+         * */
         "sendRequest" :
         {
             value : function() 
             {
-                return _deprecated("sendRequest", "net.sendRequest", net.sendRequest, arguments);
+                return _deprecated("sendRequest", "net.sendRequest", arguments);
             }
         },
+        /**
+         * @name sendRequestSync
+         * @function
+         * @deprecated use {@link net.sendRequestSync} 
+         * */
         "sendRequestSync" :
         {
             value : function() 
             {
-                return _deprecated("sendRequestSync", "net.sendRequestSync", net.sendRequest, arguments);
+                return _deprecated("sendRequestSync", "net.sendRequestSync", arguments);
             }
         },
         "_deprecated" : 
         {
-            value : function(on, nn, func, args) 
+            value : function(on, nn, args) 
             {
-                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + " is deprecated, use " + nn + " instead!");
-                return func.apply(this, args);
+                var i, l, ns, ctx;
+                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
+                ns = nn.split(".");
+                ctx = this;
+                for (i=0, l=ns.length; i<l-1; i++)
+                    ctx = ctx[ns[i]];
+                return ctx[ns[l-1]].apply(this, args);
             }
         },
         "_initNewContext" : 
