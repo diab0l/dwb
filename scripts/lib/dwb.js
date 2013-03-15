@@ -201,6 +201,56 @@
                     _applyRequired(names, callback);
             }
         },
+        "timerStart" :
+        {
+            value : function() 
+            {
+                return _deprecated("timerStart", "timer.start", timer.start, arguments);
+            }
+        },
+        "timerStop" :
+        {
+            value : function() 
+            {
+                return _deprecated("timerStop", "timer.stop", timer.stop, arguments);
+            }
+        },
+        "domainFromHost" :
+        {
+            value : function() 
+            {
+                return _deprecated("domainFromHost", "net.domainFromHost", net.domainFromHost, arguments);
+            }
+        },
+        "checksum" :
+        {
+            value : function() 
+            {
+                return _deprecated("checksum", "util.checksum", util.checksum, arguments);
+            }
+        },
+        "sendRequest" :
+        {
+            value : function() 
+            {
+                return _deprecated("sendRequest", "net.sendRequest", net.sendRequest, arguments);
+            }
+        },
+        "sendRequestSync" :
+        {
+            value : function() 
+            {
+                return _deprecated("sendRequestSync", "net.sendRequestSync", net.sendRequest, arguments);
+            }
+        },
+        "_deprecated" : 
+        {
+            value : function(on, nn, func, args) 
+            {
+                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + " is deprecated, use " + nn + " instead!");
+                return func.apply(this, args);
+            }
+        },
         "_initNewContext" : 
         {
             value : (function() {

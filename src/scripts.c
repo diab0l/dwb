@@ -1858,7 +1858,7 @@ set_request(JSContextRef ctx, SoupMessage *msg, JSValueRef val, JSValueRef *exc)
 static JSValueRef 
 net_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    gboolean success = false;
+    gboolean ret = -1;
     char *method = NULL, *uri = NULL;
     SoupMessage *msg;
     JSObjectRef function;
@@ -1884,12 +1884,12 @@ net_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t
 
     JSValueProtect(ctx, function);
     soup_session_queue_message(webkit_get_default_session(), msg, (SoupSessionCallback)request_callback, function);
-    success = true;
+    ret = 0;
 
 error_out: 
     g_free(uri);
     g_free(method);
-    return JSValueMakeBoolean(ctx, success);
+    return JSValueMakeNumber(ctx, ret);
 }/*}}}*/
 
 /** 
