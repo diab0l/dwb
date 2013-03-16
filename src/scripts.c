@@ -124,6 +124,7 @@ static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_TAB_BUTTON_PRESS, "tabButtonPress" },
     { SCRIPTS_SIG_CHANGE_MODE, "changeMode" },
     { SCRIPTS_SIG_EXECUTE_COMMAND, "executeCommand" },
+    { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
     { 0, NULL },
 };
 
@@ -159,6 +160,7 @@ static JSClassRef s_gobject_class,
                   s_download_class, 
                   s_download_class, 
                   s_widget_class, 
+                  s_menu_class, 
                   s_secure_widget_class, 
                   s_message_class, 
                   s_deferred_class, 
@@ -340,7 +342,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
         fprintf(stderr, "    %s\n", line < 3 ? "BOF" : "...");
         for (int i=MAX(line-2, 0); lines[i] != NULL && i < line + 1; i++)
             fprintf(stderr, "%s %d > %s\n", i == line-1 ? "-->" : "   ", i+ ((int) debug), lines[i]);
-        fprintf(stderr, "    %s\n", line + 2 >= g_strv_length(lines) ? "EOF" : "...");
+        fprintf(stderr, "    %s\n", line + 2 >= (int)g_strv_length(lines) ? "EOF" : "...");
 
         g_strfreev(lines);
     }
@@ -1942,22 +1944,6 @@ net_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
     JSStringRelease(js_key);
     return o;
 }
-void 
-scripts_completion_activate(void) 
-{
-    if (!TRY_CONTEXT_LOCK) 
-        return;
-
-    if (s_global_context != NULL)
-    {
-        const char *text = GET_TEXT();
-        JSValueRef val[] = { js_char_to_value(s_global_context, text) };
-        call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
-        completion_clean_completion(false);
-        dwb_change_mode(NORMAL_MODE, true);
-    }
-    CONTEXT_UNLOCK;
-}
 /* timeout_callback {{{*/
 /**
  * @callback timer~startCallback
@@ -2089,11 +2075,11 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc
  * @name domainFromHost 
  * @memberOf net
  * @function
- * @type String
  *
  * @param {String} hostname A hostname
  *
- * @returns The effective second level domain
+ * @returns {String} 
+ *      The effective second level domain
  *
  * */
 static JSValueRef 
@@ -2113,17 +2099,44 @@ net_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, si
     g_free(host);
     return ret;
 }/*}}}*//*}}}*/
+/**
+ * Callback that will be called when <i>Return</i> was pressed after {@link util.tabComplete} was invoked.
+ *
+ * @callback util~onTabComplete 
+ *
+ * @param {String} text Text from the textentry. 
+ * */
+void 
+scripts_completion_activate(void) 
+{
+    if (!TRY_CONTEXT_LOCK) 
+        return;
+
+    if (s_global_context != NULL)
+    {
+        const char *text = GET_TEXT();
+        JSValueRef val[] = { js_char_to_value(s_global_context, text) };
+        call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
+        completion_clean_completion(false);
+        dwb_change_mode(NORMAL_MODE, true);
+    }
+    CONTEXT_UNLOCK;
+}
 /** 
  * Initializes tab completion.
  * @name tabComplete
  * @memberOf util
  * @function
  * 
- * @param {String} label The command line label
- * @param {Object} items An array of objects, each object can have 2 properties,
- *                       left which will be the left completion label and right
- *                       which will be the right completion label.
- * @param {Function} callback Callback function, the first argument will be the
+ * @param {String} label 
+ *      The command line label
+ * @param {Array[Object]} items[] 
+ *      An array of labels, 
+ * @param {String} items[].left
+ *      Left completion label
+ * @param {String} items[].right
+ *      Right completion label
+ * @param {util~onTabComplete} callback Callback function, the first argument will be the
  *                            returned string from the url bar.
  * @param {Boolean} [readonly] Whether the items are readonly, default false 
  *
@@ -2194,9 +2207,10 @@ error_out:
  * @name markupEscape 
  * @memberOf util 
  * @function
- * @type String
  *
- * @returns The escaped text or null
+ * @param {String} text The text to escape
+ *
+ * @returns {String} The escaped text or null
  *
  * */
 static JSValueRef 
@@ -2226,11 +2240,10 @@ sutil_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
  * @name checksum 
  * @memberOf util
  * @function
- * @type Boolean
  *
  * @param {String} data The data 
  * @param {ChecksumType} [type] The {@link Enums and Flags.ChecksumType|ChecksumType}, defaults to sha256
- * @returns Whether the shortcut was unbound
+ * @returns {Boolean} Whether the shortcut was unbound
  *
  * */
 static JSValueRef 
@@ -2274,9 +2287,8 @@ error_out:
  * @name getMode 
  * @memberOf util 
  * @function 
- * @type Modes
  *
- * @returns The current mode
+ * @returns {Enums and Flags.Modes} The current mode
  * */
 static JSValueRef 
 sutil_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2290,11 +2302,10 @@ sutil_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @name getBody
  * @memberOf util
  * @function 
- * @type String
  * 
  * @param {Function} function A function
  *
- * @returns The body of the function
+ * @returns {String} The body of the function
  * */
 static JSValueRef 
 sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2317,13 +2328,12 @@ sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @name dispatchEvent
  * @memberOf util
  * @function 
- * @type Boolean
  * 
  * @param {KeyEvent} event 
  * @param {Modifier} modifier Modifier state bitmask
  * @param {Keyval} keyval The key that was pressed
  *
- * @returns Whether the key was dispatched
+ * @returns {Boolean} Whether the key was dispatched
  * */
 static JSValueRef 
 sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2363,7 +2373,6 @@ atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     double type = JSValueToNumber(ctx, val, exc);
     if (isnan(type))
         return NULL;
-    printf("%f %d\n", type, (int)type);
     if ((int)type == SELECTION_PRIMARY)
         return GDK_SELECTION_PRIMARY;
     else if ((int)type == SELECTION_CLIPBOARD)
@@ -2388,8 +2397,9 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
         return UNDEFINED;
     GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
     if (atom == NULL)
-        return UNDEFINED;
+        atom = GDK_NONE;
     char *text = js_value_to_char(ctx, argv[1], -1, exc);
+    puts(text);
     if (text != NULL)
     {
         GtkClipboard *cb = gtk_clipboard_get(atom);
@@ -2683,7 +2693,7 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnChannel *sc)
                             r = write(sc->infd, "\n", 1);
 
                         }
-                        if (r == -1) 
+                        if ((int)r == -1) 
                         {
                             fputs("Error cannot write to stdin", stderr);
                             close(sc->infd);
@@ -3488,6 +3498,141 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
     }
     return JSValueToObject(ctx, NIL, NULL);
 }
+/**
+ * Called when a menu item was activated that was added to the popup menu,
+ * <i>this</i> will refer to the GtkMenuItem.
+ *
+ * @callback GtkMenu~onMenuActivate
+ * */
+static void 
+menu_callback(GtkMenuItem *item, JSObjectRef callback)
+{
+    if (!TRY_CONTEXT_LOCK)
+        return;
+    if (s_global_context != NULL)
+    {
+        JSObjectRef this =  make_object_for_class(s_global_context, s_widget_class, G_OBJECT(item), true);
+        call_as_function_debug(s_global_context, callback, this, 0, NULL);
+    }
+    CONTEXT_UNLOCK;
+}
+/**
+ * Add menu items to the menu
+ *
+ * @name addItems
+ * @memberOf GtkMenu.prototype
+ * @function 
+ *
+ * @param {Array} items[] 
+ *      Array of menu items and callbacks, if an item is <i>null</i> or label or
+ *      callback is omitted it will be a separator
+ * @param {GtkMenu~onMenuActivate} [items[].callback] 
+ *      Callback called when the item is clicked, if omitted it will be a
+ *      separator
+ * @param {String} [items[].label] 
+ *      Label of the item, if omitted it will be a separator
+ * @param {Number} [items[].position] 
+ *      Position of the item or separator starting at 0, if omitted it will be appended
+ *
+ * @example 
+ * signals.connect("contextMenu", function(wv, menu) {
+ *      menu.addItems([
+ *          // append separator
+ *          null, 
+ *          // append a menu item
+ *          { 
+ *              label : "Copy current url", 
+ *              callback : function() 
+ *              {
+ *                  clipboard.set(Selection.clipboard, wv.url);
+ *                  io.notify(this.label + " was activated");
+ *              }
+ *          }
+ *      ]);
+ * });
+ *
+ * */
+static JSValueRef 
+menu_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSObjectRef arg, o;
+    JSValueRef current, label_value, callback_value;
+    if (argc == 0 || (arg = JSValueToObject(ctx, argv[0], exc)) == NULL )
+        return UNDEFINED;
+
+    double p;
+    int position = -1;
+    JSObjectRef callback;
+    char *label = NULL;
+    GtkWidget *item;
+
+    if(TRY_CONTEXT_LOCK) 
+    {
+        GtkMenu *menu = JSObjectGetPrivate(this);
+        if (menu)
+        {
+            JSStringRef str_position = JSStringCreateWithUTF8CString("position");
+            JSStringRef str_label = JSStringCreateWithUTF8CString("label");
+            JSStringRef str_callback = JSStringCreateWithUTF8CString("callback");
+
+            js_array_iterator iter;
+            js_array_iterator_init(ctx, &iter, arg);
+            while ((current = js_array_iterator_next(&iter, exc)) != NULL)
+            {
+                if (JSValueIsNull(ctx, current))
+                {
+                    item = gtk_separator_menu_item_new();
+                    goto create;
+                }
+                    
+                o = JSValueToObject(ctx, current, exc);
+                if (o == NULL)
+                    continue;
+                if (JSObjectHasProperty(ctx, o, str_position))
+                {
+                    current = JSObjectGetProperty(ctx, o, str_position, exc);
+                    p = JSValueToNumber(ctx, current, exc);
+                    if (isnan(p))
+                        position = -1;
+                    else 
+                        position = (int) p;
+                }
+                if (JSObjectHasProperty(ctx, o, str_label) && JSObjectHasProperty(ctx, o, str_callback))
+                {
+                    label_value = JSObjectGetProperty(ctx, o, str_label, exc);
+                    label = js_value_to_char(ctx, label_value, -1, exc);
+                    if (label == NULL)
+                        goto error;
+                    callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
+                    callback = js_value_to_function(ctx, callback_value, exc);
+                    if (callback == NULL)
+                        goto error;
+                    item = gtk_menu_item_new_with_label(label);
+                    g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
+                }
+                else 
+                {
+                    item = gtk_separator_menu_item_new();
+                }
+create: 
+                gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+                if (position != -1)
+                    gtk_menu_reorder_child(menu, item, position);
+                gtk_widget_show(item);
+error:
+                g_free(label);
+            }
+            js_array_iterator_finish(&iter);
+
+            JSStringRelease(str_position);
+            JSStringRelease(str_label);
+            JSStringRelease(str_callback);
+        }
+        CONTEXT_UNLOCK;
+    }
+    return UNDEFINED;
+
+}
 
 /* DOWNLOAD {{{*/
 /* download_constructor_cb {{{*/
@@ -3760,6 +3905,7 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
 gboolean
 scripts_emit(ScriptSignal *sig) 
 {
+    int numargs, i, additional = 0;
     gboolean ret = false;
     JSObjectRef function = s_sig_objects[sig->signal];
     if (function == NULL)
@@ -3770,10 +3916,16 @@ scripts_emit(ScriptSignal *sig)
 
     if (s_global_context != NULL) 
     {
-        int additional = sig->jsobj != NULL ? 2 : 1;
-        int numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
+        if (sig->jsobj != NULL)
+            additional++;
+        if (sig->json != NULL)
+            additional++;
+        if (sig->arg != NULL)
+            additional++;
+
+        numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
         JSValueRef val[numargs];
-        int i = 0;
+        i = 0;
 
         if (sig->jsobj != NULL) 
             val[i++] = sig->jsobj;
@@ -3786,8 +3938,21 @@ scripts_emit(ScriptSignal *sig)
                 val[i++] = NIL;
         }
 
-        JSValueRef vson = js_json_to_value(s_global_context, sig->json);
-        val[i++] = vson == NULL ? NIL : vson;
+        if (sig->json != NULL)
+        {
+            JSValueRef vson = js_json_to_value(s_global_context, sig->json);
+            val[i++] = vson == NULL ? NIL : vson;
+        }
+        if (sig->arg != NULL)
+        {
+            switch (sig->arg->n)
+            {
+                case BOOLEAN : val[i++] = JSValueMakeBoolean(s_global_context, sig->arg->b); break;
+                case INTEGER : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->i); break;
+                case DOUBLE  : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->d); break;
+                case CHAR    : val[i++] = js_char_to_value(s_global_context, sig->arg->p); break;
+            }
+        }
 
         JSValueRef js_ret = call_as_function_debug(s_global_context, function, function, numargs, val);
 
@@ -3854,6 +4019,8 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_message_class;
     else if (WEBKIT_IS_WEB_BACK_FORWARD_LIST(o))
         class = s_history_class;
+    else if (GTK_IS_MENU(o))
+        class = s_menu_class;
     else if (GTK_IS_WIDGET(o))
         class = s_secure_widget_class;
     else 
@@ -3975,7 +4142,6 @@ notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
         return;
     if (s_global_context != NULL)
     {
-        //JSValueRef argv[] = { make_object(s_global_context, o) };
         call_as_function_debug(s_global_context, func, make_object(s_global_context, o), 0, NULL);
     }
     CONTEXT_UNLOCK;
@@ -3984,9 +4150,10 @@ notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
  * Connect to a GObject-signal. Note that all signals are connected using the
  * signal::- or with notify::-prefix. If connecting to a signal the
  * signal::-prefix must be omitted. The callback function will have the same
- * parameters as the GObject signal callback, however some parameters may be
- * undefined if they cannot be converted to javascript objects. All signal
- * handlers are executed after dwb’s default handler.
+ * parameters as the GObject signal callback without the first parameter,
+ * however some parameters may be undefined if they cannot be converted to
+ * javascript objects. All signal handlers are executed after dwb’s default
+ * handler.
  *
  * @memberOf GObject.prototype
  * @name connect 
@@ -4818,6 +4985,23 @@ create_global_object()
     s_widget_class = JSClassCreate(&cd);
     s_constructors[CONSTRUCTOR_WIDGET] = create_constructor(s_global_context, "GtkWidget", s_widget_class, widget_constructor_cb, NULL);
 
+    /**
+     * @class 
+     *      Widget that will be created when a context menu is shown, can be
+     *      used to add custom items to the menu
+     *
+     * @augments GtkWidget 
+     * @name GtkMenu
+     * */
+    JSStaticFunction menu_functions[] = { 
+        { "addItems",                menu_add,       kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "GtkMenu";
+    cd.staticFunctions = menu_functions;
+    cd.parentClass = s_widget_class;
+    s_menu_class = JSClassCreate(&cd);
 
     /** 
      * Static object that holds dwb's GtkWidgets
@@ -5183,6 +5367,7 @@ scripts_end()
         JSClassRelease(s_frame_class);
         JSClassRelease(s_download_class);
         JSClassRelease(s_widget_class);
+        JSClassRelease(s_menu_class);
         JSClassRelease(s_secure_widget_class);
         JSClassRelease(s_message_class);
         JSClassRelease(s_history_class);

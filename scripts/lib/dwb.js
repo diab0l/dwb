@@ -68,7 +68,9 @@
                  *          only match against wildcard <b>*</b> and joker
                  *          <b>?</b> where the wildcard character matches
                  *          any number of unknown characters and the joker
-                 *          matches exactly one unkown character
+                 *          matches exactly one unkown character. Note that
+                 *          internally regular expressions are used, so Glob
+                 *          matching is not faster than RegExp matching.
                  * @constructs Glob
                  *
                  * @param {String} pattern The pattern to match against
@@ -77,7 +79,9 @@
                  * var g = new Glob("foo*ba?baz");
                  * */
                 return function(p) { 
-                    var regex = new RegExp("^" + p.replace(esc, '\\$&').replace(matcher, cnstr) + "$");
+                    var inner = p.replace(esc, '\\$&').replace(matcher, cnstr);
+                    var regex = new RegExp("^" + inner + "$");
+                    var searchPattern = new RegExp(inner);
                     return Object.create(Object.prototype, {
                             /** 
                              * Match against a text
@@ -94,9 +98,55 @@
                              * @param {String} text The text to match
                              *                      against 
                              * @returns {Boolean}
-                             *      Whether the text matches the globs pattern
+                             *      <i>true</i> if the pattern was found
                              * */
                             match : { value : function(string) { return regex.test(string); } }, 
+                            /**
+                             * Searches for the first occurence of the pattern
+                             * in a string and returns the position.
+                             *
+                             * @name search
+                             * @memberOf Glob.prototype
+                             * @function
+                             *
+                             * @param {String} string 
+                             *      The string to search for the pattern 
+                             *
+                             * @returns {Number} 
+                             *      The first occurence or -1 if the pattern was
+                             *      not found
+                             *
+                             * @example 
+                             * var glob = new Glob("l?si*");
+                             * glob.search("Melosine"); // 2
+                             * */
+                            search : { value : function(string) { return string.search(searchPattern); } },
+                            /**
+                             * Searches for the first occurence of the pattern
+                             * in a string and returns the match.
+                             *
+                             * @name exec 
+                             * @memberOf Glob.prototype
+                             * @function 
+                             *
+                             * @param {String} string 
+                             *      The string to search for the pattern 
+                             *
+                             * @returns {String} 
+                             *      The match or <i>null</i> if the pattern
+                             *      wasn't found
+                             * @example 
+                             * var glob = new Glob("l*si?");
+                             * glob.exec("Melosine"); // "losin"
+                             * */
+                            exec : 
+                            { 
+                                value : function(string) 
+                                { 
+                                    var match = searchPattern.exec(string);
+                                    return match ? match[0] : null;
+                                } 
+                            }, 
                             /** 
                              * Converts a glob to string
                              * @name toString

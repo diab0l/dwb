@@ -356,16 +356,16 @@ typedef enum {
 } ShowMessage;
 
 typedef enum { 
-  CHAR        = 0x01,
-  INTEGER     = 0x02,
-  DOUBLE      = 0x03,
-  BOOLEAN     = 0x04,
-  COLOR_CHAR  = 0x05,
-  HTML_STRING = 0x06,
-  ULONG       = 0x07,
-  LONG        = 0x08,
-  UINTEGER    = 0x09,
-  OBJECT      = 0x0A,
+  CHAR        = 1<<0,
+  INTEGER     = 1<<1,
+  DOUBLE      = 1<<2,
+  BOOLEAN     = 1<<3,
+  COLOR_CHAR  = 1<<4,
+  HTML_STRING = 1<<5,
+  ULONG       = 1<<6,
+  LONG        = 1<<7,
+  UINTEGER    = 1<<8,
+  OBJECT      = 1<<9,
 } DwbType;
 
 typedef enum { 
@@ -457,6 +457,7 @@ enum Signal {
   SIG_TAB_BUTTON_PRESS, 
   SIG_POPULATE_POPUP, 
   SIG_FRAME_CREATED, 
+  SIG_CONTEXT_MENU, 
   SIG_AD_LOAD_STATUS,
   SIG_AD_FRAME_CREATED,
   SIG_AD_RESOURCE_REQUEST,

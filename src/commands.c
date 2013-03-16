@@ -55,6 +55,28 @@ commands_simple_command(KeyMap *km, const char *argument)
     {
         completion_clean_autocompletion();
     }
+    /**
+     * Emitted before a command is executed
+     *
+     * @event executeCommand
+     * @memberOf signals
+     * @param {signals~onExecuteCommand} callback
+     *      Callback function that will be called when the signal is emitted
+     * */
+    /**
+     * Callback called before a command is executed
+     * @callback signals~onExecuteCommand
+     * @param {Object}  detail
+     * @param {String}  command 
+     *      The command
+     * @param {String}  argument
+     *      An argument that was used on commandline or <i>null</i>
+     * @param {String}  nummod
+     *      A numerical modifier or -1 if no modifier was used
+     *
+     * @returns {Boolean}
+     *      Return <i>true</i> to prevent the command from being executed
+     * */
     if (EMIT_SCRIPT(EXECUTE_COMMAND))
     {
         char *json = util_create_json(3,

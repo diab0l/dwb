@@ -937,15 +937,25 @@ view_popup_activate_cb(GtkMenuItem *menu, GList *gl)
     }
 }/*}}}*/
 
+void on_destroy(GtkWidget *item)
+{
+    puts("destroy");
+}
 /* view_populate_popup_cb {{{*/
 static void 
-view_populate_popup_cb(WebKitWebView *web, GtkMenu *menu, GList *gl) 
+view_populate_popup_cb(WebKitWebView *web, GtkWidget *menu, GList *gl) 
 {
-  GList *items = gtk_container_get_children(GTK_CONTAINER(menu));
-  for (GList *l = items; l; l=l->next) 
-    g_signal_connect(l->data, "activate", G_CALLBACK(view_popup_activate_cb), gl);
-  
-  g_list_free(items);
+    if (EMIT_SCRIPT(CONTEXT_MENU))
+    {
+        ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(menu) }, 
+            SCRIPTS_SIG_META(NULL, CONTEXT_MENU, 1) };
+        scripts_emit(&signal);
+    }
+    GList *items = gtk_container_get_children(GTK_CONTAINER(menu));
+    for (GList *l = items; l; l=l->next) 
+        g_signal_connect(l->data, "activate", G_CALLBACK(view_popup_activate_cb), gl);
+
+    g_list_free(items);
 }/*}}}*/
 
 /* view_load_status_cb {{{*/

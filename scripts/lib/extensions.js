@@ -21,7 +21,7 @@
  *      used to disconnect from signals/unbind shortcuts, ...
  * @property {Object} [exports]
  *      An object that exports some functionality or the configuration, the
- *      object can retrieved in other scripts with {@link require}
+ *      object can be retrieved in other scripts with {@link require}
  * @property {extensions~onInit} init 
  *      A function that will be called when an extension is loaded
  *
@@ -210,30 +210,16 @@
           }
       },
       /**
-       * Merges the default configuration with the configuration passed to
-       * {@link extensions.load}
-       *
+       * @name getConfig
        * @memberOf extensions
+       * @deprecated use {@link util.mixin}
        * @function
-       *
-       * @param {Object} config 
-       *        The configuration was passed to {@link extensions.load|load}
-       * @param {Object} defaultConfig 
-       *        The default configuration
        * */
       "getConfig" : 
       {
           value : function(c, dc) 
           {
-              var k, config = {};
-              if (c === null || c === undefined)
-                  config =  dc;
-              else
-              {
-                  for (k in dc) 
-                      config[k] = typeof c[k] === typeof dc[k] || c[k] === null ? c[k] : dc[k];
-              }
-              return config;
+              return _deprecated("extensions.getConfig", "util.mixin", arguments);
           }
       }, 
       /**
@@ -314,7 +300,7 @@
                   plugin._name = name;
 
                   if (plugin.defaultConfig) 
-                      extConfig = extensions.getConfig(extConfig, plugin.defaultConfig);
+                      util.mixin(extConfig, plugin.defaultConfig);
 
                   if (plugin.init(extConfig)) 
                   {
