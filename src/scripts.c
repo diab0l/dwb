@@ -2329,7 +2329,7 @@ sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @memberOf util
  * @function 
  * 
- * @param {KeyEvent} event 
+ * @param {Object} event 
  * @param {Modifier} modifier Modifier state bitmask
  * @param {Keyval} keyval The key that was pressed
  *
