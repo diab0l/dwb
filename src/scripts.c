@@ -2452,7 +2452,7 @@ clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
         return NIL;
     GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
     if (atom == NULL)
-        return NIL;
+        atom = GDK_NONE;
     GtkClipboard *clipboard = gtk_clipboard_get(atom);
     if (argc > 1) 
     {
