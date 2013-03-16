@@ -3553,82 +3553,81 @@ menu_callback(GtkMenuItem *item, JSObjectRef callback)
  *
  * */
 static JSValueRef 
-menu_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    JSObjectRef arg, o;
-    JSValueRef current, label_value, callback_value;
+    JSObjectRef arg;
     if (argc == 0 || (arg = JSValueToObject(ctx, argv[0], exc)) == NULL )
         return UNDEFINED;
 
     double p;
     int position = -1;
-    JSObjectRef callback;
     char *label = NULL;
     GtkWidget *item;
 
-    if(TRY_CONTEXT_LOCK) 
+    JSObjectRef callback, o;
+    JSValueRef current, label_value, callback_value;
+
+    GtkMenu *menu = JSObjectGetPrivate(this);
+    if (menu)
     {
-        GtkMenu *menu = JSObjectGetPrivate(this);
-        if (menu)
+        JSStringRef str_position = JSStringCreateWithUTF8CString("position");
+        JSStringRef str_label = JSStringCreateWithUTF8CString("label");
+        JSStringRef str_callback = JSStringCreateWithUTF8CString("callback");
+
+        js_array_iterator iter;
+        js_array_iterator_init(ctx, &iter, arg);
+        while ((current = js_array_iterator_next(&iter, exc)) != NULL)
         {
-            JSStringRef str_position = JSStringCreateWithUTF8CString("position");
-            JSStringRef str_label = JSStringCreateWithUTF8CString("label");
-            JSStringRef str_callback = JSStringCreateWithUTF8CString("callback");
-
-            js_array_iterator iter;
-            js_array_iterator_init(ctx, &iter, arg);
-            while ((current = js_array_iterator_next(&iter, exc)) != NULL)
+            if (JSValueIsNull(ctx, current))
             {
-                if (JSValueIsNull(ctx, current))
-                {
-                    item = gtk_separator_menu_item_new();
-                    goto create;
-                }
-                    
-                o = JSValueToObject(ctx, current, exc);
-                if (o == NULL)
-                    continue;
-                if (JSObjectHasProperty(ctx, o, str_position))
-                {
-                    current = JSObjectGetProperty(ctx, o, str_position, exc);
-                    p = JSValueToNumber(ctx, current, exc);
-                    if (isnan(p))
-                        position = -1;
-                    else 
-                        position = (int) p;
-                }
-                if (JSObjectHasProperty(ctx, o, str_label) && JSObjectHasProperty(ctx, o, str_callback))
-                {
-                    label_value = JSObjectGetProperty(ctx, o, str_label, exc);
-                    label = js_value_to_char(ctx, label_value, -1, exc);
-                    if (label == NULL)
-                        goto error;
-                    callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
-                    callback = js_value_to_function(ctx, callback_value, exc);
-                    if (callback == NULL)
-                        goto error;
-                    item = gtk_menu_item_new_with_label(label);
-                    g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
-                }
-                else 
-                {
-                    item = gtk_separator_menu_item_new();
-                }
-create: 
-                gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-                if (position != -1)
-                    gtk_menu_reorder_child(menu, item, position);
-                gtk_widget_show(item);
-error:
-                g_free(label);
+                item = gtk_separator_menu_item_new();
+                goto create;
             }
-            js_array_iterator_finish(&iter);
 
-            JSStringRelease(str_position);
-            JSStringRelease(str_label);
-            JSStringRelease(str_callback);
+            o = JSValueToObject(ctx, current, exc);
+            if (o == NULL)
+                continue;
+            if (JSObjectHasProperty(ctx, o, str_position))
+            {
+                current = JSObjectGetProperty(ctx, o, str_position, exc);
+                p = JSValueToNumber(ctx, current, exc);
+                if (isnan(p))
+                    position = -1;
+                else 
+                    position = (int) p;
+            }
+            if (JSObjectHasProperty(ctx, o, str_label) && JSObjectHasProperty(ctx, o, str_callback))
+            {
+                label_value = JSObjectGetProperty(ctx, o, str_label, exc);
+                label = js_value_to_char(ctx, label_value, -1, exc);
+                if (label == NULL)
+                    goto error;
+
+                callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
+                callback = js_value_to_function(ctx, callback_value, exc);
+                if (callback == NULL)
+                    goto error;
+
+                item = gtk_menu_item_new_with_label(label);
+                g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
+            }
+            else 
+            {
+                item = gtk_separator_menu_item_new();
+            }
+create: 
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+            if (position != -1)
+                gtk_menu_reorder_child(menu, item, position);
+            gtk_widget_show(item);
+error:
+            g_free(label);
         }
-        CONTEXT_UNLOCK;
+        js_array_iterator_finish(&iter);
+
+        JSStringRelease(str_position);
+        JSStringRelease(str_label);
+        JSStringRelease(str_callback);
     }
     return UNDEFINED;
 
@@ -4994,7 +4993,7 @@ create_global_object()
      * @name GtkMenu
      * */
     JSStaticFunction menu_functions[] = { 
-        { "addItems",                menu_add,       kJSDefaultAttributes },
+        { "addItems",                menu_add_items,       kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     cd = kJSClassDefinitionEmpty;

@@ -410,8 +410,11 @@ js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname_ret, c
 void 
 js_property_iterator_finish(js_property_iterator *iter)
 {
-    JSValueUnprotect(iter->ctx, iter->object);
+    g_return_if_fail(iter != NULL && iter->array != NULL);
     JSPropertyNameArrayRelease(iter->array);
+
+    g_return_if_fail(iter->object != NULL);
+    JSValueUnprotect(iter->ctx, iter->object);
 }
 
 JSObjectRef 
