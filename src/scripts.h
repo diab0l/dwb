@@ -48,6 +48,7 @@ enum SIGNALS {
   SCRIPTS_SIG_TAB_BUTTON_PRESS,
   SCRIPTS_SIG_CHANGE_MODE,
   SCRIPTS_SIG_EXECUTE_COMMAND,
+  SCRIPTS_SIG_CONTEXT_MENU,
   SCRIPTS_SIG_LAST, 
 } ;
 
@@ -59,6 +60,7 @@ typedef struct _ScriptSignal {
   char *json;
   unsigned int signal;
   int numobj;
+  Arg *arg;
 } ScriptSignal;
 
 gboolean scripts_emit(ScriptSignal *);
@@ -90,5 +92,6 @@ G_STMT_END
 G_STMT_END
 
 #define SCRIPTS_WV(gl) .jsobj = (VIEW(gl)->script_wv)
-#define SCRIPTS_SIG_META(js, sig, num)  .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num
+#define SCRIPTS_SIG_META(js, sig, num) .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num, .arg = NULL
+#define SCRIPTS_SIG_ARG(js, sig, num) .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num, 
 #endif

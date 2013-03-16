@@ -1,3 +1,91 @@
+/**
+ * Handles extensions. If scripts should be managed by <b>dwbem</b> they must
+ * be implemented as an extension. In contrast to regular scripts extensions can
+ * be enabled/disabled on the fly without reloading all userscripts.  Every extension must contain two special tags, 
+ * <b>/*&lt;INFO ... INFO&gt;*<span><span>/</b> that will be used by dwbem to find information
+ * about the extension and <b>//&lt;DEFAULT_CONFIG ... //&gt;DEFAULT_CONFIG</b> that
+ * will be used by dwbem to find the default configuration
+ * Every extension must also return an object that can have up to four properties.
+ *
+ *
+ * @namespace 
+ *      Static object that handles extensions
+ * @name extensions 
+ * @static 
+ *
+
+ * @property {Object} [defaultConfig]
+ *      The default configuration, will be passed to extensions.getConfig
+ * @property {extensions~onEnd} end 
+ *      A function that will be called when the extension is unloaded, can be
+ *      used to disconnect from signals/unbind shortcuts, ...
+ * @property {Object} [exports]
+ *      An object that exports some functionality or the configuration, the
+ *      object can be retrieved in other scripts with {@link require}
+ * @property {extensions~onInit} init 
+ *      A function that will be called when an extension is loaded
+ *
+ * @example
+ * // ext:set ft=javascript:
+ *
+ * /*&lt;INFO 
+ * Extension that does some awesome things
+ * INFO&gt;*<span></span>/
+ *
+ * var defaultConfig = { 
+ * //&lt;DEFAULT_CONFIG
+ *      // Foo
+ *      foo : 37, 
+ *      // Shortcut to do some action
+ *      shortcut : "foo"
+ * //&gt;DEFAULT_CONFIG
+ * };
+ *
+ * var myConfig = {};
+ *
+ * function action() {
+ *      ...
+ * } 
+ * function onNavigation() {
+ *      ...
+ * } 
+ * var myExtension = {
+ *      defaultConfig : defaultConfig, 
+ *      exports : {
+ *          action : action
+ *      },
+ *      init : function(config) {
+ *          myConfig = config; 
+ *          bind(config.shortcut, "action"); 
+ *          signals.connect("navigation", onNavigation); 
+ *          return true;
+ *      },
+ *      end : function() {
+ *          signals.disconnect(onNavigation);
+ *          unbind(action);
+ *          return true;
+ *      }
+ * };
+ * return myExtension;
+ *
+ * */
+/**
+ * Called when an extension is unloaded
+ * @callback extensions~onEnd
+ *
+ * @returns {Boolean}
+ *      Return true if the extension was successfully unloaded
+ * */
+/**
+ * Called when an extension is loaded
+ * @callback extensions~onInit
+ *
+ * @param {Object} configuration 
+ *      The configuration passed to {@link extensions.load}
+ * @returns {Boolean}
+ *      Return true if the extension was successfully initialized
+ * */
+
 (function () {
   var _config = {};
   var _registered = {};
@@ -54,6 +142,17 @@
   };
   Object.defineProperties(extensions, 
   { 
+      /**
+       * Print a warning message to stderr
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * @param {String} name 
+       *        Name of the extension
+       * @param {String} message 
+       *        The message to print 
+       * */
       "warning" : 
       {
           value : function (name, message) 
@@ -61,6 +160,17 @@
               io.print("\033[1mDWB EXTENSION WARNING: \033[0mextension  \033[1m" + name + "\033[0m: " + message, "stderr");
           }
       }, 
+      /**
+       * Print an error message to stderr
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * @param {String} name 
+       *        Name of the extension
+       * @param {String} message 
+       *        The message to print 
+       * */
       "error" : 
       {
           value : function (name, a, b) {
@@ -81,6 +191,17 @@
               }
           }
       },
+      /**
+       * Print message to stderr
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * @param {String} name 
+       *        Name of the extension
+       * @param {String} message 
+       *        The message to print 
+       * */
       "message" : 
       {
           value : function (name, message) 
@@ -88,21 +209,32 @@
               io.print("\033[1mDWB EXTENSION: \033[0mextension \033[1m" + name + "\033[0m: " + message, "stderr");
           }
       },
+      /**
+       * @name getConfig
+       * @memberOf extensions
+       * @deprecated use {@link util.mixin}
+       * @function
+       * */
       "getConfig" : 
       {
           value : function(c, dc) 
           {
-              var k, config = {};
-              if (c === null || c === undefined)
-                  config =  dc;
-              else
-              {
-                  for (k in dc) 
-                      config[k] = typeof c[k] === typeof dc[k] || c[k] === null ? c[k] : dc[k];
-              }
-              return config;
+              return _deprecated("extensions.getConfig", "util.mixin", arguments);
           }
       }, 
+      /**
+       * Loads an extension, the default path for an extension is 
+       * <i>{@link data.userDataDir}/extensions/name_of_extension</i> or 
+       * <i>{@link data.systemDataDir}/extensions/name_of_extension</i>
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * @param {String} name 
+       *        The name of the extension
+       * @param {Object} configuration 
+       *        The configuration that will be used for the extension
+       * */
       "load" : 
       {
           value : function(name, c) 
@@ -160,7 +292,7 @@
                   if (plugin === null) 
                   {
                       extensions.error(name, "Couldn't find extension.");
-                      return false;
+                      return null;
                   }
               }
               try 
@@ -168,7 +300,7 @@
                   plugin._name = name;
 
                   if (plugin.defaultConfig) 
-                      extConfig = extensions.getConfig(extConfig, plugin.defaultConfig);
+                      util.mixin(extConfig, plugin.defaultConfig);
 
                   if (plugin.init(extConfig)) 
                   {
@@ -193,6 +325,18 @@
               }
           }
       },
+      /**
+       * Unloads an extension, calls extension.end when the extensions
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * @param {String} name 
+       *        The name of the extension
+       *
+       * @returns {Boolean}
+       *        true if the extension was found and unloaded
+       * */
       "unload" : 
       { 
           value : function(name) 
@@ -200,6 +344,14 @@
               return _unload(name, true);
           }
       }, 
+      /**
+       * Disables all extensions, calls {@link extensions.unload} for every
+       * extension
+       *
+       * @memberOf extensions
+       * @function
+       *
+       * */
       "disableAll" : 
       {
           value : function()
@@ -208,6 +360,21 @@
                   _unload(key, true);
           }
       }, 
+      /**
+       * Toggles an extensions, if it is loaded toggle will unload it, otherwise
+       * it will load it.
+       *
+       * @memberOf extensions
+       * @function
+       * 
+       * @param {String} name 
+       *        Name of the extension
+       * @param {Object} configuration 
+       *        Configuration that will be passed to {@link extensions.load}
+       *
+       * @returns {Boolean}
+       *        true if the extension was loaded, false if it was unloaded
+       * */
       "toggle" : 
       {
           value : function(name, c) 
@@ -224,6 +391,25 @@
               }
           }
       },
+      /**
+       * Binds an extension to a shortcut 
+       *
+       * @memberOf extensions
+       * @function
+       * 
+       * @param {String} name 
+       *        Name of the extension
+       * @param {String} shortcut 
+       *        The shortcut that will be used to toggle the extension
+       * @param {Object} options 
+       * @param {Boolean} options.load
+       *        Whether to initially load the extension 
+       * @param {Boolean} options.config
+       *        The configuration passed to {@link extensions.load}
+       * @param {String} options.command
+       *        Command that can be used from dwb's command line to toggle the
+       *        extension
+       * */
       "bind" : 
       {
           value : function(name, shortcut, options) 

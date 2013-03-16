@@ -124,6 +124,7 @@ static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_TAB_BUTTON_PRESS, "tabButtonPress" },
     { SCRIPTS_SIG_CHANGE_MODE, "changeMode" },
     { SCRIPTS_SIG_EXECUTE_COMMAND, "executeCommand" },
+    { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
     { 0, NULL },
 };
 
@@ -134,6 +135,7 @@ enum {
     CONSTRUCTOR_WIDGET,
     CONSTRUCTOR_FRAME,
     CONSTRUCTOR_SOUP_MESSAGE,
+    CONSTRUCTOR_HISTORY_LIST,
     CONSTRUCTOR_DEFERRED,
     CONSTRUCTOR_HIDDEN_WEB_VIEW,
     CONSTRUCTOR_LAST,
@@ -158,6 +160,7 @@ static JSClassRef s_gobject_class,
                   s_download_class, 
                   s_download_class, 
                   s_widget_class, 
+                  s_menu_class, 
                   s_secure_widget_class, 
                   s_message_class, 
                   s_deferred_class, 
@@ -339,7 +342,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
         fprintf(stderr, "    %s\n", line < 3 ? "BOF" : "...");
         for (int i=MAX(line-2, 0); lines[i] != NULL && i < line + 1; i++)
             fprintf(stderr, "%s %d > %s\n", i == line-1 ? "-->" : "   ", i+ ((int) debug), lines[i]);
-        fprintf(stderr, "    %s\n", line + 2 >= g_strv_length(lines) ? "EOF" : "...");
+        fprintf(stderr, "    %s\n", line + 2 >= (int)g_strv_length(lines) ? "EOF" : "...");
 
         g_strfreev(lines);
     }
@@ -395,6 +398,38 @@ deferred_new(JSContextRef ctx)
 
     return ret;
 }
+/** 
+ * Registers functions for the done and fail chain
+ *
+ * @name then
+ * @memberOf Deferred.prototype
+ * @function
+ *
+ *
+ * @param {Deferred~resolveCallback} ondone
+ *      A callback function that will be called when the deferred is resolved.
+ *      If the function returns a deferred the original deferred will be
+ *      replaced with the new deferred.
+
+ * @param {Deferred~rejectCallback} onfail
+ *      A callback function that will be called when the deferred is rejected.
+ *      If the function returns a deferred the original deferred will be
+ *      replaced with the new deferred.
+ * @returns {Deferred}
+ *      A new deferred that can be used to chain callbacks.
+ * */
+/** 
+ * Called when a Deferred is resolved
+ * @callback Deferred~resolveCallback
+ * @param {...Object} arguments 
+ *      Variable number of arguments passed to Deferred.resolve
+ * */
+/** 
+ * Called when a Deferred is rejected
+ * @callback Deferred~rejectCallback
+ * @param {...Object} arguments 
+ *      Variable number of arguments passed to Deferred.reject
+ * */
 static JSValueRef 
 deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -424,6 +459,15 @@ deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
     deferred_destroy(ctx, old, opriv);
     return npriv;
 }
+/**
+ * Resolves a deferred, the done-chain is called when a deferred is resolved
+ *
+ * @name resolve
+ * @memberOf Deferred.prototype
+ * @function
+ *
+ * @param {...Object} arguments Arguments passed to the <i>done</i> callbacks
+ */
 static JSValueRef 
 deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -451,6 +495,15 @@ deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
     }
     return UNDEFINED;
 }
+/**
+ * Rejects a deferred, the fail-chain is called when a deferred is resolved
+ *
+ * @name reject
+ * @memberOf Deferred.prototype
+ * @function
+ *
+ * @param {...Object} arguments Arguments passed to the <i>fail</i> callbacks
+ */
 static JSValueRef 
 deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -606,6 +659,11 @@ make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *
 }/*}}}*/
 
 /* callback {{{*/
+/** 
+ * @callback WebKitDownload~statusCallback
+ * @param {WebKitDownload} download 
+ *      The download
+ * */
 static void 
 callback(CallbackData *c) 
 {
@@ -630,6 +688,13 @@ callback(CallbackData *c)
 
 /* TABS {{{*/
 /* tabs_current {{{*/
+/**
+ * The currently focused webview
+ *
+ * @name current 
+ * @memberOf tabs
+ * @type WebKitWebView
+ * */
 static JSValueRef 
 tabs_current(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
 {
@@ -640,6 +705,13 @@ tabs_current(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* e
 }/*}}}*/
 
 /* tabs_number {{{*/
+/**
+ * The number of the currently focused webview
+ *
+ * @name number 
+ * @memberOf tabs
+ * @type Number
+ * */
 static JSValueRef 
 tabs_number(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
 {
@@ -647,6 +719,13 @@ tabs_number(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* ex
 }/*}}}*/
 
 /* tabs_length {{{*/
+/**
+ * Total number of tabs
+ *
+ * @name length 
+ * @memberOf tabs
+ * @type Number
+ * */
 static JSValueRef 
 tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
 {
@@ -654,6 +733,17 @@ tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* ex
 }/*}}}*/
 
 /* tabs_get_nth {{{*/
+/** 
+ * Gets the WebKitWebView of the nth tab, counting at 0
+ * @name nth
+ * @memberOf tabs
+ * @function
+ *
+ * @param {Number} number Number of the tab
+ *
+ * @returns {WebKitWebView} 
+ *      The corresponding {@link WebKitWebView}
+ * */
 static JSValueRef 
 tabs_get_nth(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -684,6 +774,13 @@ find_webview(JSObjectRef o)
     return NULL;
 }
 /* wv_status_cb {{{*/
+/** 
+ * Callback that will be called if the load-status changes, return true to stop
+ * the emission
+ *
+ * @callback WebKitWebView#loadUriCallback 
+ * @param {WebKitWebView} wv The webview which loaded the uri
+ * */
 static gboolean 
 wv_status_cb(CallbackData *c) 
 {
@@ -694,6 +791,21 @@ wv_status_cb(CallbackData *c)
 }/*}}}*/
 
 /* wv_load_uri {{{*/
+/**
+ * Load an uri in a webview
+ * @name loadUri
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ *
+ * @param {String} uri 
+ *      The uri to load
+ * @param {WebKitWebView#loadUriCallback} [callback] 
+ *      A callback function that will be called when the load status changes,
+ *      return true to stop the emission
+ *
+ * @returns {Boolean}
+ *      true if the uri was loaded
+ * */
 static JSValueRef 
 wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -716,6 +828,14 @@ wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     return JSValueMakeBoolean(ctx, false);
 }/*}}}*/
 
+/**
+ * Stops any ongoing loading
+ *
+ * @name stopLoading
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ *
+ * */
 static JSValueRef 
 wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -725,6 +845,16 @@ wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
     return UNDEFINED;
 }
 
+/**
+ * Loads a history item, can be used to navigate forward/backwards in history
+ *
+ * @name history
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ *
+ * @param {Number} steps 
+ *      Number of steps, pass a negative value to go back in history
+ * */
 /* wv_history {{{*/
 static JSValueRef 
 wv_history(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -743,6 +873,14 @@ wv_history(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc
     return UNDEFINED;
 }/*}}}*/
 
+/**
+ * Reloads the current site
+ *
+ * @name reload
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ *
+ * */
 /* wv_reload {{{*/
 static JSValueRef 
 wv_reload(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -766,6 +904,28 @@ wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
     return NIL;
 }/*}}}*/
 #if WEBKIT_CHECK_VERSION(1, 10, 0)
+
+/** 
+ * Renders a webview to a png file
+ *
+ * @name toPng
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ * @type Number
+ * @requires webkitgtk >= 1.10
+ *
+ *
+ * @param {String} filename
+ *      The filename for the png.
+ * @param {Number} width
+ *      The width of the png, if width is < 0 and height is > 0 the image will have the same aspect ratio as the original webview, optional.
+ * @param {Number} height
+ *      The height of the png, if height is < 0 and width is > 0 the image will have the same aspect ratio as the original webview, optional, mandatory if width is set.
+ * @param {Boolean} keepAspect
+ *      Whether to keep the ascpect ratio, if set to true the new image will have the same aspect ratio as the original webview, width and height are taken as maximum sizes and must both be > 0, optional.
+ *
+ * @returns A cairo_status_t, 0 on success, -1 if an error occured
+ * */
 static JSValueRef 
 wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -855,6 +1015,13 @@ wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
 }
 #endif
 /* wv_get_main_frame {{{*/
+/** 
+ * The main frame
+ *
+ * @name mainFrame
+ * @memberOf WebKitWebView.prototype
+ * @type WebKitWebFrame
+ * */
 static JSValueRef 
 wv_get_main_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -867,6 +1034,13 @@ wv_get_main_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
     return NIL;
 }/*}}}*/
 
+/** 
+ * The focused frame
+ *
+ * @name focusedFrame
+ * @memberOf WebKitWebView.prototype
+ * @type WebKitWebFrame
+ * */
 /* wv_get_focused_frame {{{*/
 static JSValueRef 
 wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -881,6 +1055,13 @@ wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, 
 }/*}}}*/
 
 /* wv_get_all_frames {{{*/
+/** 
+ * All frames of a webview, including the main frame
+ *
+ * @name allFrames
+ * @memberOf WebKitWebView.prototype
+ * @type Array[WebKitWebFrame]
+ * */
 static JSValueRef 
 wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -899,6 +1080,14 @@ wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
     return JSObjectMakeArray(ctx, argc, argv, exception);
 }/*}}}*/
 
+/** 
+ * The tabnumber of the webview, starting at 0
+ * 
+ * @name number
+ * @memberOf WebKitWebView.prototype
+ * @type Number
+ *
+ * */
 /* wv_get_number {{{*/
 static JSValueRef 
 wv_get_number(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -912,6 +1101,13 @@ wv_get_number(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValue
     return JSValueMakeNumber(ctx, -1); 
 }/*}}}*/
 
+/** 
+ * The main widget for tab labels, used for coloring tabs, child of gui.tabBox.
+ *
+ * @name tabWidget
+ * @memberOf WebKitWebView.prototype
+ * @type GtkEventBox
+ * */
 static JSValueRef 
 wv_get_tab_widget(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -920,6 +1116,13 @@ wv_get_tab_widget(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
         return NIL;
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabevent), true);
 }
+/** 
+ * Horizontal box, child of wv.tabWidget.
+ *
+ * @name tabBox
+ * @memberOf WebKitWebView.prototype
+ * @type GtkBox
+ * */
 static JSValueRef 
 wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -928,6 +1131,13 @@ wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
         return NIL;
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabbox), true);
 }
+/** 
+ * Text label of a tab, child of wv.tabBox.
+ *
+ * @name tabLabel
+ * @memberOf WebKitWebView.prototype
+ * @type GtkLabel
+ * */
 static JSValueRef 
 wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -936,6 +1146,13 @@ wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
         return NIL;
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tablabel), true);
 }
+/** 
+ * Favicon widget, child of wv.tabBox
+ *
+ * @name tabIcon
+ * @memberOf WebKitWebView.prototype
+ * @type GtkImage
+ * */
 static JSValueRef 
 wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -945,6 +1162,13 @@ wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVal
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->tabicon), true);
 }
 
+/** 
+ * The parent widget of every webview, it is used for scrolling the webview
+ *
+ * @name scrolledWindow
+ * @memberOf WebKitWebView.prototype
+ * @type GtkScrolledWindow
+ * */
 static JSValueRef 
 wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -953,6 +1177,13 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
         return NIL;
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(VIEW(gl)->scroll), true);
 }
+/** 
+ * The history of the webview
+ *
+ * @name historyList
+ * @memberOf WebKitWebView.prototype
+ * @type WebKitWebBackForwardList
+ * */
 static JSValueRef 
 wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -966,6 +1197,68 @@ wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, J
 /*}}}*/
 
 /* SOUP_MESSAGE {{{*/
+/** 
+ * A SoupUri
+ *
+ * @class
+ * @name SoupUri
+ * */
+ /**
+  * The scheme part of the uri
+  * @name scheme 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The user part of the uri
+  * @name user 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The password part of the uri
+  * @name password 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The host part of the uri
+  * @name host 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The port of the uri
+  * @name port 
+  * @memberOf SoupUri.prototype 
+  * @type Number
+  * @readonly
+  * */
+ /**
+  * The path part of the uri
+  * @name path
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The query part of the uri
+  * @name query 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
+ /**
+  * The fragment part of the uri
+  * @name fragment 
+  * @memberOf SoupUri.prototype 
+  * @type String
+  * @readonly
+  * */
 static JSValueRef 
 get_soup_uri(JSContextRef ctx, JSObjectRef object, SoupURI * (*func)(SoupMessage *), JSValueRef *exception)
 {
@@ -990,6 +1283,13 @@ get_soup_uri(JSContextRef ctx, JSObjectRef object, SoupURI * (*func)(SoupMessage
 }
 
 /* message_get_uri {{{*/
+/**
+ * The uri of a message
+ *
+ * @name uri
+ * @memberOf SoupMessage.prototype
+ * @type SoupUri
+ * */
 static JSValueRef 
 message_get_uri(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -997,6 +1297,13 @@ message_get_uri(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVal
 }/*}}}*/
 
 /* message_get_first_party {{{*/
+/**
+ * The first party uri of a message
+ *
+ * @name firstParty
+ * @memberOf SoupMessage.prototype
+ * @type SoupUri
+ * */
 static JSValueRef 
 message_get_first_party(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1006,6 +1313,14 @@ message_get_first_party(JSContextRef ctx, JSObjectRef object, JSStringRef js_nam
 
 /* FRAMES {{{*/
 /* frame_get_domain {{{*/
+/** 
+ * The domain name of the frame which is the effective second level domain
+ *
+ * @name domain
+ * @memberOf WebKitWebFrame.prototype
+ * @type String
+ *
+ * */
 static JSValueRef 
 frame_get_domain(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1024,6 +1339,14 @@ frame_get_domain(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
 }/*}}}*/
 
 /* frame_get_host {{{*/
+/** 
+ * The host name of the frame
+ *
+ * @name host
+ * @memberOf WebKitWebFrame.prototype
+ * @type String
+ *
+ * */
 static JSValueRef 
 frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1040,6 +1363,41 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
 }/*}}}*/
 
 /* frame_inject {{{*/
+
+/**
+ * Injects javascript code into a frame or webview 
+ *
+ * @name inject
+ * @memberOf WebKitWebFrame.prototype
+ * @function 
+ * @example 
+ * //!javascript
+ * function injectable() {
+ *    var text = arguments[0];
+ *    document.body.innerHTML = text;
+ * }
+ * signals.connect("documentLoaded", function(wv) {
+ *    wv.inject(injectable, "foo", 3);
+ * });
+ *
+ * @param {String|Function} code
+ *      The script to inject, either a string or a function. If it is a function
+ *      the body will be wrapped inside a new function.
+ * @param {Object} arg
+ *      If the script isn’t injected into the global scope the script is wrapped
+ *      inside a function. arg then is accesible via arguments in the injected
+ *      script, optional
+ * @param {Number} [line]
+ *      Starting line number, useful for debugging. If linenumber is greater
+ *      than 0 error messages will be printed to stderr, optional.
+ * @param {Boolean} [global]
+ *      true to inject it into the global scope, false to encapsulate it in a
+ *      function, default false
+ * @returns {String}
+ *      The return value of the script. If the script is injected globally
+ *      inject always returns null. The return value is always converted to a
+ *      string. To return objects call JSON.parse on the return value.
+ * */
 static JSValueRef 
 frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1054,42 +1412,19 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
 /*}}}*/
 
 /* GLOBAL {{{*/
-/* global_checksum {{{*/
-static JSValueRef 
-global_checksum(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *checksum = NULL;
-    guchar *original = NULL;
-    JSValueRef ret;
-
-    if (argc < 1) 
-        return NIL;
-
-    original = (guchar*)js_value_to_char(ctx, argv[0], -1, exc);
-    if (original == NULL)
-        return NIL;
-
-    GChecksumType type = G_CHECKSUM_SHA256;
-    if (argc > 1) 
-    {
-        type = JSValueToNumber(ctx, argv[1], exc);
-        if (isnan(type)) 
-        {
-            ret = NIL;
-            goto error_out;
-        }
-        type = MIN(MAX(type, G_CHECKSUM_MD5), G_CHECKSUM_SHA256);
-    }
-    checksum = g_compute_checksum_for_data(type, original, -1);
-
-    ret = js_char_to_value(ctx, checksum);
-
-error_out:
-    g_free(original);
-    g_free(checksum);
-    return ret;
-}/*}}}*/
-
+/** 
+ * Callback that will be called when a shortcut or command was invoked that was
+ * bound with {@link bind}
+ *
+ * @callback bindCallback
+ * 
+ * @param {Object} arguments 
+ * @param {Number} arguments.nummod 
+ *      Numerical modifier that was used or -1 if no modifier was used.
+ * @param {Number} [arguments.arg]
+ *      Argument if the callback was invoked from commandline and an argument
+ *      was used on commanline
+ * */
 /* scripts_eval_key {{{*/
 DwbStatus
 scripts_eval_key(KeyMap *m, Arg *arg) 
@@ -1130,6 +1465,17 @@ unbind_free_keymap(JSContextRef ctx, GList *l)
     dwb.keymap = g_list_delete_link(dwb.keymap, l);
 }
 /* global_unbind{{{*/
+/** 
+ * Unbind a shortcut previously bound with <b>bind</b>
+ * @name unbind 
+ * @function
+ *
+ * @param {String|bindCallback} command|callback Either the function or the command
+ *                          passed to {@link bind}
+ * @returns {Boolean}
+ *      Whether the shortcut was unbound
+ *
+ * */
 static JSValueRef 
 global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1165,6 +1511,29 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     return JSValueMakeBoolean(ctx, false);
 }/*}}}*/
 /* global_bind {{{*/
+/** 
+ * Bind a function to a shortcut or commandline command
+ * @name bind 
+ * @function
+ *
+ * @param {String} shortcut 
+ *      A shortcut, the syntax is the same as in dwb:keys, pass <i>null</i> if
+ *      only a commandline command should be bound 
+ * @param {bindCallback} callback 
+ *      A callback function that will be called if the shortcut is pressed or
+ *      the command was executed from commandline
+ * @param {String|OverrideKey} [command|override] 
+ *      A command the can be used on dwb's commandline or an 
+ *      {@link Enums and Flags.OverrideKey|OverrideKey} flag 
+ *
+ * @returns {Boolean}
+ *      true if the shortcut/command was bound
+ * @example 
+ * bind("Control U", function () { 
+ *      execute("tabopen " + tabs.current.uri);
+ * }, "tabopen_current");
+ *
+ * */
 static JSValueRef 
 global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1232,17 +1601,42 @@ error_out:
     return JSValueMakeBoolean(ctx, ret);
 }/*}}}*/
 
+/** 
+ * Refers to the global object
+ * @name global 
+ *
+ * */
 static JSValueRef 
 global_get(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     return JSContextGetGlobalObject(ctx);
 }
+/** 
+ * The webkit session
+ *
+ * @name session 
+ * @type SoupSession
+ *
+ * */
 static JSValueRef 
 global_get_webkit_session(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     return s_soup_session;
 }
 /* global_execute {{{*/
+/** 
+ * Executes a command
+ * @name execute 
+ * @function
+ *
+ * @param {String} name 
+ *      A command, the command syntax is the same as the syntax on dwb's
+ *      commandline
+ *
+ * @returns {Boolean}
+ *      true if execution was successful
+ *
+ * */
 static JSValueRef 
 global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1259,6 +1653,12 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     return JSValueMakeBoolean(ctx, status == STATUS_OK);
 }/*}}}*/
 
+/** 
+ * Exit dwb
+ * @name exit 
+ * @function
+ *
+ * */
 /* global_exit {{{*/
 static JSValueRef 
 global_exit(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1391,6 +1791,18 @@ get_message_data(SoupMessage *msg)
 
     return ret;
 }
+/**
+ * Callback called when a response from a request was retrieved
+ *
+ * @callback net~onResponse
+ *
+ * @param {Object} data 
+ * @param {String} data.body 
+ *      The message body
+ * @param {Object} data.he 
+ *      An object that contains all response headers
+ * @param {SoupMessage} message The soup message
+ * */
 static void
 request_callback(SoupSession *session, SoupMessage *message, JSObjectRef function) 
 {
@@ -1427,11 +1839,28 @@ set_request(JSContextRef ctx, SoupMessage *msg, JSValueRef val, JSValueRef *exc)
     g_free(content_type);
     g_free(body);
 }
-
+/** 
+ * Sends a http-request
+ * @name sendRequest
+ * @memberOf net
+ * @function
+ *
+ * @param {String} uri          
+ *      The uri the request will be sent to.
+ * @param {net~onResponse} callback   
+ *      A callback that will be called when the request is finished
+ * @param {String} [method]     The http request method, default GET
+ * @param {Object} [data]       An object if method is POST
+ * @param {String} data.contentType The content type
+ * @param {String} data.data    The data that will be sent with the request
+ *
+ * @returns {Boolean}
+ *      true if the request was sent
+ * */
 static JSValueRef 
-global_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+net_send_request(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    gint ret = -1;
+    gboolean ret = -1;
     char *method = NULL, *uri = NULL;
     SoupMessage *msg;
     JSObjectRef function;
@@ -1465,8 +1894,21 @@ error_out:
     return JSValueMakeNumber(ctx, ret);
 }/*}}}*/
 
+/** 
+ * Sends a http-request synchronously
+ * @name sendRequestSync
+ * @memberOf net
+ * @function
+ *
+ * @param {String} uri          The uri the request will be sent to.
+ * @param {String} [method]     The http request method, default GET
+ *
+ * @returns {Object}
+ *      Object that contains the response body, the response headers and the
+ *      http status code of the request.  
+ * */
 static JSValueRef 
-global_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+net_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     char *method = NULL, *uri = NULL;
     SoupMessage *msg;
@@ -1502,6 +1944,168 @@ global_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject
     JSStringRelease(js_key);
     return o;
 }
+/* timeout_callback {{{*/
+/**
+ * @callback timer~startCallback
+ * @returns {Boolean}
+ *      Return true to stop the timer
+ * */
+static gboolean
+timeout_callback(JSObjectRef obj) 
+{
+    gboolean ret = false;
+    if (!TRY_CONTEXT_LOCK)
+        return ret;
+
+    if (s_global_context != NULL)
+    {
+        JSValueRef val = call_as_function_debug(s_global_context, obj, obj, 0, NULL);
+        if (val == NULL)
+            ret = false;
+        else 
+            ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
+    }
+    CONTEXT_UNLOCK;
+
+    return ret;
+}/*}}}*/
+
+/* global_timer_stop {{{*/
+/**
+ * Stops a timer started by {@link timerStart}
+ * @name stop 
+ * @memberOf timer
+ * @function
+ * 
+ * @param {Number} id A timer id retrieved from {@link timer.start|start}
+ *
+ * @returns {Boolean}
+ *      true if the timer was stopped
+ * */
+static JSValueRef 
+timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    gdouble sigid;
+    if (argc < 1) 
+    {
+        js_make_exception(ctx, exc, EXCEPTION("timerStop: missing argument."));
+        return JSValueMakeBoolean(ctx, false);
+    }
+    if (!isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
+    {
+        gboolean ret = g_source_remove((int)sigid);
+        GSList *source = g_slist_find(s_timers, GINT_TO_POINTER(sigid));
+        if (source)
+            s_timers = g_slist_delete_link(s_timers, source);
+
+        return JSValueMakeBoolean(ctx, ret);
+    }
+    return JSValueMakeBoolean(ctx, false);
+}/*}}}*/
+
+void 
+timer_stopped_cb(JSObjectRef func)
+{
+    if (!TRY_CONTEXT_LOCK)
+        return;
+
+    if (s_global_context != NULL)
+        JSValueUnprotect(s_global_context, func);
+    CONTEXT_UNLOCK;
+}
+/**
+ * Calls a function reqeatedly or after a timeout, similar to window.setInterval
+ * or window.setTimeout that are available in the webcontext.
+ * @name start 
+ * @memberOf timer
+ * @function
+ * @example 
+ * // equivalent to window.setInterval
+ * timer.start(1000, function() {
+ *      ...
+ * });
+ * // equivalent to window.setTimeout
+ * timer.start(1000, function() {
+ *      ...
+ *      return false;
+ * });
+ * 
+ * @param {Number} interval The interval in milliseconds, the minimum interval
+ *                          is 10 milliseconds
+ * @param {timer~startCallback} callback 
+ *      The callback that will be called, if the callback returns <i>false</i>
+ *      the timer will be stopped
+ *
+ * @returns {Number}
+ *      A timer id that can be passed to {@link timer.stop|stop}
+ * */
+
+/* global_timer_start {{{*/
+static JSValueRef 
+timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 2) 
+    {
+        js_make_exception(ctx, exc, EXCEPTION("timerStart: missing argument."));
+        return JSValueMakeNumber(ctx, -1);
+    }
+    double msec = 10;
+    if (isnan(msec = JSValueToNumber(ctx, argv[0], exc)))
+        return JSValueMakeNumber(ctx, -1);
+
+    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
+    if (func == NULL)
+        return JSValueMakeNumber(ctx, -1);
+
+    JSValueProtect(ctx, func);
+
+    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)timer_stopped_cb);
+    s_timers = g_slist_prepend(s_timers, GINT_TO_POINTER(ret));
+    return JSValueMakeNumber(ctx, ret);
+}/*}}}*/
+/*}}}*/
+
+/* UTIL {{{*/
+/* util_domain_from_host {{{*/
+/**
+ * Gets the base domain name from a hostname where the base domain name is the
+ * effective second level domain name, e.g. for www.example.com it will be
+ * example.com, for www.example.co.uk it will be example.co.uk.
+ *
+ * @name domainFromHost 
+ * @memberOf net
+ * @function
+ *
+ * @param {String} hostname A hostname
+ *
+ * @returns {String} 
+ *      The effective second level domain
+ *
+ * */
+static JSValueRef 
+net_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 1) 
+    {
+        js_make_exception(ctx, exc, EXCEPTION("domainFromHost: missing argument."));
+        return JSValueMakeBoolean(ctx, false);
+    }
+    char *host = js_value_to_char(ctx, argv[0], -1, exc);
+    const char *domain = domain_get_base_for_host(host);
+    if (domain == NULL)
+        return NIL;
+
+    JSValueRef ret = js_char_to_value(ctx, domain);
+    g_free(host);
+    return ret;
+}/*}}}*//*}}}*/
+/**
+ * Callback that will be called when <i>Return</i> was pressed after {@link util.tabComplete} was invoked.
+ *
+ * @callback util~onTabComplete 
+ *
+ * @param {String} text Text from the textentry. 
+ * */
 void 
 scripts_completion_activate(void) 
 {
@@ -1518,8 +2122,27 @@ scripts_completion_activate(void)
     }
     CONTEXT_UNLOCK;
 }
+/** 
+ * Initializes tab completion.
+ * @name tabComplete
+ * @memberOf util
+ * @function
+ * 
+ * @param {String} label 
+ *      The command line label
+ * @param {Array[Object]} items[] 
+ *      An array of labels, 
+ * @param {String} items[].left
+ *      Left completion label
+ * @param {String} items[].right
+ *      Right completion label
+ * @param {util~onTabComplete} callback Callback function, the first argument will be the
+ *                            returned string from the url bar.
+ * @param {Boolean} [readonly] Whether the items are readonly, default false 
+ *
+ * */
 static JSValueRef 
-global_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+sutil_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     if (argc < 3 || !JSValueIsInstanceOfConstructor(ctx, argv[1], s_array_contructor, exc)) 
     {
@@ -1578,104 +2201,18 @@ error_out:
     dwb.state.script_completion = NULL;
     return UNDEFINED;
 }
-/* timeout_callback {{{*/
-static gboolean
-timeout_callback(JSObjectRef obj) 
-{
-    gboolean ret = false;
-    if (!TRY_CONTEXT_LOCK)
-        return ret;
-
-    if (s_global_context != NULL)
-    {
-        JSValueRef val = call_as_function_debug(s_global_context, obj, obj, 0, NULL);
-        if (val == NULL)
-            ret = false;
-        else 
-            ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
-    }
-    CONTEXT_UNLOCK;
-
-    return ret;
-}/*}}}*/
-
-/* global_timer_stop {{{*/
-static JSValueRef 
-global_timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    gdouble sigid;
-    if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("timerStop: missing argument."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    if (!isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
-    {
-        gboolean ret = g_source_remove((int)sigid);
-        GSList *source = g_slist_find(s_timers, GINT_TO_POINTER(sigid));
-        if (source)
-            s_timers = g_slist_delete_link(s_timers, source);
-
-        return JSValueMakeBoolean(ctx, ret);
-    }
-    return JSValueMakeBoolean(ctx, false);
-}/*}}}*/
-
-void 
-timer_stopped_cb(JSObjectRef func)
-{
-    if (!TRY_CONTEXT_LOCK)
-        return;
-
-    if (s_global_context != NULL)
-        JSValueUnprotect(s_global_context, func);
-    CONTEXT_UNLOCK;
-}
-
-/* global_timer_start {{{*/
-static JSValueRef 
-global_timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 2) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("timerStart: missing argument."));
-        return JSValueMakeNumber(ctx, -1);
-    }
-    double msec = 10;
-    if (isnan(msec = JSValueToNumber(ctx, argv[0], exc)))
-        return JSValueMakeNumber(ctx, -1);
-
-    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
-    if (func == NULL)
-        return JSValueMakeNumber(ctx, -1);
-
-    JSValueProtect(ctx, func);
-
-    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)timer_stopped_cb);
-    s_timers = g_slist_prepend(s_timers, GINT_TO_POINTER(ret));
-    return JSValueMakeNumber(ctx, ret);
-}/*}}}*/
-/*}}}*/
-
-/* UTIL {{{*/
-/* util_domain_from_host {{{*/
-static JSValueRef 
-sutil_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("domainFromHost: missing argument."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    char *host = js_value_to_char(ctx, argv[0], -1, exc);
-    const char *domain = domain_get_base_for_host(host);
-    if (domain == NULL)
-        return NIL;
-
-    JSValueRef ret = js_char_to_value(ctx, domain);
-    g_free(host);
-    return ret;
-}/*}}}*//*}}}*/
+/**
+ * Escapes text for usage with pango markup
+ *
+ * @name markupEscape 
+ * @memberOf util 
+ * @function
+ *
+ * @param {String} text The text to escape
+ *
+ * @returns {String} The escaped text or null
+ *
+ * */
 static JSValueRef 
 sutil_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1697,12 +2234,79 @@ sutil_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
     }
     return NIL;
 }
+/* global_checksum {{{*/
+/** 
+ * Computes a checksum of a string
+ * @name checksum 
+ * @memberOf util
+ * @function
+ *
+ * @param {String} data The data 
+ * @param {ChecksumType} [type] The {@link Enums and Flags.ChecksumType|ChecksumType}, defaults to sha256
+ * @returns {Boolean} Whether the shortcut was unbound
+ *
+ * */
+static JSValueRef 
+sutil_checksum(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *checksum = NULL;
+    guchar *original = NULL;
+    JSValueRef ret;
+
+    if (argc < 1) 
+        return NIL;
+
+    original = (guchar*)js_value_to_char(ctx, argv[0], -1, exc);
+    if (original == NULL)
+        return NIL;
+
+    GChecksumType type = G_CHECKSUM_SHA256;
+    if (argc > 1) 
+    {
+        type = JSValueToNumber(ctx, argv[1], exc);
+        if (isnan(type)) 
+        {
+            ret = NIL;
+            goto error_out;
+        }
+        type = MIN(MAX(type, G_CHECKSUM_MD5), G_CHECKSUM_SHA256);
+    }
+    checksum = g_compute_checksum_for_data(type, original, -1);
+
+    ret = js_char_to_value(ctx, checksum);
+
+error_out:
+    g_free(original);
+    g_free(checksum);
+    return ret;
+}/*}}}*/
+
+/**
+ * Gets the current mode 
+ *
+ * @name getMode 
+ * @memberOf util 
+ * @function 
+ *
+ * @returns {Enums and Flags.Modes} The current mode
+ * */
 static JSValueRef 
 sutil_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
 }
 
+/** 
+ * Gets the body of a function, useful for injecting scripts
+ *
+ * @name getBody
+ * @memberOf util
+ * @function 
+ * 
+ * @param {Function} function A function
+ *
+ * @returns {String} The body of the function
+ * */
 static JSValueRef 
 sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1718,6 +2322,19 @@ sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
     }
     return ret;
 }
+/** 
+ * Dispatches a keyboard event
+ *
+ * @name dispatchEvent
+ * @memberOf util
+ * @function 
+ * 
+ * @param {KeyEvent} event 
+ * @param {Modifier} modifier Modifier state bitmask
+ * @param {Keyval} keyval The key that was pressed
+ *
+ * @returns {Boolean} Whether the key was dispatched
+ * */
 static JSValueRef 
 sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1763,6 +2380,16 @@ atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     else
         return NULL;
 }
+/**
+ * Sets content of the system clipboard
+ * @name set
+ * @memberOf clipboard
+ * @function 
+ *
+ * @param {Selection} selection The {@link Enums and Flags.Selection|Selection} to set
+ * @param {String} text The text to set
+ *
+ * */
 static JSValueRef 
 clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1772,6 +2399,7 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
     if (atom == NULL)
         atom = GDK_NONE;
     char *text = js_value_to_char(ctx, argv[1], -1, exc);
+    puts(text);
     if (text != NULL)
     {
         GtkClipboard *cb = gtk_clipboard_get(atom);
@@ -1780,6 +2408,13 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
     }
     return UNDEFINED;
 }
+/** 
+ * Callback called when the clipboard was received
+ * @callback clipboard~onGotClipboard
+ *
+ * @param {String} text 
+ *      The text content of the clipboard
+ * */
 static void
 got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
 {
@@ -1794,6 +2429,22 @@ got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
     }
     CONTEXT_UNLOCK;
 }
+/**
+ * Gets content of the system clipboard
+ * @name get
+ * @memberOf clipboard
+ * @function 
+ *
+ * @param {Selection} selection 
+ *      The {@Link Enums and Flags.Selection|Selection} to get
+ * @param {clipboard~onGotClipboard} [callback] 
+ *      A callback function that is called when the clipboard content was
+ *      retrieved, if a callback function is used the clipboard will be fetched
+ *      asynchronously, otherwise it will be fetched synchronously
+ *
+ * @returns {String|undefined}
+ *      The content of the clipboard or undefined if a callback function is used
+ * */
 static JSValueRef 
 clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1826,6 +2477,18 @@ clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
     return NIL;
 }
 
+/** 
+ * Get a history item 
+ *
+ * @name getItem
+ * @memberOf WebKitWebBackForwardList.prototype
+ * @function 
+ *
+ * @param {Number} position Position of the history item
+ *
+ * @return {WebKitWebHistoryItem}
+ *      The history item
+ * */
 static JSValueRef 
 history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1839,6 +2502,13 @@ history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
     }
     return NIL;
 }
+/**
+ * Number of items that precede the current item
+ *
+ * @name backLength
+ * @memberOf WebKitWebBackForwardList.prototype
+ * @type Number
+ * */
 static JSValueRef 
 history_back_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1846,6 +2516,13 @@ history_back_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, J
     g_return_val_if_fail(list != NULL, NIL);
     return JSValueMakeNumber(ctx, webkit_web_back_forward_list_get_back_length(list));
 }
+/**
+ * Number of items that succeed the current item
+ *
+ * @name forwardLength
+ * @memberOf WebKitWebBackForwardList.prototype
+ * @type Number
+ * */
 static JSValueRef 
 history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1856,6 +2533,14 @@ history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 
 /* DATA {{{*/
 /* data_get_profile {{{*/
+/** 
+ * Profile which will be <i>default</i> unless another profile is specified on command line
+ *
+ * @name profile 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
 static JSValueRef 
 data_get_profile(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1863,6 +2548,14 @@ data_get_profile(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
 }/*}}}*/
 
 /* data_get_cache_dir {{{*/
+/** 
+ * The cache directory used by dwb
+ *
+ * @name cacheDir 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
 static JSValueRef 
 data_get_cache_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1870,6 +2563,14 @@ data_get_cache_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JS
 }/*}}}*/
 
 /* data_get_config_dir {{{*/
+/** 
+ * The configuration diretory
+ *
+ * @name configDir 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
 static JSValueRef 
 data_get_config_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1883,6 +2584,14 @@ data_get_config_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, J
 }/*}}}*/
 
 /* data_get_system_data_dir {{{*/
+/** 
+ * The system data dir, for a default installation it is /usr/share/dwb
+ *
+ * @name systemDataDir 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
 static JSValueRef 
 data_get_system_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1896,6 +2605,14 @@ data_get_system_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_na
 }/*}}}*/
 
 /* data_get_user_data_dir {{{*/
+/** 
+ * The user data dir, in most cases it will be ~/.local/share/dwb
+ *
+ * @name userDataDir 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
 static JSValueRef 
 data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
@@ -1911,6 +2628,18 @@ data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 
 /* SYSTEM {{{*/
 /* system_get_env {{{*/
+/** 
+ * Get a environment variable
+ * 
+ * @name getEnv 
+ * @memberOf system
+ * @function 
+ *
+ * @param {String} name The name of the environment variable
+ *
+ * @returns {String}
+ *      The environment variable or <i>null</i> if the variable wasn't found
+ * */
 static JSValueRef 
 system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1964,7 +2693,7 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnChannel *sc)
                             r = write(sc->infd, "\n", 1);
 
                         }
-                        if (r == -1) 
+                        if ((int)r == -1) 
                         {
                             fputs("Error cannot write to stdin", stderr);
                             close(sc->infd);
@@ -2013,6 +2742,23 @@ get_environment(JSContextRef ctx, JSValueRef v, JSValueRef *exc)
 }
 
 /* {{{*/
+
+/** 
+ * Spawn a process synchronously. This function should be used with care. The
+ * execution is single threaded so longer running processes will block the whole
+ * execution
+ * 
+ * @name spawnSync 
+ * @memberOf system
+ * @function 
+ *
+ * @param {String} command The command to execute
+ * @param {Object}   [environ] Object that can be used to add environment
+ *                             variables to the childs environment
+ *
+ * @returns {Object}
+ *      An object that contains <i>stdout</i>, <i>stderr</i> and the <i>status</i> code.
+ * */
 static JSValueRef 
 system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2077,6 +2823,39 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
 }
 
 /* system_spawn {{{*/
+/** 
+ * Spawn a process asynchronously
+ * 
+ * @name spawn 
+ * @memberOf system
+ * @function 
+ * @example 
+ * system.spawn("foo" function (stdin) { 
+ *   io.print(stdin);
+ * }, function(stderr) {
+ *   io.print(stderr, "stderr");
+ * }, { foo : "bar"});
+ *
+ * @param {String} command The command to execute
+ * @param {Function} [stdout] A callback function that is called when a line from
+ *                            stdout was read, if the function returns a
+ *                            string the string is passed to stdin of the
+ *                            spawned process, pass <i>null</i> if only stderr
+ *                            is needed or only environment variables should be
+ *                            set
+ * @param {Function} [stderr] A callback function that is called when a line from
+ *                            stderr was read, if the function returns a
+ *                            string the string is passed to stdin of the
+ *                            spawned process, pass <i>null</i> if stderr is not
+ *                            needed and environment variables should be set
+ * @param {Object}   [environ] Object that can be used to add environment
+ *                             variables to the childs environment
+ *
+ * @returns {Deferred}
+ *      A deferred, it will be resolved if the child exits normally, it will be
+ *      rejected if the child process exits abnormally, the first parameter of
+ *      the reject function will be the status code of the child process.  
+ * */
 static JSValueRef 
 system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2155,6 +2934,20 @@ error_out:
 }/*}}}*/
 
 /* system_file_test {{{*/
+/** 
+ * Checks for existence of a file or directory
+ * 
+ * @name fileTest 
+ * @memberOf system
+ * @function 
+ *
+ * @param {String} path Path to a file to check
+ * @param {FileTest} flags 
+ *      Bitmask of {@link Enums and Flags.FileTest|FileTest} flags
+ *
+ * @returns {Boolean}
+ *      <i>true</i> if any of the flags is set
+ * */
 static JSValueRef 
 system_file_test(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2176,6 +2969,20 @@ system_file_test(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
     return JSValueMakeBoolean(ctx, ret);
 }/*}}}*/
 
+/** 
+ * Creates a directory and all parent directories
+ * 
+ * @name mkdir 
+ * @memberOf system
+ * @function 
+ *
+ * @param {Path} path Path to create
+ * @param {Number} mode The permissions the directory will get
+ *
+ * @returns {Boolean}
+ *      <i>true</i> if creation was successful or if the diretory already
+ *      existed
+ * */
 /* system_mkdir {{{*/
 static JSValueRef 
 system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2201,6 +3008,21 @@ system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 
 /* IO {{{*/
 /* io_prompt {{{*/
+/**
+ * Gets user input synchronously
+ *
+ * @name prompt 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} prompt The prompt message
+ * @param {Boolean} [visible] Whether the chars should be visible, pass false
+ *                            for a password prompt, default true.
+ *
+ * @returns {String}
+ *      The user response
+ * */
+
 static JSValueRef 
 io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2225,6 +3047,18 @@ io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
     return result;
 }/*}}}*/
 
+/**
+ * Read from a file 
+ *
+ * @name read 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} path A path to a file
+ *
+ * @returns {String}
+ *      The file content
+ * */
 /* io_read {{{*/
 static JSValueRef 
 io_read(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2254,6 +3088,15 @@ error_out:
 }/*}}}*/
 
 /* io_notify {{{*/
+/**
+ * Show a notification in the browser window
+ *
+ * @name notify 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} message The message
+ * */
 static JSValueRef 
 io_notify(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2269,6 +3112,15 @@ io_notify(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
     return UNDEFINED;
 }/*}}}*/
 
+/**
+ * Show an error message in the browser window
+ *
+ * @name error 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} message The error message
+ * */
 /* io_error {{{*/
 static JSValueRef 
 io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2285,6 +3137,18 @@ io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
     return UNDEFINED;
 }/*}}}*/
 
+/**
+ * Get directory entries
+ *
+ * @name dirnames 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} path A path to a directory
+ *
+ * @returns {Arrayp[String]}
+ *      An array of file names
+ * */
 static JSValueRef 
 io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2324,6 +3188,20 @@ io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     return ret;
 }
 /* io_write {{{*/
+/** 
+ * Write to a file 
+ *
+ * @name write
+ * @memberOf io
+ * @function
+ *
+ * @param {String} path Path to a file to write to
+ * @param {String} mode Either <i>"a"</i> to append or <i>"w"</i> to strip the file
+ * @param {String} text The text that should be written to the file
+ *
+ * @returns {Boolean}
+ *      true if writing was successful
+ * */
 static JSValueRef 
 io_write(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2367,6 +3245,16 @@ error_out:
 }/*}}}*/
 
 /* io_print {{{*/
+/** 
+ * Print messages to stdout or stderr
+ *
+ * @name print
+ * @memberOf io
+ * @function
+ *
+ * @param {String}  text  The text to print
+ * @param {String} [stream] The stream, either <i>"stdout"</i> or <i>"stderr"</i>, default <i>"stdout"</i>
+ * */
 static JSValueRef 
 io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2436,6 +3324,18 @@ hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const
     return make_object_for_class(ctx, s_webview_class, wv, false);
 }
 
+/** 
+ * Moves a widget in a GtkBox to a new Position
+ *
+ * @name reorderChild
+ * @memberOf GtkWidget.prototype
+ * @function 
+ *
+ * @param {GtkWidget} child
+ *      The child widget
+ * @param {Number} position
+ *      Whether to expand the widget
+ * */
 static JSValueRef 
 widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2463,6 +3363,40 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     return UNDEFINED;
 }
 
+/** 
+ * Adds a widget to a GtkBox
+ *
+ * @name packEnd
+ * @memberOf GtkWidget.prototype
+ * @function 
+ *
+ * @param {GtkWidget} child
+ *      The child widget
+ * @param {Boolean} expand
+ *      Whether to expand the widget
+ * @param {Boolean} fill
+ *      Whether to fill the remaining space
+ * @param {Number} padding
+ *      Padding in the box
+ *
+ * */
+/** 
+ * Adds a widget to a GtkBox
+ *
+ * @name packStart
+ * @memberOf GtkWidget.prototype
+ * @function 
+ *
+ * @param {GtkWidget} child
+ *      The child widget
+ * @param {Boolean} expand
+ *      Whether to expand the widget
+ * @param {Boolean} fill
+ *      Whether to fill the remaining space
+ * @param {Number} padding
+ *      Padding in the box
+ *
+ * */
 static JSValueRef 
 widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2527,6 +3461,13 @@ widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     return UNDEFINED;
 }
 
+/**
+ * Destroys a widget
+ *
+ * @name destroy
+ * @memberOf GtkWidget.prototype
+ * @function
+ * */
 static JSValueRef 
 widget_destroy(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2557,9 +3498,150 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
     }
     return JSValueToObject(ctx, NIL, NULL);
 }
+/**
+ * Called when a menu item was activated that was added to the popup menu,
+ * <i>this</i> will refer to the GtkMenuItem.
+ *
+ * @callback GtkMenu~onMenuActivate
+ * */
+static void 
+menu_callback(GtkMenuItem *item, JSObjectRef callback)
+{
+    if (!TRY_CONTEXT_LOCK)
+        return;
+    if (s_global_context != NULL)
+    {
+        JSObjectRef this =  make_object_for_class(s_global_context, s_widget_class, G_OBJECT(item), true);
+        call_as_function_debug(s_global_context, callback, this, 0, NULL);
+    }
+    CONTEXT_UNLOCK;
+}
+/**
+ * Add menu items to the menu
+ *
+ * @name addItems
+ * @memberOf GtkMenu.prototype
+ * @function 
+ *
+ * @param {Array} items[] 
+ *      Array of menu items and callbacks, if an item is <i>null</i> or label or
+ *      callback is omitted it will be a separator
+ * @param {GtkMenu~onMenuActivate} [items[].callback] 
+ *      Callback called when the item is clicked, if omitted it will be a
+ *      separator
+ * @param {String} [items[].label] 
+ *      Label of the item, if omitted it will be a separator
+ * @param {Number} [items[].position] 
+ *      Position of the item or separator starting at 0, if omitted it will be appended
+ *
+ * @example 
+ * signals.connect("contextMenu", function(wv, menu) {
+ *      menu.addItems([
+ *          // append separator
+ *          null, 
+ *          // append a menu item
+ *          { 
+ *              label : "Copy current url", 
+ *              callback : function() 
+ *              {
+ *                  clipboard.set(Selection.clipboard, wv.url);
+ *                  io.notify(this.label + " was activated");
+ *              }
+ *          }
+ *      ]);
+ * });
+ *
+ * */
+static JSValueRef 
+menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSObjectRef arg;
+    if (argc == 0 || (arg = JSValueToObject(ctx, argv[0], exc)) == NULL )
+        return UNDEFINED;
+
+    double p;
+    int position = -1;
+    char *label = NULL;
+    GtkWidget *item;
+
+    JSObjectRef callback, o;
+    JSValueRef current, label_value, callback_value;
+
+    GtkMenu *menu = JSObjectGetPrivate(this);
+    if (menu)
+    {
+        JSStringRef str_position = JSStringCreateWithUTF8CString("position");
+        JSStringRef str_label = JSStringCreateWithUTF8CString("label");
+        JSStringRef str_callback = JSStringCreateWithUTF8CString("callback");
+
+        js_array_iterator iter;
+        js_array_iterator_init(ctx, &iter, arg);
+        while ((current = js_array_iterator_next(&iter, exc)) != NULL)
+        {
+            if (JSValueIsNull(ctx, current))
+            {
+                item = gtk_separator_menu_item_new();
+                goto create;
+            }
+
+            o = JSValueToObject(ctx, current, exc);
+            if (o == NULL)
+                continue;
+            if (JSObjectHasProperty(ctx, o, str_position))
+            {
+                current = JSObjectGetProperty(ctx, o, str_position, exc);
+                p = JSValueToNumber(ctx, current, exc);
+                if (isnan(p))
+                    position = -1;
+                else 
+                    position = (int) p;
+            }
+            if (JSObjectHasProperty(ctx, o, str_label) && JSObjectHasProperty(ctx, o, str_callback))
+            {
+                label_value = JSObjectGetProperty(ctx, o, str_label, exc);
+                label = js_value_to_char(ctx, label_value, -1, exc);
+                if (label == NULL)
+                    goto error;
+
+                callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
+                callback = js_value_to_function(ctx, callback_value, exc);
+                if (callback == NULL)
+                    goto error;
+
+                item = gtk_menu_item_new_with_label(label);
+                g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
+            }
+            else 
+            {
+                item = gtk_separator_menu_item_new();
+            }
+create: 
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+            if (position != -1)
+                gtk_menu_reorder_child(menu, item, position);
+            gtk_widget_show(item);
+error:
+            g_free(label);
+        }
+        js_array_iterator_finish(&iter);
+
+        JSStringRelease(str_position);
+        JSStringRelease(str_label);
+        JSStringRelease(str_callback);
+    }
+    return UNDEFINED;
+
+}
 
 /* DOWNLOAD {{{*/
 /* download_constructor_cb {{{*/
+/**
+ * Constructs a new download
+ *
+ * @memberOf WebKitDownload.prototype
+ * @constructor
+ * @param {String} uri The uri of the download
+ * */
 static JSObjectRef 
 download_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
@@ -2584,6 +3666,11 @@ download_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, 
     WebKitDownload *download = webkit_download_new(request);
     return JSObjectMake(ctx, s_download_class, download);
 }/*}}}*/
+/**
+ * Constructs a new Deferred.
+ * @memberOf Deferred.prototype
+ * @constructor 
+ */
 static JSObjectRef 
 deferred_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
@@ -2602,6 +3689,20 @@ stop_download_notify(CallbackData *c)
 }/*}}}*/
 
 /* download_start {{{*/
+/** 
+ * Starts a download
+ *
+ * @name start
+ * @memberOf WebKitDownload.prototype
+ * @function 
+ *
+ * @param {WebKitDownload~statusCallback} callback
+ *      Callback function that will be executed whenever the 
+ *      {@link Enums and Flags.DownloadStatus|DownloadStatus} changes
+ *
+ * @returns {Boolean}
+ *      true if the download was started
+ * */
 static JSValueRef 
 download_start(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2623,6 +3724,13 @@ download_start(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
 
 }/*}}}*/
 
+/** 
+ * Cancels a download
+ *
+ * @name cancel
+ * @memberOf WebKitDownload.prototype
+ * @function 
+ * */
 /* download_cancel {{{*/
 static JSValueRef 
 download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2636,56 +3744,122 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
 /*}}}*/
 
 /* gui {{{*/
+/** 
+ * The main window
+ * @name window
+ * @memberOf gui
+ * @type GtkWindow
+ * */
 static JSValueRef
 gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.window), true);
 }
+/** 
+ * The main container. Child of window
+ * @name mainBox
+ * @memberOf gui
+ * @type GtkBox
+ * */
 static JSValueRef
 gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.vbox), true);
 }
+/** 
+ * The box used for tab labels. Child of mainBox
+ * @name tabBox
+ * @memberOf gui
+ * @type GtkBox
+ * */
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.topbox), true);
 }
+/** 
+ * The box used for the main content. Child of mainBox
+ * @name contentBox
+ * @memberOf gui
+ * @type GtkBox
+ * */
 static JSValueRef
 gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.mainbox), true);
 }
+/** 
+ * The outmost statusbar widget, used for setting the statusbars colors, child of mainBox.
+ * @name statusWidget
+ * @memberOf gui
+ * @type GtkEventBox
+ * */
 static JSValueRef
 gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.statusbox), true);
 }
+/** 
+ * Used for the statusbar alignment, child of statusWidget.
+ * @name statusAlignment
+ * @memberOf gui
+ * @type GtkAlignment
+ * */
 static JSValueRef
 gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.alignment), true);
 }
+/** 
+ * The box that contains the statusbar widgets, grandchild of statusAlignment
+ * @name statusBox
+ * @memberOf gui
+ * @type GtkBox
+ * */
 static JSValueRef
 gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.status_hbox), true);
 }
-    static JSValueRef
+/** 
+ * Label used for notifications, first child of statusBox
+ * @name messageLabel
+ * @memberOf gui
+ * @type GtkLabel
+ * */
+static JSValueRef
 gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.lstatus), true);
 }
+/** 
+ * The entry, second child of statusBox
+ * @name entry
+ * @memberOf gui
+ * @type GtkEntry
+ * */
 static JSValueRef
 gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.entry), true);
 }
+/** 
+ * The uri label, third child of statusBox
+ * @name uriLabel
+ * @memberOf gui
+ * @type GtkLabel
+ * */
 static JSValueRef
 gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.urilabel), true);
 }
+/** 
+ * Label used for status information, fourth child of statusBox
+ * @name statusLabel
+ * @memberOf gui
+ * @type GtkLabel
+ * */
 static JSValueRef
 gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
@@ -2730,6 +3904,7 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
 gboolean
 scripts_emit(ScriptSignal *sig) 
 {
+    int numargs, i, additional = 0;
     gboolean ret = false;
     JSObjectRef function = s_sig_objects[sig->signal];
     if (function == NULL)
@@ -2740,10 +3915,16 @@ scripts_emit(ScriptSignal *sig)
 
     if (s_global_context != NULL) 
     {
-        int additional = sig->jsobj != NULL ? 2 : 1;
-        int numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
+        if (sig->jsobj != NULL)
+            additional++;
+        if (sig->json != NULL)
+            additional++;
+        if (sig->arg != NULL)
+            additional++;
+
+        numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
         JSValueRef val[numargs];
-        int i = 0;
+        i = 0;
 
         if (sig->jsobj != NULL) 
             val[i++] = sig->jsobj;
@@ -2756,8 +3937,21 @@ scripts_emit(ScriptSignal *sig)
                 val[i++] = NIL;
         }
 
-        JSValueRef vson = js_json_to_value(s_global_context, sig->json);
-        val[i++] = vson == NULL ? NIL : vson;
+        if (sig->json != NULL)
+        {
+            JSValueRef vson = js_json_to_value(s_global_context, sig->json);
+            val[i++] = vson == NULL ? NIL : vson;
+        }
+        if (sig->arg != NULL)
+        {
+            switch (sig->arg->n)
+            {
+                case BOOLEAN : val[i++] = JSValueMakeBoolean(s_global_context, sig->arg->b); break;
+                case INTEGER : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->i); break;
+                case DOUBLE  : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->d); break;
+                case CHAR    : val[i++] = js_char_to_value(s_global_context, sig->arg->p); break;
+            }
+        }
 
         JSValueRef js_ret = call_as_function_debug(s_global_context, function, function, numargs, val);
 
@@ -2824,6 +4018,8 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_message_class;
     else if (WEBKIT_IS_WEB_BACK_FORWARD_LIST(o))
         class = s_history_class;
+    else if (GTK_IS_MENU(o))
+        class = s_menu_class;
     else if (GTK_IS_WIDGET(o))
         class = s_secure_widget_class;
     else 
@@ -2831,12 +4027,29 @@ make_object(JSContextRef ctx, GObject *o)
     return make_object_for_class(ctx, class, o, true);
 }/*}}}*/
 
+/** 
+ * Callback called for GObject signals, <b>this</b> will refer to the object
+ * that connected to the signal
+ * @callback GObject~connectCallback
+ *
+ * @param {...Object} varargs
+ *      Variable number of additional arguments, see the correspondent
+ *      gtk/glib/webkit documentation. Note that only arguments of basic type
+ *      and arguments derived from GObject are converted to the corresponding
+ *      javascript object, otherwise the argument will be undefined (e.g. 
+ *      GBoxed types and structs).
+ *
+ * @returns {Boolean} 
+ *      Return true to stop the emission. Note that this signal handler is
+ *      connected after dwb's default handler so it will not prevent dwb's
+ *      handlers to be executed
+ * */
 static gboolean 
 connect_callback(SSignal *sig, ...) 
 {
     va_list args;
     JSValueRef cur;
-    JSValueRef argv[sig->query->n_params + 1];
+    JSValueRef argv[sig->query->n_params];
     gboolean result = false;
 
     if (!TRY_CONTEXT_LOCK)
@@ -2888,11 +4101,10 @@ connect_callback(SSignal *sig, ...)
         }
 
 apply:
-        argv[i+1] = cur;
+        argv[i] = cur;
     }
 #undef CHECK_NUMBER
-    argv[0] = sig->object;
-    JSValueRef ret = call_as_function_debug(s_global_context, sig->func, sig->func, sig->query->n_params+1, argv);
+    JSValueRef ret = call_as_function_debug(s_global_context, sig->func, sig->object, sig->query->n_params, argv);
     if (JSValueIsBoolean(s_global_context, ret)) 
     {
         result = JSValueToBoolean(s_global_context, ret);
@@ -2916,6 +4128,12 @@ on_disconnect_notify(JSObjectRef func, GClosure *closure)
         JSValueUnprotect(s_global_context, func);
     CONTEXT_UNLOCK;
 }
+/** 
+ * Called when a property of an object changes, <b>this</b> will refer to the object
+ * that connected to the signal.
+ * @callback GObject~notifyCallback
+ *
+ * */
 static void
 notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
 {
@@ -2923,11 +4141,29 @@ notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
         return;
     if (s_global_context != NULL)
     {
-        JSValueRef argv[] = { make_object(s_global_context, o) };
-        call_as_function_debug(s_global_context, func, func, 1, argv);
+        call_as_function_debug(s_global_context, func, make_object(s_global_context, o), 0, NULL);
     }
     CONTEXT_UNLOCK;
 }
+/**
+ * Connect to a GObject-signal. Note that all signals are connected using the
+ * signal::- or with notify::-prefix. If connecting to a signal the
+ * signal::-prefix must be omitted. The callback function will have the same
+ * parameters as the GObject signal callback without the first parameter,
+ * however some parameters may be undefined if they cannot be converted to
+ * javascript objects. All signal handlers are executed after dwb’s default
+ * handler.
+ *
+ * @memberOf GObject.prototype
+ * @name connect 
+ * @function
+ *
+ * @param {String} name The signal name.
+ * @param {GObject~connectCallback} callback Callback that will be called when the signal is emitted.
+ * @param {Boolean} [after] Whether to connect after the default signal handler.
+ *
+ * @returns {Number} The signal id of this signal
+ * */
 static JSValueRef 
 gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -3000,6 +4236,15 @@ error_out:
     g_free(name);
     return JSValueMakeNumber(ctx, id);
 }
+/** 
+ * Blocks emission of a signal
+ *
+ * @name blockSignal 
+ * @memberOf GObject.prototype
+ * @function
+ *
+ * @param {Number} id The signal id retrieved from GObject#connect
+ * */
 
 static JSValueRef 
 gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -3013,6 +4258,15 @@ gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     }
     return UNDEFINED;
 }
+/** 
+ * Unblocks a signal that was blocked with GObject#blockSignal
+ *
+ * @name unblockSignal 
+ * @memberOf GObject.prototype
+ * @function
+ *
+ * @param {Number} id The signal id retrieved from GObject#connect
+ * */
 static JSValueRef 
 gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -3025,6 +4279,18 @@ gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this,
     }
     return UNDEFINED;
 }
+/**
+ * Disconnects from a signal
+ *
+ * @name disconnect
+ * @memberOf GObject.prototype
+ * @function
+ *
+ * @param {Number} id The signal id retrieved from {@link GObject.connect}
+ *
+ * @returns {Boolean}
+ *      Whether a signal was found and disconnected
+ * */
 static JSValueRef 
 gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -3244,7 +4510,7 @@ create_global_object()
     s_ref_quark = g_quark_from_static_string("dwb_js_ref");
 
     JSStaticValue global_values[] = {
-        { "global",      global_get, NULL,   kJSDefaultAttributes },
+        { "global",       global_get, NULL,   kJSDefaultAttributes },
         { "session",      global_get_webkit_session, NULL,   kJSDefaultAttributes },
         { 0, 0, 0, 0 }, 
     };
@@ -3254,13 +4520,7 @@ create_global_object()
         { "exit",             global_exit,         kJSDefaultAttributes },
         { "bind",             global_bind,         kJSDefaultAttributes },
         { "unbind",           global_unbind,         kJSDefaultAttributes },
-        { "checksum",         global_checksum,         kJSDefaultAttributes },
         { "include",          global_include,         kJSDefaultAttributes },
-        { "timerStart",       global_timer_start,         kJSDefaultAttributes },
-        { "timerStop",        global_timer_stop,         kJSDefaultAttributes },
-        { "sendRequest",      global_send_request,         kJSDefaultAttributes },
-        { "sendRequestSync",  global_send_request_sync,         kJSDefaultAttributes },
-        { "tabComplete",      global_tab_complete,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
 
@@ -3269,6 +4529,14 @@ create_global_object()
     JSClassRelease(class);
 
 
+    /** 
+     * Get internally used data like configuration files
+     * 
+     * @namespace
+     *      Get internally used data like configuration files
+     * @name data
+     * @static 
+     * */
     JSObjectRef global_object = JSContextGetGlobalObject(s_global_context);
 
     JSStaticValue data_values[] = {
@@ -3283,6 +4551,46 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "data", NULL);
     JSClassRelease(class);
 
+    /**
+     * Static object for timed execution 
+     * @namespace 
+     *      Static object for timed execution 
+     * @name timer
+     * @static
+     * */
+    JSStaticFunction timer_functions[] = { 
+        { "start",       timer_start,         kJSDefaultAttributes },
+        { "stop",        timer_stop,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    class = create_class("timer", timer_functions, NULL);
+    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "timer", NULL);
+    JSClassRelease(class);
+    /**
+     * @namespace 
+     *      Static object for network related tasks
+     * @name net
+     * @static
+     * */
+    JSStaticFunction net_functions[] = { 
+        { "sendRequest",      net_send_request,         kJSDefaultAttributes },
+        { "sendRequestSync",  net_send_request_sync,         kJSDefaultAttributes },
+        { "domainFromHost",   net_domain_from_host,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    class = create_class("net", net_functions, NULL);
+    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "net", NULL);
+    JSClassRelease(class);
+
+
+    /**
+     * Static object for input and output
+     *
+     * @namespace 
+     *      Static object for input and output and file operations
+     * @name io
+     * @static
+     * */
     cd = kJSClassDefinitionEmpty;
     cd.getProperty = settings_get;
     cd.setProperty = set_property_cb;
@@ -3304,6 +4612,15 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
     JSClassRelease(class);
 
+    /**
+     * Static object for system functions
+     * 
+     * @namespace 
+     *      Static object for system functions such as spawning processes,
+     *      getting environment variables
+     * @name system
+     * @static
+     * */
     JSStaticFunction system_functions[] = { 
         { "spawn",           system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
@@ -3326,10 +4643,31 @@ create_global_object()
         { "length",       tabs_length,  NULL,   kJSDefaultAttributes },
         { 0, 0, 0, 0 }, 
     };
+
+    /**
+     * Getting webviews
+     *
+     * @namespace 
+     *      Static object that can be used to get webviews
+     * @name tabs 
+     * @static 
+     * */
     class = create_class("tabs", tab_functions, tab_values);
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "tabs", NULL);
     JSClassRelease(class);
 
+    /**
+     * Execute code on certain events. dwb emits some signals, e.g. before a new
+     * site is loaded, the signals object can be used to handle these signals.
+     * All events are emitted on the signals object itself, for example 
+     * "signals.keyPress = function() { ...  };" would connect to the keyPress
+     * signal but it is <b>strongly discouraged</b> to use this pattern since it will
+     * only allow to connect one callback to a certain signal, so {@link signals.connect}
+     * which manages all signals should be used instead. 
+     *
+     * @namespace 
+     * @name signals 
+     * */
     cd = kJSClassDefinitionEmpty;
     cd.className = "signals";
     cd.setProperty = signal_set;
@@ -3342,18 +4680,35 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "extensions", NULL);
     JSClassRelease(class);
 
+    /**
+     * Utility functions
+     *
+     * @namespace 
+     *      Miscellaneous utility functions
+     * @name util 
+     * @static 
+     * */
     JSStaticFunction util_functions[] = { 
-        { "domainFromHost",   sutil_domain_from_host,         kJSDefaultAttributes },
         { "markupEscape",     sutil_markup_escape,         kJSDefaultAttributes },
         { "getMode",          sutil_get_mode,         kJSDefaultAttributes },
         { "getBody",          sutil_get_body,         kJSDefaultAttributes },
-        { "dispatchEvent",      sutil_dispatch_event,         kJSDefaultAttributes },
+        { "dispatchEvent",    sutil_dispatch_event,         kJSDefaultAttributes },
+        { "tabComplete",      sutil_tab_complete,         kJSDefaultAttributes },
+        { "checksum",         sutil_checksum,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL);
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "util", NULL);
     JSClassRelease(class);
 
+    /**
+     * Access to the system clipboard
+     * @namespace 
+     *      Accessing the system clipboard
+     * @name clipboard 
+     * @static 
+     *
+     * */
     JSStaticFunction clipboard_functions[] = { 
         { "get",     clipboard_get,         kJSDefaultAttributes },
         { "set",     clipboard_set,         kJSDefaultAttributes },
@@ -3363,7 +4718,28 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
     JSClassRelease(class);
 
-    /* Default gobject class */
+    /** 
+     * Base class for webkit/gtk objects
+     *
+     * @name GObject
+     * @property {Object}  ... 
+     *      Variable number of properties, See the corresponding
+     *      gtk/webkitgtk/libsoup documentation for a list of properties, All
+     *      properties can be used in camelcase. 
+     *
+     * @class 
+     *      Base class for webkit/gtk objects, all objects derived from GObject
+     *      correspond to the original GObjects. They have the same properties,
+     *      but javascript properties can also be used in camelcase. 
+     *      It is discouraged from settting own properties directly on objects derived
+     *      from GObject since these objects are shared between all scripts, use 
+     *      {@link script.setPrivate} and {@link script.getPrivate} instead
+     * @example 
+     * tabs.current["zoom-level"] = 2;
+     * //  is equivalent to 
+     * tabs.current.zoomLevel = 2; 
+     *
+     * */
     JSStaticFunction default_functions[] = { 
         { "connect",            gobject_connect,                kJSDefaultAttributes },
         { "blockSignal",        gobject_block_signal,                kJSDefaultAttributes },
@@ -3382,6 +4758,14 @@ create_global_object()
     s_constructors[CONSTRUCTOR_DEFAULT] = create_constructor(s_global_context, "GObject", s_gobject_class, NULL, NULL);
 
     /* Webview */
+    /**
+     * A GtkWidget that shows the webcontent
+     *
+     * @name WebKitWebView
+     * @augments GObject
+     * @class GtkWidget that shows webcontent
+     * @borrows WebKitWebFrame#inject as prototype.inject
+     * */
     JSStaticFunction wv_functions[] = { 
         { "loadUri",         wv_load_uri,             kJSDefaultAttributes },
         { "stopLoading",         wv_stop_loading,        kJSDefaultAttributes },
@@ -3425,6 +4809,16 @@ create_global_object()
 
 
     /* Frame */
+    /** 
+     * Represents a frame or an iframe
+     *
+     * @name WebKitWebFrame
+     * @augments GObject
+     * @class 
+     *      Represents a frame or iframe. Due to same origin policy it
+     *      is not possible to inject scripts from a WebKitWebView into iframes with a
+     *      different domain. For this purpose the frame object can be used.
+     * */
     JSStaticFunction frame_functions[] = { 
         { "inject",          frame_inject,             kJSDefaultAttributes },
         { 0, 0, 0 }, 
@@ -3445,6 +4839,17 @@ create_global_object()
     s_constructors[CONSTRUCTOR_FRAME] = create_constructor(s_global_context, "WebKitWebFrame", s_frame_class, NULL, NULL);
 
     /* SoupMessage */ 
+    /**
+     * Represents a SoupMessage 
+     *
+     * @name SoupMessage
+     * @augments GObject 
+     * @class 
+     *      Represents a SoupMessage. Can be used to inspect information about a
+     *      request
+     *
+     * @returns undefined
+     * */
     JSStaticValue message_values[] = {
         { "uri",     message_get_uri, NULL, kJSDefaultAttributes }, 
         { "firstParty",     message_get_first_party, NULL, kJSDefaultAttributes }, 
@@ -3457,8 +4862,17 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
 
+    /**
+     * The history of a webview
+     *
+     * @class 
+     *     The history of a webview.
+     * @augments GObject
+     * @name WebKitWebBackForwardList
+     *
+     * */
     JSStaticFunction history_functions[] = { 
         { "getItem",           history_get_item,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
@@ -3474,8 +4888,49 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_history_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "WebKitWebBackForwardList", s_history_class, NULL, NULL);
 
+    /**
+     * Constructs a new Deferred
+     *
+     * @class 
+     *      Deferred objects can be used to manage asynchronous operations. It
+     *      can trigger a callback function when an asynchrounous operation has
+     *      finished, and allows chaining of callbacks. Deferred basically has 2
+     *      callback chains, a done-chain and a fail-chain. If a asynchronous
+     *      operation is successful the deferred should be resolved and the done
+     *      callback chain of the deferred is called. If a asynchronous
+     *      operation fails the deferred should be rejected and the fail
+     *      callback chain of the deferred is called.
+     * @name Deferred
+     * @constructs Deferred
+     * @example
+     * system.spawn("command").then(
+     *      function() {
+     *          // called when execution was  successful 
+     *      },
+     *      function(errorcode) {
+     *          // called when execution wasn't successful 
+     *      }
+     * );
+     *
+     * function foo() {
+     *     var d = new Deferred();
+     *     timerStart(2000, function() {
+     *         d.reject("rejected");
+     *     });
+     *     return d;
+     * }
+     * function onResponse(response) {
+     *     io.print(response);
+     * }
+     *
+     * // Will print "rejected" after 2 and 4 seconds
+     * foo().fail(onResponse).fail(onResponse);
+     *
+     * @returns A Deferred
+     *
+     * */
     JSStaticFunction deferred_functions[] = { 
         { "then",             deferred_then,         kJSDefaultAttributes },
         { "resolve",          deferred_resolve,         kJSDefaultAttributes },
@@ -3488,11 +4943,28 @@ create_global_object()
     s_deferred_class = JSClassCreate(&cd);
     s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(s_global_context, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
 
+    /** 
+     * Constructs a new GtkWidget
+     *
+     * @class 
+     *      It is possible to create new widgets but only widgets that are currently
+     *      used by dwb can be created. The widgets used by dwb can be found under
+     *      {@see http://portix.bitbucket.org/dwb/resources/layout.html}
+     * @augments GObject
+     * @name GtkWidget
+     *
+     * @constructs GtkWidget
+     * @param {String} name Name of the Widget, e.g. "GtkLabel"
+     *
+     * @returns A GtkWidget
+     * @example
+     * var myLabel = new GtkWidget("GtkLabel");
+     * */
     JSStaticFunction secure_widget_functions[] = { 
         { "packStart",              widget_pack,          kJSDefaultAttributes },
         { "packEnd",                widget_pack,          kJSDefaultAttributes },
         { "reorderChild",           widget_reorder_child, kJSDefaultAttributes },
-        { "add",           widget_container_add, kJSDefaultAttributes },
+        { "add",                    widget_container_add, kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     cd = kJSClassDefinitionEmpty;
@@ -3512,7 +4984,36 @@ create_global_object()
     s_widget_class = JSClassCreate(&cd);
     s_constructors[CONSTRUCTOR_WIDGET] = create_constructor(s_global_context, "GtkWidget", s_widget_class, widget_constructor_cb, NULL);
 
+    /**
+     * @class 
+     *      Widget that will be created when a context menu is shown, can be
+     *      used to add custom items to the menu
+     *
+     * @augments GtkWidget 
+     * @name GtkMenu
+     * */
+    JSStaticFunction menu_functions[] = { 
+        { "addItems",                menu_add_items,       kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "GtkMenu";
+    cd.staticFunctions = menu_functions;
+    cd.parentClass = s_widget_class;
+    s_menu_class = JSClassCreate(&cd);
 
+    /** 
+     * Static object that holds dwb's GtkWidgets
+     *
+     * @namespace 
+     *      Static object that holds dwb's GtkWidgets. Most widgets can be accessed
+     *      directly from scripts
+     *      see <a>http://portix.bitbucket.org/dwb/resources/layout.html</a> for an
+     *      overview of all widgets.
+     * @name gui
+     * @static
+     *
+     * */
     JSStaticValue gui_values[] = {
         { "window",           gui_get_window, NULL, kJSDefaultAttributes }, 
         { "mainBox",          gui_get_main_box, NULL, kJSDefaultAttributes }, 
@@ -3534,6 +5035,20 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "gui", NULL);
     JSClassRelease(class);
 
+    /** 
+     * Constructs a new download
+     *
+     * @class 
+     *    Object that can be used for downloads
+     * @name WebKitDownload
+     * @augments GObject
+     *
+     * @constructs WebKitDownload 
+     *
+     * @param {String} url The url of the download
+     *
+     * @returns WebKitDownLoad
+     * */
     /* download */
     JSStaticFunction download_functions[] = { 
         { "start",          download_start,        kJSDefaultAttributes },
@@ -3541,13 +5056,13 @@ create_global_object()
         { 0, 0, 0 }, 
     };
 
-    cd.className = "Download";
+    cd.className = "WebKitDownload";
     cd.staticFunctions = download_functions;
     cd.staticValues = NULL;
     cd.parentClass = s_gobject_class;
     s_download_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(s_global_context, "Download", s_download_class, download_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(s_global_context, "WebKitDownload", s_download_class, download_constructor_cb, NULL);
 
     
     s_soup_session = make_object_for_class(s_global_context, s_gobject_class, G_OBJECT(webkit_get_default_session()), false);
@@ -3624,6 +5139,20 @@ scripts_remove_tab(JSObjectRef obj)
     {
         if (EMIT_SCRIPT(CLOSE_TAB)) 
         {
+            /**
+             * Emitted when a tab is closed
+             * @event  closeTab
+             * @memberOf signals
+             * @param {signals~onCloseTab} callback 
+             *      Callback function that will be called when the signal is emitted
+             *
+             * */
+            /**
+             * Callback called when a tab is closed
+             * @callback signals~onCloseTab
+             *
+             * @param {WebKitWebView} webview The corresponding WebKitWebView
+             * */
             ScriptSignal signal = { obj, SCRIPTS_SIG_META(NULL, CLOSE_TAB, 0) };
             scripts_emit(&signal);
         }
@@ -3837,6 +5366,7 @@ scripts_end()
         JSClassRelease(s_frame_class);
         JSClassRelease(s_download_class);
         JSClassRelease(s_widget_class);
+        JSClassRelease(s_menu_class);
         JSClassRelease(s_secure_widget_class);
         JSClassRelease(s_message_class);
         JSClassRelease(s_history_class);

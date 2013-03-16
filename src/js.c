@@ -18,6 +18,7 @@
 
 #include <JavaScriptCore/JavaScript.h>
 #include <string.h>
+#include <math.h>
 #include "dwb.h"
 #include "util.h"
 #include "js.h"
@@ -348,17 +349,17 @@ js_array_iterator_init(JSContextRef ctx, js_array_iterator *iter, JSObjectRef ob
     JSValueProtect(ctx, iter->array);
 
     iter->current_index = 0;
-    iter->length = js_get_double_property(ctx, object, "length");
+    double length = js_get_double_property(ctx, object, "length");
+    iter->length = isnan(length) ? -1 : (int) length;
 }
 JSValueRef 
 js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc) 
 {
     g_return_val_if_fail(iter != NULL && iter->array != NULL, NULL);
 
-    if (iter->current_index == iter->length)
-        return NULL;
-
-    return JSObjectGetPropertyAtIndex(iter->ctx, iter->array, iter->current_index++, exc);
+    if (iter->current_index < iter->length)
+        return JSObjectGetPropertyAtIndex(iter->ctx, iter->array, iter->current_index++, exc);
+    return NULL;
 }
 void 
 js_array_iterator_finish(js_array_iterator *iter)
@@ -409,8 +410,11 @@ js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname_ret, c
 void 
 js_property_iterator_finish(js_property_iterator *iter)
 {
-    JSValueUnprotect(iter->ctx, iter->object);
+    g_return_if_fail(iter != NULL && iter->array != NULL);
     JSPropertyNameArrayRelease(iter->array);
+
+    g_return_if_fail(iter->object != NULL);
+    JSValueUnprotect(iter->ctx, iter->object);
 }
 
 JSObjectRef 

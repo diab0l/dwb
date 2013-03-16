@@ -147,6 +147,38 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
 
     if (EMIT_SCRIPT(KEY_PRESS)) 
     {
+        /**
+         * Emitted when a key was pressed
+         * @event  keyPress
+         * @memberOf signals
+         * @param {signals~onKeyPress} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called whenever a key is pressed 
+         * @memberOf signals
+         * @callback signals~onKeyPress
+         *
+         * @param {WebKitWebView} webview The currently focused webview
+         * @param {Object}   event              
+         *      The event
+         * @param {Boolean} event.isModifier   
+         *      Whether the key is a modifier
+         * @param {Number}  event.keyCode      
+         *      The hardware keycode
+         * @param {Number}  event.keyVal       
+         *      The keycode as listed in gdkkeysyms.h
+         * @param {String}  event.name         
+         *      A string representation of the key
+         * @param {Modifier}  event.state      
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifier} pressed
+         *
+         * @returns {Boolean}
+         *      Return true to stop emission of the signal, will also prevent
+         *      dwb from handling the signal.
+         *
+         * */
         char *json = util_create_json(5, UINTEGER, "state", e->state, 
                 UINTEGER, "keyVal", e->keyval, UINTEGER, "keyCode", e->hardware_keycode,
                 BOOLEAN, "isModifier", e->is_modifier, CHAR, "name", gdk_keyval_name(e->keyval));
@@ -203,6 +235,32 @@ callback_key_release(GtkWidget *w, GdkEventKey *e)
 {
     if (EMIT_SCRIPT(KEY_RELEASE)) 
     {
+        /**
+         * Emitted when a key was released
+         * @event  keyRelease
+         * @memberOf signals
+         * @param {signals~onKeyRelease} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called whenever a key is pressed 
+         * @callback signals~onKeyRelease
+         *
+         * @param {WebKitWebView} webview The currently focused webview
+         * @param {Object}   event              The event
+         * @param {Boolean}  event.isModifier   Whether the key is a modifier
+         * @param {Number}  event.keyCode      The hardware keycode
+         * @param {Number}  event.keyVal       The keycode as listed in gdkkeysyms.h
+         * @param {String}  event.name         A string representation of the
+         *                                     key
+         * @param {Modifier}  event.state      
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifier} pressed
+         * @returns {Boolean}
+         *      Return true to stop emission of the signal, will also prevent
+         *      dwb from handling the signal.
+         *
+         * */
         char *json = util_create_json(5, UINTEGER, "state", e->state, 
                 UINTEGER, "keyVal", e->keyval, UINTEGER, "keyCode", e->hardware_keycode,
                 BOOLEAN, "isModifier", e->is_modifier, CHAR, "name", gdk_keyval_name(e->keyval));

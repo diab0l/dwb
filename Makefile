@@ -92,6 +92,10 @@ endif
 
 distclean: clean
 
+apidoc: $(wildcard src/*.c) $(wildcard scripts/lib/*.js)
+	@echo generating doc
+	jsdoc -d=jsdoc -x=c,js $(wildcard src/*.c) $(wildcard scripts/lib/*.js)
+	#@/home/stefan/tmp/jsdoc-master/jsdoc -x=c,js $(wildcard src/*.c) $(wildcard scripts/lib/*.js)
 snapshot: 
 	@$(MAKE) dist DISTDIR=$(REAL_NAME)-$(BUILDDATE) 
 

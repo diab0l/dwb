@@ -1,6 +1,14 @@
 (function () {
     Object.defineProperties(util, 
     { 
+        /** 
+         * Get the selected text in a webview
+         * @name getSelection
+         * @memberOf util
+         * @function
+         *
+         * @returns {String} The selected text or null if no text was selected
+         * */
         "getSelection" : 
         {
             value : function() 
@@ -15,6 +23,20 @@
                 return null;
             }
         },
+        /** 
+         * Converts camel-case string for usage with GObject properties to a
+         * non-camel-case String
+         * @name uncamelize 
+         * @memberOf util 
+         * @function
+         * @example 
+         * util.uncamelize("fooBarBaz"); // "foo-bar-baz"
+         *
+         * @param {String} text The text to uncamelize
+         *
+         * @returns {String} The uncamelized String
+         * 
+         * */
         "uncamelize" : 
         {
             value : function(text) 
@@ -26,6 +48,19 @@
                 });
             }
         },
+        /** 
+         * Converts a non-camel-case string to a camel-case string
+         *
+         * @name camelize 
+         * @memberOf util 
+         * @function
+         * @example 
+         * util.camelize("foo-bar-baz"); // "fooBarBaz"
+         *
+         * @param {String} text The text to camelize
+         *
+         * @returns {String} A camelcase String
+         * */
         "camelize" : 
         {
             value : function(text) 
@@ -35,6 +70,50 @@
                 return text.replace(/[-_]+(.)?/g, function(a, b) { 
                     return b ? b.toUpperCase() : ""; 
                 });
+            }
+        },
+        /**
+         * Mixes properties of objects into an object. Properties are mixed in
+         * from left to right, so properties will not be overwritten in the
+         * leftmost object if they are already defined. 
+         *
+         * @name mixin 
+         * @memberOf util 
+         * @function 
+         *
+         * @param {Object} self 
+         *      The object to mixin the properties
+         * @param {...Object} varargs 
+         *      Variable number of objects to mix in.
+         *
+         * @returns {Object}
+         *      <i>self</i> or a new object if <i>self</i> is null or undefined.
+         *
+         * @example 
+         * var a = { a : 1, b : 2, c : 3 };
+         * var b = { b : 1, d : 2, e : 3 };
+         * var c = { e : 1, f : 2, g : 3 };
+         * 
+         * a = util.mixin(a, b, c); // a = { a : 1, b : 2, c : 3, d : 2, e : 3, f : 2, g : 3}
+         * */
+        "mixin" : 
+        {
+            value : function(self)
+            {
+                var i, l, key, o;
+                self = self || {};
+                for (i=1, l=arguments.length; i<l; i++)
+                {
+                    o = arguments[i];
+                    for (key in o)
+                    {
+                        if (!self.hasOwnProperty(key)) 
+                        {
+                            self[key] = o[key];
+                        }
+                    }
+                }
+                return self;
             }
         }
     });
@@ -52,44 +131,6 @@
                     if (this.hasOwnProperty(key))
                         callback(key, this[key], this); 
                 }
-            }
-        });
-    }
-    if (Array.prototype.fastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=0, l=this.length; i<l; ++i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
-    if (Array.prototype.fastLastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastLastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=this.length-1; i>=0; --i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
-    if (! RegExp.escape)
-    {
-        Object.defineProperty(RegExp, "escape", 
-        {
-            value : function(string)
-            {
-                return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
             }
         });
     }
