@@ -429,7 +429,8 @@
                              * @memberOf script
                              * @function 
                              *
-                             * @param {Object} object The object on which the value was set
+                             * @param {Object} object 
+                             *  The object whichs property will be set
                              * @param {String} key    The property name
                              * @param {Object} value  The value to set
                              * @example 

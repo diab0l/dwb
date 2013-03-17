@@ -1998,7 +1998,7 @@ dwb_update_hints(GdkEventKey *e)
     gboolean ret = false;
     char json[BUFFER_LENGTH] = {0};
 
-    if (e->keyval == GDK_KEY_Return) 
+    if (IS_RETURN_KEY(e)) 
     {
         com = "followActive";
         snprintf(json, sizeof(json), "{ \"type\" : \"%d\" }", hint_map[dwb.state.hint_type].arg);
@@ -2174,6 +2174,7 @@ dwb_prompt_snooper_cb(GtkWidget *w, GdkEventKey *e, int *state)
         return false;
     switch (e->keyval) 
     {
+        case GDK_KEY_KP_Enter:
         case GDK_KEY_Return:       *state = 0; ret = true; break;
         case GDK_KEY_Escape:  *state = -1; ret = true; break;
         default:              return false;

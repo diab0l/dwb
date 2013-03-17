@@ -132,6 +132,7 @@
 
 #define ALPHA(X)    ((X->keyval >= GDK_KEY_A && X->keyval <= GDK_KEY_Z) ||  (X->keyval >= GDK_KEY_a && X->keyval <= GDK_KEY_z) || X->keyval == GDK_KEY_space)
 #define DIGIT(X)   (X->keyval >= GDK_KEY_0 && X->keyval <= GDK_KEY_9)
+#define IS_RETURN_KEY(X)  ((X)->keyval == GDK_KEY_Return || (X)->keyval == GDK_KEY_KP_Enter)
 #define DWB_TAB_KEY(e)              (e->keyval == GDK_KEY_Tab || e->keyval == GDK_KEY_ISO_Left_Tab)
 #define DWB_COMPLETE_KEY(e)         (DWB_TAB_KEY(e) || e->keyval == GDK_KEY_Down || e->keyval == GDK_KEY_Up)
 

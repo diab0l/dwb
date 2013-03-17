@@ -76,7 +76,7 @@ callback_entry_key_press(GtkWidget* entry, GdkEventKey *e)
     if (dwb.state.mode & QUICK_MARK_OPEN) 
         set_text = true;
     /*  Handled by activate-callback */
-    if (e->keyval == GDK_KEY_Return)
+    if (IS_RETURN_KEY(e))
         return dwb_entry_activate(e);
     /* Insert primary selection on shift-insert */
     if (mode == QUICK_MARK_SAVE) 
@@ -99,9 +99,6 @@ callback_entry_key_press(GtkWidget* entry, GdkEventKey *e)
             dwb_update_hints(e);
             return true;
         }
-        else if (e->keyval == GDK_KEY_Return) 
-            return false;
-        
     }
     else if (!e->is_modifier && complete) 
     {
@@ -205,7 +202,7 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         ret = dwb_eval_override_key(e, CP_OVERRIDE_INSERT);
     else if (gtk_widget_has_focus(dwb.gui.entry) || mode & COMPLETION_MODE) 
         ret = false;
-    else if (webkit_web_view_has_selection(CURRENT_WEBVIEW()) && e->keyval == GDK_KEY_Return) 
+    else if (webkit_web_view_has_selection(CURRENT_WEBVIEW()) && IS_RETURN_KEY(e)) 
         dwb_follow_selection(e);
     else if (dwb.state.mode & AUTO_COMPLETE && DWB_TAB_KEY(e)) 
     {
@@ -218,7 +215,7 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         {
             if (DWB_TAB_KEY(e)) 
                 completion_autocomplete(NULL, e);
-            else if (e->keyval == GDK_KEY_Return) 
+            else if (IS_RETURN_KEY(e)) 
             {
                 completion_eval_autocompletion();
                 return true;
