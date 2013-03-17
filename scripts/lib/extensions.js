@@ -326,7 +326,8 @@
           }
       },
       /**
-       * Unloads an extension, calls extension.end when the extensions
+       * Unloads an extension, calls extension.end when the extensions is
+       * unloaded
        *
        * @memberOf extensions
        * @function
@@ -361,7 +362,7 @@
           }
       }, 
       /**
-       * Toggles an extensions, if it is loaded toggle will unload it, otherwise
+       * Toggles an extension, if it is loaded toggle will unload it, otherwise
        * it will load it.
        *
        * @memberOf extensions

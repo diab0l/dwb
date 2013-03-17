@@ -162,7 +162,7 @@
             value : function(name, callback)
             {
                 this.connect("createTab", function(wv) {
-                    wv.connect(name, function() { callback.apply(callback, arguments);});
+                    wv.connect(name, function() { callback.apply(wv, arguments);});
                 });
             }
         },

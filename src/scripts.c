@@ -4034,10 +4034,11 @@ make_object(JSContextRef ctx, GObject *o)
  *
  * @param {...Object} varargs
  *      Variable number of additional arguments, see the correspondent
- *      gtk/glib/webkit documentation. Note that only arguments of basic type
- *      and arguments derived from GObject are converted to the corresponding
- *      javascript object, otherwise the argument will be undefined (e.g. 
- *      GBoxed types and structs).
+ *      gtk/glib/webkit documentation. Note that the first argument is omitted and
+ *      <i>this</i> will correspond to the first parameter and that only
+ *      arguments of basic type and arguments derived from GObject are converted
+ *      to the corresponding javascript object, otherwise the argument will be
+ *      undefined (e.g.  GBoxed types and structs).
  *
  * @returns {Boolean} 
  *      Return true to stop the emission. Note that this signal handler is
