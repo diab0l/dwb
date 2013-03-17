@@ -4584,12 +4584,12 @@ create_global_object()
 
 
     /**
-     * Static object for input and output
-     *
-     * @namespace 
-     *      Static object for input and output and file operations
-     * @name io
-     * @static
+     * Object that can be used to get dwb's settings, to set dwb's settings use
+     * {@link execute}
+     * @name settings 
+     * @example 
+     * if (settings.enableScripts == true)
+     *      execute("local_set enable-scripts false");
      * */
     cd = kJSClassDefinitionEmpty;
     cd.getProperty = settings_get;
@@ -4597,6 +4597,14 @@ create_global_object()
     class = JSClassCreate(&cd);
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "settings", NULL);
     JSClassRelease(class);
+    /**
+     * Static object for input and output
+     *
+     * @namespace 
+     *      Static object for input and output and file operations
+     * @name io
+     * @static
+     * */
 
     JSStaticFunction io_functions[] = { 
         { "print",     io_print,            kJSDefaultAttributes },
