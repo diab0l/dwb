@@ -364,7 +364,7 @@ js_array_iterator_next(js_array_iterator *iter, JSValueRef *exc)
 void 
 js_array_iterator_finish(js_array_iterator *iter)
 {
-    g_return_if_fail(iter != NULL);
+    g_return_if_fail(iter != NULL && iter != NULL && iter->array != NULL);
 
     JSValueUnprotect(iter->ctx, iter->array);
 }
@@ -410,11 +410,13 @@ js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname_ret, c
 void 
 js_property_iterator_finish(js_property_iterator *iter)
 {
-    g_return_if_fail(iter != NULL && iter->array != NULL);
-    JSPropertyNameArrayRelease(iter->array);
+    g_return_if_fail(iter != NULL);
 
-    g_return_if_fail(iter->object != NULL);
-    JSValueUnprotect(iter->ctx, iter->object);
+    if (iter->array)
+        JSPropertyNameArrayRelease(iter->array);
+
+    if (iter->object)
+        JSValueUnprotect(iter->ctx, iter->object);
 }
 
 JSObjectRef 
