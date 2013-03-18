@@ -696,7 +696,11 @@ sync_meta(const char *output)
 
                 response += 2;
                 while (*response && *response != ',') 
-                    fputc(*(response++), file);
+                {
+                    if (g_ascii_isxdigit(*response))
+                        fputc(*response, file);
+                    response++;
+                }
 
                 fputc('\n', file);
                 SKIP(response, '\n');

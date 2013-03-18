@@ -1,5 +1,10 @@
 = dwb's JavaScript API documentation =
 
+== DEPRECATED ==
+This documentation is deprecated, 
+the new api documentation can be found under 
+link:http://portix.bitbucket.org/dwb/api/[]
+
 == Abstract == 
 
 *dwb* can be extended with different types of userscripts. 
