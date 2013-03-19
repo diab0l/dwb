@@ -1334,12 +1334,20 @@ view_init_settings(GList *gl)
         g_list_free(l);
 }/*}}}*/
 
+static gboolean
+view_key_ignore_cb(WebKitWebView *wv, GdkEventKey *e, GList *gl)
+{
+    return !(dwb.state.mode & INSERT_MODE);
+}
+
 /* view_init_signals(View *v) {{{*/
 static void
 view_init_signals(GList *gl) 
 {
     View *v = gl->data;
     GtkAdjustment *a = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(v->scroll));
+    g_signal_connect(v->web, "key-press-event", G_CALLBACK(view_key_ignore_cb), gl);
+    g_signal_connect(v->web, "key-release-event", G_CALLBACK(view_key_ignore_cb), gl);
     v->status->signals[SIG_BUTTON_PRESS]          = g_signal_connect(v->web, "button-press-event",                    G_CALLBACK(view_button_press_cb), gl);
     v->status->signals[SIG_BUTTON_RELEASE]        = g_signal_connect(v->web, "button-release-event",                  G_CALLBACK(view_button_release_cb), gl);
     v->status->signals[SIG_CLOSE_WEB_VIEW]        = g_signal_connect(v->web, "close-web-view",                        G_CALLBACK(view_close_web_view_cb), gl);
