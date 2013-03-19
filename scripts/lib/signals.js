@@ -85,11 +85,10 @@
                 var id = 0;
                 return function(name, callback)
                 {
-                    id++;
                     if (!name)
-                    {
                         throw new Error("new Signal() : missing signal name");
-                    }
+                    
+                    id++;
                     return Object.create(Signal.prototype, 
                         {
                             /**
@@ -341,7 +340,7 @@
              *
              * @param {String} signal The signal name 
              * @param {varargs} args  Arguments passed to the callback function of
-             *                        {@link signals.connect} 
+             *                        {@link Signal.connect} 
              *
              * @returns {Boolean}
              *      The overall return value of all callback function, if one
@@ -503,7 +502,7 @@
         {
             value : function()
             {
-                return _deprecated("signals.connect", "Signal.disconnect", arguments);
+                return _deprecated("signals.disconnect", "Signal.disconnect", arguments);
             }
         },
         /**

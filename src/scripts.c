@@ -166,8 +166,7 @@ static JSClassRef s_gobject_class,
                   s_deferred_class, 
                   s_history_class;
 static gboolean s_commandline = false;
-static JSObjectRef s_array_contructor, 
-                   s_signal_connect;
+static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
 static JSObjectRef s_init_before, s_init_after; // s_private;
@@ -2400,7 +2399,6 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
     if (atom == NULL)
         atom = GDK_NONE;
     char *text = js_value_to_char(ctx, argv[1], -1, exc);
-    puts(text);
     if (text != NULL)
     {
         GtkClipboard *cb = gtk_clipboard_get(atom);
@@ -3890,10 +3888,17 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
         {
             name[2] = g_ascii_tolower(name[2]);
             const char *tmp = name+2;
-            JSValueRef js_value = js_char_to_value(ctx, tmp);
-            JSValueRef argv[] = { js_value, func };
-            puts(tmp);
-            JSObjectCallAsFunction(s_global_context, s_signal_connect, NULL, 2, argv, exception);
+            JSObjectRef scripts = js_get_object_property(s_global_context, JSContextGetGlobalObject(s_global_context), "Signal");
+            if (scripts)
+            {
+                JSObjectRef connect = js_get_object_property(s_global_context, scripts, "connect");
+                if (connect)
+                {
+                    JSValueRef js_value = js_char_to_value(ctx, tmp);
+                    JSValueRef argv[] = { js_value, func };
+                    JSObjectCallAsFunction(s_global_context, connect, func, 2, argv, exception);
+                }
+            }
 
             g_free(name);
             return true;
@@ -5307,9 +5312,6 @@ scripts_init(gboolean force)
         g_string_free(content, true);
         g_free(dir);
     }
-    JSObjectRef signal = js_get_object_property(s_global_context, JSContextGetGlobalObject(s_global_context), "Signal");
-    s_signal_connect = js_get_object_property(s_global_context, signal, "connect");
-    JSValueProtect(s_global_context, s_signal_connect);
 
     UNDEFINED = JSValueMakeUndefined(s_global_context);
     JSValueProtect(s_global_context, UNDEFINED);
@@ -5418,7 +5420,6 @@ scripts_end()
         JSValueUnprotect(s_global_context, UNDEFINED);
         JSValueUnprotect(s_global_context, NIL);
         JSValueUnprotect(s_global_context, s_soup_session);
-        JSValueUnprotect(s_global_context, s_signal_connect);
         //JSValueUnprotect(s_global_context, s_private);
         JSClassRelease(s_gobject_class);
         JSClassRelease(s_webview_class);
