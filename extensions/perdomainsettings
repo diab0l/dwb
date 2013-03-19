@@ -243,12 +243,12 @@ var perdomainsettings = {
         exports.uris = uris = config.uris || defaultConfig.uris;
         uris && getDefaultValue(uris);
 
-        signals.connect("navigation", onNavigation.debug(script));
+        Signal.connect("navigation", onNavigation.debug(script));
         return true;
     },
     end : function () 
     {
-        signals.disconnect(onNavigation);
+        Signal.disconnect(onNavigation);
     }
 };
 return perdomainsettings;

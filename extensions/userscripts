@@ -489,13 +489,13 @@ function userscriptsStart()
     if (onStart.length > 0) 
     {
         onStart.sort(function(a, b) { return b.priority - a.priority; });
-        signals.connect("loadCommitted", loadCommittedCallback);
+        Signal.connect("loadCommitted", loadCommittedCallback);
         ret = true;
     }
     if (onEnd.length > 0) 
     {
         onEnd.sort(function(a, b) { return b.priority - a.priority; });
-        signals.connect("documentLoaded", loadFinishedCallback);
+        Signal.connect("documentLoaded", loadFinishedCallback);
         ret = true;
     }
     //metaData = {};
@@ -541,8 +541,8 @@ var userscripts = {
         return parseScripts(c ? c.scripts || [] : []);
     },
     end : function () {
-        signals.disconnect(loadFinishedCallback);
-        signals.disconnect(loadCommittedCallback);
+        Signal.disconnect(loadFinishedCallback);
+        Signal.disconnect(loadCommittedCallback);
     }
 };
 

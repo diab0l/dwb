@@ -335,17 +335,27 @@
                 return _deprecated("sendRequestSync", "net.sendRequestSync", arguments);
             }
         },
+        "_deprecationWarning" : 
+        {
+            value : function(on, nn)
+            {
+                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
+            }
+        },
         "_deprecated" : 
         {
             value : function(on, nn, args) 
             {
                 var i, l, ns, ctx;
                 io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
-                ns = nn.split(".");
-                ctx = this;
-                for (i=0, l=ns.length; i<l-1; i++)
-                    ctx = ctx[ns[i]];
-                return ctx[ns[l-1]].apply(this, args);
+                if (args)
+                {
+                    ns = nn.split(".");
+                    ctx = this;
+                    for (i=0, l=ns.length; i<l-1; i++)
+                        ctx = ctx[ns[i]];
+                    return ctx[ns[l-1]].apply(this, args);
+                }
             }
         },
         "_initNewContext" : 

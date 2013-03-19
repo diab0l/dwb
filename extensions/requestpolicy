@@ -109,12 +109,6 @@ var defaultConfig = {
 };
 var config = {};
 
-var sigs = {
-    resource : -1,
-    navigation : -1,
-    loadFinished : -1
-};
-
 var persistentList = null;
 var tmpList = {};
 
@@ -412,23 +406,6 @@ function loadFinishedCB(wv)
         io.notify("RP: blocked " + blocked + " requests");
 }
 
-function connect() 
-{
-    sigs.resource = signals.connect("resource", resourceCB);
-    sigs.navigation = signals.connect("navigation", navigationCB);
-    if (config.notify) 
-        sigs.loadFinished = signals.connect("loadFinished", loadFinishedCB);
-}
-function disconnect() 
-{
-    sigs.forEach(function (key, value) {
-        if (value != -1) 
-        {
-            signals.disconnect(value);
-            sigs[key] = -1;
-        }
-    });
-}//}}}
 var requestpolicy = {
     defaultConfig : defaultConfig, 
     init : function(c) 
@@ -448,7 +425,10 @@ var requestpolicy = {
             }
         }
         persistentList = persistentList || {};
-        connect();
+        Signal.connect("resource", resourceCB);
+        Signal.connect("navigation", navigationCB);
+        if (config.notify)
+            Signal.connect("loadFinished", loadFinishedCB);
         bind(config.shortcut, showMenu, "requestpolicy");
         bind(config.unblockCurrent, unblockCurrent, "requestpolicyUnblockCurrent");
         bind(config.unblockAll, unblockAll, "requestpolicyUnblockAll");
@@ -457,6 +437,9 @@ var requestpolicy = {
     end : function () 
     {
         disconnect();
+        Signal.disconnect(resourceCB);
+        Signal.disconnect(navigationCB);
+        Signal.disconnect(loadFinishedCB);
         unbind("requestpolicy");
         unbind("requestpolicyUnblockCurrent");
         unbind("requestpolicyUnblockAll");

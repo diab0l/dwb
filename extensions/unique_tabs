@@ -44,7 +44,7 @@ commandToggleAutoFocus : "ut_toggle_autofocus",
 //>DEFAULT_CONFIG
 };
 
-var signalId = -1;
+var signal;
 
 var removeDuplicates = function() 
 {
@@ -73,28 +73,17 @@ var onNavigation = function(wv, frame, request)
     }
     return false;
 };
-var connectAutoFocus = function()
-{
-    signalId = signals.connect("navigation", onNavigation);
-};
-var disconnectAutoFocus = function()
-{
-    if (signalId != -1)
-    {
-        signals.disconnect(signalId);
-        signalId = -1;
-        return true;
-    }
-    return false;
-};
 var toggleAutoFocus = function()
 {
-    if (disconnectAutoFocus())
+    if (signal.isConnected())
+    {
+        signal.disconnect();
         io.notify("unique_tabs: autofocus disabled");
+    }
     else 
     {
+        signal.connect();
         io.notify("unique_tabs: autofocus enabled");
-        connectAutoFocus();
     }
 };
 
@@ -110,14 +99,15 @@ var uniqueTabs = {
             bind(c.shortcutToggleAutoFocus, toggleAutoFocus, c.commandToggleAutoFocus);
         }
 
+        signal = new Signal("navigation", onNavigation);
         if (c.autoFocus)
-            connectAutoFocus();
+            signal.connect();
         return true;
     }, 
     end : function() {
         unbind(removeDuplicates);
         unbind(toggleAutoFocus);
-        disconnectAutoFocus();
+        signal.disconnect();
         return true;
     }
 };

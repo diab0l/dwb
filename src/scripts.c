@@ -166,7 +166,8 @@ static JSClassRef s_gobject_class,
                   s_deferred_class, 
                   s_history_class;
 static gboolean s_commandline = false;
-static JSObjectRef s_array_contructor;
+static JSObjectRef s_array_contructor, 
+                   s_signal_connect;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
 static JSObjectRef s_init_before, s_init_after; // s_private;
@@ -2850,6 +2851,8 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  *                            needed and environment variables should be set
  * @param {Object}   [environ] Object that can be used to add environment
  *                             variables to the childs environment
+ * @param {Boolean}  [toStdin] If set to <i>true</i> stdout- and stderr-callback can be
+ *                             used to write to stdin of the childs
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
@@ -2868,6 +2871,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     SpawnChannel *out = NULL, *err = NULL;
     JSObjectRef oc = NULL, ec = NULL;
     GPid pid;
+    gboolean get_stdin = false;
 
 
     if (argc == 0) 
@@ -2891,12 +2895,14 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     
     if (argc > 3)
         envp = get_environment(ctx, argv[3], exc);
+    if (argc > 4)
+        get_stdin = JSValueToBoolean(ctx, argv[4]);
     
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
                 NULL, NULL, &pid,  
-                oc != NULL || ec != NULL ? &infd : NULL,
+                get_stdin && (oc != NULL || ec != NULL) ? NULL : &infd,
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
     {
@@ -3877,6 +3883,22 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
 
     if (name == NULL)
         return false;
+    if (g_str_has_prefix(name, "on") && strlen(name) > 3 && g_ascii_isupper(*(name+2)))
+    {
+        JSObjectRef func = js_value_to_function(ctx, value, exception);
+        if (func) 
+        {
+            name[2] = g_ascii_tolower(name[2]);
+            const char *tmp = name+2;
+            JSValueRef js_value = js_char_to_value(ctx, tmp);
+            JSValueRef argv[] = { js_value, func };
+            puts(tmp);
+            JSObjectCallAsFunction(s_global_context, s_signal_connect, NULL, 2, argv, exception);
+
+            g_free(name);
+            return true;
+        }
+    }
 
     for (int i = SCRIPTS_SIG_FIRST; i<SCRIPTS_SIG_LAST; i++) 
     {
@@ -4671,11 +4693,34 @@ create_global_object()
      * All events are emitted on the signals object itself, for example 
      * "signals.keyPress = function() { ...  };" would connect to the keyPress
      * signal but it is <b>strongly discouraged</b> to use this pattern since it will
-     * only allow to connect one callback to a certain signal, so {@link signals.connect}
-     * which manages all signals should be used instead. 
+     * only allow to connect one callback to a certain signal. To handle signals
+     * {@link Signal}-objects can be used, it manages signals, allows to connect
+     * more than one signal and also allows to easily disconnect/reconnect to
+     * signals. 
+     *
+     * There is just one convenient pattern that allows setting
+     * callbacks directly on signals: if the signal name starts with "on"
+     * dwb will internally create a new Signal and connect to it with the given
+     * callback function, i.e. using 
+     * <b>signals.onResource = function () {...}</b> allows to connect more than
+     * one callback to the "resource"-event, however it doesn't give you as much
+     * control as creating a {@link Signal}.
      *
      * @namespace 
      * @name signals 
+     * @example 
+     * function onNavigation(wv, frame, request) 
+     * {
+     *      ... 
+     *      if (request.uri == "http://www.example.com")
+     *          this.disconnect();
+     * }
+     * // Connect to the navigation event
+     * // this is the preferred way.
+     * var s = new Signal("navigation", onNavigation).connect();
+     * // or equivalently, gi
+     * signals.onNavigation = onNavigation;
+     *
      * */
     cd = kJSClassDefinitionEmpty;
     cd.className = "signals";
@@ -5262,6 +5307,10 @@ scripts_init(gboolean force)
         g_string_free(content, true);
         g_free(dir);
     }
+    JSObjectRef signal = js_get_object_property(s_global_context, JSContextGetGlobalObject(s_global_context), "Signal");
+    s_signal_connect = js_get_object_property(s_global_context, signal, "connect");
+    JSValueProtect(s_global_context, s_signal_connect);
+
     UNDEFINED = JSValueMakeUndefined(s_global_context);
     JSValueProtect(s_global_context, UNDEFINED);
     NIL = JSValueMakeNull(s_global_context);
@@ -5369,6 +5418,7 @@ scripts_end()
         JSValueUnprotect(s_global_context, UNDEFINED);
         JSValueUnprotect(s_global_context, NIL);
         JSValueUnprotect(s_global_context, s_soup_session);
+        JSValueUnprotect(s_global_context, s_signal_connect);
         //JSValueUnprotect(s_global_context, s_private);
         JSClassRelease(s_gobject_class);
         JSClassRelease(s_webview_class);

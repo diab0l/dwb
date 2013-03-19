@@ -1,144 +1,479 @@
 (function ()  
 {
-    var _registered = {};
-    var _blocked = false;
-    var _pending = [];
-    function _disconnect(sig) 
+    var _regCount = {};
+    var _connectedSignals = {};
+    var _connectedMapping = {};
+
+    var _disconnect = function(signal)
     {
-        signals[sig] = null;
-        delete _registered[sig];
-    }
-    var _disconnectByProp = function(prop, obj) 
+        var name = signal.name, id = signal.id;
+        _regCount[name]--;
+
+        _connectedSignals[name][id] = null;
+        delete _connectedSignals[name][id];
+
+        _connectedMapping[id] = null;
+        delete _connectedMapping[id];
+
+
+        if (_regCount[name] == 0)
+            signals[name] = null;
+        return signal;
+    };
+    var _getSignalByCallback = function(callback)
     {
-        var sig, i, sigs;
-        if (_blocked)
+        var id;
+        for (id in _connectedMapping)
         {
-            _pending.push({prop : prop, obj : obj});
-            return;
-        }
-        for (sig in _registered) 
-        {
-            sigs = _registered[sig];
-            for (i = 0; i<sigs.length; i++) 
+            if (callback == _connectedMapping[id].callback)
             {
-                if (sigs[i][prop] == obj) 
-                {
-                    if (_registered[sig].length === 1) 
-                    {
-                        _disconnect(sig);
-                    }
-                    else 
-                    {
-                        sigs.splice(i, 1);
-                    }
-                    return;
-                }
+                return _connectedMapping[id];
             }
         }
+        return null;
     };
-    var _connect = function(id, sig, func, pre)
+    var _getSignalBySelfOrCallback = function(selfOrCallback)
     {
-        pre = pre || 0;
-        if (func === null || typeof func !== "function") 
-        {
-            return -1;
-        }
-        if (_registered[sig] === undefined || _registered[sig] === null) 
-        {
-            _registered[sig] = [];
-            signals[sig] = function () { return signals.emit(sig, arguments); };
-        }
-        _registered[sig].push({ callback : func, id : id, pre : pre });
-        _registered[sig].sort(function(a, b) { return b.pre - a.pre; });
-        return id;
+        if (selfOrCallback instanceof Signal)
+            return selfOrCallback;
+        return _getSignalByCallback(selfOrCallback);
     };
-    Object.defineProperties(signals, 
-    {
+    /** 
+     *
+     * @name Signal
+     * @class 
+     *      A Signal can be used to connect to certain browser events. For a list
+     *      of available signals see {@link signals}. Signals are directly
+     *      emitted on {@link signals}, this class is just a convience
+     *      class to handle signals. 
+     * @description
+     *      Constructs a new Signal
+     * @example 
+     * function navigationCallback(wv, frame, request, response) 
+     * {
+     *      ...
+     * }
+     *
+     * // Create a new signal
+     * var a = new Signal("navigation", navigationCallback);
+     * var b = new Signal("navigation");
+     *
+     * // The following patterns are equivalent
+     * a.connect();
+     *
+     * b.connect(navigationCallback);
+     *
+     * // using the static method
+     * var c = Signal.connect("navigation", navigationCallback);
+     *
+     * // set the signal callback directly on {@link signals} 
+     * // you won't get the constructed signal then
+     * signals.onNavigation = navigationCallback;
+     *
+     * @param {String} name 
+     *      The event to connect to
+     * @param {Function} [callback] 
+     *      Callback that will be called when the signal is emitted. If omitted
+     *      a callback must be passed to {@link connect}.
+     *
+     * @returns {Signal}
+     *      A new Signal
+     * */
+    Object.defineProperty(this, "Signal", {
+            writable : true,
+            value : (function() {
+                var id = 0;
+                return function(name, callback)
+                {
+                    id++;
+                    if (!name)
+                    {
+                        throw new Error("new Signal() : missing signal name");
+                    }
+                    return Object.create(Signal.prototype, 
+                        {
+                            /**
+                             * The id of the signal
+                             * @name id
+                             * @memberOf Signal.prototype
+                             * @readonly
+                             *
+                             * */
+                            "id" : { value : id },
+                            /** 
+                             * The callback that will be called when the signal
+                             * is emitted, the context of the signal will be the
+                             * signal itself (i.e. <i>this</i> refers to the
+                             * connected Signal).
+                             *
+                             * @name callback
+                             * @memberOf Signal.prototype
+                             *
+                             * @example 
+                             * function a() {
+                             *      io.print("Calling from a");
+                             *      this.callback = b;
+                             * }
+                             * function b() { 
+                             *      io.print("Calling from b");
+                             *      this.callback = a;
+                             * }
+                             * var s = new Signal("createTab", a).connect();
+                             * */
+                            "callback" : { value : callback, writable : true }, 
+                            /**
+                             * The name of the event
+                             * @name name
+                             * @memberOf Signal.prototype
+                             * @readonly
+                             * */
+                            "name" : { value : name },
+                            /**
+                             * Disconnect this signal from the event, if disconnected the
+                             * callback will no longer be called, to reconnect
+                             * call signal.connect()
+                             *
+                             * @name disconnect
+                             * @function 
+                             * @memberOf Signal.prototype
+                             *
+                             * @returns {Signal}
+                             *      self
+                             *
+                             * @example
+                             * var i = 0;
+                             * var signal = new Signal("navigation", function(wv, frame, request) {
+                             *      i++;
+                             *      if (i == 3)
+                             *          this.disconnect();
+                             * });
+                             * */
+                            "disconnect" : 
+                            { 
+                                value : function() 
+                                { 
+                                    if (this.isConnected())
+                                        _disconnect(this); 
+                                    return this;
+                                }
+                            },
+                            /**
+                             * Connect this signal to the event
+                             *
+                             * @name connect
+                             * @function 
+                             * @memberOf Signal.prototype
+                             *
+                             * @param {Function} [callback]
+                             *      The callback function to call, if no
+                             *      callback was passed to the constructor
+                             *      callback is mandatory.
+                             *
+                             * @returns {Signal}
+                             *      self
+                             * @example 
+                             * function a() {
+                             *      ...
+                             * }
+                             * function b() {
+                             *      ...
+                             * }
+                             * var signal = new Signal("navigation", a);
+                             * // connect to a
+                             * signal.connect();
+                             * // connect to b
+                             * signal.connect(b);
+                             * */
+                            "connect" : 
+                            { 
+                                value : function(callback) 
+                                {
+                                    if (callback)
+                                        this.callback = callback;
+                                    if (this.isConnected())
+                                        return;
+
+                                    if (!this.callback)
+                                        throw new Error("Signal.connect() : missing callback");
+                                    var name = this.name, id = this.id;
+                                    if (!_regCount[name])
+                                        _regCount[name] = 0;
+                                    if (!_connectedSignals[name])
+                                        _connectedSignals[name] = {};
+                                    if (_regCount[name] == 0)
+                                    {
+                                        signals[name] = function() { return Signal.emit(name, arguments); };
+                                    }
+                                    _regCount[name]++;
+                                    _connectedSignals[name][id] = this;
+                                    _connectedMapping[id] = this;
+                                    return this;
+                                }
+                            }, 
+                            /**
+                             * Checks if a signal is connected
+                             *
+                             * @name isConnected 
+                             * @memberOf Signal.prototype
+                             * @function
+                             *
+                             * @return {Boolean}
+                             *      <i>true</i> if the signal is connected
+                             * */
+                            "isConnected" : 
+                            {
+                                value : function() 
+                                {
+                                    return Boolean(_connectedMapping[this.id]);
+                                }
+                            }
+                        }
+                    );
+                };
+            })()
+    });
+    Object.defineProperties(Signal, {
+            /**
+             * Connects to an event
+             *
+             * @name connect
+             * @memberOf Signal
+             * @function
+             * 
+             * @param {String} name 
+             *      The signal to connect to
+             * @param {Function} callback 
+             *      Callback that will be called when the signal is emitted.
+             *
+             * @returns {Signal}
+             *      A new Signal
+             *
+             * @example
+             * function onCloseTab()
+             * {
+             *      ...
+             * }
+             * var s = Signal.connect("closeTab", onCloseTab);
+             * // equivalent to 
+             * var s = new Signal("closeTab", onCloseTab);
+             * s.connect();
+             * */
+            "connect" : 
+            {
+                value : function(name, callback)
+                {
+                    var signal = new Signal(name, callback);
+                    return signal.connect();
+                }
+            },
+            /**
+             * Disconnects from an event.              
+             * @name disconnect
+             * @memberOf Signal
+             * @function
+             * 
+             * @param {Signal|Callback} object 
+             *      Either a Signal or the callback of a signal
+             *      If a callback is passed to this function and the same
+             *      callback is connected multiple times only the first matching
+             *      callback will be disconnected, to disconnect all matching
+             *      callbacks call use {@link Signal.disconnectAll}
+             *
+             * @returns {Signal}
+             *      The disconnected Signal
+             *
+             * @example
+             * function callback(wv) 
+             * {
+             *      ...
+             * }
+             * var s = new Signal("loadStatus").connect(callback);
+             *
+             * // Disconnect from the first matching callback
+             * Signal.disconnect(callback);
+             *
+             * Signal.disconnect(s);
+             * // or equivalently
+             * s.disconnect();
+             * */
+            "disconnect" : 
+            {
+                value : function(selfOrCallback)
+                {
+                    return _getSignalBySelfOrCallback(selfOrCallback);
+                }
+            }, 
+            /**
+             * Connects all webviews to a GObject signal. 
+             *
+             * @name connectWebView
+             * @memberOf Signal 
+             * @function 
+             *
+             * @param {String} signal The signal name
+             * @param {GObject~connectCallback} callback 
+             *      A callback function the will be called when the signal is
+             *      emitted, the arguments of the callback correspond to the GObject
+             *      callback
+             * @example 
+             * Signal.connectWebView("hovering-over-link", function(title, uri) {
+             *      io.write("/tmp/hovered_sites", "a", uri + " " + title);
+             * }); 
+             *
+             * */
+            "connectWebView" : 
+            {
+                value : function(name, callback)
+                {
+                    Signal.connect("createTab", function(wv) {
+                        wv.connect(name, function() { callback.apply(wv, arguments);});
+                    });
+                }
+            }, 
+            /**
+             * Emits a signal, can be used to implement custom signals.
+             *
+             * @name emit 
+             * @memberOf Signal 
+             * @function
+             *
+             * @param {String} signal The signal name 
+             * @param {varargs} args  Arguments passed to the callback function of
+             *                        {@link signals.connect} 
+             *
+             * @returns {Boolean}
+             *      The overall return value of all callback function, if one
+             *      callback function returns <i>true</i> the overall return value
+             *      will be <i>true</i>
+             * */
+            "emit" :
+            {
+                value : function(signal, args)
+                {
+                    var id, current;
+                    var ret = false;
+                    var connected = _connectedSignals[signal];
+                    for (id in connected)
+                    {
+                        current = connected[id];
+                        ret = current.callback.apply(current, args) || ret;
+                    }
+                    return ret;
+                }
+            }, 
+            /**
+             * Disconnect from all signals with matching callback function
+             *
+             * @name disconnectAll
+             * @memberOf Signal 
+             * @function 
+             *
+             * @param {Function} callback
+             *      A callback function
+             * 
+             * @returns {Array}
+             *      Array of signals that were disconnected
+             *
+             * @example
+             * function onNavigation(wv, frame, request) 
+             * {
+             *      ...
+             * }
+             * var a = new Signal("navigation", onNavigation).connect();
+             * var b = new Signal("navigation", onNavigation).connect();
+             *
+             * Signals.disconnectAll(onNavigation);
+             * */
+            "disconnectAll" : 
+            {
+                value : function(callback) 
+                {
+                    var signals = [];
+                    var signal; 
+                    while((signal = _getSignalBySelfOrCallback(callback)))
+                    {
+                        signals.push(signal);
+                        signal.disconnect();
+                    }
+                    return signals;
+
+                }
+            }, 
+            /**
+             * Connect to more than one signal at once
+             *
+             * @name connectAll
+             * @memberOf Signal 
+             * @function 
+             *
+             * @param {Array}  signals
+             *      Array of signals
+             * @param {Function}  [callback]
+             *      Callbackfunction to connect to
+             *
+             *
+             * @example
+             * function onNavigation(wv, frame, request) 
+             * {
+             *      ...
+             * }
+             * function onNavigation2(wv, frame, request) 
+             * {
+             *      ...
+             * }
+             * var a = new Signal("navigation", onNavigation).connect();
+             * var b = new Signal("navigation", onNavigation).connect();
+             *
+             * // disconnect from all signals
+             * var signals = Signal.disconnectAll(onNavigation);
+             *
+             * // reconnect to all signals
+             * Signal.connectAll(signals);
+             *
+             * // Reconnect to all signals with a new callback
+             * Signal.connectAll([a, b], onNavigation2);
+             * */
+            "connectAll" : 
+            {
+                value : function(signalOrArray, callback)
+                {
+                    var i, l;
+                    if (signalOrArray instanceof Signal)
+                        signalOrArray.connect(callback);
+                    else 
+                    {
+                        for (i=signalOrArray.length-1; i>=0; i--)
+                            signalOrArray[i].connect(callback);
+                    }
+                }
+            }
+    });
+    Object.defineProperties(signals, {
         /**
-         * Emits a signal, can be used to implement custom signals.
-         *
          * @name emit 
          * @memberOf signals 
-         * @function
-         *
-         * @param {String} signal The signal name 
-         * @param {varargs} args  Arguments passed to the callback function of
-         *                        {@link signals.connect} 
-         *
-         * @returns {Boolean}
-         *      The overall return value of all callback function, if one
-         *      callback function returns <i>true</i> the overall return value
-         *      will be <i>true</i>
+         * @function 
+         * @deprecated use {@link Signal.emit} instead
          * */
         "emit" : 
         {
-            value : function(sig, args) 
+            value : function(sig, func, pre) 
             {
-                var sigs = _registered[sig];
-                var currentSig, pending;
-                var ret = false;
-                var i, l;
-                _blocked = true;
-                for (i=0, l=sigs.length; i<l; i++)
-                {
-                    currentSig = sigs[i];
-                    ret = currentSig.callback.apply(currentSig.callback, args) || ret;
-                } 
-                _blocked = false;
-                if (_pending.length > 0)
-                {
-                    for (i=_pending.length-1; i>=0; --i)
-                    {
-                        pending = _pending[i];
-                        _disconnectByProp(pending.prop, pending.obj);
-                    }
-                    _pending = [];
-                }
-                return ret;
+                return _deprecated("signals.emit", "Signal.emit", arguments);
             }
         },
         /**
-         * Connects to a signal. Use this function to connect to a signal,
-         * setting a callback function directly on an event will overwrite
-         * all existing callbacks. The callbacks are executed in order they are
-         * connected except precedence is set for some signals.
-         *
-         * @example 
-         * signals.connect("navigation", function(webview, frame, request, action) {
-         *     ...
-         * });
-         *
          * @name connect 
          * @memberOf signals 
          * @function 
-         *
-         * @param {String} event 
-         *      The event name, see Events for details
-         * @param {Function} callback 
-         *      A callback function the will be called when the signal is
-         *      emitted, see Type Definitions for details
-         * @param {Number} [precedence]
-         *      A number indicating the precedence of executing the callback,
-         *      the higher the number the earlier the function will be executed
-         *      in the callback queue, note that all callbacks connected from
-         *      scripts will be executed regardless of precedence. The default
-         *      precedence is 0.
-         *
-         * @returns {Number}
-         *      A unique signal id
+         * @deprecated use {@link Signal.connect} instead
          * */
         "connect" : 
         {
-            value : (function () 
+            value : function(sig, func, pre) 
             {
-                var id = 0;
-                return function(sig, func, pre) 
-                {
-                    id++;
-                    _connect(id, sig, func, pre);
-                    return id;
-                };
-            })()
+                return _deprecated("signals.connect", "Signal.connect", arguments);
+            }
         },
         /**
          * Connects all webviews to a GObject signal. 
@@ -146,127 +481,53 @@
          * @name connectWebView
          * @memberOf signals 
          * @function 
+         * @deprecated use {@link Signal.connectWebView} instead
          *
-         * @param {String} signal The signal name
-         * @param {GObject~connectCallback} callback 
-         *      A callback function the will be called when the signal is
-         *      emitted, the arguments of the callback correspond to the GObject
-         *      callback
-         * @example 
-         * signals.connectWebView("hovering-over-link", function(title, uri) {
-         *      io.write("/tmp/hovered_sites", "a", uri + " " + title);
-         * }); 
          * */
         "connectWebView" :
         {
-            value : function(name, callback)
+            value : function()
             {
-                this.connect("createTab", function(wv) {
-                    wv.connect(name, function() { callback.apply(wv, arguments);});
-                });
+                return _deprecated("signals.connectWebView", "Signal.connectWebView", arguments);
             }
         },
         /**
-         * Disconnect from a signal
-         *
          * @name disconnect
          * @memberOf signals 
          * @function 
-         *
-         * @param {Number|Function} id|callback 
-         *          The id returned from {@link connect} or the callback
-         *          function passed to connect.  Note that if the same callback
-         *          is used more than once the signal must be disconnected by
-         *          id, otherwise the behaviour is undefined.
-         * @example 
-         * signals.connect("loadFinished", function(wv) {
-         *      ... 
-         *      signals.disconnect(this);
-         * });
-         * var id = signals.connect("loadCommitted", function(wv) {
-         *      ... 
-         *      signals.disconnect(id);
-         * });
+         * @deprecated use {@link Signal.disconnect} instead
          * */
         "disconnect" : 
         {
-            value : function(obj) {
-                if (typeof obj == "function")
-                    _disconnectByProp("callback", obj);
-                else 
-                    _disconnectByProp("id", obj);
-
+            value : function()
+            {
+                return _deprecated("signals.connect", "Signal.disconnect", arguments);
             }
         },
         /**
-         * Disconnect from all signals with matching name. Use with care, it
-         * will stop the emission of the signal in <b>all scripts</b>. Can be used to
-         * temporarily disable the emission of the signal.
-         * To reconnect to all signals pass the returned object to  
-         * {@link signals.connectAll}.
-         *
          * @name disconnectAll
          * @memberOf signals 
          * @function 
-         *
-         * @param {String} signal
-         *      The signal name
-         * 
-         * @returns {Object}
-         *      An object that can be passed to {@link signals.connectAll} or
-         *      <i>null</i>.
+         * @deprecated use {@link Signal.disconnectAll}
          * */
         "disconnectAll" : 
         {
-            value : function (name) 
+            value : function(callback) 
             {
-                var  sigs = null;
-                if (signals[name] !== null && signals[name] !== undefined) 
-                {
-                    var ret = [];
-                    for (var i=0; i<_registered[name].length; i++)
-                        ret.push(_registered[name][i]);
-                    _disconnect(name);
-
-                    return { name : name, signals : ret };
-                }
-                return null;
+                return _deprecated("signals.disconnectAll", "Signal.disconnectAll", arguments);
             }
         }, 
         /**
-         * Reconnect to a signal previously disconnected with 
-         * {@link signals.disconnectAll}. 
-         *
          * @name connectAll
          * @memberOf signals 
          * @function 
-         *
-         * @param {Object}  detail
-         *      Object retrieved from {@link signals.disconnectAll}
-         * @param {String}  detail.name 
-         *      Name of the signal
-         * @param {Array[Object]}   detail.signals[]    
-         *      Array of signal data
-         * @param {Number}  detail.signals[].id         
-         *      The id of the signal
-         * @param {Function}  detail.signals[].callback   
-         *      The callback passed to {@link signals.connect}
-         * @param {Number}  detail.signals[].pre 
-         *      The precedence
-         * 
+         * @deprecated use {@link Signal.connectAll} instead
          * */
         "connectAll" : 
         {
-            value : function(sigs)
+            value : function()
             {
-                var sig, i, l;
-                var name = sigs.name;
-                var s = sigs.signals;
-                for (i=0, l=s.length; i<l; i++)
-                {
-                    sig = s[i];
-                    _connect(sig.id, name, sig.callback, sig.pre);
-                }
+                return _deprecated("signals.connectAll", "Signal.connectAll", arguments);
             }
         }
     });
