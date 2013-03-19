@@ -191,19 +191,22 @@
                                     if (callback)
                                         this.callback = callback;
                                     if (this.isConnected())
-                                        return;
+                                        return this;
 
                                     if (!this.callback)
                                         throw new Error("Signal.connect() : missing callback");
+
                                     var name = this.name, id = this.id;
+
                                     if (!_regCount[name])
                                         _regCount[name] = 0;
+
                                     if (!_connectedSignals[name])
                                         _connectedSignals[name] = {};
+
                                     if (_regCount[name] == 0)
-                                    {
                                         signals[name] = function() { return Signal.emit(name, arguments); };
-                                    }
+
                                     _regCount[name]++;
                                     _connectedSignals[name][id] = this;
                                     _connectedMapping[id] = this;
@@ -262,8 +265,7 @@
             {
                 value : function(name, callback)
                 {
-                    var signal = new Signal(name, callback);
-                    return signal.connect();
+                    return new Signal(name, callback).connect();
                 }
             },
             /**
