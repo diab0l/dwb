@@ -115,7 +115,21 @@
                 }
                 return self;
             }
+        }, 
+        /**
+         * @name domainFromHost
+         * @memberOf util
+         * @function
+         * @deprecated use {@link net.domainFromHost} 
+         * */
+        "domainFromHost" : 
+        {
+            value : function() 
+            {
+                return _deprecated("util.domainFromHost", "net.domainFromHost", arguments);
+            }
         }
+
     });
     Object.freeze(util);
     
