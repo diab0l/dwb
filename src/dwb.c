@@ -3413,11 +3413,9 @@ dwb_free_custom_keys()
 gboolean
 dwb_clean_up() 
 {
+    scripts_end();
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
-    // needs to be ended before anything else is freed, otherwise pending
-    // 'execute' can crash
-    scripts_end();
     
     hsts_end(); /* Assumes it has access to dwb.settings */
     for (GList *l = dwb.keymap; l; l=l->next) {

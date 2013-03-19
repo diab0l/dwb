@@ -518,6 +518,7 @@
             configurable : true
         }
     });
+    
     Object.defineProperties(GObject.prototype, {
             /** 
              * Connects to a property change notification

@@ -147,4 +147,4 @@
         }
     });
 })();
-//Object.freeze(io);
+Object.freeze(io);

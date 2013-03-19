@@ -4739,6 +4739,10 @@ create_global_object()
     create_object(s_global_context, class, global_object, kJSDefaultAttributes, "extensions", NULL);
     JSClassRelease(class);
 
+    class = create_class("Signal", NULL, NULL);
+    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "Signal", NULL);
+    JSClassRelease(class);
+
     /**
      * Utility functions
      *
