@@ -4700,7 +4700,7 @@ create_global_object()
      * signal but it is <b>strongly discouraged</b> to use this pattern since it will
      * only allow to connect one callback to a certain signal. To handle signals
      * {@link Signal}-objects can be used, it manages signals, allows to connect
-     * more than one signal and also allows to easily disconnect/reconnect to
+     * to more than one signal and also allows to easily disconnect/reconnect to
      * signals. 
      *
      * There is just one convenient pattern that allows setting
@@ -4709,7 +4709,10 @@ create_global_object()
      * callback function, i.e. using 
      * <b>signals.onResource = function () {...}</b> allows to connect more than
      * one callback to the "resource"-event, however it doesn't give you as much
-     * control as creating a {@link Signal}.
+     * control as creating a {@link Signal}. When connected with this pattern it
+     * is <b>not</b> possible to disconnect from the signal with 
+     * <b>signals.onResource  = null;</b>, instead {@link Signal.disconnect}
+     * must be used.
      *
      * @namespace 
      * @name signals 
