@@ -75,16 +75,10 @@ var onNavigation = function(wv, frame, request)
 };
 var toggleAutoFocus = function()
 {
-    if (signal.isConnected())
-    {
-        signal.disconnect();
-        io.notify("unique_tabs: autofocus disabled");
-    }
-    else 
-    {
-        signal.connect();
+    if (signal.toggle())
         io.notify("unique_tabs: autofocus enabled");
-    }
+    else 
+        io.notify("unique_tabs: autofocus disabled");
 };
 
 var uniqueTabs = {
