@@ -1178,6 +1178,8 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL | SETTING_ONINIT,  CHAR, { .p = NULL }, (S_Func)dwb_set_accept_language,   { 0 }, }, 
   { { "max-visible-completions",                            "Maximum number of visible completions", },                                            
     SETTING_GLOBAL,  INTEGER, { .i = 11 }, NULL,   { 0 }, }, 
+  { { "passthrough-keys",                            "Whether to enable webkit builtin shortcuts", },                                            
+    SETTING_GLOBAL | SETTING_ONINIT,  CHAR, { .p = "webkit" }, (S_Func)dwb_set_passthrough,   { 0 }, }, 
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

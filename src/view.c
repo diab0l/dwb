@@ -1337,6 +1337,50 @@ view_init_settings(GList *gl)
 static gboolean
 view_key_ignore_cb(WebKitWebView *wv, GdkEventKey *e, GList *gl)
 {
+    // passthrough none
+    if (dwb.misc.passthrough == PASSTHROUGH_NONE)
+        return !(dwb.state.mode & INSERT_MODE);
+    // passthrough all 
+    else if (dwb.misc.passthrough == PASSTHROUGH_ALL)
+        return false;
+
+    if (e->state == GDK_CONTROL_MASK)
+    {
+        switch (e->keyval)
+        {
+            case GDK_KEY_c: 
+            case GDK_KEY_x: 
+            case GDK_KEY_v: 
+            case GDK_KEY_a: 
+                return false;
+        }
+    }
+    else if (e->state == GDK_SHIFT_MASK)
+    {
+        switch (e->keyval)
+        {
+            case GDK_KEY_ISO_Left_Tab: 
+            case GDK_KEY_space: 
+                return false;
+        }
+    }
+    else 
+    {
+        switch (e->keyval)
+        {
+            case GDK_KEY_Tab: 
+            case GDK_KEY_Return: 
+            case GDK_KEY_Escape: 
+            case GDK_KEY_Up: 
+            case GDK_KEY_Down: 
+            case GDK_KEY_Left: 
+            case GDK_KEY_Right: 
+            case GDK_KEY_Page_Up: 
+            case GDK_KEY_Page_Down: 
+            case GDK_KEY_space: 
+                return false;
+        }
+    }
     return !(dwb.state.mode & INSERT_MODE);
 }
 

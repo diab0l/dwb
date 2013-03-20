@@ -186,6 +186,12 @@ typedef enum _DwbStatus {
   STATUS_END,
   STATUS_IGNORE, 
 } DwbStatus;
+enum {
+    PASSTHROUGH_NONE,
+    PASSTHROUGH_WEBKIT,
+    PASSTHROUGH_ALL,
+};
+
 
 
 /* TYPES {{{*/
@@ -788,6 +794,8 @@ struct _Misc {
   int script_signals;
   CloseLastTabPolicy clt_policy;
   ProgressBarStyle progress_bar_style;
+
+  int passthrough;
   //gboolean javascript_debugging;
 };
 enum Files {

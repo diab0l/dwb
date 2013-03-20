@@ -80,6 +80,7 @@ static DwbStatus dwb_set_find_delay(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_do_not_track(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
 static void dwb_set_statusbar_color();
 //static DwbStatus dwb_set_javascript_debugging(GList *gl, WebSettings *s);
 #ifdef WITH_LIBSOUP_2_38
@@ -170,6 +171,19 @@ dwb_set_adblock(GList *gl, WebSettings *s)
         for (GList *l = dwb.state.views; l; l=l->next) 
             adblock_disconnect(l);
     }
+}/*}}}*/
+static DwbStatus
+dwb_set_passthrough(GList *gl, WebSettings *s) 
+{
+    if (!strcmp(s->arg_local.p, "all"))
+        dwb.misc.passthrough = PASSTHROUGH_ALL;
+    else if (!strcmp(s->arg_local.p, "none"))
+        dwb.misc.passthrough = PASSTHROUGH_NONE;
+    else if (!strcmp(s->arg_local.p, "webkit"))
+        dwb.misc.passthrough = PASSTHROUGH_WEBKIT;
+    else 
+        return STATUS_ERROR;
+    return STATUS_OK;
 }/*}}}*/
 
 /*{{{*/

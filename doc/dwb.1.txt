@@ -1444,6 +1444,11 @@ rgb color-string, default value: '#151515'.
 The foreground color of inactive element in tab-completion. Possible values: an rgb color-string.
 color-string, default value: '#eeeeee'.
 
+*passthrough-keys*:: 
+Keysstrokes that will be passed to the website, *webkit* means only webkit builtin
+shortcuts will be passed through, *all* means all will be passed through, *none*
+means no keystrokes will be passed through, default value: 'webkit'.
+
 *print-previewer*::
 Program used for printing previews, default value: 'NULL'.
 
