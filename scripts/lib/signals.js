@@ -135,7 +135,7 @@
                             { 
                                 value : function() 
                                 { 
-                                    if (!this.isConnected())
+                                    if (!this.connected)
                                         return this;
                                     var name = this.name, id = this.id;
                                     if (_sigCount[name] > 0)
@@ -186,7 +186,7 @@
                                 {
                                     if (callback)
                                         this.callback = callback;
-                                    if (this.isConnected())
+                                    if (this.connected)
                                         return this;
 
                                     if (!this.callback)
@@ -210,18 +210,17 @@
                                 }
                             }, 
                             /**
-                             * Checks if a signal is connected
+                             * Whether the signal is connected
                              *
-                             * @name isConnected 
+                             * @name connected 
                              * @memberOf Signal.prototype
-                             * @function
+                             * @type Boolean
+                             * @readonly
                              *
-                             * @return {Boolean}
-                             *      <i>true</i> if the signal is connected
                              * */
-                            "isConnected" : 
+                            "connected" : 
                             {
-                                value : function() 
+                                get : function() 
                                 {
                                     return Boolean(_byId[this.id]);
                                 }
@@ -242,7 +241,7 @@
                             {
                                 value : function()
                                 {
-                                    var connected = this.isConnected();
+                                    var connected = this.connected;
                                     if (connected)
                                         this.disconnect();
                                     else 
@@ -323,7 +322,7 @@
                 value : function(selfOrCallback)
                 {
                     var signal = _getBySelfOrCallback(selfOrCallback);
-                    if (signal && signal.isConnected())
+                    if (signal && signal.connected)
                         signal.disconnect();
                     return signal;
                 }
@@ -417,7 +416,7 @@
                     var signal; 
                     while((signal = _getBySelfOrCallback(callback)))
                     {
-                        if (signal.isConnected())
+                        if (signal.connected)
                         {
                             signals.push(signal);
                             signal.disconnect();
