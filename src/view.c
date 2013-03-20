@@ -867,6 +867,29 @@ view_scroll_cb(GtkWidget *w, GdkEventScroll *e, GList *gl)
     return false;
 }/*}}}*/
 
+/* view_scroll_cb(GtkWidget *w, GdkEventScroll * GList *) {{{*/
+static gboolean
+view_scroll_tab_cb(GtkWidget *w, GdkEventScroll *e, GList *gl) 
+{
+    const char *event;
+    int pos = -1;
+    if (e->direction == GDK_SCROLL_DOWN)
+    {
+        pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
+        event = "focus_next";
+    }
+    else if (e->direction == GDK_SCROLL_UP)
+    {
+        pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) - 1, g_list_length(dwb.state.views));
+        event = "focus_prev";
+    }
+    if (pos != -1)
+    {
+        dwb_focus_view(g_list_nth(dwb.state.views, pos), event);
+    }
+    return false;
+}/*}}}*/
+
 /* view_value_changed_cb(GtkAdjustment *a, GList *gl) {{{ */
 static gboolean
 view_value_changed_cb(GtkAdjustment *a, GList *gl) 
@@ -1417,6 +1440,7 @@ view_init_signals(GList *gl)
     v->status->signals[SIG_TITLE]                 = g_signal_connect(v->web, "notify::title",                         G_CALLBACK(view_title_cb), gl);
     v->status->signals[SIG_URI]                   = g_signal_connect(v->web, "notify::uri",                           G_CALLBACK(view_uri_cb), gl);
     v->status->signals[SIG_SCROLL]                = g_signal_connect(v->web, "scroll-event",                          G_CALLBACK(view_scroll_cb), gl);
+    v->status->signals[SIG_SCROLL_TAB]            = g_signal_connect(v->tabevent, "scroll-event",                          G_CALLBACK(view_scroll_tab_cb), gl);
     v->status->signals[SIG_VALUE_CHANGED]         = g_signal_connect(a,      "value-changed",                         G_CALLBACK(view_value_changed_cb), gl);
     if (GET_BOOL("enable-favicon")) 
         v->status->signals[SIG_ICON_LOADED]           = g_signal_connect(v->web, "icon-loaded",                           G_CALLBACK(view_icon_loaded), gl);

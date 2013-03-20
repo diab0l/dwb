@@ -143,6 +143,9 @@
 #define GET_DOUBLE(prop)            (((WebSettings*)g_hash_table_lookup(dwb.settings, prop))->arg_local.d)
 #define NUMMOD                      (dwb.state.nummod < 0 ? 1 : dwb.state.nummod)
 
+#define FLOOR(x) ((x) >= 0 ? ((int)( x )) : ((int)(( x ) - 1)))
+#define MODULO(x, y) ((x) - FLOOR((double)(x)/(y))  * (y))
+
 #ifdef DWB_DEBUG
 #define PRINT_DEBUG(...) do { \
     fprintf(stderr, "\n\033[31;1mDEBUG:\033[0m %s:%d:%s()\t", __FILE__, __LINE__, __func__); \
@@ -457,6 +460,7 @@ enum Signal {
   SIG_TITLE,
   SIG_URI,
   SIG_SCROLL,
+  SIG_SCROLL_TAB,
   SIG_VALUE_CHANGED,
   SIG_ENTRY_KEY_PRESS,
   SIG_ENTRY_KEY_RELEASE,

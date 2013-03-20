@@ -93,5 +93,5 @@ G_STMT_END
 
 #define SCRIPTS_WV(gl) .jsobj = (VIEW(gl)->script_wv)
 #define SCRIPTS_SIG_META(js, sig, num) .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num, .arg = NULL
-#define SCRIPTS_SIG_ARG(js, sig, num) .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num, 
+#define SCRIPTS_SIG_ARG(js, sig, num) .json = js, .signal = SCRIPTS_SIG_##sig, .numobj = num 
 #endif

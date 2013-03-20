@@ -33,14 +33,6 @@
 #include "editor.h"
 #include "dom.h"
 
-inline static int 
-dwb_floor(double x) { 
-  return x >= 0 ? (int) x : (int) x - 1;
-}
-inline static int 
-modulo(int x, int y) {
-  return x - dwb_floor((double)x/y)  * y;
-}
 /* commands.h {{{*/
 /* commands_simple_command(keyMap *km) {{{*/
 DwbStatus 
@@ -425,7 +417,7 @@ commands_focus(KeyMap *km, Arg *arg)
 {
     if (dwb.state.views->next) 
     {
-        int pos = modulo(g_list_position(dwb.state.views, dwb.state.fview) + NUMMOD * arg->n, g_list_length(dwb.state.views));
+        int pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) + NUMMOD * arg->n, g_list_length(dwb.state.views));
         GList *g = g_list_nth(dwb.state.views, pos);
         dwb_focus_view(g, km->map->n.first);
         return STATUS_OK;

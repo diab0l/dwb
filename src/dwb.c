@@ -1501,6 +1501,8 @@ dwb_hide_tabbar(int *running)
 gboolean
 dwb_focus_view(GList *gl, const char *event) 
 {
+    g_return_val_if_fail(gl != NULL, true);
+
     static int running;
     if (gl != dwb.state.fview) 
     {
