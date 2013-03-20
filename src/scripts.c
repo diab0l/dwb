@@ -3274,7 +3274,7 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
         JSStringRelease(js_string);
     }
 
-    char *out;
+    char *out = NULL;
     double dout;
     char *json = NULL;
     int type = JSValueGetType(ctx, argv[0]);
@@ -3284,6 +3284,17 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
             out = js_value_to_char(ctx, argv[0], -1, exc);
             if (out != NULL) 
             { 
+                if (!isatty(fileno(stream)))
+                {
+                    GRegex *regex = g_regex_new("\e\\[\\d+(?>(;\\d+)*)m", 0, 0, NULL);
+                    char *tmp = out;
+
+                    out = g_regex_replace(regex, tmp, -1, 0, "", 0, NULL);
+
+                    g_free(tmp);
+                    if (out == NULL)
+                        return UNDEFINED;
+                }
                 fprintf(stream, "%s\n", out);
                 g_free(out);
             }
