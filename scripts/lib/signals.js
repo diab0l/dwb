@@ -137,6 +137,7 @@
                                 { 
                                     if (!this.isConnected())
                                         return this;
+
                                     var name = this.name, id = this.id;
                                     if (_sigCount[name] > 0)
                                         _sigCount[name]--;
@@ -147,9 +148,9 @@
                                     _byId[id] = null;
                                     delete _byId[id];
 
-
                                     if (_sigCount[name] == 0)
                                         signals[name] = null;
+
                                     return this;
                                 }
                             },
@@ -186,6 +187,7 @@
                                 {
                                     if (callback)
                                         this.callback = callback;
+
                                     if (this.isConnected())
                                         return this;
 
@@ -206,6 +208,7 @@
                                     _sigCount[name]++;
                                     _byName[name][id] = this;
                                     _byId[id] = this;
+
                                     return this;
                                 }
                             }, 
@@ -323,7 +326,7 @@
                 value : function(selfOrCallback)
                 {
                     var signal = _getBySelfOrCallback(selfOrCallback);
-                    if (signal && signal.isConnected())
+                    if (signal)
                         signal.disconnect();
                     return signal;
                 }
