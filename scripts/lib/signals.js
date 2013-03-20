@@ -1,42 +1,26 @@
 (function ()  
 {
-    var _regCount = {};
-    var _connectedSignals = {};
-    var _connectedMapping = {};
+    var _sigCount = {};
+    var _byName = {};
+    var _byId = {};
 
-    var _disconnect = function(signal)
-    {
-        var name = signal.name, id = signal.id;
-        _regCount[name]--;
-
-        _connectedSignals[name][id] = null;
-        delete _connectedSignals[name][id];
-
-        _connectedMapping[id] = null;
-        delete _connectedMapping[id];
-
-
-        if (_regCount[name] == 0)
-            signals[name] = null;
-        return signal;
-    };
-    var _getSignalByCallback = function(callback)
+    var _getByCallback = function(callback)
     {
         var id;
-        for (id in _connectedMapping)
+        for (id in _byId)
         {
-            if (callback == _connectedMapping[id].callback)
+            if (callback == _byId[id].callback)
             {
-                return _connectedMapping[id];
+                return _byId[id];
             }
         }
         return null;
     };
-    var _getSignalBySelfOrCallback = function(selfOrCallback)
+    var _getBySelfOrCallback = function(selfOrCallback)
     {
         if (selfOrCallback instanceof Signal)
             return selfOrCallback;
-        return _getSignalByCallback(selfOrCallback);
+        return _getByCallback(selfOrCallback);
     };
     /** 
      *
@@ -151,8 +135,21 @@
                             { 
                                 value : function() 
                                 { 
-                                    if (this.isConnected())
-                                        _disconnect(this); 
+                                    if (!this.isConnected())
+                                        return this;
+                                    var name = this.name, id = this.id;
+                                    if (_sigCount[name] > 0)
+                                        _sigCount[name]--;
+
+                                    _byName[name][id] = null;
+                                    delete _byName[name][id];
+
+                                    _byId[id] = null;
+                                    delete _byId[id];
+
+
+                                    if (_sigCount[name] == 0)
+                                        signals[name] = null;
                                     return this;
                                 }
                             },
@@ -197,18 +194,18 @@
 
                                     var name = this.name, id = this.id;
 
-                                    if (!_regCount[name])
-                                        _regCount[name] = 0;
+                                    if (!_sigCount[name])
+                                        _sigCount[name] = 0;
 
-                                    if (!_connectedSignals[name])
-                                        _connectedSignals[name] = {};
+                                    if (!_byName[name])
+                                        _byName[name] = {};
 
-                                    if (_regCount[name] == 0)
+                                    if (_sigCount[name] == 0)
                                         signals[name] = function() { return Signal.emit(name, arguments); };
 
-                                    _regCount[name]++;
-                                    _connectedSignals[name][id] = this;
-                                    _connectedMapping[id] = this;
+                                    _sigCount[name]++;
+                                    _byName[name][id] = this;
+                                    _byId[id] = this;
                                     return this;
                                 }
                             }, 
@@ -226,7 +223,7 @@
                             {
                                 value : function() 
                                 {
-                                    return Boolean(_connectedMapping[this.id]);
+                                    return Boolean(_byId[this.id]);
                                 }
                             },
                             /**
@@ -325,7 +322,7 @@
             {
                 value : function(selfOrCallback)
                 {
-                    var signal = _getSignalBySelfOrCallback(selfOrCallback);
+                    var signal = _getBySelfOrCallback(selfOrCallback);
                     if (signal && signal.isConnected())
                         signal.disconnect();
                     return signal;
@@ -380,7 +377,7 @@
                 {
                     var id, current;
                     var ret = false;
-                    var connected = _connectedSignals[signal];
+                    var connected = _byName[signal];
                     for (id in connected)
                     {
                         current = connected[id];
@@ -418,7 +415,7 @@
                 {
                     var signals = [];
                     var signal; 
-                    while((signal = _getSignalBySelfOrCallback(callback)))
+                    while((signal = _getBySelfOrCallback(callback)))
                     {
                         if (signal.isConnected())
                         {
