@@ -228,6 +228,30 @@
                                 {
                                     return Boolean(_connectedMapping[this.id]);
                                 }
+                            },
+                            /**
+                             * Toggles a signal, if it is connected it will be
+                             * disconnected and vice versa
+                             *
+                             * @name toggle 
+                             * @memberOf Signal.prototype
+                             * @function
+                             *
+                             * @returns {Boolean}
+                             *      <i>true if the signal was connected, <i>false</i>
+                             *      otherwise
+                             * */
+                            "toggle" : 
+                            {
+                                value : function()
+                                {
+                                    var connected = this.isConnected();
+                                    if (connected)
+                                        this.disconnect();
+                                    else 
+                                        this.connect();
+                                    return !connected;
+                                }
                             }
                         }
                     );
