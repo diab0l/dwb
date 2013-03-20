@@ -396,8 +396,11 @@
                     var signal; 
                     while((signal = _getSignalBySelfOrCallback(callback)))
                     {
-                        signals.push(signal);
-                        signal.disconnect();
+                        if (signal.isConnected())
+                        {
+                            signals.push(signal);
+                            signal.disconnect();
+                        }
                     }
                     return signals;
 
