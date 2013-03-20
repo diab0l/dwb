@@ -3290,6 +3290,7 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
                     char *tmp = out;
 
                     out = g_regex_replace(regex, tmp, -1, 0, "", 0, NULL);
+                    g_regex_unref(regex);
 
                     g_free(tmp);
                     if (out == NULL)
