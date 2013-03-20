@@ -301,7 +301,10 @@
             {
                 value : function(selfOrCallback)
                 {
-                    return _getSignalBySelfOrCallback(selfOrCallback);
+                    var signal = _getSignalBySelfOrCallback(selfOrCallback);
+                    if (signal && signal.isConnected())
+                        signal.disconnect();
+                    return signal;
                 }
             }, 
             /**
