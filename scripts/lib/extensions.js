@@ -82,8 +82,12 @@
  *
  * @param {Object} configuration 
  *      The configuration passed to {@link extensions.load}
- * @returns {Boolean}
- *      Return true if the extension was successfully initialized
+ * @returns {Boolean or Deferred}
+ *      Return true if the extension was successfully initialized, for
+ *      asynchronous initializations the callback can return a {@link Deferred}, to
+ *      indicate a successful initialization either call {@linkcode deferred.resolve(true)}, to
+ *      indicate an error either call {@linkcode deferred.resolve(false)} or
+ *      {@linkcode deferred.reject(reason)} on the deferred
  * */
 
 (function () {
@@ -140,6 +144,9 @@
       }
       return false;
   };
+  var _onSuccess = function()
+  {
+  }
   Object.defineProperties(extensions, 
   { 
       /**
@@ -292,7 +299,7 @@
                   if (plugin === null) 
                   {
                       extensions.error(name, "Couldn't find extension.");
-                      return null;
+                      return;
                   }
               }
               try 
@@ -302,26 +309,31 @@
                   if (plugin.defaultConfig) 
                       util.mixin(extConfig, plugin.defaultConfig);
 
-                  if (plugin.init(extConfig)) 
-                  {
-                      _registered[name] = plugin;
+                  Deferred.when(plugin.init(extConfig), function(name, plugin, success) {
+                      if (success)
+                      {
+                          _registered[name] = plugin;
 
-                      if (plugin.exports) 
-                          replace(name, plugin.exports);
+                          if (plugin.exports) 
+                              replace(name, plugin.exports);
 
-                      extensions.message(name, "Successfully loaded and initialized.");
-                      return plugin.exports || null;
-                  }
-                  else 
-                  {
-                      extensions.error(name, "Initialization failed.");
-                      return null;
-                  }
+                          extensions.message(name, "Successfully loaded and initialized.");
+                      }
+                      else 
+                      {
+                          extensions.error(name, "Initialization failed.");
+                      }
+
+                  }.bind(null, name, plugin),  function(name, reason) {
+                     if (reason)
+                         extensions.error(name, "Initialization failed: " + reason);
+                     else 
+                         extensions.error(name, "Initialization failed.");
+                  }.bind(null, name));
               }
               catch (e) 
               {
                   extensions.error(name, "Initialization failed: " + e);
-                  return null;
               }
           }
       },
