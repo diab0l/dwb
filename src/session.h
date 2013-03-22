@@ -29,5 +29,6 @@ gboolean session_save(const char *, int);
 gboolean session_restore(char *, int);
 void session_list(void);
 void session_clear_session(void);
+void session_set_name(const char *);
 
 #endif

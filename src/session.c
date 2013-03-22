@@ -270,6 +270,15 @@ clean:
     g_free(group);
     return ret;
 }/*}}}*/
+void 
+session_set_name(const char *name)
+{
+    g_return_if_fail(name != NULL || !(*name));
+
+    if (s_session_name)
+        g_free(s_session_name);
+    s_session_name = g_strdup(name);
+}
 
 /* session_save(const char *) {{{*/
 gboolean  

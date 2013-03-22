@@ -1666,7 +1666,7 @@ global_exit(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     if (s_commandline)
         application_stop();
     else 
-        dwb_end();
+        dwb_end(0);
     return UNDEFINED;
 }/*}}}*/
 

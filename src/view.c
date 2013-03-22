@@ -1645,7 +1645,7 @@ view_remove(GList *gl)
         if (dwb.misc.clt_policy == CLT_POLICY_CLOSE) 
         {
             view_clear_tab(dwb.state.fview);
-            dwb_end();
+            dwb_end(0);
             return STATUS_END;
         }
         if (dwb.misc.clt_policy == CLT_POLICY_CLEAR) 

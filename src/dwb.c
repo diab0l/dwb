@@ -1264,9 +1264,8 @@ dwb_remove_quickmark(const char *line)
     }
 }/*}}}*/
 
-/* dwb_sync_history {{{*/
-static gboolean
-dwb_sync_files(gpointer data) 
+static void
+dwb_sync_history_and_cooies()
 {
     if (dwb.misc.sync_files & SYNC_HISTORY) 
     {
@@ -1284,10 +1283,21 @@ dwb_sync_files(gpointer data)
     {
         dwb_soup_sync_cookies();
     }
+}
+static void
+dwb_sync_session()
+{
     if ((dwb.misc.sync_files & SYNC_SESSION) && GET_BOOL("save-session")) 
     {
         session_save(NULL, SESSION_SYNC | SESSION_FORCE);
     }
+}
+/* dwb_sync_history {{{*/
+static gboolean
+dwb_sync_files(gpointer data) 
+{
+    dwb_sync_history_and_cooies();
+    dwb_sync_session();
     return true;
 }/*}}}*/
 
@@ -2709,8 +2719,14 @@ dwb_entry_activate(GdkEventKey *e)
                                   return true;
         case DOWNLOAD_GET_PATH:   download_start(NULL); 
                                   return true;
-        case SAVE_SESSION:        session_save(GET_TEXT(), SESSION_FORCE);
-                                  dwb_end();
+        case SAVE_SESSION:        text = GET_TEXT();
+                                  if (text != NULL && *text)
+                                  {
+                                      session_set_name(GET_TEXT());
+                                      dwb_end(SESSION_FORCE);
+                                  }
+                                  else 
+                                      dwb_set_error_message(dwb.state.fview, "Missing session name");
                                   return true;
         case COMPLETE_BUFFER:     completion_eval_buffer_completion();
                                   return true;
@@ -3609,11 +3625,11 @@ dwb_save_list(GList *list, const char *filename, int limit)
 
 /* dwb_save_files() {{{*/
 gboolean 
-dwb_save_files(gboolean end_session) 
+dwb_save_files(gboolean end_session, gint session_flags) 
 {
     dwb_save_keys();
     dwb_save_settings();
-    dwb_sync_files(NULL);
+    dwb_sync_history_and_cooies(NULL);
     /* Save command history */
     if (! dwb.misc.private_browsing) 
     {
@@ -3622,8 +3638,8 @@ dwb_save_files(gboolean end_session)
         dwb_save_list(dwb.fc.searches, dwb.files[FILES_SEARCH_HISTORY], GET_INT("navigation-history-max"));
     }
     /* save session */
-    if (end_session && GET_BOOL("save-session") && dwb.state.mode != SAVE_SESSION) 
-        session_save(NULL, 0);
+    if ((end_session && GET_BOOL("save-session")) || (session_flags & SESSION_FORCE)) 
+        session_save(NULL, session_flags);
     
     return true;
 }
@@ -3631,7 +3647,7 @@ dwb_save_files(gboolean end_session)
 
 /* dwb_end() {{{*/
 gboolean
-dwb_end() 
+dwb_end(gint session_flags) 
 {
     if (dwb.state.mode & CONFIRM) 
         return false;
@@ -3674,7 +3690,7 @@ dwb_end()
         scripts_emit(&s);
     }
 
-    if (dwb_save_files(true)) 
+    if (dwb_save_files(true, session_flags)) 
     {
         if (dwb_clean_up()) 
         {
@@ -4430,7 +4446,7 @@ dwb_init_files()
 static void
 dwb_handle_signal(int s) 
 {
-    if (((s == SIGTERM || s == SIGINT) && dwb_end()) || s == SIGFPE || s == SIGILL || s == SIGQUIT) 
+    if (((s == SIGTERM || s == SIGINT) && dwb_end(0)) || s == SIGFPE || s == SIGILL || s == SIGQUIT) 
         exit(EXIT_SUCCESS);
     else if (s == SIGSEGV) {
         fprintf(stderr, "Received SIGSEGV, trying to clean up.\n");

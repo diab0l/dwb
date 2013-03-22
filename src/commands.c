@@ -537,9 +537,7 @@ commands_save_session(KeyMap *km, Arg *arg)
 {
     if (arg->n == NORMAL_MODE) 
     {
-        dwb.state.mode = SAVE_SESSION;
-        session_save(NULL, SESSION_FORCE);
-        dwb_end();
+        dwb_end(SESSION_FORCE);
         return STATUS_END;
     }
     else 
@@ -648,7 +646,7 @@ commands_new_window_or_view(KeyMap *km, Arg *arg)
 DwbStatus 
 commands_save_files(KeyMap *km, Arg *arg) 
 {
-  if (dwb_save_files(false)) 
+  if (dwb_save_files(false, 0)) 
   {
       dwb_set_normal_message(dwb.state.fview, true, "Configuration files saved");
       return STATUS_OK;
@@ -770,7 +768,7 @@ commands_toggle_hidden_files(KeyMap *km, Arg *arg)
 DwbStatus
 commands_quit(KeyMap *km, Arg *arg) 
 {
-    dwb_end();
+    dwb_end(0);
     return STATUS_END;
 }/*}}}*/
 

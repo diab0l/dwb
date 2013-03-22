@@ -668,7 +668,7 @@ dwb_malloc(size_t size)
     if ( !(r = malloc(size)) ) 
     {
         fprintf(stderr, "Cannot malloc %d bytes of memory", (int)size);
-        dwb_end();
+        dwb_end(0);
         exit(EXIT_SUCCESS);
     }
     return r;

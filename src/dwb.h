@@ -925,13 +925,13 @@ void dwb_new_window(const char *uri);
 gboolean dwb_eval_editing_key(GdkEventKey *);
 DwbStatus dwb_parse_command_line(const char *);
 
-int dwb_end(void);
+int dwb_end(int);
 Key dwb_str_to_key(char *);
 
 GList * dwb_keymap_add(GList *, KeyValue );
 
 void dwb_save_settings(void);
-gboolean dwb_save_files(gboolean);
+gboolean dwb_save_files(gboolean, int);
 CompletionType dwb_eval_completion_type(void);
 
 void dwb_append_navigation_with_argument(GList **, const char *, const char *);

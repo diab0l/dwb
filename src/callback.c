@@ -131,7 +131,7 @@ skip:
 gboolean
 callback_delete_event(GtkWidget *w) 
 {
-    dwb_end();
+    dwb_end(0);
     return true;
 }/*}}}*/
 
