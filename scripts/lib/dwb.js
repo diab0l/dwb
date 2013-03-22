@@ -3,6 +3,7 @@
     var _requires = {};
     var _callbacks = [];
     var _initialized = false;
+    var _pending = [];
     var _applyRequired = function(names, callback) 
     {
         if (names === null) 
@@ -21,7 +22,15 @@
                     if (!_modules[name]) 
                         include(detail.slice(1).join("!"));
                 }
-                modules.push(_modules[name]);
+                if (_modules[name])
+                {
+                    modules.push(_modules[name]);
+                }
+                else 
+                {
+                    _pending.push({names : names, callback : callback});
+                    return;
+                }
             } 
             /**
              * Callback that will be called when all provided modules have been
@@ -189,6 +198,22 @@
                 }
                 else 
                     _modules[name] = module;
+                var pl = _pending.length;
+                if (pl > 0)
+                {
+                    var pending = [];
+                    var finished = [];
+                    for (var i=0; i<pl; i++) 
+                    {
+                        if (_pending[i].names.every(function(name) { return _modules[name]; }))
+                            finished.push(_pending[i]);
+                        else 
+                            pending.push(_pending[i]);
+                    }
+                    for (i=0; i<finished.length; i++)
+                        _applyRequired(finished[i].names, finished[i].callback);
+                    _pending = pending;
+                }
             }
         },
         /** 
