@@ -236,7 +236,7 @@
                              * @function
                              *
                              * @returns {Boolean}
-                             *      <i>true if the signal was connected, <i>false</i>
+                             *      <i>true</i> if the signal was connected, <i>false</i>
                              *      otherwise
                              * */
                             "toggle" : 
