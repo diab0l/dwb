@@ -385,6 +385,9 @@ deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv)
         JSValueUnprotect(ctx, priv->resolve);
     if (priv->reject)
         JSValueUnprotect(ctx, priv->reject);
+    if (priv->next)
+        JSValueUnprotect(ctx, priv->next);
+
     JSObjectSetPrivate(this, NULL);
 
     g_free(priv);
@@ -454,6 +457,7 @@ deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, co
     }
 
     priv->next = deferred_new(ctx);
+    JSValueProtect(ctx, priv->next);
 
     return priv->next;
 }
@@ -470,6 +474,8 @@ deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
     if (npriv->reject)
         JSValueProtect(ctx, npriv->reject);
     npriv->next = opriv->next;
+    if (npriv->next)
+        JSValueProtect(ctx, npriv->next);
 
     deferred_destroy(ctx, old, opriv);
     return npriv;
@@ -493,7 +499,7 @@ deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
         return UNDEFINED;
 
     if (priv->resolve) 
-        ret = JSObjectCallAsFunction(ctx, priv->resolve, priv->resolve, argc, argv, exc);
+        ret = JSObjectCallAsFunction(ctx, priv->resolve, this, argc, argv, exc);
 
     JSObjectRef next = priv->next;
     deferred_destroy(ctx, this, priv);
@@ -529,7 +535,7 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
         return UNDEFINED;
 
     if (priv->reject) 
-        ret = JSObjectCallAsFunction(ctx, priv->reject, priv->reject, argc, argv, exc);
+        ret = JSObjectCallAsFunction(ctx, priv->reject, this, argc, argv, exc);
 
     JSObjectRef next = priv->next;
     deferred_destroy(ctx, this, priv);
