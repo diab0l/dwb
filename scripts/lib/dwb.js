@@ -335,27 +335,46 @@
                 return _deprecated("sendRequestSync", "net.sendRequestSync", arguments);
             }
         },
-        "_deprecationWarning" : 
-        {
-            value : function(on, nn)
-            {
-                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
-            }
-        },
+        /**
+         * Print a deprecation warning for a function that is deprecated and call the new function
+         * @name _deprecated
+         * @function
+         * @example
+         * var oldfoo = {
+         *      bar : function() {
+         *          return _deprecated("oldfoo.bar", "newfoo.bar", arguments);
+         *      }
+         * };
+         * var newfoo = {
+         *      bar : function() {
+         *          // new implementation
+         *      };
+         * }; 
+         * // will print a deprecation warning and call newfoo.bar("foo");
+         * oldfoo.bar("foo");
+         *
+         * @param oldname {String}
+         *      Name of the old function (including namespace)
+         * @param newname {String}
+         *      Name of the new function (including namespace)
+         * @param arguments {Arguments}
+         *      Arguments passed to the new function
+         *
+         * @returns {Object}
+         *      The return value of the new function
+         *
+         * */
         "_deprecated" : 
         {
             value : function(on, nn, args) 
             {
                 var i, l, ns, ctx;
                 io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
-                if (args)
-                {
-                    ns = nn.split(".");
-                    ctx = this;
-                    for (i=0, l=ns.length; i<l-1; i++)
-                        ctx = ctx[ns[i]];
-                    return ctx[ns[l-1]].apply(this, args);
-                }
+                ns = nn.split(".");
+                ctx = this;
+                for (i=0, l=ns.length; i<l-1; i++)
+                    ctx = ctx[ns[i]];
+                return ctx[ns[l-1]].apply(this, args);
             }
         },
         "_initNewContext" : 
