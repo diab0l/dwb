@@ -380,6 +380,11 @@ deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv)
 
     if (priv == NULL)
         priv = JSObjectGetPrivate(this);
+
+    if (priv->resolve)
+        JSValueUnprotect(ctx, priv->resolve);
+    if (priv->reject)
+        JSValueUnprotect(ctx, priv->reject);
     JSObjectSetPrivate(this, NULL);
 
     g_free(priv);
@@ -438,9 +443,15 @@ deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, co
         return NIL;
 
     if (argc > 0)
+    {
         priv->resolve = js_value_to_function(ctx, argv[0], NULL);
+        JSValueProtect(ctx, priv->resolve);
+    }
     if (argc > 1) 
+    {
         priv->reject = js_value_to_function(ctx, argv[1], NULL);
+        JSValueProtect(ctx, priv->reject);
+    }
 
     priv->next = deferred_new(ctx);
 
@@ -453,7 +464,11 @@ deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
     DeferredPriv *npriv = JSObjectGetPrivate(new);
 
     npriv->resolve = opriv->resolve;
+    if (npriv->resolve)
+        JSValueProtect(ctx, npriv->resolve);
     npriv->reject = opriv->reject;
+    if (npriv->reject)
+        JSValueProtect(ctx, npriv->reject);
     npriv->next = opriv->next;
 
     deferred_destroy(ctx, old, opriv);

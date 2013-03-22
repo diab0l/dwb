@@ -309,7 +309,7 @@
                   if (plugin.defaultConfig) 
                       util.mixin(extConfig, plugin.defaultConfig);
 
-                  Deferred.when(plugin.init(extConfig), function(name, plugin, success) {
+                  Deferred.when(plugin.init(extConfig), function(success) {
                       if (success)
                       {
                           _registered[name] = plugin;
@@ -324,12 +324,12 @@
                           extensions.error(name, "Initialization failed.");
                       }
 
-                  }.bind(null, name, plugin),  function(name, reason) {
+                  }, function(reason) {
                      if (reason)
                          extensions.error(name, "Initialization failed: " + reason);
                      else 
                          extensions.error(name, "Initialization failed.");
-                  }.bind(null, name));
+                  });
               }
               catch (e) 
               {
