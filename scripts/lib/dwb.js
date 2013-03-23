@@ -4,6 +4,7 @@
     var _callbacks = [];
     var _initialized = false;
     var _pending = [];
+    var _contexts = {};
     var _applyRequired = function(names, callback) 
     {
         if (names === null) 
@@ -58,7 +59,6 @@
                 callback.apply(callback, modules);
         }
     };
-    var _contexts = {};
     Object.defineProperties(this, { 
         "Glob" : 
         { 
@@ -177,6 +177,9 @@
          *
          * @param {String} name The name of the module
          * @param {Object} module The module
+         * @param {Boolean} overwrite 
+         *      Whether to overwrite existing module with
+         *      the same name 
          * @example 
          * provide("foo", {
          *    baz : 37, 
@@ -186,9 +189,19 @@
          * */
         "provide" : 
         { 
-            value : function(name, module) 
+            value : function(name, module, overwrite) 
             {
-                if (_modules[name]) 
+                if (overwrite)
+                {
+                    if (!module && _modules[name])
+                    {
+                        for (var key in _modules[name]) 
+                            delete _modules[name][key];
+
+                        delete _modules[name];
+                    }
+                }
+                if (!overwrite && _modules[name]) 
                 {
                     io.debug({ 
                             offset : 1, arguments : arguments,
@@ -198,6 +211,7 @@
                 }
                 else 
                     _modules[name] = module;
+
                 var pl = _pending.length;
                 if (pl > 0)
                 {
@@ -206,7 +220,9 @@
                     for (var i=0; i<pl; i++) 
                     {
                         if (_pending[i].names.every(function(name) { return _modules[name]; }))
+                        {
                             finished.push(_pending[i]);
+                        }
                         else 
                             pending.push(_pending[i]);
                     }
@@ -217,27 +233,15 @@
             }
         },
         /** 
-         * Same as provide but replaces modules if they are already defined
          * @name replace 
          * @function
-         *
-         * @param {String} name The name of the module
-         * @param {Object} module The module
-         *
+         * @deprecated use {@link provide}
          * */
         "replace" : 
         {
-            value : function(name, module) 
+            value : function() 
             {
-                if (! module && _modules[name] ) 
-                {
-                    for (var key in _modules[name]) 
-                        delete _modules[name][key];
-
-                    delete _modules[name];
-                }
-                else 
-                    _modules[name] = module;
+                return _deprecated("replace", "provide", arguments);
             }
         },
         /** 

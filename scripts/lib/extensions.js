@@ -138,15 +138,12 @@
 
           delete _registered[name];
 
-          replace(name);
+          provide(name, null, true);
 
           return true;
       }
       return false;
   };
-  var _onSuccess = function()
-  {
-  }
   Object.defineProperties(extensions, 
   { 
       /**
@@ -315,7 +312,7 @@
                           _registered[name] = plugin;
 
                           if (plugin.exports) 
-                              replace(name, plugin.exports);
+                              provide(name, plugin.exports, true);
 
                           extensions.message(name, "Successfully loaded and initialized.");
                       }
