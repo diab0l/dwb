@@ -4563,12 +4563,13 @@ create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallA
 
 }
 /* create_global_object {{{*/
-static void 
+static JSGlobalContextRef  
 create_global_object() 
 {
     pthread_rwlock_wrlock(&s_context_lock);
     JSClassDefinition cd; 
     s_ref_quark = g_quark_from_static_string("dwb_js_ref");
+    JSGlobalContextRef ctx;
 
     JSStaticValue global_values[] = {
         { "global",       global_get, NULL,   kJSDefaultAttributes },
@@ -4586,7 +4587,7 @@ create_global_object()
     };
 
     JSClassRef class = create_class("dwb", global_functions, global_values);
-    s_global_context = JSGlobalContextCreate(class);
+    ctx = JSGlobalContextCreate(class);
     JSClassRelease(class);
 
 
@@ -4598,7 +4599,7 @@ create_global_object()
      * @name data
      * @static 
      * */
-    JSObjectRef global_object = JSContextGetGlobalObject(s_global_context);
+    JSObjectRef global_object = JSContextGetGlobalObject(ctx);
 
     JSStaticValue data_values[] = {
         { "profile",        data_get_profile, NULL, kJSDefaultAttributes },
@@ -4609,7 +4610,7 @@ create_global_object()
         { 0, 0, 0,  0 }, 
     };
     class = create_class("data", NULL, data_values);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "data", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "data", NULL);
     JSClassRelease(class);
 
     /**
@@ -4625,7 +4626,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("timer", timer_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "timer", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "timer", NULL);
     JSClassRelease(class);
     /**
      * @namespace 
@@ -4640,7 +4641,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("net", net_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "net", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
     JSClassRelease(class);
 
 
@@ -4656,7 +4657,7 @@ create_global_object()
     cd.getProperty = settings_get;
     cd.setProperty = set_property_cb;
     class = JSClassCreate(&cd);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "settings", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "settings", NULL);
     JSClassRelease(class);
     /**
      * Static object for input and output
@@ -4678,7 +4679,7 @@ create_global_object()
         { 0,           0,           0 },
     };
     class = create_class("io", io_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
+    create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
     JSClassRelease(class);
 
     /**
@@ -4699,7 +4700,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("system", system_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "system", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "system", NULL);
     JSClassRelease(class);
 
     JSStaticFunction tab_functions[] = { 
@@ -4722,7 +4723,7 @@ create_global_object()
      * @static 
      * */
     class = create_class("tabs", tab_functions, tab_values);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "tabs", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "tabs", NULL);
     JSClassRelease(class);
 
     /**
@@ -4768,15 +4769,15 @@ create_global_object()
     cd.setProperty = signal_set;
     class = JSClassCreate(&cd);
 
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "signals", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "signals", NULL);
     JSClassRelease(class);
 
     class = create_class("extensions", NULL, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "extensions", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
     JSClassRelease(class);
 
     class = create_class("Signal", NULL, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "Signal", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "Signal", NULL);
     JSClassRelease(class);
 
     /**
@@ -4797,7 +4798,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "util", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
     JSClassRelease(class);
 
     /**
@@ -4814,7 +4815,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("clipboard", clipboard_functions, NULL);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
     JSClassRelease(class);
 
     /** 
@@ -4854,7 +4855,7 @@ create_global_object()
     cd.finalize = finalize;
     s_gobject_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_DEFAULT] = create_constructor(s_global_context, "GObject", s_gobject_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_DEFAULT] = create_constructor(ctx, "GObject", s_gobject_class, NULL, NULL);
 
     /* Webview */
     /**
@@ -4897,14 +4898,14 @@ create_global_object()
     s_webview_class = JSClassCreate(&cd);
 
 
-    s_constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(s_global_context, "WebKitWebView", s_webview_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(ctx, "WebKitWebView", s_webview_class, NULL, NULL);
 
     cd = kJSClassDefinitionEmpty;
     cd.className = "HiddenWebView";
     cd.staticFunctions = wv_functions;
     cd.parentClass = s_gobject_class;
 
-    s_constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(s_global_context, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(ctx, "HiddenWebView", s_webview_class, hwv_constructor_cb, NULL);
 
 
     /* Frame */
@@ -4935,7 +4936,7 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_frame_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_FRAME] = create_constructor(s_global_context, "WebKitWebFrame", s_frame_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_FRAME] = create_constructor(ctx, "WebKitWebFrame", s_frame_class, NULL, NULL);
 
     /* SoupMessage */ 
     /**
@@ -4961,7 +4962,7 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(s_global_context, "SoupMessage", s_message_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(ctx, "SoupMessage", s_message_class, NULL, NULL);
 
     /**
      * The history of a webview
@@ -4987,7 +4988,7 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_history_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(s_global_context, "WebKitWebBackForwardList", s_history_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(ctx, "WebKitWebBackForwardList", s_history_class, NULL, NULL);
 
     /**
      * Constructs a new Deferred
@@ -5040,7 +5041,7 @@ create_global_object()
     cd.className = "Deferred"; 
     cd.staticFunctions = deferred_functions;
     s_deferred_class = JSClassCreate(&cd);
-    s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(s_global_context, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(ctx, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
 
     /** 
      * Constructs a new GtkWidget
@@ -5081,7 +5082,7 @@ create_global_object()
     cd.staticFunctions = widget_functions;
     cd.parentClass = s_secure_widget_class;
     s_widget_class = JSClassCreate(&cd);
-    s_constructors[CONSTRUCTOR_WIDGET] = create_constructor(s_global_context, "GtkWidget", s_widget_class, widget_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_WIDGET] = create_constructor(ctx, "GtkWidget", s_widget_class, widget_constructor_cb, NULL);
 
     /**
      * @class 
@@ -5131,7 +5132,7 @@ create_global_object()
     cd = kJSClassDefinitionEmpty;
     cd.staticValues = gui_values;
     class = JSClassCreate(&cd);
-    create_object(s_global_context, class, global_object, kJSDefaultAttributes, "gui", NULL);
+    create_object(ctx, class, global_object, kJSDefaultAttributes, "gui", NULL);
     JSClassRelease(class);
 
     /** 
@@ -5161,12 +5162,13 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_download_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(s_global_context, "WebKitDownload", s_download_class, download_constructor_cb, NULL);
+    s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(ctx, "WebKitDownload", s_download_class, download_constructor_cb, NULL);
 
     
-    s_soup_session = make_object_for_class(s_global_context, s_gobject_class, G_OBJECT(webkit_get_default_session()), false);
-    JSValueProtect(s_global_context, s_soup_session);
+    s_soup_session = make_object_for_class(ctx, s_gobject_class, G_OBJECT(webkit_get_default_session()), false);
+    JSValueProtect(ctx, s_soup_session);
     pthread_rwlock_unlock(&s_context_lock);
+    return ctx;
 }/*}}}*/
 /*}}}*/
 
@@ -5266,7 +5268,7 @@ scripts_init_script(const char *path, const char *script)
 {
     char *debug = NULL;
     if (s_global_context == NULL) 
-        create_global_object();
+        s_global_context = create_global_object();
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
@@ -5330,7 +5332,7 @@ scripts_init(gboolean force)
     if (s_global_context == NULL) 
     {
         if (force) 
-            create_global_object();
+            s_global_context = create_global_object();
         else 
             return false;
     }

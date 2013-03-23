@@ -67,8 +67,10 @@ var onStart = [];
 var onEnd = []; 
 /*
 //<DEFAULT_CONFIG
-  // paths to userscripts, this extension will also load all scripts in from 
-  // $XDG_CONFIG_HOME/scripts
+  // paths to userscripts, this extension will also load all scripts in 
+  // $XDG_CONFIG_HOME/dwb/greasemonkey, it will also load all scripts in
+  // $XDG_CONFIG_HOME/dwb/scripts but this is deprecated and will be
+  // disabled in future versions.
   scripts : []
 //>DEFAULT_CONFIG
 */
@@ -515,24 +517,29 @@ function userscriptsStart()
 function parseScripts(scripts) //{{{
 {
     var i, path;
-    var scriptDir = data.configDir + "/scripts";
     for (i=0; i<scripts.length; i++) 
     {
         if (system.fileTest(scripts[i], FileTest.regular | FileTest.symlink)) 
             parseScript(scripts[i]);
     }
-    if (system.fileTest(scriptDir, FileTest.dir)) 
-    {
-        var lines = io.dirNames(scriptDir);
-        for (i=0; i<lines.length; i++) 
+    [ "scripts", "greasemonkey" ].forEach(function(path) {
+        var scriptDir = data.configDir + "/" + path;
+        if (system.fileTest(scriptDir, FileTest.dir)) 
         {
-            if (lines[i].charAt(0) == ".")
-                continue;
-            path = scriptDir + "/" + lines[i];
-            if (!(/^\s*$/.test(lines[i])) && system.fileTest(path, FileTest.regular | FileTest.symlink)) 
-                parseScript(path);
+            if (path == "scripts")
+                extensions.warning(me, "Using $XDG_CONFIG_HOME/.config/dwb/scripts is deprecated, use $XDG_CONFIG_HOME/.config/dwb/greasemonkey instead");
+            var lines = io.dirNames(scriptDir);
+            for (i=0; i<lines.length; i++) 
+            {
+                if (lines[i].charAt(0) == ".")
+                    continue;
+                path = scriptDir + "/" + lines[i];
+                if (!(/^\s*$/.test(lines[i])) && system.fileTest(path, FileTest.regular | FileTest.symlink)) 
+                    parseScript(path);
+            }
         }
-    }
+    });
+
     return userscriptsStart();
 }//}}}
 

@@ -825,6 +825,14 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
         default: break;
 
     }
+    if (!ret && frame == webkit_web_view_get_main_frame(web))
+    {
+        if (VIEW(gl)->js_base != NULL) 
+        {
+            JSValueUnprotect(JS_CONTEXT_REF(gl), VIEW(gl)->js_base);
+            VIEW(gl)->js_base = NULL;
+        }
+    }
     return ret;
 }/*}}}*/
 
@@ -991,11 +999,6 @@ view_load_status_after_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
     WebKitLoadStatus status = webkit_web_view_get_load_status(web);
     if (status == WEBKIT_LOAD_COMMITTED) 
     {
-        if (VIEW(gl)->js_base != NULL) 
-        {
-            JSValueUnprotect(JS_CONTEXT_REF(gl), VIEW(gl)->js_base);
-            VIEW(gl)->js_base = NULL;
-        }
         VIEW(gl)->js_base = js_create_object(webkit_web_view_get_main_frame(web), dwb.misc.hints);
         js_call_as_function(webkit_web_view_get_main_frame(web), VIEW(gl)->js_base, "init", dwb.misc.hint_style, kJSTypeObject, NULL);
     }
