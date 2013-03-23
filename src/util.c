@@ -930,3 +930,18 @@ util_string_to_sanitize(const char *string)
     g_strfreev(token);
     return s;
 }
+inline static int 
+dwb_floor(double x) { 
+  return x >= 0 ? (int) x : (int) x - 1;
+}
+inline static int 
+modulo(int x, int y) {
+  return x - dwb_floor((double)x/y)  * y;
+}
+int
+util_modulo(int x, int y)
+{
+    double d = ((double) x / y);
+    int c = d >= 0 ? (int)d  : (int) d - 1;
+    return x - c * y;
+}

@@ -101,7 +101,7 @@ const char * util_str_chug(const char *str);
 Sanitize util_string_to_sanitize(const char *);
 
 char *util_create_json(int, ...);
-char *util_create_json(int, ...);
+int util_modulo(int, int);
 
 
 #endif

@@ -215,8 +215,6 @@ view_button_press_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
          *      The webview that emitted the signal
          * @param {WebKitHitTestResult} result 
          *      A hit test result
-         * @param {GtkEventBox} tabwidget
-         *      The tabwidget
          * @param {Object} event
          * @param {Number} event.button 
          *      The button that was pressed, usually a value between 1 and 5
@@ -883,12 +881,12 @@ view_scroll_tab_cb(GtkWidget *w, GdkEventScroll *e, GList *gl)
     int pos = -1;
     if (e->direction == GDK_SCROLL_DOWN)
     {
-        pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
+        pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
         event = "focus_next";
     }
     else if (e->direction == GDK_SCROLL_UP)
     {
-        pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) - 1, g_list_length(dwb.state.views));
+        pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) - 1, g_list_length(dwb.state.views));
         event = "focus_prev";
     }
     if (pos != -1)

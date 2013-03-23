@@ -417,7 +417,7 @@ commands_focus(KeyMap *km, Arg *arg)
 {
     if (dwb.state.views->next) 
     {
-        int pos = MODULO(g_list_position(dwb.state.views, dwb.state.fview) + NUMMOD * arg->n, g_list_length(dwb.state.views));
+        int pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) + NUMMOD * arg->n, g_list_length(dwb.state.views));
         GList *g = g_list_nth(dwb.state.views, pos);
         dwb_focus_view(g, km->map->n.first);
         return STATUS_OK;
