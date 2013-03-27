@@ -296,6 +296,10 @@ Object.freeze((function () {
                 globals.notify.innerText = e.tagName.toLowerCase() + ", name=" + e.name;
             else if (e.innerText && e.innerText.trim().length > 0) 
                 globals.notify.innerText = e.tagName.toLowerCase() + ": " + e.innerText.replace("\n\r", "").trim();
+            else if (e.hasAttribute("onclick"))
+                globals.notify.innerText = e.tagName.toLowerCase() + ": onclick";
+            else if (e.hasAttribute("onmousedown"))
+                globals.notify.innerText = e.tagName.toLowerCase() + ": onmousedown";
             else 
                 globals.notify.innerText = e.tagName.toLowerCase();
         }

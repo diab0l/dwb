@@ -2693,41 +2693,60 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnChannel *sc)
         spawn_channel_close(sc);
         return false;
     }
-    else if (g_io_channel_read_line(channel, &content, &length, NULL, NULL) == G_IO_STATUS_NORMAL && content != NULL)  
+    else 
     {
-        if (TRY_CONTEXT_LOCK)
+        if (sc->infd != -1)
         {
-            if (s_global_context != NULL)
+            if (g_io_channel_read_to_end(channel, &content, &length, NULL) == G_IO_STATUS_NORMAL)
             {
-                JSValueRef arg = js_char_to_value(s_global_context, content);
-                if (arg != NULL) 
+                if (TRY_CONTEXT_LOCK)
                 {
-                    JSValueRef argv[] = { arg };
-                    JSValueRef ret = call_as_function_debug(s_global_context, sc->callback, sc->callback, 1,  argv);
-                    output = js_value_to_char(s_global_context, ret, -1, NULL);
-                    if (output && sc->infd != -1)
+                    JSValueRef arg = js_char_to_value(s_global_context, content);
+                    if (arg != NULL)
                     {
-                        size_t r = write(sc->infd, output, strlen(output));
-                        if (r > 0 && output[r-1] != '\n') 
-                        {
-                            r = write(sc->infd, "\n", 1);
-
-                        }
-                        if ((int)r == -1) 
-                        {
-                            fputs("Error cannot write to stdin", stderr);
-                            close(sc->infd);
-                            sc->infd = -1;
-                        }
+                        JSValueRef argv[] = { arg };
+                        call_as_function_debug(s_global_context, sc->callback, sc->callback, 1, argv);
                     }
-                    g_free(output);
+                    CONTEXT_UNLOCK;
                 }
             }
         }
-        CONTEXT_UNLOCK;
-        result = true;
-        g_free(content);
+        else if (g_io_channel_read_line(channel, &content, &length, NULL, NULL) == G_IO_STATUS_NORMAL && content != NULL)  
+        {
+            if (TRY_CONTEXT_LOCK)
+            {
+                if (s_global_context != NULL)
+                {
+                    JSValueRef arg = js_char_to_value(s_global_context, content);
+                    if (arg != NULL) 
+                    {
+                        JSValueRef argv[] = { arg };
+                        JSValueRef ret = call_as_function_debug(s_global_context, sc->callback, sc->callback, 1,  argv);
+                        output = js_value_to_char(s_global_context, ret, -1, NULL);
+                        if (output && sc->infd != -1)
+                        {
+                            size_t r = write(sc->infd, output, strlen(output));
+                            if (r > 0 && output[r-1] != '\n') 
+                            {
+                                r = write(sc->infd, "\n", 1);
+
+                            }
+                            if ((int)r == -1) 
+                            {
+                                fputs("Error cannot write to stdin", stderr);
+                                close(sc->infd);
+                                sc->infd = -1;
+                            }
+                        }
+                        g_free(output);
+                    }
+                }
+            }
+            CONTEXT_UNLOCK;
+            result = true;
+        }
     }
+    g_free(content);
     return result;
 }/*}}}*/
 
@@ -2871,7 +2890,9 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  * @param {Object}   [environ] Object that can be used to add environment
  *                             variables to the childs environment
  * @param {Boolean}  [toStdin] If set to <i>true</i> stdout- and stderr-callback can be
- *                             used to write to stdin of the childs
+ *                             used to write to stdin of the childs and stdout
+ *                             is read line by line, if set to true stdout is
+ *                             read all at once.
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
