@@ -74,6 +74,7 @@ static KeyValue KEYS[] = {
   { "tab_quickmark",            {   "B",          0,                0 }, },  
   { "win_quickmark",            {   "wb",         0,                0 }, },  
   { "reload",                   {   "r",          0,                0 }, },  
+  { "tabdo",                    {   NULL,         0 ,               0 }, },  
   { "reload_bypass_cache",      {   "R",          0,                0 }, },  
   { "close_tab",                {   "d",          0,                0 }, },  
   { "save_quickmark",           {   "m",          0,                0 }, },  
@@ -191,6 +192,10 @@ static KeyValue KEYS[] = {
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
+  { { "tabdo",              "Execute a command in all tabs",                    }, CP_COMMANDLINE | CP_NEEDS_ARG, 
+    (Func)commands_tabdo,            "Missing command",                            ALWAYS_SM,     
+    { .p = NULL },                          EP_NONE,    { NULL }, },
+
   { { "tab_new",              "Add a new tab",                    }, CP_COMMANDLINE, 
     (Func)commands_add_view,            NULL,                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },

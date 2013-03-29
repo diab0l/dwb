@@ -836,6 +836,7 @@ COMMAND OVERVIEW
 |start_page              |home            |Open the default homepage
 |stop_loading            |st, stop        |Stop loading current page
 |tab_bookmarks           |tabmarks        |Show bookmarks, open in new tab
+|tabdo                   |                |Execute a command in all tabs
 |tab_hist_back           |tba, tabback    |Go back in a new tab
 |tab_hist_forward        |tfo, tabforward |Go forward in a new tab
 |tab_move                |tabm            |Move tab

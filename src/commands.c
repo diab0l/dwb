@@ -1074,3 +1074,18 @@ commands_reload_quickmarks(KeyMap *km, Arg *arg)
     dwb_reload_quickmarks();
     return STATUS_OK;
 }
+DwbStatus
+commands_tabdo(KeyMap *km, Arg *arg)
+{
+    const char *text = arg->p;
+    if (text == NULL || *text == '\0')
+        return STATUS_ERROR;
+    GList *current = dwb.state.fview;
+    for (GList *gl = dwb.state.views; gl; gl=gl->next)
+    {
+        dwb_focus_view(gl, "tabdo");
+        dwb_parse_command_line(text);
+    }
+    dwb_focus_view(current, "tabdo");
+    return STATUS_OK;
+}
