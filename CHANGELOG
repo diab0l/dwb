@@ -1,5 +1,54 @@
 Changes since 2012-10-28: 
 
+New features: 
+ * New commandline option --proxy for dwbem
+ * New commands 'reload_bookmarks', 'reload_quickmarks'
+ * New option 'load-on-focus'
+ * Prompt if a form should be resubmitted
+ * Expand ~ in user-stylesheet-uri
+ * New command 'print_preview', new option 'print-previewer'
+ * New option 'accept-language'
+ * New extension 'unique_tabs'
+ * Indicate installed/disabled extensions when calling dwbem -a/-l
+ * Allow arbitrary uri-schemes for commandline/open-prompt
+ * Check for supercookies
+ * New commandline option '--check-syntax'
+ * Searchable find/command history
+ * HSTS-support
+ * Added bashcompletion for dwb/dwbem
+ * Control-Return follows selection in new tab, Shift-Return follows selection in
+   background tab
+ * New option 'max-visible-completions'
+ * Mousewheel cycles through tabs
+ * New command 'tabdo'
+ * New option 'passthrough-keys'
+ * Refactored scripting api
+
+Bug fixes: 
+ * Fixing a use after free when reading scripts
+ * Fixing memory leak in connect_object
+ * Fixing memory leak in signal_set
+ * Escape download path when spawning with application, parse arguments with
+   g_shell_parse_argv
+ * Fixing hint clicking on youtube images
+ * Fixing wrong default PREFIX
+ * Fixing broken layout on dwb:quickmarks
+ * Fixing wrong font size in hints
+ * Fixing format security errors
+ * Fixing a segfault when a tab is closed
+ * Unref use WebKitHitTestResults
+ * Fixing --no-confirm of dwbem deleted the config
+ * Adding elements with contenteditable property to editable elements
+ * Fixing several segfaults when connecting GObject in the scripting context
+ * Fixing ignored '@'-shortcut
+ * Check for numpad-return
+
+Removed:
+ * Removed scratchpad
+
+
+Changes since 2012-10-28: 
+
 New features:
  * Paste primary selection into webview
  * New option 'hints-key-lock'
