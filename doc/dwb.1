@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 03/29/2013
+.\"      Date: 03/30/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "03/29/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "03/30/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3728,7 +3728,7 @@ means that the statusbar won\(cqt be visible\&. Default value:
 .sp
 Userscripts can be stored in \fI~/\&.config/dwb/userscripts\fR\&. The first argument of the script will be the current url, the second argument is the title, the third argument will be the profile name, the fourth argument is the numerical modifier and the fifth argument is a commandline argument\&. Also the variables \fIDWB_URI\fR, \fIDWB_TITLE\fR, \fIDWB_PROFILE\fR, \fIDWB_NUMMOD\fR, \fIDWB_ARGUMENT\fR, \fIDWB_REFERER\fR, and \fIDWB_USER_AGENT\fR are set\&. The keybinding for the script must be defined in the script itself in a commented line of the form \fB<comment symbols> dwb: <keybinding>\fR\&.
 .sp
-dwb also provides a small javascript api, scripts that use the api must have the special shebang \fB#!javascript\fR, for details see http://portix\&.bitbucket\&.org/dwb/resources/jsapi\&.html\&.
+dwb also provides a small javascript api, scripts that use the api must have the special shebang \fB#!javascript\fR or start with \fB//!javascript\fR for details see also http://portix\&.bitbucket\&.org/dwb/api/ and \fBdwb\-js\fR(7)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -3778,7 +3778,7 @@ Block requests from specific sites:
 
 var block = [ new RegExp("https://example\&.org\&.*"), new RegExp("https://example\&.co\&.uk\&.*") ];
 
-signals\&.connect("resource", function(wv, frame, request) {
+Signal\&.connect("resource", function(wv, frame, request) {
   for (var i=0, l=block\&.length; i<l; ++i)
   {
     if (block[i]\&.test(request\&.uri))

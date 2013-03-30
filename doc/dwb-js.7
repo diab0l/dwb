@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 03/18/2013
+.\"      Date: 03/30/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "03/18/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "03/30/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -125,32 +125,6 @@ A name that identifies the function on command line, optional
 \fIreturns\fR
 .RS 4
 true if the function was bound successfully
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBString checksum(String data, [ChecksumType type])\fR
-.RS 4
-.sp
-Computes a checksum for given data\&.
-.PP
-\fIshortcut\fR
-.RS 4
-The to compute the checksum for\&.
-.RE
-.PP
-\fItype\fR
-.RS 4
-The type of the checksum, optional, defaults to ChecksumType\&.sha256
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-The checksum
 .RE
 .RE
 .sp
@@ -338,136 +312,6 @@ from the module name, see also MODULES for details\&.
 A callback function that is called after initialization of all scripts and modules\&. The parameters of the callback function correspond to the names array\&. If
 \fBnames\fR
 is null the function is called with one parameter that contains all modules, see also MODULES for examples\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBvoid sendRequest(String uri, Function callback, [String method])\fR
-.RS 4
-.sp
-Sends a http\-request\&.
-.PP
-\fIuri\fR
-.RS 4
-The uri the request will be sent to\&.
-.RE
-.PP
-\fIcallback\fR
-.RS 4
-A callback that will be called when the request is finished, the callback has 2 parameters, the first will be an object that contains body and headers, the second the associated SoupMessage\&.
-.RE
-.PP
-\fImethod\fR
-.RS 4
-The http request method, default GET, optional\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBObject sendRequestSync(String uri, [String method])\fR
-.RS 4
-.sp
-Sends a http\-request synchronously\&.
-.PP
-\fIuri\fR
-.RS 4
-The uri the request will be sent to\&.
-.RE
-.PP
-\fImethod\fR
-.RS 4
-The http request method, default GET, optional\&.
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-Object that contains the response body, the response headers and the http status code of the request\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBvoid tabComplete(String label, Array items, Function callback, [Boolean readonly])\fR
-.RS 4
-.sp
-Initiates tab completion\&.
-.PP
-\fIlabel\fR
-.RS 4
-The command line label
-.RE
-.PP
-\fIitems\fR
-.RS 4
-An array of objects, each object can have 2 properties, left which will be the left completion label and right which will be the right completion label\&.
-.RE
-.PP
-\fIcallback\fR
-.RS 4
-Callback function, the first argument will be the returned string from the url bar\&.
-.RE
-.PP
-\fIreadonly\fR
-.RS 4
-Whether the items are readonly, default false, optional\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNumber timerStart(Number interval, Function func)\fR
-.RS 4
-.sp
-Executes a function repeatedly until the function returns false or timerStop is called on the id returned from this function
-.PP
-\fIinterval\fR
-.RS 4
-Interval in milliseconds
-.RE
-.PP
-\fIfunc\fR
-.RS 4
-Function to execute
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-An id that can be passed to timerStop
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNumber timerStop(Number id)\fR
-.RS 4
-.sp
-Stops a timer started by timerStart
-.PP
-\fIid\fR
-.RS 4
-The id returned from timerStart
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-true if the timer was stopped
 .RE
 .RE
 .sp
@@ -944,9 +788,193 @@ Number of the tab
 The corresponding webview
 .RE
 .RE
+.SS "net"
+.sp
+Network related functions
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString net.domainFromHost(String hostname)\fR
+.RS 4
+.sp
+Gets the base domain name from a hostname where the base domain name is the effective second level domain name, e\&.g\&. for www\&.example\&.com it will be example\&.com, for www\&.example\&.co\&.uk it will be example\&.co\&.uk\&.
+.PP
+\fIhostname\fR
+.RS 4
+a hostname
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+the base domain
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid net.sendRequest(String uri, Function callback, [String method], [Object data])\fR
+.RS 4
+.sp
+Sends a http\-request\&.
+.PP
+\fIuri\fR
+.RS 4
+The uri the request will be sent to\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+A callback that will be called when the request is finished, the callback has 2 parameters, the first will be an object that contains body and headers, the second the associated SoupMessage\&.
+.RE
+.PP
+\fImethod\fR
+.RS 4
+The http request method, default GET, optional\&.
+.RE
+.PP
+\fIdata\fR
+.RS 4
+Data to sent if method is POST
+.RE
+.PP
+\fIdata\&.contentType\fR
+.RS 4
+The content type
+.RE
+.PP
+\fIdata\&.data\fR
+.RS 4
+The data to sent
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+True if the request was sent\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBObject net.sendRequestSync(String uri, [String method])\fR
+.RS 4
+.sp
+Sends a http\-request synchronously\&.
+.PP
+\fIuri\fR
+.RS 4
+The uri the request will be sent to\&.
+.RE
+.PP
+\fImethod\fR
+.RS 4
+The http request method, default GET, optional\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+Object that contains the response body, the response headers and the http status code of the request\&.
+.RE
+.RE
+.SS "timer"
+.sp
+Functions for timed execution
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNumber timer.start(Number interval, Function func)\fR
+.RS 4
+.sp
+Executes a function repeatedly until the function returns false or timerStop is called on the id returned from this function
+.PP
+\fIinterval\fR
+.RS 4
+Interval in milliseconds
+.RE
+.PP
+\fIfunc\fR
+.RS 4
+Function to execute
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+An id that can be passed to timerStop
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBNumber timer.stop(Number id)\fR
+.RS 4
+.sp
+Stops a timer started by timerStart
+.PP
+\fIid\fR
+.RS 4
+The id returned from timerStart
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+true if the timer was stopped
+.RE
+.RE
 .SS "util"
 .sp
 The util object implements helper methods\&.
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.camelize(String text)\fR
+.RS 4
+.sp
+Converts a non\-camelcase string to a camelcase string\&.
+.PP
+\fItext\fR
+.RS 4
+A non\-camelcase string
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The a camelcase string
+.RE
+.sp
+Computes a checksum for given data\&.
+.PP
+\fIshortcut\fR
+.RS 4
+The to compute the checksum for\&.
+.RE
+.PP
+\fItype\fR
+.RS 4
+The type of the checksum, optional, defaults to ChecksumType\&.sha256
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The checksum
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -974,14 +1002,29 @@ The body of the function as a string
 .nr an-break-flag 1
 .br
 .ps +1
-\fBNumber util.getMode()\fR
+\fBString util.dispatchEvent(Number event, Modifier modifier, Number keyval)\fR
 .RS 4
 .sp
-Gets the the current mode\&.
+Dispatches a keyboard event\&.
+.PP
+\fIevent\fR
+.RS 4
+A GdkEventType
+.RE
+.PP
+\fImodifier\fR
+.RS 4
+A Modifier
+.RE
+.PP
+\fIkeyval\fR
+.RS 4
+A keyval as listed in gdkkeysyms\&.h
+.RE
 .PP
 \fIreturns\fR
 .RS 4
-The mode, see Modes for possible modes\&.
+True if the event was dispatched
 .RE
 .RE
 .sp
@@ -990,19 +1033,14 @@ The mode, see Modes for possible modes\&.
 .nr an-break-flag 1
 .br
 .ps +1
-\fBString util.domainFromHost(String hostname)\fR
+\fBNumber util.getMode()\fR
 .RS 4
 .sp
-Gets the base domain name from a hostname where the base domain name is the effective second level domain name, e\&.g\&. for www\&.example\&.com it will be example\&.com, for www\&.example\&.co\&.uk it will be example\&.co\&.uk\&.
-.PP
-\fIhostname\fR
-.RS 4
-a hostname
-.RE
+Gets the the current mode\&.
 .PP
 \fIreturns\fR
 .RS 4
-the base domain
+The mode, see Modes for possible modes\&.
 .RE
 .RE
 .sp
@@ -1041,6 +1079,84 @@ A text to escape
 .RS 4
 The escaped text or
 \fInull\fR;
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.mixin(Object self, Object \&...)\fR
+.RS 4
+.sp
+Mixes properties of objects into an object\&. Properties are mixed in from left to right, so properties will not be overwritten in the leftmost object if they are already defined\&.
+.PP
+\fIself\fR
+.RS 4
+An object
+.RE
+.PP
+\fIObject\&...\fR
+.RS 4
+Variable number of objects to mix in\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+self or a new object if self is null or undefined
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid util.tabComplete(String label, Array items, Function callback, [Boolean readonly])\fR
+.RS 4
+.sp
+Initiates tab completion\&.
+.PP
+\fIlabel\fR
+.RS 4
+The command line label
+.RE
+.PP
+\fIitems\fR
+.RS 4
+An array of objects, each object can have 2 properties, left which will be the left completion label and right which will be the right completion label\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function, the first argument will be the returned string from the url bar\&.
+.RE
+.PP
+\fIreadonly\fR
+.RS 4
+Whether the items are readonly, default false, optional\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid util.uncamelize(String text)\fR
+.RS 4
+.sp
+Converts camel\-case string for usage with GObject properties to a non\-camel\-case String
+.PP
+\fItext\fR
+.RS 4
+The text to uncamlize
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The uncamelized string
 .RE
 .sp
 dwb also adds additional methods to builtin objects
@@ -1466,7 +1582,7 @@ Chaining of a deferred:
 function foo()
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer\&.start(2000, function() {
         d\&.reject("rejected");
     });
     return d;
@@ -1493,7 +1609,7 @@ Note that if the deferred is rejected only the fail chain is called, when it is 
 function foo()
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer\&.start(2000, function() {
         d\&.reject("rejected");
         // Already rejected, will not execute the done chain
         d\&.resolve("rejected");
@@ -1524,7 +1640,7 @@ Changing the deferred in a callback chain:
 function foo(message)
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer\&.start(2000, function() {
         d\&.resolve(message);
     });
     return d;
@@ -2330,129 +2446,9 @@ label\&.visible = true;
 .RE
 .SH "SIGNALS"
 .sp
-With the signals object \fBdwb\fR communicates with the script on certain events\&. To connect to a signal one can call the connect function that is implemented by the signals object, that takes 2 arguments, the name of the signal and a callback function\&.
+Execute code on certain events\&. dwb emits some signals, e\&.g\&. before a new site is loaded, the signals object can be used to handle these signals\&. All events are emitted on the signals object itself, for example "signals\&.keyPress = function() { \&... };" would connect to the keyPress signal but it is strongly discouraged to use this pattern since it will only allow to connect one callback to a certain signal\&. To handle signals Signal\-objects can be used, it manages signals, allows to connect to more than one signal and also allows to easily disconnect/reconnect to signals\&.
 .sp
-The callback function has a varying number of parameters\&. The last paramter is always a json\-object which might be empty or contain additional data relevant to the signal\&. A callback function should either return true or false or nothing which is equivalent to false\&. If multiple callbacks are connected to the same signal and one callback function returns true the overall return value will be true\&.
-.sp
-\fBdwb\fR only emits signals as long as one callback is connected to a signal\&. To reduce overhead one should disconnect from signals when no longer needed\&.
-.sp
-The signals object is not a readonly object, properties can be added to the object which are visible in all scripts but it should be avoided to add properties on the signals object\&. signals should only be used to connect to signals or define custom signals\&.
-.sp
-The signals object implements the following methods
-.SS "Methods"
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNumber signals.connect(String signal, Function callback)\fR
-.RS 4
-.sp
-Connect to a signal
-.PP
-\fIsignal\fR
-.RS 4
-The signal to connect to
-.RE
-.PP
-\fIcallback\fR
-.RS 4
-The callback function which will be called when the signal is emitted
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-Unique id for this connection, can be passed to disconnect
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNumber signals.connectWebView(String signal, Function callback)\fR
-.RS 4
-.sp
-Connect all webviews to a GObject signal
-.PP
-\fIsignal\fR
-.RS 4
-The signal to connect to
-.RE
-.PP
-\fIcallback\fR
-.RS 4
-The callback function which will be called when the signal is emitted, the arguments of the callback function correspond to the GObject callback
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBBoolean signals.emit(String signal, \&...)\fR
-.RS 4
-.sp
-Emits a signal with a variable number of arguments passed to the callback function
-.PP
-\fIsignal\fR
-.RS 4
-The signal to emit
-.RE
-.PP
-\fI\&...\fR
-.RS 4
-Objects passed to the callback function
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-Overall return value from all connected callback functions
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBBoolean signals.disconnect(Number id|Function callback)\fR
-.RS 4
-.sp
-Disconnect from a signal
-.PP
-\fIid|callback\fR
-.RS 4
-The id returned from
-\fBconnect\fR
-or the callback function passed to
-\fBconnect\fR\&. Note that if the same callback is used more than once the signal must be disconnected by id, otherwise the behaviour is undefined\&.
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBvoid signals.disconnectByName(String signal)\fR
-.RS 4
-.sp
-Disconnect from all signals with matching name, It should be avoided to call disconnectByName on signals implemented by dwb since it will completely stop the emission of the signal in all scripts\&.
-.PP
-\fIsignal\fR
-.RS 4
-The callback function passed to connect
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-true if signals were disconnected, false if no signal was disconnected
-.RE
-.RE
+There is just one convenient pattern that allows setting callbacks directly on signals: if the signal name starts with "on" dwb will internally create a new Signal and connect to it with the given callback function, i\&.e\&. using signals\&.onResource = function () {\&...} allows to connect more than one callback to the "resource"\-event, however it doesn\(cqt give you as much control as creating a Signal\&. When connected with this pattern it is not possible to disconnect from the signal with signals\&.onResource = null;, instead Signal\&.disconnect must be used\&.
 .SS "Emitted signals"
 .sp
 Custom signals can be created by simply calling
@@ -2461,7 +2457,7 @@ Custom signals can be created by simply calling
 .RS 4
 .\}
 .nf
-signals\&.connect("nameOfNewSignal", callbackFunction);
+var signal = new Signal("nameOfNewSignal", callbackFunction);
 .fi
 .if n \{\
 .RE
@@ -2481,7 +2477,7 @@ Signals emitted by dwb are the following:
 .RS 4
 .\}
 .nf
-signals\&.connect("buttonPress", function(webview, hittestresult, event));
+new Signal("buttonPress", function(webview, hittestresult, event));
 .fi
 .if n \{\
 .RE
@@ -2552,7 +2548,7 @@ y\-position relative to the screen
 .RS 4
 .\}
 .nf
-signals\&.connect("buttonRelease", function(webview, hittestresult, event));
+new Signal("buttonRelease", function(webview, hittestresult, event));
 .fi
 .if n \{\
 .RE
@@ -2589,7 +2585,7 @@ Same as buttonPress but without
 .RS 4
 .\}
 .nf
-signals\&.connect("changeMode", function(webview, mode));
+new Signal("changeMode", function(webview, mode));
 .fi
 .if n \{\
 .RE
@@ -2620,39 +2616,13 @@ A mode, see also Modes for possible modes
 .RS 4
 .\}
 .nf
-signals\&.connect("close", function());
+new Signal("close", function());
 .fi
 .if n \{\
 .RE
 .\}
 .sp
 Emitted when dwb is closed
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBcreateTab\fR
-.RS 4
-.sp
-.if n \{\
-.RS 4
-.\}
-.nf
-signals\&.connect("createTab", function(webview));
-.fi
-.if n \{\
-.RE
-.\}
-.sp
-Emitted when a tab is created
-.PP
-\fIwebview\fR
-.RS 4
-The webview that corresponds to the created tab
-.RE
 .RE
 .sp
 .it 1 an-trap
@@ -2667,7 +2637,7 @@ The webview that corresponds to the created tab
 .RS 4
 .\}
 .nf
-signals\&.connect("closeTab", function(webview));
+new Signal("closeTab", function(webview));
 .fi
 .if n \{\
 .RE
@@ -2686,6 +2656,32 @@ The webview that corresponds to the tab
 .nr an-break-flag 1
 .br
 .ps +1
+\fBcreateTab\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+new Signal("createTab", function(webview));
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Emitted when a tab is created
+.PP
+\fIwebview\fR
+.RS 4
+The webview that corresponds to the created tab
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBdocumentLoaded\fR
 .RS 4
 .sp
@@ -2693,7 +2689,7 @@ The webview that corresponds to the tab
 .RS 4
 .\}
 .nf
-signals\&.connect("documentLoaded",  function(webview, frame));
+new Signal("documentLoaded",  function(webview, frame));
 .fi
 .if n \{\
 .RE
@@ -2724,7 +2720,7 @@ The frame that contains the document
 .RS 4
 .\}
 .nf
-signals\&.connect("download", function(webview, download, json));
+new Signal("download", function(webview, download, json));
 .fi
 .if n \{\
 .RE
@@ -2765,7 +2761,7 @@ The mimetype of the file
 .RS 4
 .\}
 .nf
-signals\&.connect("downloadStart", function(download, json));
+new Signal("downloadStart", function(download, json));
 .fi
 .if n \{\
 .RE
@@ -2811,7 +2807,7 @@ The chosen application or null if a path was chosen\&.
 .RS 4
 .\}
 .nf
-signals\&.connect("downloadStatus", function(download));
+new Signal("downloadStatus", function(download));
 .fi
 .if n \{\
 .RE
@@ -2837,7 +2833,7 @@ The Download
 .RS 4
 .\}
 .nf
-signals\&.connect("executeCommand", function(commandinfo));
+new Signal("executeCommand", function(commandinfo));
 .fi
 .if n \{\
 .RE
@@ -2873,7 +2869,7 @@ The numerical modifier\&.
 .RS 4
 .\}
 .nf
-signals\&.connect("frameCreated", function(webview, frame));
+new Signal("frameCreated", function(webview, frame));
 .fi
 .if n \{\
 .RE
@@ -2904,7 +2900,7 @@ The frame
 .RS 4
 .\}
 .nf
-signals\&.connect("frameStatus", function(webview, frame));
+new Signal("frameStatus", function(webview, frame));
 .fi
 .if n \{\
 .RE
@@ -2935,7 +2931,7 @@ The frame
 .RS 4
 .\}
 .nf
-signals\&.connect("keyPress", function(webview, json));
+new Signal("keyPress", function(webview, json));
 .fi
 .if n \{\
 .RE
@@ -2986,7 +2982,7 @@ A bitmap of modifiers pressed, see Modifier
 .RS 4
 .\}
 .nf
-signals\&.connect("keyRelease", function(webview, json));
+new Signal("keyRelease", function(webview, json));
 .fi
 .if n \{\
 .RE
@@ -3017,7 +3013,7 @@ Same as keyPress
 .RS 4
 .\}
 .nf
-signals\&.connect("loadCommitted", function(webview));
+new Signal("loadCommitted", function(webview));
 .fi
 .if n \{\
 .RE
@@ -3043,7 +3039,7 @@ The webview that emitted the signal
 .RS 4
 .\}
 .nf
-signals\&.connect("loadFinished", function(webview));
+new Signal("loadFinished", function(webview));
 .fi
 .if n \{\
 .RE
@@ -3069,7 +3065,7 @@ The webview that emitted the signal
 .RS 4
 .\}
 .nf
-signals\&.connect("loadStatus", function(webview));
+new Signal("loadStatus", function(webview));
 .fi
 .if n \{\
 .RE
@@ -3095,7 +3091,7 @@ The webview that emitted the signal
 .RS 4
 .\}
 .nf
-signals\&.connect("mimeType", function(webview, frame, request, json));
+new Signal("mimeType", function(webview, frame, request, json));
 .fi
 .if n \{\
 .RE
@@ -3136,7 +3132,7 @@ The mimetype
 .RS 4
 .\}
 .nf
-signals\&.connect("mouseMove", function(webview, event));
+new Signal("mouseMove", function(webview, event));
 .fi
 .if n \{\
 .RE
@@ -3167,7 +3163,7 @@ Same as buttonRelease
 .RS 4
 .\}
 .nf
-signals\&.connect("navigation", function(webview, frame, request, action));
+new Signal("navigation", function(webview, frame, request, action));
 .fi
 .if n \{\
 .RE
@@ -3208,7 +3204,7 @@ The navigation action
 .RS 4
 .\}
 .nf
-signals\&.connect("resource", function(webview, frame, request, response));
+new Signal("resource", function(webview, frame, request, response));
 .fi
 .if n \{\
 .RE
@@ -3249,7 +3245,7 @@ The network response
 .RS 4
 .\}
 .nf
-signals\&.connect("statusBarChange", function(webview, data));
+new Signal("statusBarChange", function(webview, data));
 .fi
 .if n \{\
 .RE
@@ -3322,7 +3318,7 @@ and
 .RS 4
 .\}
 .nf
-signals\&.connect("tabButtonPress", function(webview, tabwidget, event));
+new Signal("tabButtonPress", function(webview, tabwidget, event));
 .fi
 .if n \{\
 .RE
@@ -3358,7 +3354,7 @@ Same as buttonPress
 .RS 4
 .\}
 .nf
-signals\&.connect("tabFocus", function(webview, json));
+new Signal("tabFocus", function(webview, json));
 .fi
 .if n \{\
 .RE
@@ -3374,6 +3370,238 @@ The new tab
 \fIjson\&.last\fR
 .RS 4
 The number of the previously focused tab
+.RE
+.RE
+.SH "SIGNAL"
+.sp
+Object that can be used to connect to certain browser events\&.
+.SS "Constructor"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBnew Signal(String name, [Function callback])\fR
+.RS 4
+.sp
+Constructs a new signal
+.PP
+\fIname\fR
+.RS 4
+Name of the event
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function that is invoked when the signal is emitted\&.
+.RE
+.RE
+.SS "Properties"
+.PP
+\fIcallback (Function, read|write)\fR
+.RS 4
+The callback that will be called when the signal is emitted, the context of the signal will be the signal itself (i\&.e\&. this refers to the connected Signal)\&.
+.RE
+.PP
+\fIconnected (SoupSession, read)\fR
+.RS 4
+Whether the signal is connected
+.RE
+.PP
+\fIid (Number, read)\fR
+.RS 4
+Unique id of the signal
+.RE
+.PP
+\fIname (Number, read)\fR
+.RS 4
+Name of the event
+.RE
+.SS "Methods"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBconnect([Function callback])\fR
+.RS 4
+.sp
+Connects the signal to the event
+.PP
+\fIcallback\fR
+.RS 4
+Callback function that is invoked when the signal is emitted, optional, but mandatory if no callback was given during signal construction\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+self
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBdisconnect([Function callback])\fR
+.RS 4
+.sp
+Disconnects the signal from the event
+.PP
+\fIreturns\fR
+.RS 4
+self
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBtoggle()\fR
+.RS 4
+.sp
+Toggles a signal, if it is connected it will be disconnected an vice versa\&.
+.PP
+\fIreturns\fR
+.RS 4
+true if the signal was connected, false otherwise
+.RE
+.RE
+.SS "Static methods"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.connect(String name, Function callback)\fR
+.RS 4
+.sp
+Connects to an event
+.PP
+\fIsignals\fR
+.RS 4
+The event name
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function to connect to\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.connectAll(Array signals, [Function callback])\fR
+.RS 4
+.sp
+Connects to more than one signal at once
+.PP
+\fIsignals\fR
+.RS 4
+Array of signals\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function to connect to, optional\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.connectWebView(String name, Function callback)\fR
+.RS 4
+.sp
+Connects all webviews to a GObject signal\&.
+.PP
+\fIname\fR
+.RS 4
+The event name
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+A callback function the will be called when the signal is emitted, the arguments of the callback correspond to the GObject callback with the first argument omitted, instead this refers to the object\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.disconnect(Signal|Function object)\fR
+.RS 4
+.sp
+Either a Signal or the callback of a signal If a callback is passed to this function and the same callback is connected multiple times only the first matching callback will be disconnected, to disconnect all matching callbacks call use Signal\&.disconnectAll
+.PP
+\fIobject\fR
+.RS 4
+The event name
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+the disconnected signal
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.disconnectAll(Function callback)\fR
+.RS 4
+.sp
+Disconnect from all signals with matching callback function
+.PP
+\fIcallback\fR
+.RS 4
+A callback function
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+An array of signal that were disconnected
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.emit(String name, \&...)\fR
+.RS 4
+.sp
+Emits a signal, can be used to implement custom signals\&.
+.PP
+\fIname\fR
+.RS 4
+The name of the event
+.RE
+.PP
+\fI\&...\fR
+.RS 4
+Variable number of arguments passed to the callback function of Signal\&.connect\&.
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The overall return value of all callback function, if one callback function returns true the overall return value will be true
 .RE
 .RE
 .SH "ENUM OBJECTS"
@@ -3536,6 +3764,7 @@ const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2
+  HintMode : 1<<2
 };
 .fi
 .if n \{\
@@ -4384,7 +4613,7 @@ return {
       bar(config\&.foo);
       foo(config\&.bar);
       bind("XX", bar, "dobar");
-      signals\&.connect("loadStatus", loadStatusCallback);
+      Signal\&.connect("loadStatus", loadStatusCallback);
       return true;
     }
 
@@ -4393,7 +4622,7 @@ return {
 
   end : function () {
     unbind("dobar");
-    signals\&.disconnectByFunction(loadStatusCallback);
+    Signal\&.disconnect(loadStatusCallback);
     return true;
   }
 };

@@ -351,6 +351,12 @@
             {
                 value : function(name, callback)
                 {
+                    var wv;
+                    for (var i=0; i<tabs.length; i++)
+                    {
+                        if (tabs.nth(i))
+                            tabs.nth(i).connect(name, function() { callback.apply(wv, arguments); });
+                    }
                     Signal.connect("createTab", function(wv) {
                         wv.connect(name, function() { callback.apply(wv, arguments);});
                     });

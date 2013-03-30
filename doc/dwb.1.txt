@@ -1619,8 +1619,8 @@ the script must be defined in the script itself in a commented line of the form
 Commands can be executed by sending the command to ${DWB_FIFO}.
 
 dwb also provides a small javascript api, scripts that use the api must have the
-special shebang *#!javascript*, for details see
-http://portix.bitbucket.org/dwb/resources/jsapi.html.
+special shebang *#!javascript* or start with *//!javascript* for details see
+also http://portix.bitbucket.org/dwb/api/ and *dwb-js*(7).
 
 Examples
 ^^^^^^^^
@@ -1650,7 +1650,7 @@ Block requests from specific sites:
 
 var block = [ new RegExp("https://example.org.*"), new RegExp("https://example.co.uk.*") ];
 
-signals.connect("resource", function(wv, frame, request) {
+Signal.connect("resource", function(wv, frame, request) {
   for (var i=0, l=block.length; i<l; ++i) 
   {
     if (block[i].test(request.uri)) 

@@ -65,17 +65,6 @@ _name_;; A name that identifies the function on command line, optional
 _returns_;; true if the function was bound successfully
 ****
 
-==== String checksum(String data, [ChecksumType type])
-
-****
-
-Computes a checksum for given data.
-
-_shortcut_;; The to compute the checksum for.
-_type_;; The type of the checksum, optional, defaults to ChecksumType.sha256
-_returns_;; The checksum
-****
-
 ==== Boolean execute(String command)
 
 ****
@@ -174,64 +163,6 @@ _callback_;; A callback function that is called after initialization of all
 scripts and modules. The parameters of the callback function correspond to the
 names array. If *names* is null the function is called with one parameter that
 contains all modules, see also MODULES for examples.
-****
-
-==== void sendRequest(String uri, Function callback, [String method])
-****
-
-Sends a http-request. 
-
-_uri_;; The uri the request will be sent to.
-_callback_;; A callback that will be called when the request is finished, the
-callback has 2 parameters, the first will be an object that contains body and
-headers, the second the associated SoupMessage.
-_method_;; The http request method, default GET, optional.
-****
-
-==== Object sendRequestSync(String uri, [String method])
-****
-
-Sends a http-request synchronously. 
-
-_uri_;; The uri the request will be sent to.
-_method_;; The http request method, default GET, optional.
-_returns_;; Object that contains the response body, the response headers and
-the http status code of
-the request. 
-****
-
-==== void tabComplete(String label, Array items, Function callback, [Boolean readonly])
-****
-
-Initiates tab completion.
-
-_label_;; The command line label
-_items_;; An array of objects, each object can have 2 properties, left which
-will be the left completion label and right which will be the right completion
-label.
-_callback_;; Callback function, the first argument will be the returned string
-from the url bar.
-_readonly_;; Whether the items are readonly, default false, optional.
-****
-
-==== Number timerStart(Number interval, Function func)
-****
-
-Executes a function repeatedly until the function returns false or
-timerStop is called on the id returned from this function
-
-_interval_;; Interval in milliseconds
-_func_;; Function to execute
-_returns_;; An id that can be passed to timerStop
-****
-
-==== Number timerStop(Number id)
-****
-
-Stops a timer started by timerStart
-
-_id_;; The id returned from timerStart
-_returns_;; true if the timer was stopped
 ****
 
 ==== Number unbind(Function func|String name)
@@ -432,9 +363,97 @@ _n_;; Number of the tab
 _returns_;; The corresponding webview
 ****
 
+=== net ===
+
+Network related functions
+
+==== String net.domainFromHost(String hostname)
+****
+
+Gets the base domain name from a hostname where the base domain name is the
+effective second level domain name, e.g. for www.example.com it will be
+example.com, for www.example.co.uk it will be example.co.uk.
+
+_hostname_;; a hostname
+_returns_;; the base domain 
+****
+
+==== void net.sendRequest(String uri, Function callback, [String method], [Object data])
+****
+
+Sends a http-request. 
+
+_uri_;; The uri the request will be sent to.
+_callback_;; A callback that will be called when the request is finished, the
+callback has 2 parameters, the first will be an object that contains body and
+headers, the second the associated SoupMessage.
+_method_;; The http request method, default GET, optional.
+_data_;; Data to sent if method is POST
+_data.contentType_;; The content type
+_data.data_;; The data to sent
+_returns_;; True if the request was sent.
+****
+
+==== Object net.sendRequestSync(String uri, [String method])
+****
+
+Sends a http-request synchronously. 
+
+_uri_;; The uri the request will be sent to.
+_method_;; The http request method, default GET, optional.
+_returns_;; Object that contains the response body, the response headers and
+the http status code of
+the request. 
+****
+
+=== timer === 
+
+Functions for timed execution
+
+==== Number timer.start(Number interval, Function func)
+****
+
+Executes a function repeatedly until the function returns false or
+timerStop is called on the id returned from this function
+
+_interval_;; Interval in milliseconds
+_func_;; Function to execute
+_returns_;; An id that can be passed to timerStop
+****
+
+==== Number timer.stop(Number id)
+****
+
+Stops a timer started by timerStart
+
+_id_;; The id returned from timerStart
+_returns_;; true if the timer was stopped
+****
+
+
 === util ===
 
 The util object implements helper methods.
+
+==== String util.camelize(String text)
+
+****
+
+Converts a non-camelcase string to a camelcase string.
+
+_text_;; A non-camelcase string
+_returns_;; The a camelcase string
+****
+
+****
+
+Computes a checksum for given data.
+
+_shortcut_;; The to compute the checksum for.
+_type_;; The type of the checksum, optional, defaults to ChecksumType.sha256
+_returns_;; The checksum
+****
+
 
 ==== String util.getBody(Function func) 
 ****
@@ -446,23 +465,23 @@ _func_;; A function
 _returns_;; The body of the function as a string
 ****
 
+==== String util.dispatchEvent(Number event, Modifier modifier, Number keyval) 
+****
+
+Dispatches a keyboard event.
+
+_event_;; A GdkEventType 
+_modifier_;; A Modifier
+_keyval_;; A keyval as listed in gdkkeysyms.h
+_returns_;; True if the event was dispatched
+****
+
 ==== Number util.getMode()
 ****
 
 Gets the the current mode.
 
 _returns_;; The mode, see Modes for possible modes.
-****
-
-==== String util.domainFromHost(String hostname)
-****
-
-Gets the base domain name from a hostname where the base domain name is the
-effective second level domain name, e.g. for www.example.com it will be
-example.com, for www.example.co.uk it will be example.co.uk.
-
-_hostname_;; a hostname
-_returns_;; the base domain 
 ****
 
 ==== String util.getSelection()
@@ -481,6 +500,44 @@ Escapes text for usage with pango markup.
 _text_;; A text to escape
 _returns_;; The escaped text or 'null';
 ****
+
+==== String util.mixin(Object self, Object ...)
+****
+
+Mixes properties of objects into an object. Properties are mixed in from left to
+right, so properties will not be overwritten in the leftmost object if they are
+already defined.
+
+_self_;; An object
+_Object..._;; Variable number of objects to mix in.
+_returns_;; self or a new object if self is null or undefined
+****
+
+==== void util.tabComplete(String label, Array items, Function callback, [Boolean readonly])
+****
+
+Initiates tab completion.
+
+_label_;; The command line label
+_items_;; An array of objects, each object can have 2 properties, left which
+will be the left completion label and right which will be the right completion
+label.
+_callback_;; Callback function, the first argument will be the returned string
+from the url bar.
+_readonly_;; Whether the items are readonly, default false, optional.
+****
+
+==== void util.uncamelize(String text)
+****
+
+Converts camel-case string for usage with GObject properties to a non-camel-case
+String
+
+_text_;; The text to uncamlize
+_returns_;; The uncamelized string
+****
+
+
 
 dwb also adds additional methods to builtin objects 
 
@@ -702,7 +759,7 @@ Chaining of a deferred:
 function foo() 
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer.start(2000, function() {
         d.reject("rejected");
     });
     return d;
@@ -724,7 +781,7 @@ resolved only the done chain is called.
 function foo() 
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer.start(2000, function() {
         d.reject("rejected");
         // Already rejected, will not execute the done chain
         d.resolve("rejected");
@@ -750,7 +807,7 @@ Changing the deferred in a callback chain:
 function foo(message) 
 {
     var d = new Deferred();
-    timerStart(2000, function() {
+    timer.start(2000, function() {
         d.resolve(message);
     });
     return d;
@@ -1193,93 +1250,32 @@ label.visible = true;
 
 
 == SIGNALS ==
-With the signals object *dwb* communicates with the script on certain events. 
-To connect to a signal one can call the connect function that is implemented by
-the signals object, that takes 2 arguments, the name of the signal and a
-callback function. 
 
-The callback function has a varying number of parameters.
-The last paramter is always a json-object which might be empty or contain
-additional data relevant to the signal. 
-A callback function should either return true or false or nothing which is
-equivalent to false.
-If multiple callbacks are connected to the same signal and one callback
-function returns true the overall return value will be true.
+Execute code on certain events. dwb emits some signals, e.g. before a new site
+is loaded, the signals object can be used to handle these signals. All events
+are emitted on the signals object itself, for example "signals.keyPress =
+function() { ... };" would connect to the keyPress signal but it is strongly
+discouraged to use this pattern since it will only allow to connect one callback
+to a certain signal. To handle signals Signal-objects can be used, it manages
+signals, allows to connect to more than one signal and also allows to easily
+disconnect/reconnect to signals.
 
-*dwb* only emits signals as long as one callback is connected to a signal. To
-reduce overhead one should disconnect from signals when no longer
-needed. 
+There is just one convenient pattern that allows setting callbacks directly on
+signals: if the signal name starts with "on" dwb will internally create a new
+Signal and connect to it with the given callback function, i.e. using
+signals.onResource = function () {...} allows to connect more than one callback
+to the "resource"-event, however it doesn't give you as much control as creating
+a Signal. When connected with this pattern it is not possible to disconnect from
+the signal with signals.onResource = null;, instead Signal.disconnect must be
+used.
 
-The signals object is not a readonly object, properties can be added to the
-object which are visible in all scripts but it should be avoided to add
-properties on the signals object. signals should only be used to connect to
-signals or define custom signals. 
-
-The signals object implements the following methods
-
-=== Methods ===
-
-==== Number signals.connect(String signal, Function callback) 
-****
-Connect to a signal
-
-_signal_;; The signal to connect to 
-_callback_;; The callback function which will be called when the signal is emitted
-_returns_;;  Unique id for this connection, can be passed to disconnect
-****
-
-==== Number signals.connectWebView(String signal, Function callback) 
-****
-Connect all webviews to a GObject signal
-
-_signal_;; The signal to connect to 
-_callback_;; The callback function which will be called when the signal is
-emitted, the arguments of the callback function correspond to the GObject
-callback
-****
-
-
-==== Boolean signals.emit(String signal,  ...)
-****
-
-Emits a signal with a variable number of arguments passed to the callback
-function
-
-_signal_;; The signal to emit
-_..._;; Objects passed to the callback function
-_returns_;; Overall return value from all connected callback functions
-****
-
-==== Boolean signals.disconnect(Number id|Function callback) 
-****
-
-Disconnect from a signal 
-
-_id|callback_;; The id returned from *connect* or the callback function passed
-to *connect*. Note that if the same callback is used more than once 
-the signal must be disconnected by id, otherwise the behaviour is undefined. 
-****
-
-
-==== void signals.disconnectByName(String signal) 
-****
-
-Disconnect from all signals with matching name,
-It should be avoided to call disconnectByName
-on signals implemented by dwb since it will completely stop the emission of the
-signal in all scripts. 
-
-_signal_;; The callback function passed to connect
-_returns_;; true if signals were disconnected, false if no signal
-was disconnected
-****
 
 === Emitted signals ===
 
 Custom signals can be created by simply calling 
 
 -----
-signals.connect("nameOfNewSignal", callbackFunction);
+var signal = new Signal("nameOfNewSignal", callbackFunction);
 -----
 
 
@@ -1288,10 +1284,9 @@ Signals emitted by dwb are the following:
 
 ==== buttonPress 
 
-
 ****
 ----
-signals.connect("buttonPress", function(webview, hittestresult, event));
+new Signal("buttonPress", function(webview, hittestresult, event));
 ----
 
 Emitted when a button is pressed on the webview, return true to prevent
@@ -1313,7 +1308,7 @@ _event.yRoot_;; y-position relative to the screen
 
 ****
 ----
-signals.connect("buttonRelease", function(webview, hittestresult, event));
+new Signal("buttonRelease", function(webview, hittestresult, event));
 ----
 
 Emitted when a button is released, return true to prevent the default action
@@ -1327,7 +1322,7 @@ _event_;; Same as buttonPress but without _event.type_
 
 ****
 ----
-signals.connect("changeMode", function(webview, mode));
+new Signal("changeMode", function(webview, mode));
 ----
 
 Emitted when the mode changes, return true to prevent the change.
@@ -1340,28 +1335,17 @@ _mode_;; A mode, see also Modes for possible modes
 
 ****
 ----
-signals.connect("close", function());
+new Signal("close", function());
 ----
 
 Emitted when dwb is closed
-****
-
-==== createTab
-****
-----
-signals.connect("createTab", function(webview));
-----
-
-Emitted when a tab is created
-
-_webview_;; The webview that corresponds to the created tab
 ****
 
 ==== closeTab
 ****
 
 ----
-signals.connect("closeTab", function(webview));
+new Signal("closeTab", function(webview));
 ----
 
 Emitted when a tab is closed
@@ -1369,10 +1353,21 @@ Emitted when a tab is closed
 _webview_;; The webview that corresponds to the tab
 ****
 
+==== createTab
+****
+----
+new Signal("createTab", function(webview));
+----
+
+Emitted when a tab is created
+
+_webview_;; The webview that corresponds to the created tab
+****
+
 ==== documentLoaded
 ****
 ----
-signals.connect("documentLoaded",  function(webview, frame));
+new Signal("documentLoaded",  function(webview, frame));
 ----
 
 Emitted when a the DOM document of a frame has been loaded.
@@ -1384,7 +1379,7 @@ _frame_;; The frame that contains the document
 ==== download
 ****
 ----
-signals.connect("download", function(webview, download, json));
+new Signal("download", function(webview, download, json));
 ----
 
 Emitted before a download starts, before a file or action has been chosen,
@@ -1399,7 +1394,7 @@ _json.mimeType_;; The mimetype of the file
 ==== downloadStart
 ****
 ----
-signals.connect("downloadStart", function(download, json));
+new Signal("downloadStart", function(download, json));
 ----
 
 Emitted before a download starts after a path or application has been chosen, 
@@ -1417,7 +1412,7 @@ _json.application_;; The chosen application or null if a path was chosen.
 ==== downloadStatus
 ****
 ----
-signals.connect("downloadStatus", function(download));
+new Signal("downloadStatus", function(download));
 ----
 
 Emitted when the DownloadStatus changes. 
@@ -1428,7 +1423,7 @@ _download_;; The Download
 ==== executeCommand
 ****
 ----
-signals.connect("executeCommand", function(commandinfo));
+new Signal("executeCommand", function(commandinfo));
 ----
 
 Emitted when a command is executed, return true to prevent execution.
@@ -1443,7 +1438,7 @@ _commandinfo.nummod_;; The numerical modifier.
 ==== frameCreated
 ****
 ----
-signals.connect("frameCreated", function(webview, frame));
+new Signal("frameCreated", function(webview, frame));
 ----
 
 Emitted when a frame is created
@@ -1455,7 +1450,7 @@ _frame_;; The frame
 ==== frameStatus
 ****
 ----
-signals.connect("frameStatus", function(webview, frame));
+new Signal("frameStatus", function(webview, frame));
 ----
 
 Emitted when the LoadStatus of a frame changes
@@ -1467,7 +1462,7 @@ _frame_;; The frame
 ==== keyPress
 ****
 ----
-signals.connect("keyPress", function(webview, json));
+new Signal("keyPress", function(webview, json));
 ----
 
 Emitted when a key is pressed, return true to prevent the default action
@@ -1483,7 +1478,7 @@ _json.state_;; A bitmap of modifiers pressed, see Modifier
 ==== keyRelease
 ****
 ----
-signals.connect("keyRelease", function(webview, json));
+new Signal("keyRelease", function(webview, json));
 ----
 
 Emitted when a key is released, return true to prevent the default action
@@ -1496,7 +1491,7 @@ _json_;; Same as keyPress
 ==== loadCommitted
 ****
 ----
-signals.connect("loadCommitted", function(webview));
+new Signal("loadCommitted", function(webview));
 ----
 
 Emitted when the load has just commited, no data has been loaded when this
@@ -1509,7 +1504,7 @@ _webview_;; The webview that emitted the signal
 ==== loadFinished
 ****
 ----
-signals.connect("loadFinished", function(webview));
+new Signal("loadFinished", function(webview));
 ----
 
 Emitted when the site has completely loaded. 
@@ -1520,7 +1515,7 @@ _webview_;; The webview that emitted the signal
 ==== loadStatus
 ****
 ----
-signals.connect("loadStatus", function(webview));
+new Signal("loadStatus", function(webview));
 ----
 
 Emitted when the load status changes
@@ -1531,7 +1526,7 @@ _webview_;; The webview that emitted the signal
 ==== mimeType
 ****
 ----
-signals.connect("mimeType", function(webview, frame, request, json));
+new Signal("mimeType", function(webview, frame, request, json));
 ----
 
 Decide whether or not to show a given mimetype. Return true to stop the request.
@@ -1545,7 +1540,7 @@ _json.mimeType_;; The mimetype
 ==== mouseMove
 ****
 ----
-signals.connect("mouseMove", function(webview, event));
+new Signal("mouseMove", function(webview, event));
 ----
 
 Emitted when the pointer is moved.
@@ -1557,7 +1552,7 @@ _event_;; Same as buttonRelease
 ==== navigation
 ****
 ----
-signals.connect("navigation", function(webview, frame, request, action));
+new Signal("navigation", function(webview, frame, request, action));
 ----
 
 Emitted before a new site is loaded, return true to stop the request.
@@ -1571,7 +1566,7 @@ _action_;; The navigation action
 ==== resource
 ****
 ----
-signals.connect("resource", function(webview, frame, request, response));
+new Signal("resource", function(webview, frame, request, response));
 ----
 
 Emitted before a new resource is going to be loaded
@@ -1585,7 +1580,7 @@ _response_;; The network response
 ==== statusBarChange 
 ****
 ----
-signals.connect("statusBarChange", function(webview, data));
+new Signal("statusBarChange", function(webview, data));
 ----
 
 Emitted before the status bar is updated, if the callback returns true dwb will
@@ -1608,7 +1603,7 @@ uriLabel needs to be updated.
 
 ****
 ----
-signals.connect("tabButtonPress", function(webview, tabwidget, event));
+new Signal("tabButtonPress", function(webview, tabwidget, event));
 ----
 
 Emitted when a button is pressed on a tabwidget, return true to prevent the default action
@@ -1621,13 +1616,130 @@ _event_;; Same as buttonPress
 ==== tabFocus
 ****
 ----
-signals.connect("tabFocus", function(webview, json));
+new Signal("tabFocus", function(webview, json));
 ----
 
 Emitted when another tab gets focus, return true to stop the event
 
 _webview_;; The new tab
 _json.last_;; The number of the previously focused tab
+****
+
+== Signal
+
+Object that can be used to connect to certain browser events.
+
+=== Constructor 
+
+==== new Signal(String name, [Function callback])
+****
+
+Constructs a new signal
+
+_name_;; Name of the event
+_callback_;; Callback function that is invoked when the signal is emitted.
+****
+
+=== Properties
+
+_callback (Function, read|write)_;; The callback that will be called when the
+signal is emitted, the context of the signal will be the signal itself (i.e.
+this refers to the connected Signal).
+_connected (SoupSession, read)_;; Whether the signal is connected
+_id (Number, read)_;; Unique id of the signal
+_name (Number, read)_;; Name of the event
+
+=== Methods
+
+==== connect([Function callback])
+****
+
+Connects the signal to the event
+
+_callback_;; Callback function that is invoked when the signal is emitted,
+optional but mandatory if no callback was given during signal construction.
+_returns_;; self
+****
+
+==== disconnect([Function callback])
+****
+
+Disconnects the signal from the event
+
+_returns_;; self
+****
+
+==== toggle()
+****
+
+Toggles a signal, if it is connected it will be disconnected an vice versa.
+
+_returns_;; true if the signal was connected, false otherwise
+****
+
+=== Static methods
+
+==== Signal.connect(String name, Function callback)
+****
+
+Connects to an event
+
+_signals_;; The event name
+_callback_;; Callback function to connect to.
+****
+
+==== Signal.connectAll(Array signals, [Function callback])
+****
+
+Connects to more than one signal at once
+
+_signals_;; Array of signals.
+_callback_;; Callback function to connect to, optional.
+****
+
+==== Signal.connectWebView(String name, Function callback)
+****
+
+Connects all webviews to a GObject signal.
+
+_name_;; The event name
+_callback_;; A callback function the will be called when the signal is emitted,
+the arguments of the callback correspond to the GObject callback with  the first
+argument omitted, instead this refers to the object.
+****
+
+==== Signal.disconnect(Signal|Function object)
+****
+
+Either a Signal or the callback of a signal If a callback is passed to this
+function and the same callback is connected multiple times only the first
+matching callback will be disconnected, to disconnect all matching callbacks
+call use Signal.disconnectAll
+
+_object_;; The event name
+_returns_;; the disconnected signal
+****
+
+==== Signal.disconnectAll(Function callback)
+****
+
+Disconnect from all signals with matching callback function
+
+_callback_;; A callback function
+_returns_;; An array of signal that were disconnected
+****
+
+==== Signal.emit(String name, ...)
+****
+
+
+Emits a signal, can be used to implement custom signals.
+
+_name_;; The name of the event
+_..._;; Variable number of arguments passed to the callback function of
+Signal.connect.
+_returns_;; The overall return value of all callback function, if one callback
+function returns true the overall return value will be true
 ****
 
 
@@ -1774,6 +1886,7 @@ const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2
+  HintMode : 1<<2
 };
 --------
 ****
@@ -2298,7 +2411,7 @@ return {
       bar(config.foo);
       foo(config.bar);
       bind("XX", bar, "dobar");
-      signals.connect("loadStatus", loadStatusCallback);
+      Signal.connect("loadStatus", loadStatusCallback);
       return true;
     }
 
@@ -2307,7 +2420,7 @@ return {
 
   end : function () {
     unbind("dobar");
-    signals.disconnectByFunction(loadStatusCallback);
+    Signal.disconnect(loadStatusCallback);
     return true;
   }
 };
