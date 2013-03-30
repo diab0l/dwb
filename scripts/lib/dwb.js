@@ -364,35 +364,6 @@
                 return _deprecated("sendRequestSync", "net.sendRequestSync", arguments);
             }
         },
-        /**
-         * Print a deprecation warning for a function that is deprecated and call the new function
-         * @name _deprecated
-         * @function
-         * @example
-         * var oldfoo = {
-         *      bar : function() {
-         *          return _deprecated("oldfoo.bar", "newfoo.bar", arguments);
-         *      }
-         * };
-         * var newfoo = {
-         *      bar : function() {
-         *          // new implementation
-         *      };
-         * }; 
-         * // will print a deprecation warning and call newfoo.bar("foo");
-         * oldfoo.bar("foo");
-         *
-         * @param oldname {String}
-         *      Name of the old function (including namespace)
-         * @param newname {String}
-         *      Name of the new function (including namespace)
-         * @param arguments {Arguments}
-         *      Arguments passed to the new function
-         *
-         * @returns {Object}
-         *      The return value of the new function
-         *
-         * */
         "_deprecated" : 
         {
             value : function(on, nn, args) 

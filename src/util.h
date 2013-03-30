@@ -102,6 +102,7 @@ Sanitize util_string_to_sanitize(const char *);
 
 char *util_create_json(int, ...);
 int util_modulo(int, int);
+char *util_resolve_symlink(char *path);
 
 
 #endif

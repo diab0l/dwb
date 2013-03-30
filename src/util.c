@@ -945,3 +945,16 @@ util_modulo(int x, int y)
     int c = d >= 0 ? (int)d  : (int) d - 1;
     return x - c * y;
 }
+char *
+util_resolve_symlink(char *path)
+{
+    char *ret = path;
+    if (g_file_test(path, G_FILE_TEST_IS_SYMLINK))
+    {
+        ret = g_file_read_link(path, NULL);
+        if (ret == NULL)
+            return path;
+        g_free(path);
+    }
+    return ret;
+}

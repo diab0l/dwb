@@ -4376,44 +4376,81 @@ dwb_init_files()
 
 
     cachedir = g_build_filename(g_get_user_cache_dir(), dwb.misc.name, NULL);
+    cachedir       = util_resolve_symlink(cachedir);
     dwb.files[FILES_CACHEDIR] = util_check_directory(cachedir);
 
     dwb.files[FILES_BOOKMARKS]       = g_build_filename(profile_path, "bookmarks",     NULL);
+    dwb.files[FILES_BOOKMARKS]       = util_resolve_symlink(dwb.files[FILES_BOOKMARKS]);
     dwb_check_create(dwb.files[FILES_BOOKMARKS]);
+
     dwb.files[FILES_HISTORY]         = g_build_filename(profile_path, "history",       NULL);
+    dwb.files[FILES_HISTORY]       = util_resolve_symlink(dwb.files[FILES_HISTORY]);
     dwb_check_create(dwb.files[FILES_HISTORY]);
+
     dwb.files[FILES_QUICKMARKS]      = g_build_filename(profile_path, "quickmarks",    NULL);
+    dwb.files[FILES_QUICKMARKS]       = util_resolve_symlink(dwb.files[FILES_QUICKMARKS]);
     dwb_check_create(dwb.files[FILES_QUICKMARKS]);
+
     dwb.files[FILES_SESSION]         = g_build_filename(profile_path, "session",       NULL);
+    dwb.files[FILES_SESSION]       = util_resolve_symlink(dwb.files[FILES_SESSION]);
     dwb_check_create(dwb.files[FILES_SESSION]);
+
     dwb.files[FILES_NAVIGATION_HISTORY] = g_build_filename(profile_path, "navigate.history",       NULL);
+    dwb.files[FILES_NAVIGATION_HISTORY]       = util_resolve_symlink(dwb.files[FILES_NAVIGATION_HISTORY]);
     dwb_check_create(dwb.files[FILES_NAVIGATION_HISTORY]);
+
     dwb.files[FILES_COMMAND_HISTORY] = g_build_filename(profile_path, "commands.history",       NULL);
+    dwb.files[FILES_COMMAND_HISTORY]       = util_resolve_symlink(dwb.files[FILES_COMMAND_HISTORY]);
     dwb_check_create(dwb.files[FILES_COMMAND_HISTORY]);
+
     dwb.files[FILES_SEARCH_HISTORY] = g_build_filename(profile_path, "search.history",       NULL);
+    dwb.files[FILES_SEARCH_HISTORY]       = util_resolve_symlink(dwb.files[FILES_SEARCH_HISTORY]);
     dwb_check_create(dwb.files[FILES_SEARCH_HISTORY]);
+
     dwb.files[FILES_SEARCHENGINES]   = g_build_filename(path, "searchengines", NULL);
+    dwb.files[FILES_SEARCHENGINES]       = util_resolve_symlink(dwb.files[FILES_SEARCHENGINES]);
     dwb_check_create(dwb.files[FILES_SEARCHENGINES]);
+
     dwb.files[FILES_KEYS]            = g_build_filename(path, "keys",          NULL);
+    dwb.files[FILES_KEYS]            = util_resolve_symlink(dwb.files[FILES_KEYS]);
+
     dwb.files[FILES_SETTINGS]        = g_build_filename(path, "settings",      NULL);
+    dwb.files[FILES_SETTINGS]            = util_resolve_symlink(dwb.files[FILES_SETTINGS]);
+
     dwb.files[FILES_MIMETYPES]       = g_build_filename(path, "mimetypes",      NULL);
+    dwb.files[FILES_MIMETYPES]            = util_resolve_symlink(dwb.files[FILES_MIMETYPES]);
     dwb_check_create(dwb.files[FILES_MIMETYPES]);
+
     dwb.files[FILES_COOKIES]         = g_build_filename(profile_path, "cookies",       NULL);
+    dwb.files[FILES_COOKIES]            = util_resolve_symlink(dwb.files[FILES_COOKIES]);
     dwb_check_create(dwb.files[FILES_COOKIES]);
+
     dwb.files[FILES_COOKIES_ALLOW]   = g_build_filename(profile_path, "cookies.allow", NULL);
+    dwb.files[FILES_COOKIES_ALLOW]            = util_resolve_symlink(dwb.files[FILES_COOKIES_ALLOW]);
     dwb_check_create(dwb.files[FILES_COOKIES_ALLOW]);
+
     dwb.files[FILES_COOKIES_SESSION_ALLOW]   = g_build_filename(profile_path, "cookies_session.allow", NULL);
+    dwb.files[FILES_COOKIES_SESSION_ALLOW]            = util_resolve_symlink(dwb.files[FILES_COOKIES_SESSION_ALLOW]);
     dwb_check_create(dwb.files[FILES_COOKIES_SESSION_ALLOW]);
+
     dwb.files[FILES_SCRIPTS_ALLOW]   = g_build_filename(profile_path, "scripts.allow",      NULL);
+    dwb.files[FILES_SCRIPTS_ALLOW]   = util_resolve_symlink(dwb.files[FILES_SCRIPTS_ALLOW]);
     dwb_check_create(dwb.files[FILES_SCRIPTS_ALLOW]);
+
     dwb.files[FILES_PLUGINS_ALLOW]   = g_build_filename(profile_path, "plugins.allow",      NULL);
+    dwb.files[FILES_PLUGINS_ALLOW]   = util_resolve_symlink(dwb.files[FILES_PLUGINS_ALLOW]);
     dwb_check_create(dwb.files[FILES_PLUGINS_ALLOW]);
+
     dwb.files[FILES_CUSTOM_KEYS]     = g_build_filename(profile_path, "custom_keys",      NULL);
+    dwb.files[FILES_CUSTOM_KEYS]   = util_resolve_symlink(dwb.files[FILES_CUSTOM_KEYS]);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
+
     dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
+    dwb.files[FILES_HSTS]   = util_resolve_symlink(dwb.files[FILES_HSTS]);
     dwb_check_create(dwb.files[FILES_HSTS]);
 
-    userscripts               = g_build_filename(path, "userscripts",   NULL);
+    userscripts                      = g_build_filename(path, "userscripts",   NULL);
+    userscripts                      = util_resolve_symlink(userscripts);
     dwb.files[FILES_USERSCRIPTS]     = util_check_directory(userscripts);
 
     dwb.fc.bookmarks = dwb_init_file_content(dwb.fc.bookmarks, dwb.files[FILES_BOOKMARKS], (Content_Func)dwb_navigation_new_from_line); 
