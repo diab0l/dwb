@@ -1645,7 +1645,7 @@ _callback_;; Callback function that is invoked when the signal is emitted.
 _callback (Function, read|write)_;; The callback that will be called when the
 signal is emitted, the context of the signal will be the signal itself (i.e.
 this refers to the connected Signal).
-_connected (SoupSession, read)_;; Whether the signal is connected
+_connected (Boolean, read)_;; Whether the signal is connected
 _id (Number, read)_;; Unique id of the signal
 _name (Number, read)_;; Name of the event
 
@@ -2298,6 +2298,16 @@ options.command::: Command that can be used on command line
 Disables all extensions.
 ****
 
+==== void extensions.error(String name, String message) 
+****
+
+Print a consistent error message to stderr
+
+_name_;; Name of the extension
+_message_;; The message
+****
+
+
 ==== Boolean extensions.load(String name, [Object config]) 
 ****
 Loads an extension
@@ -2337,20 +2347,10 @@ _message_;; If the second parameter is an Error, an optional message can be
 specified.
 ****
 
-==== Object extensions.getConfig(Object config, Object defaultConfig)
-**** 
-Parses config with given default config. Checks for each property of
-defaultConfig if the corresponding property of config is valid.
-
-_config_;; The configuration object
-_defaultConfig_;; The default configuration for the extension
-_returns_;; The parsed config
-****
-
 ==== void extensions.message(String name, String message) 
 ****
 
-Print a consistent message to stderr
+Print a consistent message to stdout
 
 _name_;; Name of the extension
 _message_;; The message
@@ -2385,8 +2385,11 @@ the extension should unregister all signals and unbind all shortcuts in this
 function.
 init and end should be returned from the extension.
 
-Additionally the returned object can also have an +defaultConfig+-property, the
-value will be passed to extensions.getConfig before calling the init function.
+Additionally the returned object can also have a _defaultConfig_-property and
+an _exports_-property. _defaultConfig_
+will be mixed into the config before calling the init function and
+_exports_ can be used to define a public api that can be loaded as a module with
+*require*.
 
 ==== Example
 
@@ -2403,9 +2406,12 @@ function bar(val) {
 function loadStatusCallback(w) {
   ...
 }
-return {
+var myExtension = {
   defaultConfig : { foo : 37 },
-
+  exports : {
+    foo : foo, 
+    bar : bar
+  },
   init : function (config) {
     if (config.foo > 36) {
       bar(config.foo);
@@ -2424,6 +2430,7 @@ return {
     return true;
   }
 };
+return myExtension;
 --------
 
 ==== Example extensionrc
@@ -2436,35 +2443,6 @@ return {
   
 };
 --------
-
-==== Public api
-
-Extensions that provide a public api can use provide or replace using the name of the extension. 
-
-====
-[source,javascript]
---------
-var myPublicFunction = function() 
-{
-  ...
-};
-
-return {
-  init : function(config) 
-  {
-    provide("myExtensionName", 
-    {
-      config : config, 
-      method : myPublicFunction
-    });
-  },
-  end : function() 
-  {
-    replace("myExtensionName");
-  }
-};
---------
-====
 
 
 == SEE ALSO

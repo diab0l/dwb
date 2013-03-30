@@ -3404,7 +3404,7 @@ Callback function that is invoked when the signal is emitted\&.
 The callback that will be called when the signal is emitted, the context of the signal will be the signal itself (i\&.e\&. this refers to the connected Signal)\&.
 .RE
 .PP
-\fIconnected (SoupSession, read)\fR
+\fIconnected (Boolean, read)\fR
 .RS 4
 Whether the signal is connected
 .RE
@@ -3432,7 +3432,7 @@ Connects the signal to the event
 .PP
 \fIcallback\fR
 .RS 4
-Callback function that is invoked when the signal is emitted, optional, but mandatory if no callback was given during signal construction\&.
+Callback function that is invoked when the signal is emitted, optional but mandatory if no callback was given during signal construction\&.
 .RE
 .PP
 \fIreturns\fR
@@ -4411,6 +4411,27 @@ Disables all extensions\&.
 .nr an-break-flag 1
 .br
 .ps +1
+\fBvoid extensions.error(String name, String message)\fR
+.RS 4
+.sp
+Print a consistent error message to stderr
+.PP
+\fIname\fR
+.RS 4
+Name of the extension
+.RE
+.PP
+\fImessage\fR
+.RS 4
+The message
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBBoolean extensions.load(String name, [Object config])\fR
 .RS 4
 .sp
@@ -4510,36 +4531,10 @@ If the second parameter is an Error, an optional message can be specified\&.
 .nr an-break-flag 1
 .br
 .ps +1
-\fBObject extensions.getConfig(Object config, Object defaultConfig)\fR
-.RS 4
-.sp
-Parses config with given default config\&. Checks for each property of defaultConfig if the corresponding property of config is valid\&.
-.PP
-\fIconfig\fR
-.RS 4
-The configuration object
-.RE
-.PP
-\fIdefaultConfig\fR
-.RS 4
-The default configuration for the extension
-.RE
-.PP
-\fIreturns\fR
-.RS 4
-The parsed config
-.RE
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
 \fBvoid extensions.message(String name, String message)\fR
 .RS 4
 .sp
-Print a consistent message to stderr
+Print a consistent message to stdout
 .PP
 \fIname\fR
 .RS 4
@@ -4580,7 +4575,7 @@ The configuration for extensions is in \fB$XDG_CONFIG_HOME/dwb/extensionrc\fR an
 .sp
 Every extension must implement one function named init that takes one argument, the config for the extension\&. The function should return true if the extension was successfully loaded, false otherwise\&. Every extension also may implement a function end that will be called when an extension is unloaded\&. If an extension registers to signals and binds shortcuts the extension should unregister all signals and unbind all shortcuts in this function\&. init and end should be returned from the extension\&.
 .sp
-Additionally the returned object can also have an defaultConfig\-property, the value will be passed to extensions\&.getConfig before calling the init function\&.
+Additionally the returned object can also have a \fIdefaultConfig\fR\-property and an \fIexports\fR\-property\&. \fIdefaultConfig\fR will be mixed into the config before calling the init function and \fIexports\fR can be used to define a public api that can be loaded as a module with \fBrequire\fR\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -4605,9 +4600,12 @@ function bar(val) {
 function loadStatusCallback(w) {
   \&.\&.\&.
 }
-return {
+var myExtension = {
   defaultConfig : { foo : 37 },
-
+  exports : {
+    foo : foo,
+    bar : bar
+  },
   init : function (config) {
     if (config\&.foo > 36) {
       bar(config\&.foo);
@@ -4626,6 +4624,7 @@ return {
     return true;
   }
 };
+return myExtension;
 .fi
 .if n \{\
 .RE
@@ -4648,45 +4647,6 @@ return {
   foobar : { bar : "X", foo : 37 }, // config for extension foobar
   barfoo : {  }                     // config for extension barfoo
 
-};
-.fi
-.if n \{\
-.RE
-.\}
-.RE
-.sp
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBPublic api\fR
-.RS 4
-.sp
-Extensions that provide a public api can use provide or replace using the name of the extension\&.
-.sp
-.if n \{\
-.RS 4
-.\}
-.nf
-var myPublicFunction = function()
-{
-  \&.\&.\&.
-};
-
-return {
-  init : function(config)
-  {
-    provide("myExtensionName",
-    {
-      config : config,
-      method : myPublicFunction
-    });
-  },
-  end : function()
-  {
-    replace("myExtensionName");
-  }
 };
 .fi
 .if n \{\
