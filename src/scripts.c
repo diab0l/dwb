@@ -646,7 +646,8 @@ ssignal_free(SSignal *sig)
             }
             CONTEXT_UNLOCK;
         }
-        g_free(sig->query);
+        if (sig->query)
+            g_free(sig->query);
         g_free(sig);
     }
 }
@@ -655,16 +656,20 @@ static SSignal *
 ssignal_new()
 {
     SSignal *sig = g_malloc(sizeof(SSignal)); 
-    if (sig != NULL) 
+    sig->query = NULL;
+    sig->func = NULL;
+    sig->object = NULL;
+    return sig;
+}
+static SSignal * 
+ssignal_new_with_query(guint signal_id)
+{
+    SSignal *s = ssignal_new();
+    if (s)
     {
-        sig->query = g_malloc(sizeof(GSignalQuery));
-        sig->func = NULL;
-        sig->object = NULL;
-        if (sig->query != NULL) 
-            return sig;
-        g_free(sig);
+        g_signal_query(signal_id, s->query);
     }
-    return NULL;
+    return s;
 }
 
 /* make_callback {{{*/
@@ -4219,16 +4224,6 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
 {
     ssignal_free(sig);
 }
-static void 
-on_disconnect_notify(JSObjectRef func, GClosure *closure)
-{
-    if (!TRY_CONTEXT_LOCK)
-        return;
-
-    if (s_global_context != NULL)
-        JSValueUnprotect(s_global_context, func);
-    CONTEXT_UNLOCK;
-}
 /** 
  * Called when a property of an object changes, <b>this</b> will refer to the object
  * that connected to the signal.
@@ -4236,13 +4231,15 @@ on_disconnect_notify(JSObjectRef func, GClosure *closure)
  *
  * */
 static void
-notify_callback(GObject *o, GParamSpec *param, JSObjectRef func)
+notify_callback(GObject *o, GParamSpec *param, SSignal *sig)
 {
     if (!TRY_CONTEXT_LOCK) 
         return;
     if (s_global_context != NULL)
     {
-        call_as_function_debug(s_global_context, func, make_object(s_global_context, o), 0, NULL);
+        g_signal_handler_block(o, sig->id);
+        call_as_function_debug(s_global_context, sig->func, make_object(s_global_context, o), 0, NULL);
+        g_signal_handler_unblock(o, sig->id);
     }
     CONTEXT_UNLOCK;
 }
@@ -4295,8 +4292,10 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
     if (strncmp(name, "notify::", 8) == 0) 
     {
         JSValueProtect(ctx, func);
-        id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), func, (GClosureNotify)on_disconnect_notify, flags);
-        sigdata_append(id, o); 
+        SSignal *sig = ssignal_new();
+        sig->func = func;
+        sig->id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), sig, (GClosureNotify)on_disconnect_object, flags);
+        sigdata_append(sig->id, o); 
     }
     else
     {
@@ -4307,11 +4306,10 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
         if (signal_id == 0)
             goto error_out;
 
-        sig = ssignal_new();
+        sig = ssignal_new_with_query(signal_id);
         if (sig == NULL) 
             goto error_out;
 
-        g_signal_query(signal_id, sig->query);
         if (sig->query->signal_id == 0) 
         {
             ssignal_free(sig);
