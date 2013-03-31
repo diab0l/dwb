@@ -2572,7 +2572,7 @@ data_get_profile(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
  * The current session name, if 'save-session' is disabled and no session name
  * is given on commandline it will always be "default"
  *
- * @name session 
+ * @name sessionName
  * @memberOf data
  * @readonly
  * @type String
@@ -4643,7 +4643,7 @@ create_global_object()
 
     JSStaticValue data_values[] = {
         { "profile",        data_get_profile, NULL, kJSDefaultAttributes },
-        { "session",        data_get_session_name, NULL, kJSDefaultAttributes },
+        { "sessionName",    data_get_session_name, NULL, kJSDefaultAttributes },
         { "cacheDir",       data_get_cache_dir, NULL, kJSDefaultAttributes },
         { "configDir",      data_get_config_dir, NULL, kJSDefaultAttributes },
         { "systemDataDir",  data_get_system_data_dir, NULL, kJSDefaultAttributes },
