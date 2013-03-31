@@ -279,6 +279,12 @@ session_set_name(const char *name)
         g_free(s_session_name);
     s_session_name = g_strdup(name);
 }
+const char * 
+session_get_name()
+{
+    return s_session_name;
+}
+
 
 /* session_save(const char *) {{{*/
 gboolean  

@@ -29,6 +29,7 @@
 #include <glib.h>
 #include "dwb.h"
 #include "scripts.h" 
+#include "session.h" 
 #include "util.h" 
 #include "js.h" 
 #include "soup.h" 
@@ -2567,6 +2568,21 @@ data_get_profile(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
     return js_char_to_value(ctx, dwb.misc.profile);
 }/*}}}*/
 
+/** 
+ * The current session name, if 'save-session' is disabled and no session name
+ * is given on commandline it will always be "default"
+ *
+ * @name session 
+ * @memberOf data
+ * @readonly
+ * @type String
+ * */
+static JSValueRef 
+data_get_session_name(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    return js_char_to_value(ctx, session_get_name());
+}/*}}}*/
+
 /* data_get_cache_dir {{{*/
 /** 
  * The cache directory used by dwb
@@ -4627,6 +4643,7 @@ create_global_object()
 
     JSStaticValue data_values[] = {
         { "profile",        data_get_profile, NULL, kJSDefaultAttributes },
+        { "session",        data_get_session_name, NULL, kJSDefaultAttributes },
         { "cacheDir",       data_get_cache_dir, NULL, kJSDefaultAttributes },
         { "configDir",      data_get_config_dir, NULL, kJSDefaultAttributes },
         { "systemDataDir",  data_get_system_data_dir, NULL, kJSDefaultAttributes },
