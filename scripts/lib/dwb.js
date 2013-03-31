@@ -583,7 +583,6 @@
             { 
                 value : function(name, callback, after) 
                 { 
-                    io.print(this.label);
                     var sig = this.connect(name, (function() { 
                         this.blockSignal(sig);
                         var result = callback.apply(this, arguments);
