@@ -400,6 +400,7 @@ application_get_option_context(void)
     {
         option_context = g_option_context_new("[url]");
         g_option_context_add_main_entries(option_context, options, NULL);
+        g_option_context_add_group(option_context, gtk_get_option_group(true));
     }
     return option_context;
 }/*}}}*/
