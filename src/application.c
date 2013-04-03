@@ -321,7 +321,9 @@ dwb_application_init(DwbApplication *app)
 static DwbApplication *
 dwb_application_new (const gchar *id, GApplicationFlags flags)
 {
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init ();
+#endif
     return g_object_new (DWB_TYPE_APPLICATION, "application-id", id, "flags", flags, NULL);
 }/*}}}*/
 
