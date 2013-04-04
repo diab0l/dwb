@@ -1587,6 +1587,11 @@ void
 view_clean(GList *gl) 
 {
     View *v = VIEW(gl);
+    if (v->js_base)
+    {
+        JSValueUnprotect(JS_CONTEXT_REF(v->web), v->js_base);
+    }
+
     /* Inspector */
     if (v->inspector_window != NULL) 
     {
