@@ -4857,6 +4857,21 @@ create_global_object()
     create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
     JSClassRelease(class);
 
+
+    /**
+     * Wrapped namespace for the console in the webcontext, will print
+     * messages to the webinspector console. The only difference to the
+     * original webinspector console is that all functions only take one
+     * argument.  
+     *
+     * @namespace 
+     *      Wraps the webinspector console functions
+     *
+     * @name console 
+     * @static 
+     * */
+    create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
+
     /** 
      * Base class for webkit/gtk objects
      *
@@ -5167,8 +5182,8 @@ create_global_object()
         { "statusLabel",      gui_get_status_label, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
-    cd.className = "gui";
     cd = kJSClassDefinitionEmpty;
+    cd.className = "gui";
     cd.staticValues = gui_values;
     class = JSClassCreate(&cd);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "gui", NULL);
@@ -5412,10 +5427,15 @@ scripts_init(gboolean force)
 gboolean 
 scripts_execute_one(const char *script) 
 {
+    gboolean ret = false;
     if (s_global_context != NULL)
-        return js_execute(s_global_context, script, NULL) != NULL;
+    {
+        char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, "dwb:scripts", script);
+        ret = js_execute(s_global_context, debug, NULL) != NULL;
+        g_free(debug);
+    }
 
-    return false;
+    return ret;
 }
 void
 scripts_unbind(JSObjectRef obj) 

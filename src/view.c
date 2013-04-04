@@ -328,7 +328,7 @@ view_button_release_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
          *      Callback function that will be called when the signal is emitted
          * */
         /**
-         * Callback called when the load-status of a WebKitWebView changes
+         * Callback called when a mouse button was released
          * @callback signals~onButtonRelease
          * @param {WebKitWebView}  webview 
          *      The webview that emitted the signal
