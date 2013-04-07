@@ -810,7 +810,9 @@ enum Files {
   FILES_COOKIES_SESSION_ALLOW,
   FILES_DOWNLOAD_PATH,
   FILES_HISTORY,
+#ifndef DISABLE_HSTS
   FILES_HSTS,
+#endif
   FILES_KEYS,
   FILES_MIMETYPES,
   FILES_QUICKMARKS,
@@ -968,7 +970,9 @@ gboolean dwb_update_find_quickmark(const char *text);
 
 gboolean dwb_entry_activate(GdkEventKey *e);
 void dwb_set_adblock(GList *, WebSettings *);
+#ifndef DISABLE_HSTS
 void dwb_set_hsts(GList *, WebSettings *);
+#endif
 
 gboolean dwb_eval_key(GdkEventKey *);
 gboolean dwb_eval_override_key(GdkEventKey *e, CommandProperty prop);

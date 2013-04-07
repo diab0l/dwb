@@ -122,7 +122,9 @@ html_input(adblocker-filterlist, text, Path to a adblock plus compatible filterl
 html_input(enable-java-applet, checkbox, Whether to enable java applets)
 html_input(enable-plugins, checkbox, Whether to enable plugins)
 html_input(enable-scripts, checkbox, Enable embedded scripting languages)
+ifdef(`WITH_HSTS', 
 html_input(hsts, checkbox, Whether HSTS support should be enabled)
+)
 html_input(javascript-can-access-clipboard, checkbox, Whether javascript can access the clipboard)
 html_input(javascript-can-open-windows-automatically, checkbox, Whether javascript can open windows)
 html_input(javascript-schemes, checkbox, Whether to allow loading url with scheme "javascript")
