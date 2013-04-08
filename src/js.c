@@ -335,7 +335,7 @@ js_execute(JSContextRef ctx, const char *script, JSValueRef *exc)
 {
     JSObjectRef function = js_make_function(ctx, script, NULL, 0);
     if (function != NULL) 
-        return JSObjectCallAsFunction(ctx, function, NULL, 0, NULL, exc); 
+        return JSObjectCallAsFunction(ctx, function, function, 0, NULL, exc); 
     
     return NULL;
 }

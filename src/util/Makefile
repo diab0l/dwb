@@ -8,6 +8,7 @@ TLDS_IN=tlds.in
 MKTLDS=mktlds-header
 MKTLDS_SRC=mktlds-header.c
 
+
 HSTS=convert_transport_security
 HSTS_PRELOAD=$(BASE_DIR)/$(SRCDIR)/hsts_preload.h
 TRANSPORT_SECURITY_JSON=transport_security_state_static.json
@@ -17,8 +18,14 @@ LIBS=glib-2.0 gnutls json
 CFLAGS+=$(shell pkg-config --cflags $(LIBS))
 LDFLAGS=$(shell pkg-config --libs $(LIBS))
 
-OUTFILES=$(HSTS_PRELOAD) $(TLDS_H)
+ifeq (${DISABLE_HSTS}, 1)
+OUTFILES=$(TLDS_H)
+GEN_TOOLS=$(MKTLDS)
+else
 GEN_TOOLS=$(HSTS) $(MKTLDS)
+OUTFILES=$(HSTS_PRELOAD) $(TLDS_H)
+endif
+
 
 all: $(OUTFILES)
 

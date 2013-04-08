@@ -1088,7 +1088,9 @@ cl_edit(const char *name, int flags)
 int 
 main(int argc, char **argv) 
 {
+#if !GLIB_CHECK_VERSION(2, 36, 0)
     g_type_init();
+#endif
     GError *e = NULL;
     GOptionContext *ctx;
     char *config_dir;

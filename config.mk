@@ -146,10 +146,17 @@ M4FLAGS += --define=WITH_LIBSOUP_2_38=1 -G
 CFLAGS += -DWITH_LIBSOUP_2_38=1
 endif
 
+ifeq (${DISABLE_HSTS}, 1)
+CFLAGS += -DDISABLE_HSTS
+else 
+M4FLAGS += --define=WITH_HSTS=1
+endif
+
 # If execinfo.h is not available, e.g. freebsd
 ifneq (${WITHOUT_EXECINFO}, 1)
 CFLAGS += -DHAS_EXECINFO
 endif
+
 CFLAGS_OPTIONS := $(CFLAGS)
 
 ifeq (USEGTK3, 1) 

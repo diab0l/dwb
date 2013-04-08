@@ -328,7 +328,7 @@ view_button_release_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
          *      Callback function that will be called when the signal is emitted
          * */
         /**
-         * Callback called when the load-status of a WebKitWebView changes
+         * Callback called when a mouse button was released
          * @callback signals~onButtonRelease
          * @param {WebKitWebView}  webview 
          *      The webview that emitted the signal
@@ -638,6 +638,11 @@ view_mime_type_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwor
     if (!webkit_web_view_can_show_mime_type(web, mimetype) ||  dwb.state.nv & OPEN_DOWNLOAD) 
     {
         dwb.state.mimetype_request = g_strdup(mimetype);
+        if (VIEW(gl)->js_base == NULL) 
+        {
+            VIEW(gl)->js_base = js_create_object(webkit_web_view_get_main_frame(web), dwb.misc.hints);
+            js_call_as_function(webkit_web_view_get_main_frame(web), VIEW(gl)->js_base, "init", dwb.misc.hint_style, kJSTypeObject, NULL);
+        }
         webkit_web_policy_decision_download(policy);
         return true;
     }
@@ -1587,6 +1592,11 @@ void
 view_clean(GList *gl) 
 {
     View *v = VIEW(gl);
+    if (v->js_base)
+    {
+        JSValueUnprotect(JS_CONTEXT_REF(v->web), v->js_base);
+    }
+
     /* Inspector */
     if (v->inspector_window != NULL) 
     {

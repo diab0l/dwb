@@ -42,7 +42,7 @@
              * @param {...varargs|Object} arguments 
              *      Variable number of modules, for each module one argument, if
              *      <i>null</i> was passed to require the callback will only
-             *      have on parameter that contains all modules.
+             *      have one parameter that contains all modules.
              *
              * @example 
              * require(["foo", "bar"], function(foo, bar) {

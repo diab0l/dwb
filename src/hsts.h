@@ -16,6 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#ifndef DISABLE_HSTS
 #ifndef HSTS_H
 #define HSTS_H
 
@@ -27,3 +28,4 @@ void hsts_activate();
 void hsts_deactivate();
 
 #endif // HSTS_H
+#endif

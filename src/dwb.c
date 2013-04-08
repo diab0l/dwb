@@ -48,7 +48,10 @@
 #include "application.h"
 #include "scripts.h"
 #include "dom.h"
+
+#ifndef DISABLE_HSTS
 #include "hsts.h"
+#endif
 
 /* DECLARATIONS {{{*/
 static DwbStatus dwb_webkit_setting(GList *, WebSettings *);
@@ -193,6 +196,7 @@ dwb_set_accept_language(GList *gl, WebSettings *s)
     g_object_set(webkit_get_default_session(), "accept-language", s->arg_local.p, NULL);
     return STATUS_OK;
 }/*}}}*/
+#ifndef DISABLE_HSTS
 void
 dwb_set_hsts(GList *gl, WebSettings *s) 
 {
@@ -205,6 +209,7 @@ dwb_set_hsts(GList *gl, WebSettings *s)
         hsts_deactivate();
     }
 }
+#endif
 
 /*{{{*/
 //static DwbStatus 
@@ -3449,7 +3454,9 @@ dwb_clean_up()
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
     
+#ifndef DISABLE_HSTS
     hsts_end(); /* Assumes it has access to dwb.settings */
+#endif
     for (GList *l = dwb.keymap; l; l=l->next) {
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
@@ -4445,9 +4452,11 @@ dwb_init_files()
     dwb.files[FILES_CUSTOM_KEYS]   = util_resolve_symlink(dwb.files[FILES_CUSTOM_KEYS]);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
 
+#ifndef DISABLE_HSTS
     dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
     dwb.files[FILES_HSTS]   = util_resolve_symlink(dwb.files[FILES_HSTS]);
     dwb_check_create(dwb.files[FILES_HSTS]);
+#endif
 
     userscripts                      = g_build_filename(path, "userscripts",   NULL);
     userscripts                      = util_resolve_symlink(userscripts);
@@ -4658,7 +4667,9 @@ dwb_init()
     dwb_init_hints(NULL, NULL);
 
     dwb_soup_init();
+#ifndef DISABLE_HSTS
     hsts_init();
+#endif
 } /*}}}*/ /*}}}*/
 
 /* FIFO {{{*/
