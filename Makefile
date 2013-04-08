@@ -97,6 +97,7 @@ snapshot:
 
 dist: distclean
 	@echo "Creating tarball."
-	@hg archive -t tgz $(DISTDIR).tar.gz
+	@echo "Creating $(DISTDIR).tar.gz"
+	@git archive -o $(DISTDIR).tar.gz master
 
 .PHONY: clean install uninstall distclean install-data install-man uninstall-man uninstall-data phony options

@@ -23,20 +23,18 @@ SUBDIR_BUILD_FIRST=$(UTILDIR)
 EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
 
-
-
 EXTENSION_MANAGER=dwbem
 
-# Version info
-HG_VERSION=$(shell hg id -n 2>/dev/null)
-VERSION=$(shell if [ $(HG_VERSION) ]; then echo "rev.\ $(HG_VERSION)"; else echo "$(REAL_VERSION)"; fi)
-NAME=$(shell if [ $(HG_VERSION) ]; then echo "$(REAL_NAME)-hg"; else echo "$(REAL_NAME)"; fi)
-BUILDDATE=`date +%Y.%m.%d`
+DTARGET=$(TARGET)_d
 REAL_VERSION=$(BUILDDATE)
+# Version info
+GIT_VERSION=$(shell git log -1 --format="%h-%cd" --date=short)
+VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
+NAME=$(shell if [ $(GIT_VERSION) ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
+BUILDDATE=`date +%Y.%m.%d`
 
 # Targets
 TARGET = $(REAL_NAME)
-DTARGET=$(TARGET)_d
 
 
 # target directories
