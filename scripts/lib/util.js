@@ -128,6 +128,78 @@
             {
                 return _deprecated("util.domainFromHost", "net.domainFromHost", arguments);
             }
+        },
+        /** 
+         * Encodes a UTF8 string
+         * @name encodeUTF8
+         * @memberOf util
+         * @function 
+         * @param {String} string
+         *      The string to encode
+         * 
+         * @returns {String}
+         *      The encoded string
+         */
+        "encodeUTF8" : 
+        {
+            value : function(string)
+            {
+                return unescape(encodeURIComponent(string));
+            }
+        },
+        /** 
+         * Decode a string to UTF8
+         * @name decodeUTF8
+         * @memberOf util
+         * @function 
+         * @param {String} string
+         *      The string to decode
+         * 
+         * @returns {String}
+         *      The decoded string
+         */
+        "decodeUTF8" : 
+        {
+            value : function(string)
+            {
+                return decodeURIComponent(escape(string));
+            }
+        },
+        /** 
+         * Encodes a string to base64
+         * @name base64Encode
+         * @memberOf util
+         * @function 
+         * @param {String} string
+         *      The string to encode
+         * 
+         * @returns {String}
+         *      The base64-representation of the string
+         */
+        "base64Encode" : 
+        {
+            value : function(string)
+            {
+                return util._base64Encode(util.encodeUTF8(string));
+            }
+        },
+        /** 
+         * Decodes a base64 string to a string
+         * @name base64Decode
+         * @memberOf util
+         * @function 
+         * @param {String} string
+         *      The string to decode
+         * 
+         * @returns {String}
+         *      The decoded string
+         */
+        "base64Decode" : 
+        {
+            value : function(string)
+            {
+                return util.decodeUTF8(util._base64Decode(string));
+            }
         }
 
     });

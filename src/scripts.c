@@ -2308,6 +2308,71 @@ error_out:
     return ret;
 }/*}}}*/
 
+static JSValueRef 
+sutil_base64_encode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSStringRef string;
+    gsize length;
+    const JSChar *chars;
+    guchar *data; 
+    char *base64; 
+    JSValueRef ret;
+
+    if (argc == 0)
+        return NIL;
+    string = JSValueToStringCopy(ctx, argv[0], exc);
+    if (string == NULL)
+        return NIL;
+
+    length = JSStringGetLength(string);
+    chars = JSStringGetCharactersPtr(string);
+    data = g_malloc0(length * sizeof(guchar));
+
+    for (guint i=0; i<length; i++)
+    {
+        data[i] = chars[i] & 0xff;
+    }
+    base64 = g_base64_encode(data, length);
+    ret = js_char_to_value(ctx, base64);
+
+    g_free(base64);
+    g_free(data);
+    JSStringRelease(string);
+
+    return ret;
+}
+
+static JSValueRef 
+sutil_base64_decode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    gsize length;
+    gchar *base64; 
+    guchar *data;
+    gushort *js_data;
+    JSStringRef string;
+    JSValueRef ret = NIL;
+    if (argc == 0)
+        return NIL;
+    base64 = js_value_to_char(ctx, argv[0], -1, exc);
+    if (base64 == NULL)
+        return NIL;
+    data = g_base64_decode(base64, &length);
+    js_data = g_malloc0(length * sizeof(gushort));
+    for (guint i=0; i<length; i++)
+    {
+        js_data[i] = data[i];
+    }
+    string = JSStringCreateWithCharacters(js_data, length);
+    ret = JSValueMakeString(ctx, string);
+
+    g_free(base64);
+    g_free(data);
+    g_free(js_data);
+    JSStringRelease(string);
+
+    return ret;
+}
+
 /**
  * Gets the current mode 
  *
@@ -4837,6 +4902,8 @@ create_global_object()
         { "dispatchEvent",    sutil_dispatch_event,         kJSDefaultAttributes },
         { "tabComplete",      sutil_tab_complete,         kJSDefaultAttributes },
         { "checksum",         sutil_checksum,         kJSDefaultAttributes },
+        { "_base64Encode",    sutil_base64_encode,    kJSDefaultAttributes },
+        { "_base64Decode",    sutil_base64_decode,    kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL);

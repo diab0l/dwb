@@ -979,6 +979,23 @@ void on_destroy(GtkWidget *item)
 static void 
 view_populate_popup_cb(WebKitWebView *web, GtkWidget *menu, GList *gl) 
 {
+    /**
+     * Emitted before the context menu is shown, can be used to add custom
+     * items.
+     *
+     * @event contextMenu
+     * @memberOf signals
+     * @param {signals~onContextMenu} callback
+     *      Callback function that will be called when the signal is emitted
+     * */
+    /**
+     * Callback called when the load of a site has just been committed.
+     * @callback signals~onContextMenu
+     * @param {WebKitWebView}  webview 
+     *      The webview that emitted the signal
+     * @param {GtkMenu}  menu 
+     *      The menu.
+     * */
     if (EMIT_SCRIPT(CONTEXT_MENU))
     {
         ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(menu) }, 
