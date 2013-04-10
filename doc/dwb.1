@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 03/30/2013
+.\"      Date: 04/10/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "03/30/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "04/10/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -1389,6 +1389,7 @@ lt lt lt
 lt lt lt
 lt lt lt
 lt lt lt
+lt lt lt
 lt lt lt.
 T{
 .sp
@@ -2210,6 +2211,15 @@ T}:T{
 T}:T{
 .sp
 Set a setting
+T}
+T{
+.sp
+set_as_default
+T}:T{
+.sp
+T}:T{
+.sp
+Sets dwb as default application, if called with no arguments it will be set for all mimetypes listed in dwb\&.desktop, if the first argument is \fImimetype\fR it will be set for all mimetypes given on commandline, if the first argument is \fIextension\fR it will be set for all filename extensions given on commandline
 T}
 T{
 .sp

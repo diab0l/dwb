@@ -32,6 +32,7 @@
 #include "scripts.h"
 #include "editor.h"
 #include "dom.h"
+#include "application.h"
 
 /* commands.h {{{*/
 /* commands_simple_command(keyMap *km) {{{*/
@@ -1088,4 +1089,9 @@ commands_tabdo(KeyMap *km, Arg *arg)
     }
     dwb_focus_view(current, "tabdo");
     return STATUS_OK;
+}
+DwbStatus
+commands_set_as_default(KeyMap *km, Arg *arg)
+{
+    return application_set_default(arg->p);
 }

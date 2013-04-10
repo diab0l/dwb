@@ -24,6 +24,7 @@
 #include "session.h"
 #include "util.h"
 #include "scripts.h"
+#include <gio-unix-2.0/gio/gdesktopappinfo.h>
 
 static gboolean application_parse_option(const gchar *, const gchar *, gpointer , GError **);
 static void application_execute_args(char **);
@@ -154,6 +155,13 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     gchar *path, *unififo = NULL;
     char *appid;
     GDBusConnection *bus;
+
+    //GDesktopAppInfo *info = g_desktop_app_info_new("dwb.desktop");
+    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/html", NULL);
+    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/xml", NULL);
+    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "application/xhtml+xml", NULL);
+    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/http", NULL);
+    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/https", NULL);
 
     GOptionContext *c = application_get_option_context();
     if (!g_option_context_parse(c, &argc, argv, &error)) 
@@ -394,6 +402,47 @@ application_start(GApplication *app, char **argv)
     dwb_init_signals();
     g_application_hold(app);
 }/*}}}*/
+
+DwbStatus 
+application_set_default(const char *text)
+{
+    GDesktopAppInfo *info = g_desktop_app_info_new("dwb.desktop");
+    if (info == NULL)
+    {
+        dwb_set_error_message(dwb.state.fview, "No desktop file found");
+        return STATUS_OK;
+    }
+    if (text == NULL || *text == '\0') 
+    {
+        g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/html", NULL);
+        g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/xml", NULL);
+        g_app_info_set_as_default_for_type(G_APP_INFO(info), "application/xhtml+xml", NULL);
+        g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/http", NULL);
+        g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/https", NULL);
+    }
+    else 
+    {
+        char **token = g_strsplit(text, " ", -1);
+        if (token[0] == NULL || token[1] == NULL) 
+        {
+            return STATUS_ERROR;
+        }
+        else if (!g_strcmp0(token[0], "mimetype"))
+        {
+            for (int i=1; token[i]; i++)
+                g_app_info_set_as_default_for_type(G_APP_INFO(info), token[i], NULL);
+        }
+        else if (!g_strcmp0(token[0], "extension"))
+        {
+            for (int i=1; token[i]; i++)
+                g_app_info_set_as_default_for_extension(G_APP_INFO(info), token[i], NULL);
+        }
+        else 
+            return STATUS_ERROR;
+
+    }
+    return STATUS_OK;
+}
 
 static GOptionContext * /* application_get_option_context(void) {{{*/
 application_get_option_context(void) 

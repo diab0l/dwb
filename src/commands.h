@@ -99,5 +99,6 @@ DwbStatus commands_reload_bookmarks(KeyMap *, Arg *);
 DwbStatus commands_reload_quickmarks(KeyMap *, Arg *);
 DwbStatus commands_print_preview(KeyMap *, Arg *);
 DwbStatus commands_tabdo(KeyMap *, Arg *);
+DwbStatus commands_set_as_default(KeyMap *, Arg *);
 
 #endif

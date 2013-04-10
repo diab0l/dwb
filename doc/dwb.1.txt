@@ -826,6 +826,15 @@ COMMAND OVERVIEW
                                             'sanitize history' only clears history
                                             'sanitize cookies' only clears cookies
 |set                     |                |Set a setting
+|set_as_default          |                |Sets dwb as default application, if
+                                           called with no arguments it will be
+                                           set for all mimetypes listed in
+                                           dwb.desktop, if the first argument is
+                                           'mimetype' it will be set for all
+                                           mimetypes given on commandline, if
+                                           the first argument is 'extension' it
+                                           will be set for all filename
+                                           extensions given on commandline
 |set_key                 |keys            |Set keybinding
 |set_local_setting       |                |Set a setting for the running instance
                                            interactively
