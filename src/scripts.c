@@ -4378,7 +4378,7 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
         if (sig == NULL) 
             goto error_out;
 
-        if (sig->query->signal_id == 0) 
+        if (sig->query == NULL || sig->query->signal_id == 0) 
         {
             ssignal_free(sig);
             goto error_out;
