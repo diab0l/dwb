@@ -92,6 +92,18 @@ is enabled\&.
 Enables the javascript interface, if there are scripts in $XDG_CONFIG_HOME/dwb/userscripts that use the javascript api this option is not needed\&.
 .RE
 .PP
+\fB\-\-set\-as\-default\fR
+.RS 4
+Sets dwb as default browser, if called with no arguments it will be set for all mimetypes listed in dwb\&.desktop, if the first argument is
+\fImimetype\fR
+it will be set for all succeding mimetypes, e\&.g\&.
+\fBdwb \-\-set\-as\-default "mimetype text/html"\fR
+if the first argument is
+\fIextension\fR
+it will be set for all succeeding filename extensions, e\&.g\&.
+\fBdwb \-\-set\-as\-default "extension html htm"\fR\&.
+.RE
+.PP
 \fB\-x, \-\-execute\fR=\fIcommands\fR
 .RS 4
 Execute a list of dwb commands separated by
@@ -1389,7 +1401,6 @@ lt lt lt
 lt lt lt
 lt lt lt
 lt lt lt
-lt lt lt
 lt lt lt.
 T{
 .sp
@@ -2211,15 +2222,6 @@ T}:T{
 T}:T{
 .sp
 Set a setting
-T}
-T{
-.sp
-set_as_default
-T}:T{
-.sp
-T}:T{
-.sp
-Sets dwb as default application, if called with no arguments it will be set for all mimetypes listed in dwb\&.desktop, if the first argument is \fImimetype\fR it will be set for all mimetypes given on commandline, if the first argument is \fIextension\fR it will be set for all filename extensions given on commandline
 T}
 T{
 .sp

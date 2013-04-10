@@ -19,11 +19,13 @@
 #include <gtk/gtk.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include "dwb.h"
 #include "view.h"
 #include "session.h"
 #include "util.h"
 #include "scripts.h"
+#include "application.h"
 #include <gio-unix-2.0/gio/gdesktopappinfo.h>
 
 static gboolean application_parse_option(const gchar *, const gchar *, gpointer , GError **);
@@ -54,6 +56,7 @@ static GOptionEntry options[] = {
     { "execute", 'x', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_exe, "Execute commands", NULL},
     { "version", 'v', 0, G_OPTION_ARG_NONE, &s_opt_version, "Show version information and exit", NULL},
     { "enable-scripts", 'S', 0, G_OPTION_ARG_NONE, &s_opt_enable_scripts, "Enable javascript api", NULL},
+    { "set-as-default", 0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, &application_parse_option, "Sets dwb as default browser", NULL},
     { NULL, 0, 0, 0, NULL, NULL, NULL }
 };
 static GOptionContext *option_context;
@@ -403,14 +406,14 @@ application_start(GApplication *app, char **argv)
     g_application_hold(app);
 }/*}}}*/
 
-DwbStatus 
+static gboolean 
 application_set_default(const char *text)
 {
     GDesktopAppInfo *info = g_desktop_app_info_new("dwb.desktop");
     if (info == NULL)
     {
         dwb_set_error_message(dwb.state.fview, "No desktop file found");
-        return STATUS_OK;
+        return false;
     }
     if (text == NULL || *text == '\0') 
     {
@@ -425,7 +428,7 @@ application_set_default(const char *text)
         char **token = g_strsplit(text, " ", -1);
         if (token[0] == NULL || token[1] == NULL) 
         {
-            return STATUS_ERROR;
+            return false;
         }
         else if (!g_strcmp0(token[0], "mimetype"))
         {
@@ -438,10 +441,10 @@ application_set_default(const char *text)
                 g_app_info_set_as_default_for_extension(G_APP_INFO(info), token[i], NULL);
         }
         else 
-            return STATUS_ERROR;
+            return false;
 
     }
-    return STATUS_OK;
+    return true;
 }
 
 static GOptionContext * /* application_get_option_context(void) {{{*/
@@ -459,6 +462,19 @@ application_get_option_context(void)
 static gboolean /* application_parse_option(const gchar *key, const gchar *value, gpointer data, GError **error) {{{*/
 application_parse_option(const gchar *key, const gchar *value, gpointer data, GError **error) 
 {
+    if (!g_strcmp0(key, "--set-as-default"))
+    {
+        if (!application_set_default(value))
+        {
+            fprintf(stderr, "Invalid option for --set-as-default\n");
+            exit(EXIT_FAILURE);
+        }
+        else 
+        {
+            exit(EXIT_SUCCESS);
+        }
+
+    }
     if (!g_strcmp0(key, "-r") || !g_strcmp0(key, "--restore")) 
     {
         if (value != NULL) 

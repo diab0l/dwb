@@ -21,5 +21,4 @@
 
 gint application_run(int, char **);
 void application_stop(void);
-DwbStatus application_set_default(const char *text);
 #endif

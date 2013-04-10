@@ -188,14 +188,10 @@ static KeyValue KEYS[] = {
   { "reload_bookmarks",         {   NULL,         0, 0 }, }, 
   { "reload_quickmarks",        {   NULL,         0, 0 }, }, 
   { "print_preview",        {   NULL,         0, 0 }, }, 
-  { "set_as_default",        {   NULL,         0, 0 }, }, 
 };
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
-  { { "set_as_default",              "Set dwb as default application",                    }, CP_COMMANDLINE | CP_DONT_CLEAN, 
-    (Func)commands_set_as_default,            "Invalid arguments",                            ALWAYS_SM,     
-    { .p = NULL },                          EP_NONE,    { NULL }, },
   { { "tabdo",              "Execute a command in all tabs",                    }, CP_COMMANDLINE | CP_NEEDS_ARG, 
     (Func)commands_tabdo,            "Missing command",                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },

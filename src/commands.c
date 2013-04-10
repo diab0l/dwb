@@ -1090,8 +1090,3 @@ commands_tabdo(KeyMap *km, Arg *arg)
     dwb_focus_view(current, "tabdo");
     return STATUS_OK;
 }
-DwbStatus
-commands_set_as_default(KeyMap *km, Arg *arg)
-{
-    return application_set_default(arg->p);
-}

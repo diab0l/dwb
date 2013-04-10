@@ -56,6 +56,13 @@ OPTIONS
   $XDG_CONFIG_HOME/dwb/userscripts that use the javascript api this option is
   not needed. 
 
+*--set-as-default*::
+Sets dwb as default browser, if called with no arguments it will be set for all
+mimetypes listed in dwb.desktop, if the first argument is 'mimetype' it will be
+set for all succeding mimetypes, e.g. *dwb --set-as-default "mimetype text/html"*  
+if the first argument is 'extension' it will be set for all succeeding filename
+extensions, e.g. *dwb --set-as-default "extension html htm"*.
+
 *-x, --execute*='commands'::
   Execute a list of dwb commands separated by ';;', see
   <<CUSTOM_COMMANDS,'CUSTOM COMMANDS'>>
@@ -826,15 +833,6 @@ COMMAND OVERVIEW
                                             'sanitize history' only clears history
                                             'sanitize cookies' only clears cookies
 |set                     |                |Set a setting
-|set_as_default          |                |Sets dwb as default application, if
-                                           called with no arguments it will be
-                                           set for all mimetypes listed in
-                                           dwb.desktop, if the first argument is
-                                           'mimetype' it will be set for all
-                                           mimetypes given on commandline, if
-                                           the first argument is 'extension' it
-                                           will be set for all filename
-                                           extensions given on commandline
 |set_key                 |keys            |Set keybinding
 |set_local_setting       |                |Set a setting for the running instance
                                            interactively
