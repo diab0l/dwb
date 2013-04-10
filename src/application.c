@@ -409,11 +409,13 @@ application_start(GApplication *app, char **argv)
 static gboolean 
 application_set_default(const char *text)
 {
+    gboolean ret = false;
     GDesktopAppInfo *info = g_desktop_app_info_new("dwb.desktop");
+    char **token = NULL;
     if (info == NULL)
     {
         dwb_set_error_message(dwb.state.fview, "No desktop file found");
-        return false;
+        return ret;
     }
     if (text == NULL || *text == '\0') 
     {
@@ -422,29 +424,30 @@ application_set_default(const char *text)
         g_app_info_set_as_default_for_type(G_APP_INFO(info), "application/xhtml+xml", NULL);
         g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/http", NULL);
         g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/https", NULL);
+        ret = true;
     }
     else 
     {
-        char **token = g_strsplit(text, " ", -1);
-        if (token[0] == NULL || token[1] == NULL) 
+        token = g_strsplit(text, " ", -1);
+        if (token[0] != NULL && token[1] != NULL) 
         {
-            return false;
+            if (!g_strcmp0(token[0], "mimetype"))
+            {
+                for (int i=1; token[i]; i++)
+                    g_app_info_set_as_default_for_type(G_APP_INFO(info), token[i], NULL);
+                ret = true;
+            }
+            else if (!g_strcmp0(token[0], "extension"))
+            {
+                for (int i=1; token[i]; i++)
+                    g_app_info_set_as_default_for_extension(G_APP_INFO(info), token[i], NULL);
+                ret = true;
+            }
         }
-        else if (!g_strcmp0(token[0], "mimetype"))
-        {
-            for (int i=1; token[i]; i++)
-                g_app_info_set_as_default_for_type(G_APP_INFO(info), token[i], NULL);
-        }
-        else if (!g_strcmp0(token[0], "extension"))
-        {
-            for (int i=1; token[i]; i++)
-                g_app_info_set_as_default_for_extension(G_APP_INFO(info), token[i], NULL);
-        }
-        else 
-            return false;
-
+        g_strfreev(token);
     }
-    return true;
+    g_object_unref(info);
+    return ret;
 }
 
 static GOptionContext * /* application_get_option_context(void) {{{*/
