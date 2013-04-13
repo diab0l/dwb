@@ -65,9 +65,14 @@ var onNavigation = function(wv, frame, request)
     {
         if (tabs.nth(i).uri == uri && i != wv.number) 
         {
-            execute((i+1) + "focus_tab");
-            if (/^\s*$/.test(wv.uri))
-                execute((wv.number + 1) + "close");
+            /* defer execute, otherwise some other navigation callbacks will
+             * fail */
+            timer.start(10, function() {
+                execute((i+1) + "focus_tab");
+                if (/^\s*$/.test(wv.uri))
+                    execute((wv.number + 1) + "close");
+                return false;
+            });
             return true;
         }
     }
