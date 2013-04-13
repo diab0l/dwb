@@ -534,7 +534,7 @@ dwb_set_user_agent(GList *gl, WebSettings *s)
     {
         char *current_ua;
         g_object_get(dwb.state.web_settings, "user-agent", &current_ua, NULL);
-        s->arg_local.p = g_strdup_printf("%s %s/%s", current_ua, NAME, VERSION);
+        s->arg_local.p = g_strdup_printf("%s %s/%s", current_ua, REAL_NAME, VERSION);
     }
     dwb_webkit_setting(gl, s);
     g_hash_table_insert(dwb.settings, g_strdup("user-agent"), s);
