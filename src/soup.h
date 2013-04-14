@@ -20,7 +20,7 @@
 #define COOKIES_H
 
 void dwb_soup_clean(void);
-void dwb_soup_sync_cookies(void);
+void dwb_soup_sync_cookies();
 void dwb_soup_allow_cookie_tmp(void);
 DwbStatus dwb_soup_allow_cookie(GList **, const char *, CookieStorePolicy);
 const char * dwb_soup_get_host_from_request(WebKitNetworkRequest *);
@@ -40,5 +40,6 @@ const char * soup_get_header(GList *gl, const char *);
 const char * soup_get_header_from_request(WebKitNetworkRequest *, const char *);
 CookieStorePolicy dwb_soup_get_cookie_store_policy(const char *policy);
 void dwb_soup_clear_cookies(void);
+DwbStatus dwb_soup_set_cookie_expiration(const char *expiration_string);
 
 #endif

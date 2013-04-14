@@ -84,6 +84,7 @@ static DwbStatus dwb_set_do_not_track(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_cookie_expiration(GList *gl, WebSettings *s);
 static void dwb_set_statusbar_color();
 //static DwbStatus dwb_set_javascript_debugging(GList *gl, WebSettings *s);
 #ifdef WITH_LIBSOUP_2_38
@@ -188,6 +189,12 @@ dwb_set_passthrough(GList *gl, WebSettings *s)
         return STATUS_ERROR;
     return STATUS_OK;
 }/*}}}*/
+static DwbStatus
+dwb_set_cookie_expiration(GList *gl, WebSettings *s) 
+{
+    return dwb_soup_set_cookie_expiration(s->arg_local.p);
+}/*}}}*/
+
 
 /*{{{*/
 static DwbStatus 
@@ -1270,7 +1277,7 @@ dwb_remove_quickmark(const char *line)
 }/*}}}*/
 
 static void
-dwb_sync_history_and_cooies()
+dwb_sync_history()
 {
     if (dwb.misc.sync_files & SYNC_HISTORY) 
     {
@@ -1284,6 +1291,10 @@ dwb_sync_history_and_cooies()
         g_file_set_contents(dwb.files[FILES_HISTORY], buffer->str, -1, NULL);
         g_string_free(buffer, true);
     }
+}
+static void 
+dwb_sync_cookies()
+{
     if (dwb.misc.sync_files & SYNC_COOKIES) 
     {
         dwb_soup_sync_cookies();
@@ -1301,7 +1312,8 @@ dwb_sync_session()
 static gboolean
 dwb_sync_files(gpointer data) 
 {
-    dwb_sync_history_and_cooies();
+    dwb_sync_history();
+    dwb_sync_cookies();
     dwb_sync_session();
     return true;
 }/*}}}*/
@@ -3636,7 +3648,8 @@ dwb_save_files(gboolean end_session, gint session_flags)
 {
     dwb_save_keys();
     dwb_save_settings();
-    dwb_sync_history_and_cooies(NULL);
+    dwb_sync_history();
+    dwb_soup_sync_cookies();
     /* Save command history */
     if (! dwb.misc.private_browsing) 
     {

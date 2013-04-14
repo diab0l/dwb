@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 04/10/2013
+.\"      Date: 04/15/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "04/10/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "04/15/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3182,6 +3182,17 @@ Whether to complete searchengines with tab\-completion\&. Possible values: true/
 .RS 4
 Whether to complete userscripts with tab\-completion\&. Possible values: true/false, default value:
 \fIfalse\fR\&.
+.RE
+.PP
+\fBcookie\-expiration\fR
+.RS 4
+Maximum time in seconds after a cookie expires, the suffix
+\fIm\fR
+can be used for minutes,
+\fIh\fR
+for hours, and
+\fId\fR
+for days, the maximum will only be used if it is smaller than the original expiration time\&. Setting cookie\-expiration to 0 will use the original expiration time of the cookie\&.
 .RE
 .PP
 \fBcookies\-store\-policy\fR

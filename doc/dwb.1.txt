@@ -1250,6 +1250,12 @@ true/false, default value: 'false'.
 Whether to complete userscripts with tab-completion. Possible values:
 true/false, default value: 'false'.
 
+*cookie-expiration*:: 
+Maximum time in seconds after a cookie expires, the suffix 'm' can be used for minutes,
+'h' for hours, and 'd' for days, the maximum will only be used if it is smaller
+than the original expiration time. Setting cookie-expiration to 0 will use the
+original expiration time of the cookie. 
+
 *cookies-store-policy*::
 The storage policy for cookies, possible values are 'session', 'persistent', and
 'never'.  If set to session all session cookies are accepted, only cookies with

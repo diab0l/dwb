@@ -17,15 +17,23 @@
  */
 
 #include <fcntl.h>
+#include <stdlib.h>
+#include <time.h>
 #include <sys/file.h>
 #include "dwb.h"
 #include "util.h"
 #include "domain.h"
 #include "soup.h"
+#define DWB_SOUP_CHECK_EXPIRATION(multiplier) \
+    (s_expiration = (s_expiration != LONG_MIN && s_expiration != LONG_MAX && LONG_MAX / (multiplier) > s_expiration) ? \
+        s_expiration * (multiplier) : -1)
+
+
+    
 static SoupCookieJar *s_jar;
 static guint s_changed_id;
 static SoupCookieJar *s_tmp_jar;
-static SoupCookieJar *s_pers_jar;
+static long int s_expiration;
 
 /*{{{*/
 static void
@@ -207,11 +215,16 @@ dwb_soup_save_cookies(GSList *cookies)
 {
     int fd = open(dwb.files[FILES_COOKIES], 0);
     SoupCookieJar *jar;
+    SoupDate *date;
 
     flock(fd, LOCK_EX);
     jar = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], false);
     for (GSList *l=cookies; l; l=l->next) 
-        soup_cookie_jar_add_cookie(jar, soup_cookie_copy(l->data));
+    {
+        date = soup_cookie_get_expires(l->data);
+        if (date && !soup_date_is_past(date))
+            soup_cookie_jar_add_cookie(jar, soup_cookie_copy(l->data));
+    }
     g_object_unref(jar);
 
     flock(fd, LOCK_UN);
@@ -272,41 +285,49 @@ dwb_soup_get_cookie_store_policy(const char *policy)
 
 /*dwb_soup_cookie_changed_cb {{{*/
 static void 
-dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new, gpointer *p) 
+dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_cookie, gpointer *p) 
 {
-    //SoupCookieJar *j = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], false);
-    if (old) 
-        soup_cookie_jar_delete_cookie(s_pers_jar, old);
-    if (new) 
+    SoupDate *date;
+
+    if (new_cookie) 
     {
         /* Check if this is a super-cookie */
-        if (new->domain) 
+        if (new_cookie->domain) 
         {
-            const char *base = new->domain;
+            const char *base = new_cookie->domain;
 
             if (*base == '.')
                 base++;
 
             if (domain_get_tld(base) == NULL) 
             {
-                fprintf(stderr, "Site tried to set super-cookie @ TLD %s (base %s)\n", new->domain, base);
+                fprintf(stderr, "Site tried to set super-cookie @ TLD %s (base %s)\n", new_cookie->domain, base);
                 return;
             }
         }
 
-        if (dwb.state.cookie_store_policy == COOKIE_STORE_PERSISTENT || dwb_soup_test_cookie_allowed(dwb.fc.cookies_allow, new)) 
+        if (dwb.state.cookie_store_policy == COOKIE_STORE_PERSISTENT || dwb_soup_test_cookie_allowed(dwb.fc.cookies_allow, new_cookie)) 
         {
-            soup_cookie_jar_add_cookie(s_pers_jar, soup_cookie_copy(new));
+            if (s_expiration != 0) 
+            {
+                date = soup_cookie_get_expires(new_cookie);
+                if (date) 
+                    soup_cookie_set_max_age(new_cookie, MIN(s_expiration, soup_date_to_time_t(date) - time(NULL)));
+            }
         } 
         else 
         { 
-            soup_cookie_jar_add_cookie(s_tmp_jar, soup_cookie_copy(new));
+            soup_cookie_jar_add_cookie(s_tmp_jar, soup_cookie_copy(new_cookie));
 
-            if (dwb.state.cookie_store_policy == COOKIE_STORE_NEVER && !dwb_soup_test_cookie_allowed(dwb.fc.cookies_session_allow, new) ) 
+            if (dwb.state.cookie_store_policy == COOKIE_STORE_NEVER && !dwb_soup_test_cookie_allowed(dwb.fc.cookies_session_allow, new_cookie) ) 
             {
                 g_signal_handler_block(jar, s_changed_id);
-                soup_cookie_jar_delete_cookie(jar, new);
+                soup_cookie_jar_delete_cookie(jar, new_cookie);
                 g_signal_handler_unblock(jar, s_changed_id);
+            }
+            else 
+            {
+                soup_cookie_set_max_age(new_cookie, -1);
             }
         }
     }
@@ -317,11 +338,26 @@ dwb_soup_sync_cookies()
 {
     int fd = open(dwb.files[FILES_COOKIES], 0);
     flock(fd, LOCK_EX);
+    SoupDate *date;
 
-    GSList *all_cookies = soup_cookie_jar_all_cookies(s_pers_jar);
     SoupCookieJar *j = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], false);
-    for (GSList *l = all_cookies; l; l=l->next) 
-        soup_cookie_jar_add_cookie(j, l->data);
+    GSList *all_cookies = soup_cookie_jar_all_cookies(s_jar);
+    if (all_cookies == NULL)
+    {
+        unlink(dwb.files[FILES_COOKIES]);
+
+    }
+    else 
+    {
+        for (GSList *l = all_cookies; l; l=l->next) 
+        {
+            date = soup_cookie_get_expires(l->data);
+            if (date && !soup_date_is_past(date))
+                soup_cookie_jar_add_cookie(j, l->data);
+            else 
+                soup_cookie_jar_delete_cookie(s_jar, l->data);
+        }
+    }
 
     g_slist_free(all_cookies);
     g_object_unref(j);
@@ -334,7 +370,6 @@ void
 dwb_soup_clear_cookies() 
 {
     dwb_soup_clear_jar(s_tmp_jar);
-    dwb_soup_clear_jar(s_pers_jar);
     dwb_soup_clear_jar(s_jar);
 }
 
@@ -342,17 +377,23 @@ dwb_soup_clear_cookies()
 void
 dwb_soup_init_cookies(SoupSession *s) 
 {
+    SoupDate *date;
+
     s_jar = soup_cookie_jar_new(); 
     s_tmp_jar = soup_cookie_jar_new();
-    //s_pers_jar = soup_cookie_jar_new();
-    s_pers_jar = soup_cookie_jar_new();
 
     dwb_soup_set_cookie_accept_policy(GET_CHAR("cookies-accept-policy"));
     SoupCookieJar *old_cookies = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], true);
 
     GSList *l = soup_cookie_jar_all_cookies(old_cookies);
     for (; l; l=l->next ) 
-        soup_cookie_jar_add_cookie(s_jar, soup_cookie_copy(l->data)); 
+    {
+        date = soup_cookie_get_expires(l->data);
+        if (date && !soup_date_is_past(date))
+            soup_cookie_jar_add_cookie(s_jar, soup_cookie_copy(l->data)); 
+        else 
+            soup_cookie_jar_delete_cookie(old_cookies, l->data);
+    }
 
     soup_cookies_free(l);
     g_object_unref(old_cookies);
@@ -387,6 +428,44 @@ dwb_soup_set_ntlm(gboolean use_ntlm)
     else 
         soup_session_remove_feature_by_type(dwb.misc.soupsession, SOUP_TYPE_AUTH_NTLM);
 }
+DwbStatus
+dwb_soup_set_cookie_expiration(const char *expiration_string) 
+{
+    if (g_regex_match_simple("\\s*[0-9]+\\s*d", expiration_string, 0, 0))
+    {
+        s_expiration = strtol(expiration_string, NULL, 10);
+        if (DWB_SOUP_CHECK_EXPIRATION(86400) != -1)
+        {
+            return STATUS_OK;
+        }
+    }
+    else if (g_regex_match_simple("\\s*[0-9]+\\s*h", expiration_string, 0, 0))
+    {
+        s_expiration = strtol(expiration_string, NULL, 10);
+        if (DWB_SOUP_CHECK_EXPIRATION(3600) != -1)
+        {
+            return STATUS_OK;
+        }
+    }
+    else if (g_regex_match_simple("\\s*[0-9]+\\s*m", expiration_string, 0, 0))
+    {
+        s_expiration = strtol(expiration_string, NULL, 10);
+        if (DWB_SOUP_CHECK_EXPIRATION(60) != -1)
+        {
+            return STATUS_OK;
+        }
+    }
+    else if (g_regex_match_simple("\\s*[0-9]+", expiration_string, 0, 0))
+    {
+        s_expiration = strtol(expiration_string, NULL, 10);
+        if (DWB_SOUP_CHECK_EXPIRATION(1) != -1)
+        {
+            return STATUS_OK;
+        }
+    }
+    s_expiration = 0;
+    return STATUS_ERROR;
+}
 
 /* dwb_soup_init_session_features() {{{*/
 DwbStatus 
@@ -415,7 +494,6 @@ dwb_soup_end()
 {
     g_object_unref(s_tmp_jar);
     g_object_unref(s_jar);
-    g_object_unref(s_pers_jar);
     g_free(dwb.misc.proxyuri);
 }/*}}}*/
 
