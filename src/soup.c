@@ -343,22 +343,22 @@ dwb_soup_sync_cookies()
     int fd = open(dwb.files[FILES_COOKIES], 0);
     if (fd == -1)
     {
-        perror("dwb_sync_cookies");
+        perror("open");
         return;
     }
 
     flock(fd, LOCK_EX);
     SoupDate *date;
+    if ( unlink(dwb.files[FILES_COOKIES]) == -1)
+    {
+        perror("unlink");
+    }
+
 
     SoupCookieJar *j = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], false);
     GSList *all_cookies = soup_cookie_jar_all_cookies(s_jar);
     GSList *deleted = NULL;
-    if (all_cookies == NULL)
-    {
-        unlink(dwb.files[FILES_COOKIES]);
-
-    }
-    else 
+    if (all_cookies != NULL)
     {
         for (GSList *l = all_cookies; l; l=l->next) 
         {
