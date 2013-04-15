@@ -3184,6 +3184,17 @@ Whether to complete userscripts with tab\-completion\&. Possible values: true/fa
 \fIfalse\fR\&.
 .RE
 .PP
+\fBcookie\-expiration\fR
+.RS 4
+Maximum time in seconds after a persistent cookie expires, the suffix
+\fIm\fR
+can be used for minutes,
+\fIh\fR
+for hours, and
+\fId\fR
+for days, the maximum will only be used if it is smaller than the original expiration time\&. Setting cookie\-expiration to 0 will use the original expiration time of the cookie\&.
+.RE
+.PP
 \fBcookies\-store\-policy\fR
 .RS 4
 The storage policy for cookies, possible values are
