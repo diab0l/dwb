@@ -341,11 +341,18 @@ void
 dwb_soup_sync_cookies() 
 {
     int fd = open(dwb.files[FILES_COOKIES], 0);
+    if (fd == -1)
+    {
+        perror("dwb_sync_cookies");
+        return;
+    }
+
     flock(fd, LOCK_EX);
     SoupDate *date;
 
     SoupCookieJar *j = soup_cookie_jar_text_new(dwb.files[FILES_COOKIES], false);
     GSList *all_cookies = soup_cookie_jar_all_cookies(s_jar);
+    GSList *deleted = NULL;
     if (all_cookies == NULL)
     {
         unlink(dwb.files[FILES_COOKIES]);
@@ -360,11 +367,19 @@ dwb_soup_sync_cookies()
             if (!date || !soup_date_is_past(date))
                 soup_cookie_jar_add_cookie(j, l->data);
             else 
-                soup_cookie_jar_delete_cookie(s_jar, l->data);
+                deleted = g_slist_prepend(deleted, l->data);
         }
+        g_signal_handler_block(s_jar, s_changed_id);
+        for (GSList *l = deleted; l; l=l->next)
+        {
+            soup_cookie_jar_delete_cookie(s_jar, l->data);
+        }
+        g_signal_handler_unblock(s_jar, s_changed_id);
+        g_slist_free(deleted);
+        g_slist_free(all_cookies);
     }
 
-    g_slist_free(all_cookies);
+
     g_object_unref(j);
 
     flock(fd, LOCK_UN);
