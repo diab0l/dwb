@@ -4233,7 +4233,6 @@ dwb_pack(const char *layout, gboolean rebuild)
         gtk_orientable_set_orientation(GTK_ORIENTABLE(dwb.gui.tabcontainer), GTK_ORIENTATION_VERTICAL);
         gtk_widget_set_size_request(dwb.gui.tabcontainer, GET_INT("tab-width"), -1);
         gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0, GTK_PACK_START);
-        gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, true, true, 0, GTK_PACK_START);
         gtk_widget_show(dwb.gui.dummybox);
     }
 #endif
@@ -4302,9 +4301,10 @@ dwb_init_gui()
 
     dwb.gui.dummybox = gtk_vbox_new(true, 1);
     dwb.gui.tabbox = gtk_vbox_new(false, 0);
-    gtk_box_pack_end(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, false, false, 0);
+    gtk_box_pack_end(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, true, true, 0);
     gtk_box_pack_start(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.mainbox, true, true, 0);
     gtk_box_pack_start(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0);
+    gtk_widget_show(dwb.gui.tabcontainer);
 #endif
 
     /* Downloadbar */
