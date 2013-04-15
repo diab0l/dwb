@@ -1195,6 +1195,8 @@ static WebSettings DWB_SETTINGS[] = {
   { { "tab-width",                            "Tab width for vertical tabs", },                                            
     SETTING_GLOBAL,                   INTEGER, { .i = 100 }, (S_Func)dwb_set_tab_width,   { 0 }, }, 
 #endif
+  { { "mouse-cycles-through-tabs",            "Whether mouse scroll wheel cycles through tabs", },                                            
+    SETTING_GLOBAL,  BOOLEAN, { .b = true }, NULL,   { 0 }, }, 
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

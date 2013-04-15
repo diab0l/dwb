@@ -1440,6 +1440,9 @@ The maximum number of visible completions, default value: '11'.
 The duration messages are shown. Possible values: duration in seconds (integer),
 default value: '2'.
 
+*mouse-cycles-through-tabs*::
+Whether mouse wheel cycles through tabs, default value: 'true'.
+
 *navigation-history-max*::
 Maximum length of navigation history. 'enable-private-browsing' must be disabled to
 save command history at all.  default value: '500'.

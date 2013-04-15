@@ -884,19 +884,22 @@ view_scroll_tab_cb(GtkWidget *w, GdkEventScroll *e, GList *gl)
 {
     const char *event;
     int pos = -1;
-    if (e->direction == GDK_SCROLL_DOWN)
+    if (GET_BOOL("mouse-cycles-through-tabs")) 
     {
-        pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
-        event = "focus_next";
-    }
-    else if (e->direction == GDK_SCROLL_UP)
-    {
-        pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) - 1, g_list_length(dwb.state.views));
-        event = "focus_prev";
-    }
-    if (pos != -1)
-    {
-        dwb_focus_view(g_list_nth(dwb.state.views, pos), event);
+        if (e->direction == GDK_SCROLL_DOWN)
+        {
+            pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
+            event = "focus_next";
+        }
+        else if (e->direction == GDK_SCROLL_UP)
+        {
+            pos = util_modulo(g_list_position(dwb.state.views, dwb.state.fview) - 1, g_list_length(dwb.state.views));
+            event = "focus_prev";
+        }
+        if (pos != -1)
+        {
+            dwb_focus_view(g_list_nth(dwb.state.views, pos), event);
+        }
     }
     return false;
 }/*}}}*/
