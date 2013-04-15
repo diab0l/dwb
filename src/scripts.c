@@ -3922,7 +3922,11 @@ gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSV
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
+#if _HAS_GTK3
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.tabbox), true);
+#else
     return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.tabcontainer), true);
+#endif
 }
 /** 
  * The box used for the main content. Child of mainBox

@@ -934,8 +934,13 @@ commands_tab_move(KeyMap *km, Arg *arg)
         case TAB_MOVE_RIGHT  : newpos = MAX(MIN(l-1, g_list_position(dwb.state.views, dwb.state.fview)+NUMMOD), 0); break;
         default :  newpos = MAX(MIN(l, NUMMOD)-1, 0); break;
     }
-    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), CURRENT_VIEW()->tabevent, l-(newpos+1));
+#if _HAS_GTK3
+    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabbox), CURRENT_VIEW()->tabevent, l-(newpos+1));
     gtk_box_reorder_child(GTK_BOX(dwb.gui.mainbox), CURRENT_VIEW()->scroll, newpos);
+#else 
+    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), CURRENT_VIEW()->tabevent, l-(newpos+1));
+    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabwrapperbox), CURRENT_VIEW()->scroll, newpos);
+#endif
 
     dwb.state.views = g_list_remove_link(dwb.state.views, dwb.state.fview);
 

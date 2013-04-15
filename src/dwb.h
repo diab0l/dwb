@@ -741,10 +741,12 @@ struct _Setting {
 struct _Gui {
   GtkWidget *window;
   GtkWidget *vbox;
+#if !_HAS_GTK3
   GtkWidget *tabcontainer;
   GtkWidget *tabwrapperbox;
-  GtkWidget *tabbox;
   GtkWidget *dummybox;
+#endif
+  GtkWidget *tabbox;
   GtkWidget *mainbox;
   GtkWidget *downloadbar;
   /* Statusbar */
@@ -808,7 +810,9 @@ struct _Misc {
   ProgressBarStyle progress_bar_style;
 
   int passthrough;
+#if ! _HAS_GTK3
   TabOrientation tab_orientation;
+#endif
 
   //gboolean javascript_debugging;
 };

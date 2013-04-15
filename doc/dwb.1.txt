@@ -1545,13 +1545,13 @@ Type of files to sync, see also *file-sync-interval*.
 Possible values are 'all', 'cookies', 'history', 'session' or a combination,
 default value: 'all'.
 
-*tab-orientation*::
+*tab-orientation (GTK2 only)*::
 Orientation of tabs, possible values are 'horizontal', 'vertical-left' and
 'vertical-right', if set to vertical-left or vertical-right t and T in
 'widget-packing' will be ignored, instead tabs are placed left/right to the
 webview respectively, default value: 'horizontal'.
 
-*tab-width*::
+*tab-width (GTK2 only)*::
 Width of vertical tabs in pixel, will be ignored for horizontal tabs, horizontal tabs
 will always use the complete space, default value '100'.
 

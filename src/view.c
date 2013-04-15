@@ -1541,7 +1541,10 @@ view_create_web_view()
     gtk_misc_set_alignment(GTK_MISC(v->tablabel), 0.0, 0.5);
     gtk_label_set_ellipsize(GTK_LABEL(v->tablabel), PANGO_ELLIPSIZE_END);
 
+
     gtk_box_pack_end(GTK_BOX(v->tabbox), v->tablabel, true, true, 3);
+    
+
 
     GdkPixbuf *pb = gdk_pixbuf_new_from_xpm_data(dummy_icon);
     v->tabicon = gtk_image_new_from_pixbuf(pb);
@@ -1805,7 +1808,11 @@ view_add(const char *uri, gboolean background)
         return NULL;
     }
     View *v = view_create_web_view();
+#if _HAS_GTK3
+    gtk_box_pack_end(GTK_BOX(dwb.gui.tabbox), v->tabevent, true, true, 0);
+#else
     gtk_box_pack_end(GTK_BOX(dwb.gui.tabcontainer), v->tabevent, true, true, 0);
+#endif
 
     int length = g_list_length(dwb.state.views);
     if (dwb.state.fview) 
@@ -1820,7 +1827,11 @@ view_add(const char *uri, gboolean background)
         else 
             p = g_list_position(dwb.state.views, dwb.state.fview) + 1;
 
+#if _HAS_GTK3
+        gtk_box_reorder_child(GTK_BOX(dwb.gui.tabbox), v->tabevent, length - p);
+#else
         gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), v->tabevent, length - p);
+#endif
         gtk_box_insert(GTK_BOX(dwb.gui.mainbox), v->scroll, true, true, 0, p, GTK_PACK_START);
         dwb.state.views = g_list_insert(dwb.state.views, v, p);
         ret = g_list_nth(dwb.state.views, p);
@@ -1850,8 +1861,12 @@ view_add(const char *uri, gboolean background)
             gtk_widget_hide(dwb.gui.tabbox);
         else if (length == 1 && (dwb.state.bar_visible & BAR_VIS_TOP)) 
         {
+#if _HAS_GTK3 
+            gtk_widget_show_all(dwb.gui.tabbox);
+#else
             gtk_widget_show(dwb.gui.tabbox);
             gtk_widget_show_all(dwb.gui.tabcontainer);
+#endif
         }
     }
     if (EMIT_SCRIPT(CREATE_TAB)) 
