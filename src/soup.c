@@ -308,7 +308,7 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
 
         if (dwb.state.cookie_store_policy == COOKIE_STORE_PERSISTENT || dwb_soup_test_cookie_allowed(dwb.fc.cookies_allow, new_cookie)) 
         {
-            if (s_expiration != 0) 
+            if (s_expiration > 0) 
             {
                 date = soup_cookie_get_expires(new_cookie);
                 if (date) 
