@@ -288,6 +288,7 @@ static void
 dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_cookie, gpointer *p) 
 {
     SoupDate *date;
+    time_t max_time;
 
     if (new_cookie) 
     {
@@ -308,12 +309,15 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
 
         if (dwb.state.cookie_store_policy == COOKIE_STORE_PERSISTENT || dwb_soup_test_cookie_allowed(dwb.fc.cookies_allow, new_cookie)) 
         {
-            if (s_expiration > 0) 
-            {
-                date = soup_cookie_get_expires(new_cookie);
-                if (date) 
-                    soup_cookie_set_max_age(new_cookie, MIN(s_expiration, soup_date_to_time_t(date) - time(NULL)));
-            }
+            if (s_expiration <= 0) 
+                return;
+            date = soup_cookie_get_expires(new_cookie);
+            // session cookie
+            if (!date) 
+                return;
+            max_time = soup_date_to_time_t(date) - time(NULL);
+            if (max_time > 0)
+                soup_cookie_set_max_age(new_cookie, MIN(s_expiration, max_time));
         } 
         else 
         { 
@@ -352,7 +356,8 @@ dwb_soup_sync_cookies()
         for (GSList *l = all_cookies; l; l=l->next) 
         {
             date = soup_cookie_get_expires(l->data);
-            if (date && !soup_date_is_past(date))
+            // keep session cookies and valid cookies in the jar
+            if (!date || !soup_date_is_past(date))
                 soup_cookie_jar_add_cookie(j, l->data);
             else 
                 soup_cookie_jar_delete_cookie(s_jar, l->data);
