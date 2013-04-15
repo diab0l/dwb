@@ -3922,7 +3922,7 @@ gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSV
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
 {
-    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.topbox), true);
+    return make_object_for_class(ctx, s_secure_widget_class, G_OBJECT(dwb.gui.tabcontainer), true);
 }
 /** 
  * The box used for the main content. Child of mainBox

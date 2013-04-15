@@ -271,6 +271,14 @@ typedef enum _TabMoveDirection {
   TAB_MOVE_RIGHT,
 
 } TabMoveDirection;
+
+typedef enum _TabOrientation {
+  TAB_HORIZONTAL, 
+  TAB_VERTICAL_LEFT, 
+  TAB_VERTICAL_RIGHT,
+
+} TabOrientation;
+
 typedef enum _TabPosition {
   TAB_POSITION_LEFT               = 1<<0, 
   TAB_POSITION_RIGHT              = 1<<1, 
@@ -625,7 +633,6 @@ struct _State {
 
   gint last_tab;
   gboolean do_not_track;
-  guint current_groups;
 };
 
 typedef enum _SettingsApply {
@@ -633,6 +640,7 @@ typedef enum _SettingsApply {
   SETTING_GLOBAL    = 1<<1,
   SETTING_ONINIT    = 1<<2,
   SETTING_PER_VIEW  = 1<<3,
+  SETTING_INITIALIZE = 1<<4,
 } SettingsApply;
 
 struct _WebSettings {
@@ -733,7 +741,10 @@ struct _Setting {
 struct _Gui {
   GtkWidget *window;
   GtkWidget *vbox;
-  GtkWidget *topbox;
+  GtkWidget *tabcontainer;
+  GtkWidget *tabwrapperbox;
+  GtkWidget *tabbox;
+  GtkWidget *dummybox;
   GtkWidget *mainbox;
   GtkWidget *downloadbar;
   /* Statusbar */
@@ -797,6 +808,8 @@ struct _Misc {
   ProgressBarStyle progress_bar_style;
 
   int passthrough;
+  TabOrientation tab_orientation;
+
   //gboolean javascript_debugging;
 };
 enum Files {

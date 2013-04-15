@@ -1728,8 +1728,8 @@ view_remove(GList *gl)
             if ( !(new_fview = dwb.state.fview->prev) ) 
                 new_fview = g_list_first(dwb.state.views)->next;
         }
-        if (dwb.state.bar_visible & BAR_VIS_TOP && !gtk_widget_get_visible(dwb.gui.topbox)) 
-            gtk_widget_show_all(dwb.gui.topbox);
+        if (dwb.state.bar_visible & BAR_VIS_TOP && !gtk_widget_get_visible(dwb.gui.tabbox)) 
+            gtk_widget_show(dwb.gui.tabbox);
     }
     else if (dwb.state.nummod - 1 == position) 
     {
@@ -1759,7 +1759,7 @@ view_remove(GList *gl)
 
     dwb.state.views = g_list_delete_link(dwb.state.views, gl);
     if (!dwb.state.views->next && !dwb.misc.show_single_tab)
-        gtk_widget_hide(dwb.gui.topbox);
+        gtk_widget_hide(dwb.gui.tabbox);
 
     gtk_widget_show(CURRENT_VIEW()->scroll);
 
@@ -1805,7 +1805,8 @@ view_add(const char *uri, gboolean background)
         return NULL;
     }
     View *v = view_create_web_view();
-    gtk_box_pack_end(GTK_BOX(dwb.gui.topbox), v->tabevent, true, true, 0);
+    gtk_box_pack_end(GTK_BOX(dwb.gui.tabcontainer), v->tabevent, true, true, 0);
+
     int length = g_list_length(dwb.state.views);
     if (dwb.state.fview) 
     {
@@ -1819,7 +1820,7 @@ view_add(const char *uri, gboolean background)
         else 
             p = g_list_position(dwb.state.views, dwb.state.fview) + 1;
 
-        gtk_box_reorder_child(GTK_BOX(dwb.gui.topbox), v->tabevent, length - p);
+        gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), v->tabevent, length - p);
         gtk_box_insert(GTK_BOX(dwb.gui.mainbox), v->scroll, true, true, 0, p, GTK_PACK_START);
         dwb.state.views = g_list_insert(dwb.state.views, v, p);
         ret = g_list_nth(dwb.state.views, p);
@@ -1846,9 +1847,12 @@ view_add(const char *uri, gboolean background)
     if (!dwb.misc.show_single_tab) 
     {
         if (length == 0) 
-            gtk_widget_hide(dwb.gui.topbox);
+            gtk_widget_hide(dwb.gui.tabbox);
         else if (length == 1 && (dwb.state.bar_visible & BAR_VIS_TOP)) 
-            gtk_widget_show(dwb.gui.topbox);
+        {
+            gtk_widget_show(dwb.gui.tabbox);
+            gtk_widget_show_all(dwb.gui.tabcontainer);
+        }
     }
     if (EMIT_SCRIPT(CREATE_TAB)) 
     {

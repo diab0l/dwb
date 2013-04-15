@@ -97,6 +97,8 @@ html_select(new-tab-position-policy, html_options(right, left, rightmost, leftmo
 html_select(progress-bar-style, html_options(default, simple), The progress bar style)
 html_input(show-single-tab, checkbox, Whether to show the tabbar if only one tab is open)
 html_input(scrollbars, checkbox, Whether scrollbars should be enabled)
+html_select(tab-orientation, html_options(horizontal, vertical-left, vertical-right), ``Orientation of tabs, if set to vertical-left or -right t and T in widget-packing is ignored'')
+html_input(tab-width, text, ``Width of vertical tabs, will be ignored for horizontal tabs'')
 html_input(tabbar-visible, text, Number of seconds a hidden tabbar is visible when switching between tabs)
 html_input(tabbed-browsing, checkbox, Whether to enable tabbed browsing)
 html_input(user-stylesheet-uri, text, The uri of a stylesheet applied to every page)

@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 04/10/2013
+.\"      Date: 04/15/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "04/10/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "04/15/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3639,6 +3639,24 @@ Type of files to sync, see also
 \fIsession\fR
 or a combination, default value:
 \fIall\fR\&.
+.RE
+.PP
+\fBtab\-orientation\fR
+.RS 4
+Orientation of tabs, possible values are
+\fIhorizontal\fR,
+\fIvertical\-left\fR
+and
+\fIvertical\-right\fR, if set to vertical\-left or vertical\-right t and T in
+\fIwidget\-packing\fR
+will be ignored, instead tabs are placed left/right to the webview respectively, default value:
+\fIhorizontal\fR\&.
+.RE
+.PP
+\fBtab\-width\fR
+.RS 4
+Width of vertical tabs in pixel, will be ignored for horizontal tabs, horizontal tabs will always use the complete space, default value
+\fI100\fR\&.
 .RE
 .PP
 \fBtabbar\-visible\fR

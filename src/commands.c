@@ -829,7 +829,7 @@ commands_only(KeyMap *km, Arg *arg)
 static void 
 commands_set_bars(int status) 
 {
-    gtk_widget_set_visible(dwb.gui.topbox, (status & BAR_VIS_TOP) && (GET_BOOL("show-single-tab") || dwb.state.views->next));
+    gtk_widget_set_visible(dwb.gui.tabbox, (status & BAR_VIS_TOP) && (GET_BOOL("show-single-tab") || dwb.state.views->next));
     gtk_widget_set_visible(dwb.gui.bottombox, status & BAR_VIS_STATUS);
     if ((status & BAR_VIS_STATUS) ) 
         dom_remove_from_parent(WEBKIT_DOM_NODE(CURRENT_VIEW()->hover.element), NULL);
@@ -934,7 +934,7 @@ commands_tab_move(KeyMap *km, Arg *arg)
         case TAB_MOVE_RIGHT  : newpos = MAX(MIN(l-1, g_list_position(dwb.state.views, dwb.state.fview)+NUMMOD), 0); break;
         default :  newpos = MAX(MIN(l, NUMMOD)-1, 0); break;
     }
-    gtk_box_reorder_child(GTK_BOX(dwb.gui.topbox), CURRENT_VIEW()->tabevent, l-(newpos+1));
+    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), CURRENT_VIEW()->tabevent, l-(newpos+1));
     gtk_box_reorder_child(GTK_BOX(dwb.gui.mainbox), CURRENT_VIEW()->scroll, newpos);
 
     dwb.state.views = g_list_remove_link(dwb.state.views, dwb.state.fview);

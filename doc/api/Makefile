@@ -6,16 +6,9 @@ include $(BASEDIR)/config.mk
 
 all: web man webman
 
-web: jsapi.html
-
-latex: jsapi.tex
-
 man: dwb-js.7
 
 webman: jsapi.7.html
-
-jsapi.html: jsapi.txt
-	asciidoc -b html5 -a toc2 $<
 
 jsapi.7.html: jsapi.7.txt
 	asciidoc -b html5 -a toc2 $<

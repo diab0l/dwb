@@ -84,6 +84,8 @@ static DwbStatus dwb_set_do_not_track(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_tab_orientation(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_tab_width(GList *gl, WebSettings *s);
 static void dwb_set_statusbar_color();
 //static DwbStatus dwb_set_javascript_debugging(GList *gl, WebSettings *s);
 #ifdef WITH_LIBSOUP_2_38
@@ -188,6 +190,26 @@ dwb_set_passthrough(GList *gl, WebSettings *s)
         return STATUS_ERROR;
     return STATUS_OK;
 }/*}}}*/
+static DwbStatus
+dwb_set_tab_orientation(GList *gl, WebSettings *s) 
+{
+    if (!g_strcmp0(s->arg_local.p, "horizontal"))
+        dwb.misc.tab_orientation = TAB_HORIZONTAL;
+    else if (!g_strcmp0(s->arg_local.p, "vertical-left"))
+        dwb.misc.tab_orientation = TAB_VERTICAL_LEFT;
+    else if (!g_strcmp0(s->arg_local.p, "vertical-right"))
+        dwb.misc.tab_orientation = TAB_VERTICAL_RIGHT;
+    else 
+        return STATUS_ERROR;
+    if (! (s->apply & SETTING_INITIALIZE))
+        dwb_pack(GET_CHAR("widget-packing"), true);
+    return STATUS_OK;
+}/*}}}*/
+static DwbStatus
+dwb_set_tab_width(GList *gl, WebSettings *s) 
+{
+    return dwb_pack(GET_CHAR("widget-packing"), true);
+}
 
 /*{{{*/
 static DwbStatus 
@@ -242,9 +264,9 @@ dwb_set_show_single_tab(GList *gl, WebSettings *s) {
     if (dwb.state.views && !dwb.state.views->next) 
     {
         if (!dwb.misc.show_single_tab)
-            gtk_widget_hide(dwb.gui.topbox);
+            gtk_widget_hide(dwb.gui.tabbox);
         else if (dwb.state.bar_visible & BAR_VIS_TOP)
-            gtk_widget_show(dwb.gui.topbox);
+            gtk_widget_show(dwb.gui.tabbox);
     }
     return STATUS_OK;
 }/*}}}*/
@@ -302,11 +324,14 @@ static DwbStatus
 dwb_set_widget_packing(GList *gl, WebSettings *s) 
 {
     DwbStatus ret = STATUS_OK;
-    if (dwb_pack(s->arg_local.p, true) != STATUS_OK) 
+    if (! (s->apply && SETTING_INITIALIZE) )
     {
-        g_free(s->arg_local.p);
-        s->arg_local.p = g_strdup(DEFAULT_WIDGET_PACKING);
-        ret = STATUS_ERROR;
+        if (dwb_pack(s->arg_local.p, true) != STATUS_OK) 
+        {
+            g_free(s->arg_local.p);
+            s->arg_local.p = g_strdup(DEFAULT_WIDGET_PACKING);
+            ret = STATUS_ERROR;
+        }
     }
     return ret;
 }/*}}}*/
@@ -1506,7 +1531,7 @@ dwb_hide_tabbar(int *running)
 {
     if (! (dwb.state.bar_visible & BAR_VIS_TOP)) 
     {
-        gtk_widget_hide(dwb.gui.topbox);
+        gtk_widget_hide(dwb.gui.tabbox);
     }
     *running = 0;
     return false;
@@ -1562,7 +1587,7 @@ dwb_focus_view(GList *gl, const char *event)
         dwb_focus(gl);
         if (! (dwb.state.bar_visible & BAR_VIS_TOP) && dwb.misc.tabbar_delay > 0) 
         {
-            gtk_widget_show(dwb.gui.topbox);
+            gtk_widget_show(dwb.gui.tabbox);
             if (running != 0) 
                 g_source_remove(running);
             running = g_timeout_add(dwb.misc.tabbar_delay * 1000, (GSourceFunc)dwb_hide_tabbar, &running);
@@ -3932,7 +3957,11 @@ dwb_init_settings()
         g_hash_table_insert(dwb.settings, key, s);
 
         if (s->apply & SETTING_BUILTIN || s->apply & SETTING_ONINIT) 
+        {
+            s->apply |= SETTING_INITIALIZE;
             s->func(NULL, s);
+            s->apply &= ~SETTING_INITIALIZE;
+        }
         
         g_free(value);
     }
@@ -4100,9 +4129,10 @@ dwb_pack(const char *layout, gboolean rebuild)
 
     if (rebuild) 
     {
-        gtk_widget_remove_from_parent(dwb.gui.topbox);
+        gtk_widget_remove_from_parent(dwb.gui.tabbox);
         gtk_widget_remove_from_parent(dwb.gui.downloadbar);
-        gtk_widget_remove_from_parent(dwb.gui.mainbox);
+        //gtk_widget_remove_from_parent(dwb.gui.mainbox);
+        gtk_widget_remove_from_parent(dwb.gui.tabwrapperbox);
         gtk_widget_remove_from_parent(dwb.gui.statusbox);
         gtk_widget_remove_from_parent(dwb.gui.bottombox);
     }
@@ -4111,18 +4141,20 @@ dwb_pack(const char *layout, gboolean rebuild)
         switch (*bak) 
         {
             case 't': 
-                gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.topbox, false, false, 0);
+                if (dwb.misc.tab_orientation == TAB_HORIZONTAL)
+                    gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.tabbox, false, false, 0);
                 dwb.state.bar_visible |= BAR_VIS_TOP;
                 break;
             case 'T': 
-                gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.topbox, false, false, 0);
+                if (dwb.misc.tab_orientation == TAB_HORIZONTAL)
+                    gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.tabbox, false, false, 0);
                 dwb.state.bar_visible &= ~BAR_VIS_TOP;
                 break;
             case 'd': 
                 gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.downloadbar, false, false, 0);
                 break;
             case 'w': 
-                gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.mainbox, true, true, 0);
+                gtk_box_pack_start(GTK_BOX(dwb.gui.vbox), dwb.gui.tabwrapperbox, true, true, 0);
                 wv = true;
                 break;
             case 's': 
@@ -4150,9 +4182,34 @@ dwb_pack(const char *layout, gboolean rebuild)
         bak++;
 
     }
+
+    if (dwb.misc.tab_orientation == TAB_HORIZONTAL)
+    {
+        gtk_widget_hide(dwb.gui.dummybox);
+        gtk_orientable_set_orientation(GTK_ORIENTABLE(dwb.gui.tabcontainer), GTK_ORIENTATION_HORIZONTAL);
+        gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, true, true, 0, GTK_PACK_START);
+        gtk_widget_set_size_request(dwb.gui.tabcontainer, -1, -1);
+    }
+    else 
+    {
+        gtk_box_pack_start(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.tabbox, false, false, 0);
+        if (dwb.misc.tab_orientation == TAB_VERTICAL_LEFT)
+        {
+            gtk_box_reorder_child(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.tabbox, 0);
+        }
+        else 
+        {
+            gtk_box_reorder_child(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.tabbox, -1);
+        }
+        gtk_orientable_set_orientation(GTK_ORIENTABLE(dwb.gui.tabcontainer), GTK_ORIENTATION_VERTICAL);
+        gtk_widget_set_size_request(dwb.gui.tabcontainer, GET_INT("tab-width"), -1);
+        gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0, GTK_PACK_START);
+        gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, true, true, 0, GTK_PACK_START);
+        gtk_widget_show(dwb.gui.dummybox);
+    }
     gtk_widget_show_all(dwb.gui.statusbox);
     gtk_widget_set_visible(dwb.gui.bottombox, dwb.state.bar_visible & BAR_VIS_STATUS);
-    gtk_widget_set_visible(dwb.gui.topbox, dwb.state.bar_visible & BAR_VIS_TOP);
+    gtk_widget_set_visible(dwb.gui.tabbox, dwb.state.bar_visible & BAR_VIS_TOP);
     return ret;
 }
 
@@ -4201,15 +4258,25 @@ dwb_init_gui()
     /* Main */
 #if _HAS_GTK3 
     dwb.gui.vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    dwb.gui.topbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
-    gtk_box_set_homogeneous(GTK_BOX(dwb.gui.topbox), true);
+    dwb.gui.tabcontainer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
+    gtk_box_set_homogeneous(GTK_BOX(dwb.gui.tabcontainer), true);
     dwb.gui.mainbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
     gtk_box_set_homogeneous(GTK_BOX(dwb.gui.mainbox), true);
+    dwb.gui.tabwrapperbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
+    gtk_box_set_homogeneous(GTK_BOX(dwb.gui.tabwrapperbox), false);
+    dwb.gui.dummbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 1);
 #else
     dwb.gui.vbox = gtk_vbox_new(false, 0);
-    dwb.gui.topbox = gtk_hbox_new(true, 1);
+    dwb.gui.tabcontainer = gtk_hbox_new(true, 1);
     dwb.gui.mainbox = gtk_hbox_new(true, 1);
+    dwb.gui.tabwrapperbox = gtk_hbox_new(false, 0);
+    dwb.gui.dummybox = gtk_vbox_new(true, 1);
 #endif
+    dwb.gui.tabbox = gtk_vbox_new(false, 0);
+    gtk_box_pack_start(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0);
+    gtk_box_pack_end(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, true, true, 0);
+    gtk_box_pack_start(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.mainbox, true, true, 0);
+    
 
     /* Downloadbar */
 #if _HAS_GTK3 
@@ -4263,6 +4330,8 @@ dwb_init_gui()
 
     gtk_container_add(GTK_CONTAINER(dwb.gui.window), dwb.gui.vbox);
 
+    gtk_widget_show(dwb.gui.tabwrapperbox);
+    gtk_widget_show(dwb.gui.tabbox);
     gtk_widget_show(dwb.gui.mainbox);
     gtk_widget_show(dwb.gui.vbox);
     gtk_widget_show(dwb.gui.window);
