@@ -379,50 +379,69 @@ adblock_apply_element_hider(WebKitWebFrame *frame, GList *gl)
 static gboolean
 adblock_before_load_cb(WebKitDOMDOMWindow *win, WebKitDOMEvent *event, GList *gl) 
 {
-    WebKitDOMElement *src = (void*)webkit_dom_event_get_src_element(event);
-    char *tagname = webkit_dom_element_get_tag_name(src);
-    const char *url = NULL;
 
-    gboolean ret = false;
+    WebKitDOMEventTarget *src = webkit_dom_event_get_target(event);
+    g_return_val_if_fail(WEBKIT_DOM_IS_NODE(src), false);
 
-    WebKitDOMDocument *doc = webkit_dom_dom_window_get_document(win);
-    char *baseURI = webkit_dom_document_get_document_uri(doc);
+    gboolean ret;
+    char *url = NULL;
+    char *tagname = NULL;
+    char *baseURI = NULL;
+    char *type = NULL;
+    WebKitDOMNode *node = WEBKIT_DOM_NODE(src);
+
+    tagname = webkit_dom_node_get_node_name(node);
+
+    baseURI = webkit_dom_node_get_base_uri(node);
 
     WebKitDOMDocument *main_doc = webkit_web_view_get_dom_document(WEBVIEW(gl));
     WebKitDOMDOMWindow *main_win = webkit_dom_document_get_default_view(main_doc);
     AdblockAttribute attributes = win == main_win ? AA_DOCUMENT : AA_SUBDOCUMENT;
 
-    if (webkit_dom_element_has_attribute(src, "src")) 
-        url = webkit_dom_element_get_attribute(src, "src");
-    else if (webkit_dom_element_has_attribute(src, "href")) 
-        url = webkit_dom_element_get_attribute(src, "href");
-    else if (webkit_dom_element_has_attribute(src, "data")) 
-        url = webkit_dom_element_get_attribute(src, "data");
-    if (url == NULL) 
+    if (!g_strcmp0(tagname, "LINK"))
+    {
+        attributes |= AA_STYLESHEET;
+        char *type = dom_node_get_attribute(node, "REL");
+        if (!g_strcmp0(type, "stylesheet"))
+            attributes |= AA_STYLESHEET;
+        else if (! g_strcmp0((type = dom_node_get_attribute(node, "TYPE")), "text/css"))
+            attributes |= AA_STYLESHEET;
+        else 
+            goto error_out;
+        url = dom_node_get_attribute(node, "HREF");
+
+    }
+    else if (!g_strcmp0(tagname, "OBJECT") )
+    {
+        url = dom_node_get_attribute(node, "data");
+        attributes |= AA_OBJECT;
+    }
+    else if (!g_strcmp0(tagname, "EMBED"))
+    {
+        url = dom_node_get_attribute(node, "src");
+        attributes |= AA_OBJECT;
+    }
+    else if (!g_strcmp0(tagname, "IMG"))
+    {
+        url = dom_node_get_attribute(node, "src");
+        attributes |= AA_IMAGE;
+    }
+    else if (!g_strcmp0(tagname, "SCRIPT"))
+    {
+        url = dom_node_get_attribute(node, "src");
+        attributes |= AA_SCRIPT;
+    }
+    if (url == NULL)
         goto error_out;
 
-    if (!g_strcmp0(tagname, "IMG")) 
-        attributes |= AA_IMAGE;
-    else if (!g_strcmp0(tagname, "SCRIPT"))
-        attributes |= AA_SCRIPT;
-    else if (!g_strcmp0(tagname, "LINK")  ) 
-    {
-        char *rel  = webkit_dom_html_link_element_get_rel((void*)src);
-        char *type  = webkit_dom_element_get_attribute(src, "type");
-        if (!g_strcmp0(rel, "stylesheet") || !g_strcmp0(type, "text/css")) 
-            attributes |= AA_STYLESHEET;
-
-        g_free(rel);
-        g_free(type);
-    }
-    else if (!g_strcmp0(tagname, "OBJECT") || ! g_strcmp0(tagname, "EMBED")) 
-        attributes |= AA_OBJECT;
-
     if (adblock_prepare_match(url, baseURI, attributes)) 
+    {
         webkit_dom_event_prevent_default(event);
-    
+    }
     ret = true;
+
 error_out:
+    g_free(type);
     g_object_unref(src);
     g_free(tagname);
     g_free(baseURI);

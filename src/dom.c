@@ -19,6 +19,19 @@
 #include <string.h>
 #include "dwb.h"
 
+char *
+dom_node_get_attribute(WebKitDOMNode *node, const char *attribute)
+{
+    g_return_val_if_fail(WEBKIT_DOM_IS_NODE(node), NULL);
+    if (webkit_dom_node_has_attributes(node))
+    {
+        WebKitDOMNamedNodeMap *map = webkit_dom_node_get_attributes(node);
+        WebKitDOMNode *attr = webkit_dom_named_node_map_get_named_item(map, attribute);
+        if (attr)
+            return webkit_dom_node_get_node_value(attr);
+    }
+    return NULL;
+}
 gboolean
 dom_add_frame_listener(WebKitWebFrame *frame, const char *signal, GCallback callback, gboolean bubble, GList *gl) 
 {
