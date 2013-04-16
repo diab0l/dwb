@@ -32,6 +32,13 @@ dom_node_get_attribute(WebKitDOMNode *node, const char *attribute)
     }
     return NULL;
 }
+static WebKitDOMDOMWindow * 
+dom_node_get_default_view(WebKitDOMNode *node)
+{
+    g_return_val_if_fail(WEBKIT_DOM_IS_NODE(node), NULL);
+    WebKitDOMDocument *doc = webkit_dom_node_get_owner_document(node);
+    return webkit_dom_document_get_default_view(doc);
+}
 gboolean
 dom_add_frame_listener(WebKitWebFrame *frame, const char *signal, GCallback callback, gboolean bubble, GList *gl) 
 {
@@ -53,13 +60,13 @@ dom_add_frame_listener(WebKitWebFrame *frame, const char *signal, GCallback call
             tagname = webkit_dom_node_get_node_name(node);
             if (!g_ascii_strcasecmp(tagname, "iframe")) 
             {
-                framesrc = webkit_dom_html_iframe_element_get_src(WEBKIT_DOM_HTML_IFRAME_ELEMENT(node));
-                win = webkit_dom_html_iframe_element_get_content_window(WEBKIT_DOM_HTML_IFRAME_ELEMENT(node));
+                framesrc = dom_node_get_attribute(node, "src");
+                win = dom_node_get_default_view(node);
             }
             else 
             {
-                framesrc = webkit_dom_html_frame_element_get_src(WEBKIT_DOM_HTML_FRAME_ELEMENT(node));
-                win = webkit_dom_html_frame_element_get_content_window(WEBKIT_DOM_HTML_FRAME_ELEMENT(node));
+                framesrc = dom_node_get_attribute(node, "src");
+                win = dom_node_get_default_view(node);
             }
             if (!g_strcmp0(src, framesrc)) 
                 ret = webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(win), signal, callback, true, gl);
