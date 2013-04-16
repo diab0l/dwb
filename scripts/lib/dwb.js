@@ -506,7 +506,7 @@
                                 }.bind(self, id)
                             }
                     });
-                    Object.freeze(self);
+                    Object.preventExtensions(self);
 
                 };
             })() 
