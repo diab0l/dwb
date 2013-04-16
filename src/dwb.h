@@ -813,6 +813,7 @@ struct _Misc {
 #if ! _HAS_GTK3
   TabOrientation tab_orientation;
 #endif
+  gint max_tabs;
 
   //gboolean javascript_debugging;
 };
@@ -1017,6 +1018,8 @@ void dwb_init_files(void);
 void dwb_init_settings(void);
 void dwb_reload_bookmarks(void);
 void dwb_reload_quickmarks(void);
+
+void dwb_limit_tabs(gint max);
 #if 0
 void dwb_hide_tab(GList *gl);
 void dwb_show_tab(GList *gl);

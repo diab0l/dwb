@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.0 <http://docbook.sf.net/>
-.\"      Date: 04/15/2013
+.\"      Date: 04/16/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "04/15/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "04/16/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3463,6 +3463,18 @@ Whether to defer loading of a tab until a tab is focused, especially useful on s
 .RS 4
 The maximum number of visible completions, default value:
 \fI11\fR\&.
+.RE
+.PP
+\fBmaximum\-tabs\fR
+.RS 4
+Limits the maximum number of visible tabs, 0 means no limit\&. If
+\fItab\-orientation\fR
+is set to
+\fIvertical\-left\fR
+or
+\fIvertical\-right\fR
+the number of maximum tabs is computed automatically and maximum\-tabs will be ignored, default value:
+\fI0\fR\&.
 .RE
 .PP
 \fBmessage\-delay\fR

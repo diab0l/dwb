@@ -1897,7 +1897,6 @@ view_add(const char *uri, gboolean background)
         g_free(json);
     }
 
-
     view_init_signals(ret);
     view_init_settings(ret);
     if (GET_BOOL("adblocker"))

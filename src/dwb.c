@@ -77,6 +77,7 @@ static DwbStatus dwb_set_cookie_accept_policy(GList *, WebSettings *);
 static DwbStatus dwb_set_favicon(GList *, WebSettings *);
 static DwbStatus dwb_set_auto_insert_mode(GList *, WebSettings *);
 static DwbStatus dwb_set_tabbar_delay(GList *, WebSettings *);
+static DwbStatus dwb_set_max_tabs(GList *, WebSettings *);
 static DwbStatus dwb_set_close_last_tab_policy(GList *, WebSettings *);
 static DwbStatus dwb_set_ntlm(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_find_delay(GList *gl, WebSettings *s);
@@ -143,6 +144,7 @@ static gboolean dwb_user_script_cb(GIOChannel *channel, GIOCondition condition, 
 
 
 static int signals[] = { SIGFPE, SIGILL, SIGINT, SIGQUIT, SIGTERM, SIGALRM, SIGSEGV};
+static int s_tab_allocate_id;
 /*}}}*/
 
 #include "config.h"
@@ -198,15 +200,38 @@ static DwbStatus
 dwb_set_tab_orientation(GList *gl, WebSettings *s) 
 {
     if (!g_strcmp0(s->arg_local.p, "horizontal"))
+    {
+        if (s_tab_allocate_id != 0)
+        {
+            g_signal_handler_disconnect(dwb.gui.tabbox, s_tab_allocate_id);
+            s_tab_allocate_id = 0;
+        }
+
         dwb.misc.tab_orientation = TAB_HORIZONTAL;
+    }
     else if (!g_strcmp0(s->arg_local.p, "vertical-left"))
+    {
+        if (! (s->apply & SETTING_INITIALIZE) && s_tab_allocate_id == 0)
+        {
+            s_tab_allocate_id = g_signal_connect(dwb.gui.tabbox, "size-allocate", G_CALLBACK(callback_tab_container_heigth), NULL);
+        }
         dwb.misc.tab_orientation = TAB_VERTICAL_LEFT;
+    }
     else if (!g_strcmp0(s->arg_local.p, "vertical-right"))
+    {
+        if (! (s->apply & SETTING_INITIALIZE) && s_tab_allocate_id == 0)
+        {
+            s_tab_allocate_id = g_signal_connect(dwb.gui.tabbox, "size-allocate", G_CALLBACK(callback_tab_container_heigth), NULL);
+        }
         dwb.misc.tab_orientation = TAB_VERTICAL_RIGHT;
+    }
     else 
         return STATUS_ERROR;
     if (! (s->apply & SETTING_INITIALIZE))
+    {
         dwb_pack(GET_CHAR("widget-packing"), true);
+    }
+
     return STATUS_OK;
 }/*}}}*/
 static DwbStatus
@@ -506,6 +531,21 @@ dwb_set_tabbar_delay(GList *l, WebSettings *s)
 {
     dwb.misc.tabbar_delay = s->arg_local.i;
     return STATUS_OK;
+}/*}}}*/
+/* dwb_set_tabbar_delay {{{*/
+static DwbStatus 
+dwb_set_max_tabs(GList *l, WebSettings *s) 
+{
+    if (s->arg_local.i >= 0)
+    {
+        dwb.misc.max_tabs = s->arg_local.i;
+#ifndef _HAS_GTK3
+        if (dwb.misc.tab_orientation == TAB_HORIZONTAL)
+#endif
+            dwb_limit_tabs(dwb.misc.max_tabs);
+        return STATUS_OK;
+    }
+    return STATUS_ERROR;
 }/*}}}*/
 
 /* dwb_set_favicon(GList *l, WebSettings *s){{{*/
@@ -1553,6 +1593,33 @@ dwb_hide_tabbar(int *running)
     return false;
 }/*}}}*/
 
+void 
+dwb_limit_tabs(gint max)
+{
+    g_return_if_fail(max > 0);
+
+    int length, n, i = 0;
+    int m, median;
+
+    length = g_list_length(dwb.state.views);
+
+    if (length == 1)
+        return;
+
+    m = max/2+1;
+    median = max % 2 == 0 ? max/2 : m;
+    n = g_list_position(dwb.state.views, dwb.state.fview);
+    for (GList *l = dwb.state.views; l; l=l->next, i++)
+    {
+        if ((n < median && i<max) || 
+                (n > length-median-1 && i>=length-max) || 
+                (i > n-median && i<n+m))
+            gtk_widget_show(VIEW(l)->tabevent);
+        else 
+            gtk_widget_hide(VIEW(l)->tabevent);
+    }
+}
+
 /* dwb_focus_view(GList *gl){{{*/
 gboolean
 dwb_focus_view(GList *gl, const char *event) 
@@ -1607,6 +1674,15 @@ dwb_focus_view(GList *gl, const char *event)
             if (running != 0) 
                 g_source_remove(running);
             running = g_timeout_add(dwb.misc.tabbar_delay * 1000, (GSourceFunc)dwb_hide_tabbar, &running);
+        }
+        if (
+                dwb.misc.max_tabs > 0 
+#ifndef _HAS_GTK3
+                && dwb.misc.tab_orientation == TAB_HORIZONTAL
+#endif
+                )
+        {
+            dwb_limit_tabs(dwb.misc.max_tabs);
         }
         return false;
     }
@@ -4218,6 +4294,8 @@ dwb_pack(const char *layout, gboolean rebuild)
         gtk_orientable_set_orientation(GTK_ORIENTABLE(dwb.gui.tabcontainer), GTK_ORIENTATION_HORIZONTAL);
         gtk_box_set_child_packing(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0, GTK_PACK_START);
         gtk_widget_set_size_request(dwb.gui.tabcontainer, -1, -1);
+        if (dwb.misc.max_tabs > 0)
+            dwb_limit_tabs(dwb.misc.max_tabs);
     }
     else 
     {
@@ -4238,7 +4316,8 @@ dwb_pack(const char *layout, gboolean rebuild)
 #endif
     gtk_widget_show_all(dwb.gui.statusbox);
     gtk_widget_set_visible(dwb.gui.bottombox, dwb.state.bar_visible & BAR_VIS_STATUS);
-    gtk_widget_set_visible(dwb.gui.tabbox, dwb.state.bar_visible & BAR_VIS_TOP);
+    if ((dwb.state.views && dwb.state.views->next) || dwb.misc.show_single_tab)
+        gtk_widget_set_visible(dwb.gui.tabbox, dwb.state.bar_visible & BAR_VIS_TOP);
     return ret;
 }
 
@@ -4301,6 +4380,8 @@ dwb_init_gui()
 
     dwb.gui.dummybox = gtk_vbox_new(true, 1);
     dwb.gui.tabbox = gtk_vbox_new(false, 0);
+    if (dwb.misc.tab_orientation != TAB_HORIZONTAL)
+        s_tab_allocate_id = g_signal_connect(dwb.gui.tabbox, "size-allocate", G_CALLBACK(callback_tab_container_heigth), NULL);
     gtk_box_pack_end(GTK_BOX(dwb.gui.tabbox), dwb.gui.dummybox, true, true, 0);
     gtk_box_pack_start(GTK_BOX(dwb.gui.tabwrapperbox), dwb.gui.mainbox, true, true, 0);
     gtk_box_pack_start(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0);

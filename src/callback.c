@@ -286,4 +286,20 @@ callback_dns_resolve(SoupAddress *address, guint status, GList *gl)
     g_free(v->status->request_uri);
     v->status->request_uri = NULL;
 }
+#ifndef  _HAS_GTK3
+void 
+callback_tab_container_heigth(GtkWidget *tabcontainer, GdkRectangle *rect, gpointer data)
+{
+    GtkAllocation a;
+    if (dwb.state.views)
+    {
+        gtk_widget_get_allocation(VIEW(dwb.state.views)->tabevent, &a);
+        if (rect->height > 0 && a.height > 0)
+        {
+            // also add 1px padding
+            dwb_limit_tabs(rect->height / (a.height+1));
+        }
+    }
+}
+#endif
 #endif

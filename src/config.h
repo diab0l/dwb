@@ -1197,6 +1197,8 @@ static WebSettings DWB_SETTINGS[] = {
 #endif
   { { "mouse-cycles-through-tabs",            "Whether mouse scroll wheel cycles through tabs", },                                            
     SETTING_GLOBAL,  BOOLEAN, { .b = true }, NULL,   { 0 }, }, 
+  { { "maximum-tabs",            "Maximum number of tabs", },                                            
+    SETTING_GLOBAL | SETTING_ONINIT,  INTEGER, { .i = 0 }, (S_Func)dwb_set_max_tabs,   { 0 }, }, 
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

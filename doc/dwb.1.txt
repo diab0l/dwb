@@ -1436,6 +1436,12 @@ useful on startup and with slow internet connections, default value: 'false'.
 *max-visible-completions*::
 The maximum number of visible completions, default value: '11'.
 
+*maximum-tabs*::
+Limits the maximum number of visible tabs, 0 means no limit. If
+'tab-orientation' is set to 'vertical-left' or 'vertical-right' the number of
+maximum tabs is computed automatically and maximum-tabs will be ignored, default
+value: '0'.
+
 *message-delay*::
 The duration messages are shown. Possible values: duration in seconds (integer),
 default value: '2'.
