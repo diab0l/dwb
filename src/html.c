@@ -18,6 +18,7 @@
 
 #include <string.h>
 #include "dwb.h"
+#include "dom.h"
 #include "html.h"
 #include "util.h"
 #include "scripts.h"
@@ -34,7 +35,7 @@ struct _HtmlTable {
 };
 
 static gboolean html_key_changed(WebKitDOMElement *target);
-void html_settings_changed(WebKitDOMElement *el);
+void html_settings_changed(WebKitDOMNode *el);
 
 DwbStatus html_bookmarks(GList *, HtmlTable *);
 DwbStatus html_history(GList *, HtmlTable *);
@@ -92,32 +93,32 @@ html_load_page(WebKitWebView *wv, HtmlTable *t, char *panel) {
 gboolean
 html_remove_item_cb(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl) 
 {
-    char *navigation; 
+    gboolean ret = false;
     const char *uri;
     WebKitDOMEventTarget *target = webkit_dom_event_get_target(ev);
-    if (webkit_dom_element_has_attribute((void*)target, "navigation")) 
+    char *attr = NULL;
+    if ( (attr = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "navigation")) != NULL) 
     {
-        navigation = webkit_dom_element_get_attribute(WEBKIT_DOM_ELEMENT(target), "navigation");
         uri = webkit_web_view_get_uri(WEBVIEW(gl));
         if (!g_strcmp0(uri, "dwb:history")) 
-            dwb_remove_history(navigation);
+            dwb_remove_history(attr);
         else if (!g_strcmp0(uri, "dwb:bookmarks")) 
-            dwb_remove_bookmark(navigation);
+            dwb_remove_bookmark(attr);
         else if (!g_strcmp0(uri, "dwb:quickmarks")) 
-            dwb_remove_quickmark(navigation);
+            dwb_remove_quickmark(attr);
         else if (!g_strcmp0(uri, "dwb:downloads")) 
-            dwb_remove_download(navigation);
+            dwb_remove_download(attr);
         else if (!g_strcmp0(uri, "dwb:searchengines")) 
-            dwb_remove_search_engine(navigation);
+            dwb_remove_search_engine(attr);
     }
-    else if (webkit_dom_element_has_attribute((void*) target, "href")) 
+    else if ( (attr = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "href")) != NULL) 
     {
-        char *href = webkit_dom_element_get_attribute((void*) target, "href");
-        dwb_load_uri(gl, href);
+        dwb_load_uri(gl, attr);
         webkit_dom_event_prevent_default(ev);
-        return true;
+        ret = true;
     }
-    return false;
+    g_free(attr);
+    return ret;
 }
 void
 html_load_status_cb(WebKitWebView *web, GParamSpec *p, GList *gl) 
@@ -215,9 +216,12 @@ html_history(GList *gl, HtmlTable *table)
     return html_navigation(gl, dwb.fc.history, table);
 }
 void
-html_settings_changed(WebKitDOMElement *el) 
+html_settings_changed(WebKitDOMNode *node) 
 {
-    char *id = webkit_dom_html_element_get_id(WEBKIT_DOM_HTML_ELEMENT(el));
+    char *id = dom_node_get_attribute(node, "id");
+    if (id == NULL)
+        return;
+    WebKitDOMElement *el = webkit_dom_document_get_element_by_id(webkit_dom_node_get_owner_document(node), id);
     char *value = NULL;
     char *type;
     if (WEBKIT_DOM_IS_HTML_INPUT_ELEMENT(el)) 
@@ -246,7 +250,7 @@ gboolean
 html_settings_changed_cb(WebKitDOMElement *el, WebKitDOMEvent *ev, WebKitWebView *wv) 
 {
     WebKitDOMEventTarget *target = webkit_dom_event_get_target(ev);
-    html_settings_changed(WEBKIT_DOM_ELEMENT(target));
+    html_settings_changed(WEBKIT_DOM_NODE(target));
     return true;
 }
 gboolean
@@ -263,7 +267,7 @@ html_keydown_settings_cb(WebKitDOMElement *el, WebKitDOMEvent *ev, WebKitWebView
     {
         WebKitDOMEventTarget *target = webkit_dom_event_get_target(ev);
         if (target != NULL) 
-            html_settings_changed(WEBKIT_DOM_ELEMENT(target));
+            html_settings_changed(WEBKIT_DOM_NODE(target));
 
         dwb_change_mode(NORMAL_MODE, false);
         return true;

@@ -144,7 +144,9 @@ static gboolean dwb_user_script_cb(GIOChannel *channel, GIOCondition condition, 
 
 
 static int signals[] = { SIGFPE, SIGILL, SIGINT, SIGQUIT, SIGTERM, SIGALRM, SIGSEGV};
+#ifndef _HAS_GTK3
 static int s_tab_allocate_id;
+#endif
 /*}}}*/
 
 #include "config.h"
