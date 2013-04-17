@@ -500,6 +500,10 @@ function userscriptsStart()
         Signal.connect("documentLoaded", loadFinishedCallback);
         ret = true;
     }
+    if (ret == false)
+    {
+        extensions.error(me, "No scripts found, place scripts in $XDG_CONFIG_HOME/.config/dwb/greasemonkey");
+    }
     //metaData = {};
     //onStart.concat(onEnd).forEach(function (v, k, obj) {
     //  var o = { 
