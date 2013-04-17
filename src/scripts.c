@@ -271,6 +271,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     JSValueRef ret = NIL;
     gboolean global = false;
     JSValueRef args[1];
+    JSValueRef e = NULL;
     JSObjectRef f;
     JSStringRef script;
     char *name = NULL;
@@ -290,7 +291,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     if (argc > 2)
         debug = JSValueToNumber(ctx, argv[2], exc);
     if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
-        global = JSValueToBoolean(ctx, argv[2]);
+        global = JSValueToBoolean(ctx, argv[3]);
 
     if (JSValueIsObject(ctx, argv[0]) && (f = js_value_to_function(ctx, argv[0], exc)) != NULL)
     {
@@ -308,7 +309,6 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     }
 
 
-    JSValueRef e = NULL;
     if (global) 
         JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
     else 
