@@ -121,7 +121,7 @@ completion_init_completion(GList *store, GList *gl, gboolean word_beginnings, vo
         {
             for (int i=0; token[i]; i++) 
             {
-                if (func(n->first, token[i]) || (!word_beginnings && n->second && func(n->second, token[i]))) 
+                if ((n->first && func(n->first, token[i])) || (!word_beginnings && n->second && func(n->second, token[i]))) 
                     match = true;
                 else 
                 {
@@ -431,7 +431,7 @@ completion_get_key_completion(gboolean entry)
         {
             for (int i=0; m->map->alias[i] != NULL; i++) 
             {
-                if (g_str_has_prefix(m->map->alias[i], input) || !g_strcmp0(input, m->map->alias[i]) ) 
+                if ((m->map->alias[i] && g_str_has_prefix(m->map->alias[i], input)) || !g_strcmp0(input, m->map->alias[i]) ) 
                 {
                     list = completion_create_key_completion(list, m->map->alias[i], m);
                     break;
@@ -448,7 +448,7 @@ completion_get_key_completion(gboolean entry)
             continue;
         
         Navigation n = m->map->n;
-        if (g_str_has_prefix(n.first, input)) 
+        if (n.first && g_str_has_prefix(n.first, input)) 
             list = completion_create_key_completion(list, n.first, m);
     }
     return list;

@@ -187,7 +187,7 @@ static KeyValue KEYS[] = {
   { "toggle_tab",               {   "@Tab@",      GDK_CONTROL_MASK, 0 }, }, 
   { "reload_bookmarks",         {   NULL,         0, 0 }, }, 
   { "reload_quickmarks",        {   NULL,         0, 0 }, }, 
-  { "print_preview",        {   NULL,         0, 0 }, }, 
+  { "print_preview",            {   NULL,         0, 0 }, }, 
 };
 
 /* FUNCTION_MAP{{{*/
@@ -319,8 +319,8 @@ static FunctionMap FMAP [] = {
     { .n = OPEN_NEW_WINDOW }, EP_NONE, { NULL }, },
   
   { { "command_mode",          "Enter command mode",                }, 0, 
-    (Func)commands_command_mode,            NULL,                              POST_SM, 
-    {0}, EP_NONE, { NULL }, },
+    (Func)commands_change_mode,            NULL,                              POST_SM, 
+    { .n = COMMAND_MODE, .b = false }, EP_NONE, { NULL }, },
   
   { { "find_backward",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE, 
     (Func)commands_find,                NO_URL,                            NEVER_SM,     
@@ -467,12 +467,12 @@ static FunctionMap FMAP [] = {
     { .n = OPEN_NEW_WINDOW, .i = 1 }, EP_NONE, { "winforward", "wfo", NULL }, },
   
   { { "insert_mode",           "Insert Mode",                       }, CP_COMMANDLINE | CP_HAS_MODE, 
-    (Func)commands_insert_mode,             NULL,                              POST_SM, 
-    { 0 }, EP_NONE, { "i", "insert", NULL }, },
-  
+    (Func)commands_change_mode,             NULL,                              POST_SM, 
+    { .n = INSERT_MODE, .b = false }, EP_NONE, { "i", "insert", NULL }, },
+
   { { "normal_mode",           "Normal Mode",                       }, CP_OVERRIDE_INSERT | CP_OVERRIDE_ENTRY | CP_OVERRIDE_ALL, 
-    (Func)commands_normal_mode,             NULL,                              POST_SM, 
-    { 0 }, EP_NONE, { NULL }, },
+    (Func)commands_change_mode,             NULL,                              POST_SM, 
+    { .n = NORMAL_MODE, .b = true }, EP_NONE, { NULL }, },
   
   { { "load_html",             "Load html",                         }, CP_COMMANDLINE, 
     (Func)commands_open,           NULL,                       NEVER_SM,   
@@ -760,8 +760,8 @@ static FunctionMap FMAP [] = {
     { 0 }, EP_NONE, { NULL }, },
 
   { { "entry_escape",     "Command line: Alternate escape binding", },             CP_OVERRIDE_ENTRY,  
-    (Func)commands_entry_escape,           NULL,        ALWAYS_SM,  
-    { 0 }, EP_NONE, { NULL }, },
+    (Func)commands_change_mode,           NULL,        ALWAYS_SM,  
+    { .n = NORMAL_MODE, .b = true }, EP_NONE, { NULL }, },
   
   { { "entry_confirm",  "Command line: Alternate return binding", },          CP_OVERRIDE_ENTRY,  
     (Func)commands_entry_confirm,        NULL,        ALWAYS_SM,  

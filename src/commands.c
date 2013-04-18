@@ -184,18 +184,6 @@ commands_add_search_field(KeyMap *km, Arg *a)
 
 }/*}}}*/
 
-DwbStatus 
-commands_insert_mode(KeyMap *km, Arg *a) 
-{
-    return dwb_change_mode(INSERT_MODE);
-}
-DwbStatus 
-commands_normal_mode(KeyMap *km, Arg *a) 
-{
-    dwb_change_mode(NORMAL_MODE, true);
-    return STATUS_OK;
-}
-
 /* commands_toggle_proxy {{{*/
 DwbStatus
 commands_toggle_proxy(KeyMap *km, Arg *a) 
@@ -524,14 +512,14 @@ commands_entry_confirm(KeyMap *km, Arg *a)
 
     return STATUS_OK;
 }/*}}}*/
-/* commands_entry_escape {{{*/
 DwbStatus 
-commands_entry_escape(KeyMap *km, Arg *a) 
+commands_change_mode(KeyMap *km, Arg *a)
 {
-    dwb_change_mode(NORMAL_MODE, true);
-    return STATUS_OK;
-}/*}}}*/
-
+    if (a->b)
+        return dwb_change_mode(a->n, true);
+    else 
+        return dwb_change_mode(a->n);
+}
 /* commands_save_session {{{*/
 DwbStatus
 commands_save_session(KeyMap *km, Arg *arg) 
@@ -802,13 +790,7 @@ commands_open_editor(KeyMap *km, Arg *arg)
     return editor_open();
 }/*}}}*/
 
-/* dwb_command_mode {{{*/
-DwbStatus
-commands_command_mode(KeyMap *km, Arg *arg) 
-{
-    return dwb_change_mode(COMMAND_MODE);
-}/*}}}*/
-/* dwb_command_mode {{{*/
+/* dwb_only {{{*/
 DwbStatus
 commands_only(KeyMap *km, Arg *arg) 
 {
