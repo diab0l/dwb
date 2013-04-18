@@ -541,9 +541,11 @@ dwb_set_max_tabs(GList *l, WebSettings *s)
     if (s->arg_local.i >= 0)
     {
         dwb.misc.max_tabs = s->arg_local.i;
+        if (s->arg_local.i > 0
 #ifndef _HAS_GTK3
-        if (dwb.misc.tab_orientation == TAB_HORIZONTAL)
+                && dwb.misc.tab_orientation == TAB_HORIZONTAL
 #endif
+        )
             dwb_limit_tabs(dwb.misc.max_tabs);
         return STATUS_OK;
     }
