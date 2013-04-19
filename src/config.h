@@ -60,6 +60,7 @@ static KeyValue KEYS[] = {
   { "win_hist_back",            {   "wh",         0,                0 }, },  
   { "win_hist_forward",         {   "wl",         0,                0 }, },  
   { "insert_mode",              {   "i",          0,                0 }, },  
+  { "visual_mode",              {   "v",          0, 0 }, }, 
   { "normal_mode",              {   "n",          GDK_CONTROL_MASK, 0 }, },  
   { "open",                     {   "o",          0,                0 }, },  
   { "open_url",                 {   "go",         0,                0 }, }, 
@@ -147,7 +148,7 @@ static KeyValue KEYS[] = {
   { "toggle_plugins_host",      {   "ph",         0,                0 }, }, 
   { "toggle_plugins_uri_tmp",   {   "ptu",        0,                0 }, }, 
   { "toggle_plugins_host_tmp",  {   "pth",        0,                0 }, }, 
-  { "new_tab",                  {   "V",          0,                0 }, }, 
+  { "new_tab",                  {   "T",          GDK_CONTROL_MASK, 0 }, }, 
   { "new_win",                  {   "W",          0,                0 }, }, 
   { "save",                     {   "sf",         0,                0 }, }, 
   { "undo",                     {   "u",          0,                0 }, }, 
@@ -469,6 +470,10 @@ static FunctionMap FMAP [] = {
   { { "insert_mode",           "Insert Mode",                       }, CP_COMMANDLINE | CP_HAS_MODE, 
     (Func)commands_change_mode,             NULL,                              POST_SM, 
     { .n = INSERT_MODE, .b = false }, EP_NONE, { "i", "insert", NULL }, },
+
+  { { "visual_mode",           "Visual Mode",                       }, CP_COMMANDLINE | CP_HAS_MODE, 
+    (Func)commands_change_mode,             NULL,                              POST_SM, 
+    { .n = CARET_MODE, .b = false }, EP_NONE, { "visual" }, },
 
   { { "normal_mode",           "Normal Mode",                       }, CP_OVERRIDE_INSERT | CP_OVERRIDE_ENTRY | CP_OVERRIDE_ALL, 
     (Func)commands_change_mode,             NULL,                              POST_SM, 

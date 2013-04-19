@@ -1387,6 +1387,8 @@ static gboolean
 view_key_ignore_cb(WebKitWebView *wv, GdkEventKey *e, GList *gl)
 {
     // passthrough none
+    if (dwb.state.mode == CARET_MODE)
+        return false;
     if (dwb.misc.passthrough == PASSTHROUGH_NONE)
         return !(dwb.state.mode & INSERT_MODE);
     // passthrough all 
