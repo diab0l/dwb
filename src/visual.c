@@ -83,10 +83,22 @@ visual_caret(GdkEventKey *e)
         case GDK_KEY_dollar: 
             keyval[0] = GDK_KEY_End;
             break;
+        case GDK_KEY_space: 
+            if (visual)
+            {
+                visual = false;
+                dwb_set_normal_message(dwb.state.fview, false, "-- CARET --");
+            }
+            else 
+            {
+                visual = true;
+                dwb_set_normal_message(dwb.state.fview, false, "-- VISUAL --");
+            }
+            return true;
         case GDK_KEY_v: 
             visual = true;
             dwb_set_normal_message(dwb.state.fview, false, "-- VISUAL --");
-            break;
+            return true;
         case GDK_KEY_y: 
             webkit_web_view_copy_clipboard(CURRENT_WEBVIEW());
             dwb_set_normal_message(dwb.state.fview, true, "Yanked to clipboard");
