@@ -109,6 +109,5 @@ visual_caret(GdkEventKey *e)
         default :return false;
     }
     dispatch_event(keyval, state);
-    js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, "caretUpdateCursor", NULL, kJSTypeUndefined, NULL);
     return true;
 }
