@@ -884,7 +884,7 @@ dwb_update_uri(GList *gl, gboolean emit_signal)
 void 
 dwb_update_status_text(GList *gl, GtkAdjustment *a) 
 {
-    if (gl == dwb.state.fview)
+    if (gl != dwb.state.fview)
         return;
 
     if (dwb_emit_status_signal(gl, "status"))
