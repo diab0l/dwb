@@ -1041,6 +1041,9 @@ dwb_scheme_handler(GList *gl, WebKitNetworkRequest *request)
     const char *user_agent = soup_get_header_from_request(request, "User-Agent");
     if (user_agent)
         envp = g_environ_setenv(envp, "DWB_USER_AGENT", user_agent, true);
+    const char *proxy = GET_CHAR("proxy-url");
+    if (proxy)
+        envp = g_environ_setenv(envp, "DWB_PROXY", proxy, true);
 
     if (! g_spawn_async(NULL, argv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)) 
     {
@@ -3341,6 +3344,11 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     const char *user_agent = soup_get_header(dwb.state.fview, "User-Agent");
     if (user_agent != NULL)
         envp = g_environ_setenv(envp, "DWB_USER_AGENT", user_agent, true);
+
+    const char *proxy = GET_CHAR("proxy-url");
+    if (proxy)
+        envp = g_environ_setenv(envp, "DWB_PROXY", proxy, true);
+
 
     fifo = util_get_temp_filename("fifo_");
     envp = g_environ_setenv(envp, "DWB_FIFO", fifo, true);

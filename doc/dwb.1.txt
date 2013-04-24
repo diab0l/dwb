@@ -1497,7 +1497,8 @@ e.g. ftp is provided through a scheme handler. The scheme handler can either be
 an application or a script. The first command line argument will be the uri for
 your application, so you can simply set this to 'xdg-open'.  There are also the
 environment variables 'DWB_URI', 'DWB_SCHEME', 'DWB_COOKIES', 'DWB_USER_AGENT',
-and 'DWB_REFERER' available which can be used in a script, for example:
+'DWB_PROXY' and 'DWB_REFERER' available which can be used in a script, for
+example:
 
 --------
 #!/bin/sh
@@ -1637,6 +1638,7 @@ the variables
 'DWB_NUMMOD',
 'DWB_ARGUMENT',
 'DWB_REFERER',
+'DWB_PROXY',
 and
 'DWB_USER_AGENT'
 are set.
