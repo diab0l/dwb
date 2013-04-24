@@ -383,7 +383,7 @@ adblock_before_load_cb(WebKitDOMDOMWindow *win, WebKitDOMEvent *event, GList *gl
     WebKitDOMEventTarget *src = webkit_dom_event_get_target(event);
     g_return_val_if_fail(WEBKIT_DOM_IS_NODE(src), false);
 
-    gboolean ret;
+    gboolean ret = false;
     char *url = NULL;
     char *tagname = NULL;
     char *baseURI = NULL;

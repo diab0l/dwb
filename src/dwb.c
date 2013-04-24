@@ -362,7 +362,7 @@ static DwbStatus
 dwb_set_widget_packing(GList *gl, WebSettings *s) 
 {
     DwbStatus ret = STATUS_OK;
-    if (! (s->apply && SETTING_INITIALIZE) )
+    if (! (s->apply & SETTING_INITIALIZE) )
     {
         if (dwb_pack(s->arg_local.p, true) != STATUS_OK) 
         {
