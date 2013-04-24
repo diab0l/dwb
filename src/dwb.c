@@ -4097,6 +4097,8 @@ dwb_init_hints(GList *gl, WebSettings *s)
     dwb.misc.hint_style = g_strdup_printf(
             "{ \"hintLetterSeq\" : \"%s\", \"hintFont\" : \"%s\", \"hintStyle\" : \"%s\", \"hintFgColor\" : \"%s\",\
             \"hintBgColor\" : \"%s\", \"hintActiveColor\" : \"%s\", \"hintNormalColor\" : \"%s\", \"hintBorder\" : \"%s\",\
+            \"hintOffsetTop\" : %d, \
+            \"hintOffsetLeft\" : %d, \
             \"hintOpacity\" : \"%f\", \"hintHighlighLinks\" : %s, \"hintAutoFollow\" : %s }", 
             GET_CHAR("hint-letter-seq"),
             GET_CHAR("hint-font"),
@@ -4106,6 +4108,8 @@ dwb_init_hints(GList *gl, WebSettings *s)
             GET_CHAR("hint-active-color"), 
             GET_CHAR("hint-normal-color"), 
             GET_CHAR("hint-border"), 
+            GET_INT("hint-offset-top"), 
+            GET_INT("hint-offset-left"), 
             GET_DOUBLE("hint-opacity"),
             GET_BOOL("hint-highlight-links") ? "true" : "false",
             GET_BOOL("hint-autofollow") ? "true" : "false");

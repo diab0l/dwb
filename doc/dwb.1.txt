@@ -1408,6 +1408,16 @@ every letter should appear only once.  Default value: 'FDSARTGBVECWXQYIOPMNHZULK
 The background color for a normal link. Possible values: a rgb color string,
 default value: '#ffff99'.
 
+*hint-offset-left*::
+Left offset of hints in pixel, negative values will shift hints to the left, positive
+values to the right,
+default value: '0'.
+
+*hint-offset-top*::
+Top offset of hints in pixel, negative values will shift hints to the top, positive
+values to the bottom,
+default value: '0'.
+
 *hint-opacity*::
 The opacity of a hint. Possible values: a decimal from 0.0 to 1.0,
 default value: '0.75'.

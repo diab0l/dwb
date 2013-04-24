@@ -1088,6 +1088,10 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,  CHAR, { .p = "1px solid #000000"    }, (S_Func) dwb_init_hints, { 0 }, },
   { { "hint-opacity",                            "The opacity of hints", },                                     
     SETTING_GLOBAL,  DOUBLE, { .d = 0.8         },          (S_Func) dwb_init_hints, { 0 }, },
+  { { "hint-offset-top",                            "Top offset of hints", },                                     
+    SETTING_GLOBAL,  INTEGER, { .i = 0         },          (S_Func) dwb_init_hints, { 0 }, },
+  { { "hint-offset-left",                            "Left offset of hints", },                                     
+    SETTING_GLOBAL,  INTEGER, { .i = 0         },          (S_Func) dwb_init_hints, { 0 }, },
   { { "hint-autofollow",                            "Whether to follow hints automatically if one hint matches", },                                     
     SETTING_GLOBAL,  BOOLEAN, { .b = true         },          (S_Func) dwb_init_hints,  { 0 }, },
 
