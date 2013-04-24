@@ -3151,6 +3151,22 @@ dwb_normal_mode(gboolean clean)
     return STATUS_OK;
 }/*}}}*/
 
+static DwbStatus 
+dwb_caret_mode()
+{
+    dwb.state.mode = CARET_MODE;
+    dwb_set_normal_message(dwb.state.fview, false, "-- CARET --");
+    WebKitWebSettings *settings = webkit_web_view_get_settings(WEBVIEW(dwb.state.fview));
+    g_object_set(settings, "enable-caret-browsing", TRUE, NULL);
+    GdkEvent *event = gdk_event_new(GDK_BUTTON_PRESS);
+    event->button.button = 1;
+    event->button.x = 1;
+    event->button.y = 1;
+    event->button.window = g_object_ref(gtk_widget_get_window(VIEW(dwb.state.fview)->web));
+    gtk_main_do_event(event);
+    gdk_event_free(event);
+    return STATUS_OK;
+}
 /* dwb_change_mode (Mode mode, ...)   return DwbStatus {{{*/
 DwbStatus 
 dwb_change_mode(Mode mode, ...) 
@@ -3198,7 +3214,8 @@ dwb_change_mode(Mode mode, ...)
             break;
         case INSERT_MODE:   ret = dwb_insert_mode(); break;
         case COMMAND_MODE:  ret = dwb_command_mode(); break;
-        case HINT_MODE:     dwb.state.mode = HINT_MODE; break;
+        case HINT_MODE:    dwb.state.mode = mode; break; 
+        case CARET_MODE:   ret = dwb_caret_mode(); break;
         default: PRINT_DEBUG("Unknown mode: %d", mode); break;
     }
     return ret;

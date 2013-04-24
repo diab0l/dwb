@@ -23,6 +23,7 @@
 #include "entry.h"
 #include "scripts.h"
 #include "util.h"
+#include "visual.h"
 
 
 /* dwb_entry_keyrelease_cb {{{*/
@@ -183,7 +184,9 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         SCRIPTS_EMIT_RETURN(signal, json, true);
     }
 
-    if (e->keyval == GDK_KEY_Escape) 
+    if (mode == CARET_MODE)
+        return visual_caret(e);
+    else if (e->keyval == GDK_KEY_Escape) 
     {
         if (dwb.state.mode & COMPLETION_MODE) 
             completion_clean_completion(true);
