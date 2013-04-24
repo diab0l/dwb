@@ -24,7 +24,7 @@ keyboard-driven.
 OPTIONS
 -------
 *-c, --check-script-syntax*='script'::
-  Checks if a the syntax of a script that uses the javascript api is correct
+  Checks if a the syntax of a script that uses the javascript api is correct.
 
 *-e, --embed*='wid'::
   Embed dwb into <wid>.
@@ -225,10 +225,10 @@ Find forward (command 'find_forward', alias: 'ffind').
 Find backward (command 'find_backward', alias 'bfind').
 
 *c/*::
-Find forward, ignore case (command 'find_forward_ic', alias: 'iffind').
+Find forward, case sensitive (command 'find_forward_ic', alias: 'iffind').
 
 *c?*::
-Find backward, ignore case (command 'find_backward_ic', alias 'ibfind').
+Find backward, case sensitive (command 'find_backward_ic', alias 'ibfind').
 
 *M*::
 Add a bookmark (command 'bookmark', aliases: 'bmark', 'bma').
@@ -351,7 +351,7 @@ Show hints, open link in a new background tab. (command
 'hints_background', aliases: 'backhints', 'bhi').
 
 *wf*::
-Show hints, open link in a new tab. (command
+Show hints, open link in a new window. (command
 'hints_win', aliases: 'winhints', 'whi').
 
 *;i*::
@@ -667,7 +667,7 @@ Alternative shortcut for activate.
 
 *C-c*::
 Alternative shortcut for escape, the corresponding setting is
-.IR entry_escape .
+'entry_escape'.
 
 *C-p*::
 Init local path completion.
@@ -798,7 +798,7 @@ COMMAND OVERVIEW
                                            current one
 |open                    |o               |Open url
 |open_editor             |editor          |Open external editor for
-                                           input/textarea.
+                                           input/textarea
 |open_url                |                |Open, edit current url
 |paste                   |                |Open from clipboard
 |paste_primary           |ppaste          |Open from primary selection
@@ -908,11 +908,11 @@ COMMAND OVERVIEW
 //CUSTOMIZATION
 //-------------
 
-dwb can be  customized in a web interface (command 'show_settings') or via command line (command
-'set_setting').  Modified settings will be saved in Modified settings will be
-saved in '~/.config/dwb/settings' when closing dwb.  Shorcuts can also be
-modified in a web interface (command 'show_keys') or via command line (command
-'set_key').  Shortcuts will be saved in '$HOME/.config/dwb/keys'.
+dwb can be customized in a web interface (command 'show_settings') or via command line (command
+'set_setting').  Modified settings will be saved in '~/.config/dwb/settings'
+when closing dwb.  Shortcuts can also be modified in a web interface (command
+'show_keys') or via command line (command 'set_key').  Shortcuts will be saved
+in '$HOME/.config/dwb/keys'.
 
 If a string value is set to 'NULL' the default value will be used.
 
@@ -1125,7 +1125,7 @@ NULL, default value:
 Default serif font family used to display text. Possible values: a font description or
 NULL, default value: 'serif'.
 
-*spell-checking-language*::
+*spell-checking-languages*::
 The languages to be used for spell checking, separated by commas. Possible
 values: a string or NULL, default value: 'NULL'.
 
@@ -1191,7 +1191,8 @@ Default value:
 *addressbar-dns-lookup*::
 Whether to perform a dns lookup for text typed into the address bar. If set to
 true dwb performs a dns lookup for all text that does not have a valid scheme
-and does not contain whitespaces. Default value: false.
+and does not contain whitespaces. Default value:
+'false'.
 
 *background-color*::
 The background color of the statusbar. Possible values: an rgb color-string,
@@ -1318,8 +1319,8 @@ Whether to start downloads immediately without asking for a path,
 
 *download-use-external-program*::
 Whether to use an external download program specified in
-\'download-external-programm\' or the builtin download helper.  Possible values:
-true/false, default value: 'true'.
+'download-external-programm' or the builtin download helper.  Possible values:
+true/false, default value: 'false'.
 
 
 *editor*::
@@ -1359,7 +1360,7 @@ string.
 
 *font-hidden-statusbar*::
 The font used for status elements if the statusbar is hidden. Possible values: a
-css font description.  Default value: 'normal'10px helvetica .
+css font description.  Default value: 'normal 10px helvetica'.
 
 *font-nofocus*::
 The font used for tablabels without focus and completion items without focus. Possible values: a font description
@@ -1498,7 +1499,7 @@ values: an url string, default value: 'NULL'.
 
 *save-session*::
 Save the session when dwb is closed and restore the last saved session when
-invoking dwb. Possible values: true/false, default value: 'false'.
+invoking dwb. Possible values: true/false, default value: 'true'.
 
 *scheme-handler*::
 A script or application that handles uris that cannot be loaded by dwb. dwb only
@@ -1536,7 +1537,7 @@ Whether scrollbars should be enabled.  default value: 'false'.
 
 *single-instance*::
 Only one instance of dwb per user. This option will be overridden by the
-commandlineoption \(hyn. Possible values: true/false,
+command line option '-n'. Possible values: true/false,
 default value: 'true'.
 
 *ssl-strict*::
@@ -1545,8 +1546,9 @@ Whether to allow only save ssl-certificates.  default value: 'true'.
 *ssl-ca-cert*::
 Path to ssl-certificate, only with libsoup < 2.38.
 
-*ssl-use-system-ca-cert*::
-Path to ssl-certificate, only with libsoup >= 2.38.
+*ssl-use-system-ca-file*::
+Whether to use the system certification file, only with libsoup >= 2.38.
+default value: 'true'.
 
 *ssl-trusted-color*::
 Color of the url in the statusbar for ssl-encrypted sites and trusted

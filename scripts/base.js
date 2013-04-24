@@ -91,8 +91,8 @@ Object.freeze((function () {
                 break;
             }
         }
-        hint.style.top = t + "px";
-        hint.style.left = l + "px";
+        hint.style.top = (t + globals.hintOffsetTop) + "px";
+        hint.style.left = (l + globals.hintOffsetLeft) + "px";
         // 37000 is the z-index of the clickble element
         hint.style.zIndex = 37002;
         globals.positions.push({top : t, left : l});
@@ -788,7 +788,7 @@ Object.freeze((function () {
         return null;
     };
     var p_init = function (letter_seq, font, style,
-        fg_color, bg_color, active_color, normal_color, border,  opacity, markHints, autoFollow) 
+        fg_color, bg_color, active_color, normal_color, border,  hintOffsetTop, hintOffsetLeft, opacity, markHints, autoFollow) 
     {
         globals.hintOpacity = opacity;
         globals.letterSeq  = letter_seq;
@@ -799,6 +799,8 @@ Object.freeze((function () {
         globals.activeColor = p_hexToRgb(active_color);
         globals.normalColor = p_hexToRgb(normal_color);
         globals.hintBorder = border;
+        globals.hintOffsetLeft = hintOffsetLeft;
+        globals.hintOffsetTop = hintOffsetTop;
         globals.markHints = markHints;
         globals.autoFollow = autoFollow;
         globals.bigFont = Math.ceil(font.replace(/\D/g, "") * 1.25) + "px";
@@ -878,7 +880,7 @@ Object.freeze((function () {
         {
             p_init(obj.hintLetterSeq, obj.hintFont, obj.hintStyle, obj.hintFgColor,
                 obj.hintBgColor, obj.hintActiveColor, obj.hintNormalColor,
-                obj.hintBorder, obj.hintOpacity, obj.hintHighlighLinks, obj.hintAutoFollow);
+                obj.hintBorder, obj.hintOffsetTop, obj.hintOffsetLeft, obj.hintOpacity, obj.hintHighlighLinks, obj.hintAutoFollow);
         }
     };
 })());

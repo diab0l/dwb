@@ -39,7 +39,7 @@ dwb(1) is a small webbrowser based on WebKit and GTK which aims to be mostly key
 .PP
 \fB\-c, \-\-check\-script\-syntax\fR=\fIscript\fR
 .RS 4
-Checks if a the syntax of a script that uses the javascript api is correct
+Checks if a the syntax of a script that uses the javascript api is correct\&.
 .RE
 .PP
 \fB\-e, \-\-embed\fR=\fIwid\fR
@@ -397,14 +397,14 @@ Find backward (command
 .PP
 \fBc/\fR
 .RS 4
-Find forward, ignore case (command
+Find forward, case sensitive (command
 \fIfind_forward_ic\fR, alias:
 \fIiffind\fR)\&.
 .RE
 .PP
 \fBc?\fR
 .RS 4
-Find backward, ignore case (command
+Find backward, case sensitive (command
 \fIfind_backward_ic\fR, alias
 \fIibfind\fR)\&.
 .RE
@@ -634,7 +634,7 @@ Show hints, open link in a new background tab\&. (command
 .PP
 \fBwf\fR
 .RS 4
-Show hints, open link in a new tab\&. (command
+Show hints, open link in a new window\&. (command
 \fIhints_win\fR, aliases:
 \fIwinhints\fR,
 \fIwhi\fR)\&.
@@ -1173,7 +1173,8 @@ Alternative shortcut for activate\&.
 .PP
 \fBC\-c\fR
 .RS 4
-Alternative shortcut for escape, the corresponding setting is \&.IR entry_escape \&.
+Alternative shortcut for escape, the corresponding setting is
+\fIentry_escape\fR\&.
 .RE
 .PP
 \fBC\-p\fR
@@ -1911,7 +1912,7 @@ T}:T{
 editor
 T}:T{
 .sp
-Open external editor for input/textarea\&.
+Open external editor for input/textarea
 T}
 T{
 .sp
@@ -2759,7 +2760,7 @@ T}
 .TE
 .sp 1
 .sp
-dwb can be customized in a web interface (command \fIshow_settings\fR) or via command line (command \fIset_setting\fR)\&. Modified settings will be saved in Modified settings will be saved in \fI~/\&.config/dwb/settings\fR when closing dwb\&. Shorcuts can also be modified in a web interface (command \fIshow_keys\fR) or via command line (command \fIset_key\fR)\&. Shortcuts will be saved in \fI$HOME/\&.config/dwb/keys\fR\&.
+dwb can be customized in a web interface (command \fIshow_settings\fR) or via command line (command \fIset_setting\fR)\&. Modified settings will be saved in \fI~/\&.config/dwb/settings\fR when closing dwb\&. Shortcuts can also be modified in a web interface (command \fIshow_keys\fR) or via command line (command \fIset_key\fR)\&. Shortcuts will be saved in \fI$HOME/\&.config/dwb/keys\fR\&.
 .sp
 If a string value is set to \fINULL\fR the default value will be used\&.
 .SS "WebKit builtin settings"
@@ -3028,7 +3029,7 @@ Default serif font family used to display text\&. Possible values: a font descri
 \fIserif\fR\&.
 .RE
 .PP
-\fBspell\-checking\-language\fR
+\fBspell\-checking\-languages\fR
 .RS 4
 The languages to be used for spell checking, separated by commas\&. Possible values: a string or NULL, default value:
 \fINULL\fR\&.
@@ -3099,7 +3100,8 @@ A path to a adblock plus compatible filterlist for the adblocker or a path to a 
 .PP
 \fBaddressbar\-dns\-lookup\fR
 .RS 4
-Whether to perform a dns lookup for text typed into the address bar\&. If set to true dwb performs a dns lookup for all text that does not have a valid scheme and does not contain whitespaces\&. Default value: false\&.
+Whether to perform a dns lookup for text typed into the address bar\&. If set to true dwb performs a dns lookup for all text that does not have a valid scheme and does not contain whitespaces\&. Default value:
+\fIfalse\fR\&.
 .RE
 .PP
 \fBbackground\-color\fR
@@ -3303,8 +3305,10 @@ needs to be set to an existing path\&. default value:
 .PP
 \fBdownload\-use\-external\-program\fR
 .RS 4
-Whether to use an external download program specified in \*(Aqdownload\-external\-programm\e\*(Aq or the builtin download helper\&. Possible values: true/false, default value:
-\fItrue\fR\&.
+Whether to use an external download program specified in
+\fIdownload\-external\-programm\fR
+or the builtin download helper\&. Possible values: true/false, default value:
+\fIfalse\fR\&.
 .RE
 .PP
 \fBeditor\fR
@@ -3355,7 +3359,8 @@ The font used for the address bar\&. Possible values: a font description string\
 .PP
 \fBfont\-hidden\-statusbar\fR
 .RS 4
-The font used for status elements if the statusbar is hidden\&. Possible values: a css font description\&. Default value: \*(Aqnormal\(cq10px helvetica \&.
+The font used for status elements if the statusbar is hidden\&. Possible values: a css font description\&. Default value:
+\fInormal 10px helvetica\fR\&.
 .RE
 .PP
 \fBfont\-nofocus\fR
@@ -3570,7 +3575,7 @@ The proxy\-url, can also be set via the http_proxy environment variable\&. Possi
 \fBsave\-session\fR
 .RS 4
 Save the session when dwb is closed and restore the last saved session when invoking dwb\&. Possible values: true/false, default value:
-\fIfalse\fR\&.
+\fItrue\fR\&.
 .RE
 .PP
 \fBscheme\-handler\fR
@@ -3634,7 +3639,8 @@ Whether scrollbars should be enabled\&. default value:
 .PP
 \fBsingle\-instance\fR
 .RS 4
-Only one instance of dwb per user\&. This option will be overridden by the commandlineoption \e(hyn\&. Possible values: true/false, default value:
+Only one instance of dwb per user\&. This option will be overridden by the command line option
+\fI\-n\fR\&. Possible values: true/false, default value:
 \fItrue\fR\&.
 .RE
 .PP
@@ -3649,9 +3655,10 @@ Whether to allow only save ssl\-certificates\&. default value:
 Path to ssl\-certificate, only with libsoup < 2\&.38\&.
 .RE
 .PP
-\fBssl\-use\-system\-ca\-cert\fR
+\fBssl\-use\-system\-ca\-file\fR
 .RS 4
-Path to ssl\-certificate, only with libsoup >= 2\&.38\&.
+Whether to use the system certification file, only with libsoup >= 2\&.38\&. default value:
+\fItrue\fR\&.
 .RE
 .PP
 \fBssl\-trusted\-color\fR
