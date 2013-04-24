@@ -979,8 +979,6 @@ static WebSettings DWB_SETTINGS[] = {
   { { "ssl-ca-cert",                               "Path to ssl-certificate", },                                          
     SETTING_GLOBAL,      CHAR,    { .p = NULL            },   (S_Func) dwb_soup_init_session_features,  { 0 }, },
 #endif
-  { { "use-ntlm",                               "Whether to use ntlm-authentication", },                                          
-    SETTING_GLOBAL,      BOOLEAN,    { .b = false            },   (S_Func) dwb_set_ntlm,  { 0 }, },
   { { "cookies-store-policy",                                  "Whether to store cookies", },                                     
     SETTING_GLOBAL | SETTING_ONINIT,      CHAR, { .p = "session"             }, (S_Func) dwb_set_cookies,  { 0 }, },
   { { "cookies-accept-policy",                     "Cookies to accept, always never or nothirdparty", },                                     

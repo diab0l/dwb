@@ -35,7 +35,6 @@ ifdef(`WITH_LIBSOUP_2_38',
 )
 dnl SSL_CERTIFICATION
 html_input(ssl-strict, checkbox, Whether to allow only safe ssl-certificates)
-html_input(use-ntlm, checkbox, Whether to use ntlm-authentication)
 html_input(user-agent, text, The user agent string)
 dnl 
 html_header(Fonts)

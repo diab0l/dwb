@@ -1609,11 +1609,6 @@ results will be updated after that delay but only if the search-term has not
 changed since the timeout started. It is recommended to set this value greater
 than 0, default value: '200'.
 
-*use-ntlm*::
-Whether to use NTLM-authentication,
-default value:
-'false'.
-
 *widget-packing*::
 A string consisting of 4 characters, where possible characters are: 'd', 'w',
 'T', 't', 'S' and 's'.  The order of the widgets correspond the the order of
