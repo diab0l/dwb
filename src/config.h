@@ -858,7 +858,7 @@ static FunctionMap FMAP [] = {
     { 0 }, EP_NONE, { NULL }, },
   
   { { "open_editor",    "Open external editor" },                 CP_COMMANDLINE | CP_OVERRIDE_INSERT, 
-    (Func) commands_open_editor, "No input focused",     ALWAYS_SM,    
+    (Func) commands_open_editor, "No input focused",     POST_SM,    
     { 0 }, EP_NONE, { "editor", NULL }, },
   
 };/*}}}*/
