@@ -199,6 +199,7 @@ editor_open(void)
     g_child_watch_add(pid, (GChildWatchFunc)editor_watch, info);
     VIEW(dwb.state.fview)->status->signals[SIG_EDITOR_NAVIGATION] = 
         g_signal_connect(CURRENT_WEBVIEW(), "navigation-policy-decision-requested", G_CALLBACK(navigation_cb), info);
+    dwb_set_normal_message(dwb.state.fview, true, "Spawning editor '%s'", editor);
 clean:
     g_free(value);
 
