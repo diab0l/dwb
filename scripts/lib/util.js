@@ -98,10 +98,10 @@
          * */
         "mixin" : 
         {
-            value : function(self)
+            value : function(arg)
             {
                 var i, l, key, o;
-                self = self || {};
+                var self = arg || {};
                 for (i=1, l=arguments.length; i<l; i++)
                 {
                     o = arguments[i];
@@ -200,8 +200,47 @@
             {
                 return util.decodeUTF8(util._base64Decode(string));
             }
+        },
+        /** 
+         * Shorthand for <i>util.changeMode(Modes.NormalMode)</i>
+         * @name normalMode
+         * @memberOf util
+         * @function 
+         */
+        "normalMode" : 
+        {
+            value : function(string)
+            {
+                return util.changeMode(Modes.NormalMode);
+            }
+        },
+        /** 
+         * Shorthand for <i>util.changeMode(Modes.InsertMode)</i>
+         *
+         * @name insertMode
+         * @memberOf util
+         * @function 
+         */
+        "insertMode" : 
+        {
+            value : function(string)
+            {
+                return util.changeMode(Modes.InsertMode);
+            }
+        },
+        /** 
+         * Shorthand for <i>util.changeMode(Modes.CaretMode)</i>
+         * @name caretMode
+         * @memberOf util
+         * @function 
+         */
+        "caretMode" : 
+        {
+            value : function(string)
+            {
+                return util.changeMode(Modes.CaretMode);
+            }
         }
-
     });
     Object.freeze(util);
     

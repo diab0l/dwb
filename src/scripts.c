@@ -2308,6 +2308,38 @@ error_out:
     return ret;
 }/*}}}*/
 
+/** 
+ * Change the mode, changeable modes are Modes.NormalMode, Modes.InsertMode and
+ * Modes.CaretMode
+ *
+ * @name changeMode
+ * @memberOf util
+ * @function
+ *
+ * @param {Modes} mode The new mode
+ * */
+
+static JSValueRef 
+sutil_change_mode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc == 0)
+        return UNDEFINED;
+    double mode = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(mode))
+    {
+        if ((int) mode == NORMAL_MODE)
+        {
+            dwb_change_mode(NORMAL_MODE, true);
+        }
+        else if ((int)mode & (INSERT_MODE | CARET_MODE))
+        {
+            dwb_change_mode((int)mode);
+        }
+    }
+    return UNDEFINED;
+}
+
+
 static JSValueRef 
 sutil_base64_encode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -4906,6 +4938,7 @@ create_global_object()
         { "dispatchEvent",    sutil_dispatch_event,         kJSDefaultAttributes },
         { "tabComplete",      sutil_tab_complete,         kJSDefaultAttributes },
         { "checksum",         sutil_checksum,         kJSDefaultAttributes },
+        { "changeMode",       sutil_change_mode,      kJSDefaultAttributes }, 
         { "_base64Encode",    sutil_base64_encode,    kJSDefaultAttributes },
         { "_base64Decode",    sutil_base64_decode,    kJSDefaultAttributes },
         { 0, 0, 0 }, 

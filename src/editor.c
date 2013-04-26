@@ -57,7 +57,7 @@ editor_watch(GPid pid, int status, EditorInfo *info)
     char *content = util_get_file_content(info->filename, &length);
 
     if (content == NULL) 
-        goto clean;
+        return;
 
     if (!info->gl || !g_list_find(dwb.state.views, info->gl->data)) 
     {
@@ -121,7 +121,7 @@ navigation_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetworkRequest *r
 DwbStatus
 editor_open(void) 
 {
-    DwbStatus ret = STATUS_OK;
+    DwbStatus ret = STATUS_ERROR;
     char **commands = NULL;
     char *commandstring = NULL, *tagname, *path;
     char *value = NULL;
@@ -143,7 +143,6 @@ editor_open(void)
     tagname = webkit_dom_element_get_tag_name(active);
     if (tagname == NULL) 
     {
-        ret = STATUS_ERROR;
         goto clean;
     }
     if (! strcasecmp(tagname, "INPUT")) 
@@ -158,7 +157,6 @@ editor_open(void)
 
     if (value == NULL) 
     {
-        ret = STATUS_ERROR;
         goto clean;
     }
 
@@ -167,7 +165,6 @@ editor_open(void)
     commandstring = util_string_replace(editor, "dwb_uri", path);
     if (commandstring == NULL)  
     {
-        ret = STATUS_ERROR;
         goto clean;
     }
 
@@ -179,7 +176,6 @@ editor_open(void)
     g_strfreev(commands);
     if (!success) 
     {
-        ret = STATUS_ERROR;
         goto clean;
     }
 
@@ -200,6 +196,8 @@ editor_open(void)
     VIEW(dwb.state.fview)->status->signals[SIG_EDITOR_NAVIGATION] = 
         g_signal_connect(CURRENT_WEBVIEW(), "navigation-policy-decision-requested", G_CALLBACK(navigation_cb), info);
     dwb_set_normal_message(dwb.state.fview, true, "Spawning editor '%s'", editor);
+
+    ret = STATUS_OK;
 clean:
     g_free(value);
 

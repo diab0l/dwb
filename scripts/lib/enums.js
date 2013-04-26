@@ -215,12 +215,14 @@ Object.freeze(FileTest);
  * @property {Flag} InsertMode insert mode
  * @property {Flag} CommandMode command mode
  * @property {Flag} HintMode hint mode
+ * @property {Flag} CaretMode caret mode
  * */
 const Modes = {
   NormalMode  : 1<<0,
   InsertMode  : 1<<1,
   CommandMode : 1<<2,
-  HintMode    : 1<<3
+  HintMode    : 1<<3, 
+  CaretMode   : 1<<21
 };
 Object.freeze(Modes);
 /**
