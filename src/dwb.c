@@ -84,6 +84,7 @@ static DwbStatus dwb_set_do_not_track(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_javascript_api(GList *gl, WebSettings *s);
 #if !_HAS_GTK3 
 static DwbStatus dwb_set_tab_orientation(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_tab_width(GList *gl, WebSettings *s);
@@ -192,6 +193,19 @@ dwb_set_passthrough(GList *gl, WebSettings *s)
         dwb.misc.passthrough = PASSTHROUGH_NONE;
     else if (!strcmp(s->arg_local.p, "webkit"))
         dwb.misc.passthrough = PASSTHROUGH_WEBKIT;
+    else 
+        return STATUS_ERROR;
+    return STATUS_OK;
+}/*}}}*/
+static DwbStatus
+dwb_set_javascript_api(GList *gl, WebSettings *s) 
+{
+    if (!strcmp(s->arg_local.p, "disabled"))
+        dwb.misc.js_api = JS_API_DISABLED;
+    else if (!strcmp(s->arg_local.p, "automatic"))
+        dwb.misc.js_api = JS_API_AUTOMATIC;
+    else if (!strcmp(s->arg_local.p, "enabled"))
+        dwb.misc.js_api = JS_API_ENABLED;
     else 
         return STATUS_ERROR;
     return STATUS_OK;
@@ -3423,7 +3437,7 @@ dwb_get_scripts()
                     path = realpath;
                 }
             }
-            if ( (f = fopen(path, "r")) != NULL && (l1 = fgetc(f)) && (l2 = fgetc(f)) ) 
+            if (dwb.misc.js_api != JS_API_DISABLED && (f = fopen(path, "r")) != NULL && (l1 = fgetc(f)) && (l2 = fgetc(f)) ) 
             {
                 if ( (l1 == '#' && l2 == '!') || (l1 == '/' && l2 == '/' && fgetc(f) == '!')  ) 
                 {

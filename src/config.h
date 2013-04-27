@@ -1206,6 +1206,8 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,  BOOLEAN, { .b = true }, NULL,   { 0 }, }, 
   { { "maximum-tabs",            "Maximum number of tabs", },                                            
     SETTING_GLOBAL | SETTING_ONINIT,  INTEGER, { .i = 0 }, (S_Func)dwb_set_max_tabs,   { 0 }, }, 
+  { { "javascript-api",            "Whether to enable the javascript api", },                                            
+    SETTING_GLOBAL | SETTING_ONINIT,  CHAR, { .p = "automatic" }, (S_Func)dwb_set_javascript_api,   { 0 }, }, 
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

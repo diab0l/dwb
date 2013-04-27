@@ -1436,6 +1436,18 @@ The urls that are saved in the browsing history. Specifying a too large value
 can make tab-completion slow. Possible values: number of urls,
 default value: '500'.
 
+*javascript-api*:: 
+Whether to enable the javascript api. If set to 'disabled' the javascript
+context won't be initialized, meaning that also extensions won't work. If set to
+'automatic' the javascript context will automatically be initialized if scripts that use
+the api are present in $XDG_CONFIG_HOME/dwb/userscripts or extensions are
+installed. If set to 'enabled' the javascript context will always be
+initialized, useful if no scripts are present in
+$XDG_CONFIG_HOME/dwb/userscripts but the javascript api is used from commandline
+or in a custom command. The javascript context is only initialized on startup,
+so changing the value needs a restart. Default value:
+'automatic'. 
+
 *javascript-schemes*::
 Whether to allow loading javascript snippets with scheme 'javascript',
 default value: 'true'.

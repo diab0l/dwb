@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 04/25/2013
+.\"      Date: 04/27/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "04/25/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "04/27/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3461,6 +3461,18 @@ Timeout in milliseconds all keypresses are ignored after following a hint, defau
 .RS 4
 The urls that are saved in the browsing history\&. Specifying a too large value can make tab\-completion slow\&. Possible values: number of urls, default value:
 \fI500\fR\&.
+.RE
+.PP
+\fBjavascript\-api\fR
+.RS 4
+Whether to enable the javascript api\&. If set to
+\fIdisabled\fR
+the javascript context won\(cqt be initialized, meaning that also extensions won\(cqt work\&. If set to
+\fIautomatic\fR
+the javascript context will automatically be initialized if scripts that use the api are present in $XDG_CONFIG_HOME/dwb/userscripts or extensions are installed\&. If set to
+\fIenabled\fR
+the javascript context will always be initialized, useful if no scripts are present in $XDG_CONFIG_HOME/dwb/userscripts but the javascript api is used from commandline or in a custom command\&. The javascript context is only initialized on startup, so changing the value needs a restart\&. Default value:
+\fIautomatic\fR\&.
 .RE
 .PP
 \fBjavascript\-schemes\fR

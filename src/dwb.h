@@ -239,6 +239,12 @@ typedef enum  {
   COMP_SCRIPT,
 } CompletionType;
 
+typedef enum {
+    JS_API_DISABLED, 
+    JS_API_AUTOMATIC, 
+    JS_API_ENABLED ,
+} JsApi;
+
 typedef enum  {
   SANITIZE_ERROR  = -1,
   SANITIZE_HISTORY        = 1<<0, 
@@ -815,6 +821,7 @@ struct _Misc {
   TabOrientation tab_orientation;
 #endif
   gint max_tabs;
+  JsApi js_api;
 
   //gboolean javascript_debugging;
 };

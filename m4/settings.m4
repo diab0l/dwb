@@ -130,6 +130,7 @@ html_input(enable-scripts, checkbox, Enable embedded scripting languages)
 ifdef(`WITH_HSTS', 
 html_input(hsts, checkbox, Whether HSTS support should be enabled)
 )
+html_select(javascript-api, html_options(disabled, automatic, enabled), Whether the javascript api is enabled, needs restart)
 html_input(javascript-can-access-clipboard, checkbox, Whether javascript can access the clipboard)
 html_input(javascript-can-open-windows-automatically, checkbox, Whether javascript can open windows)
 html_input(javascript-schemes, checkbox, Whether to allow loading url with scheme "javascript")
