@@ -14,7 +14,7 @@ HSTS_PRELOAD=$(BASE_DIR)/$(SRCDIR)/hsts_preload.h
 TRANSPORT_SECURITY_JSON=transport_security_state_static.json
 TRANSPORT_SECURITY_CERTS=transport_security_state_static.certs
 
-LIBS=glib-2.0 gnutls json
+LIBS=glib-2.0 gnutls $(JSONC)
 CFLAGS+=$(shell pkg-config --cflags $(LIBS))
 LDFLAGS=$(shell pkg-config --libs $(LIBS))
 
