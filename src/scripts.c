@@ -5489,51 +5489,45 @@ scripts_reapply()
 gboolean 
 scripts_init(gboolean force) 
 {
-    static gsize init = 0;
-    if (g_once_init_enter(&init)) 
+    dwb.misc.script_signals = 0;
+    if (s_global_context == NULL) 
     {
-        gsize val = 37;
-        dwb.misc.script_signals = 0;
-        if (s_global_context == NULL) 
-        {
-            if (force || dwb.misc.js_api == JS_API_ENABLED) 
-                s_global_context = create_global_object();
-            else 
-                return false;
-        }
-        s_gobject_signals = g_ptr_array_new();
-
-        dwb.state.script_completion = NULL;
-
-        char *dir = util_get_data_dir(LIBJS_DIR);
-        if (dir != NULL) 
-        {
-            GString *content = g_string_new(NULL);
-            util_get_directory_content(content, dir, "js");
-            if (content != NULL)  
-            {
-                JSStringRef js_script = JSStringCreateWithUTF8CString(content->str);
-                JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
-                JSStringRelease(js_script);
-            }
-            g_string_free(content, true);
-            g_free(dir);
-        }
-
-        UNDEFINED = JSValueMakeUndefined(s_global_context);
-        JSValueProtect(s_global_context, UNDEFINED);
-        NIL = JSValueMakeNull(s_global_context);
-        JSValueProtect(s_global_context, NIL);
-
-        s_init_before = get_private(s_global_context, "_initBefore");
-        s_init_after = get_private(s_global_context, "_initAfter");
-        //s_private = get_private(s_global_context, "_private");
-
-        JSObjectRef o = JSObjectMakeArray(s_global_context, 0, NULL, NULL);
-        s_array_contructor = js_get_object_property(s_global_context, o, "constructor");
-        JSValueProtect(s_global_context, s_array_contructor); 
-        g_once_init_leave(&init, val);
+        if (force || dwb.misc.js_api == JS_API_ENABLED) 
+            s_global_context = create_global_object();
+        else 
+            return false;
     }
+    s_gobject_signals = g_ptr_array_new();
+
+    dwb.state.script_completion = NULL;
+
+    char *dir = util_get_data_dir(LIBJS_DIR);
+    if (dir != NULL) 
+    {
+        GString *content = g_string_new(NULL);
+        util_get_directory_content(content, dir, "js");
+        if (content != NULL)  
+        {
+            JSStringRef js_script = JSStringCreateWithUTF8CString(content->str);
+            JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
+            JSStringRelease(js_script);
+        }
+        g_string_free(content, true);
+        g_free(dir);
+    }
+
+    UNDEFINED = JSValueMakeUndefined(s_global_context);
+    JSValueProtect(s_global_context, UNDEFINED);
+    NIL = JSValueMakeNull(s_global_context);
+    JSValueProtect(s_global_context, NIL);
+
+    s_init_before = get_private(s_global_context, "_initBefore");
+    s_init_after = get_private(s_global_context, "_initAfter");
+    //s_private = get_private(s_global_context, "_private");
+
+    JSObjectRef o = JSObjectMakeArray(s_global_context, 0, NULL, NULL);
+    s_array_contructor = js_get_object_property(s_global_context, o, "constructor");
+    JSValueProtect(s_global_context, s_array_contructor); 
     return true;
 }/*}}}*/
 
