@@ -20,6 +20,7 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
@@ -166,7 +167,6 @@ static JSClassRef s_gobject_class,
                   s_message_class, 
                   s_deferred_class, 
                   s_history_class;
-static gboolean s_commandline = false;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
@@ -1690,11 +1690,9 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 static JSValueRef 
 global_exit(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    if (s_commandline)
-        application_stop();
-    else 
-        dwb_end(0);
-    return UNDEFINED;
+    dwb_end(0);
+    exit(EXIT_SUCCESS);
+    return 0;
 }/*}}}*/
 
 /*{{{*/
