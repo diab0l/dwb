@@ -28,7 +28,7 @@ EXTENSION_MANAGER=dwbem
 DTARGET=$(TARGET)_d
 REAL_VERSION=$(BUILDDATE)
 # Version info
-GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short)
+GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short 2>/dev/null)
 VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
 NAME=$(shell if [ "$(GIT_VERSION)" ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
 BUILDDATE=`date +%Y.%m.%d`
