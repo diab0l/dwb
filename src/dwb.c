@@ -3902,6 +3902,7 @@ dwb_str_to_key(char *str)
     if ((escape = strchr(start, '\\'))) 
     {
         keybuffer = g_string_new(NULL);
+        g_string_append_len(keybuffer, start, escape - start);
         do 
         {
             if (*(escape + 1) == '\\')
