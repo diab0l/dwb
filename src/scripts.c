@@ -1460,9 +1460,6 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     if (! (m->map->prop & CP_OVERRIDE))
         CLEAR_COMMAND_TEXT();
 
-    if (!TRY_CONTEXT_LOCK)
-        return STATUS_ERROR;
-
     if (s_global_context != NULL)
     {
         if (arg->p == NULL) 
@@ -1474,7 +1471,6 @@ scripts_eval_key(KeyMap *m, Arg *arg)
         call_as_function_debug(s_global_context, arg->js, arg->js, 1, argv);
     }
 
-    CONTEXT_UNLOCK;
     g_free(json);
 
     return STATUS_OK;
@@ -1677,6 +1673,8 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
         status = dwb_parse_command_line(command);
         g_free(command);
     }
+    if (status == STATUS_END)
+        exit(0);
     return JSValueMakeBoolean(ctx, status == STATUS_OK);
 }/*}}}*/
 
