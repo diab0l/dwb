@@ -3088,7 +3088,7 @@ dwb_eval_override_key(GdkEventKey *e, CommandProperty prop)
     if (gtk_widget_has_focus(dwb.gui.entry) && e->keyval == GDK_KEY_BackSpace)
         entry_clear_history();
 
-    if (CLEAN_STATE(e) && (key = dwb_get_key(e, &mod, &isprint)) != NULL)  
+    if ((key = dwb_get_key(e, &mod, &isprint)) != NULL)  
     {
         for (GList *l = dwb.override_keys; l; l=l->next) 
         {
