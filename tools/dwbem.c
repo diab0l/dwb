@@ -31,6 +31,7 @@
 #include <stdarg.h>
 #include <features.h>
 #include <termios.h>
+#include <JavaScriptCore/JavaScript.h>
 #include <sys/stat.h>
 
 #include <glib-2.0/glib.h>
@@ -367,19 +368,17 @@ get_response(char *buffer, size_t length, const char *format, ...)
 }
 
 int 
-create_tmp(char *buffer, int size, const char *template, int suffix_length) 
+create_tmp(char *buffer, int size, const char *template) 
 {
-    int len = strlen(template);
-    strncpy(buffer, template, len-suffix_length);
+    strncpy(buffer, template, size);
     int fd = mkstemp(buffer);
     if (fd == -1) 
         die(1, "Cannot create temporary file");
-    strncat(buffer, template + (len-suffix_length), suffix_length);
     return fd;
 }
 
 static int
-diff(const char *text1, const char *text2, char **ret) 
+diff(const char *text1, const char *text2, char **ret, int ntf) 
 {
     gboolean spawn_success = true;
     GError *e = NULL;
@@ -392,15 +391,18 @@ diff(const char *text1, const char *text2, char **ret)
         return 0;
     }
 
-    notify("The default configuration differs from configuration in use");
-    if (! yes_no(1, "Edit configuration")) 
+    if (ntf)
     {
-        *ret = g_strdup(text1);
-        return 1;
+        notify("The default configuration differs from configuration in use");
+        if (! yes_no(1, "Edit configuration")) 
+        {
+            *ret = g_strdup(text1);
+            return 1;
+        }
     }
 
-    int fd1 = create_tmp(file1, sizeof(file1), "/tmp/dwbem_XXXXXX_orig.js", 8);
-    int fd2 = create_tmp(file2, sizeof(file2), "/tmp/dwbem_XXXXXX_new.js", 7);
+    int fd1 = create_tmp(file1, sizeof(file1), "/tmp/dwbem_orig_XXXXXX");
+    int fd2 = create_tmp(file2, sizeof(file2), "/tmp/dwbem_new_XXXXXX");
 
     char *text2_new = g_strdup_printf("// THIS FILE WILL BE DISCARDED\n%s// THIS FILE WILL BE DISCARDED", text2);
     if (g_file_set_contents(file1, text1, -1, &e) && g_file_set_contents(file2, text2_new, -1, &e)) 
@@ -438,7 +440,7 @@ edit(const char *text)
     char *new_config = NULL;
     char file[32];
 
-    int fd = create_tmp(file, sizeof(file), "/tmp/dwbem_XXXXXX.js", 3);
+    int fd = create_tmp(file, sizeof(file), "/tmp/dwbem_XXXXXX");
 
     if (g_file_set_contents(file, text, -1, NULL)) 
     {
@@ -526,6 +528,24 @@ set_loader(const char *name, const char *config, int flags)
     }
     g_free(script);
 }
+static int 
+check_config(const char *config)
+{
+    int ret = 0;
+    JSValueRef exc = NULL;
+    JSGlobalContextRef ctx = JSGlobalContextCreate(NULL);
+    char *object_str = g_strdup_printf("var x = { \n%s\n };", config);
+    JSStringRef js_str = JSStringCreateWithUTF8CString(object_str);
+    if (!JSCheckScriptSyntax(ctx, js_str, NULL, 2, &exc))
+    {
+        ret = -1;
+    }
+    JSStringRelease(js_str);
+    g_free(object_str);
+    JSGlobalContextRelease(ctx);
+    return ret;
+}
+
 
 static int 
 add_to_loader(const char *name, const char *content, int flags) 
@@ -534,6 +554,7 @@ add_to_loader(const char *name, const char *content, int flags)
     char *config = NULL;
     const char *new_config = NULL;
     char *data = NULL;
+    int ntf = 1;
     gchar **matches = g_regex_split_simple("//<DEFAULT_CONFIG|//>DEFAULT_CONFIG", content, G_REGEX_DOTALL, 0);
 
     if (matches[1] == NULL) 
@@ -547,19 +568,51 @@ add_to_loader(const char *name, const char *content, int flags)
         }
 
         data = get_data(name, m_loader, TMPL_CONFIG, 0);
-        if (diff(data, matches[1], &config) == 0) {
-            notify("Config is up to date");
-            goto unwind;
+        while (1) 
+        {
+            if (diff(data, matches[1], &config, ntf) == 0) 
+            {
+                notify("Config is up to date");
+                goto unwind;
+            }
+            else 
+            {
+                if (check_config(config) != 0)
+                {
+                    if (yes_no(0, "The configuration contains errors, continue anyway"))
+                    {
+                        new_config = config;
+                        break;
+                    }
+                    else 
+                    {
+                        data = config;
+                        ntf = 0;
+                    }
+                }
+                else 
+                {
+                    new_config = config;
+                    break;
+                }
+            }
         }
-        else 
-            new_config = config;
     }
     else if (flags & F_NO_CONFIRM) {
         notify("Skipping configuration check");
         new_config = matches[1];
     }
     else if (!(flags & F_NO_CONFIG) && yes_no(1, "Edit configuration") == 1) 
-        new_config = config = edit(matches[1]);
+    {
+        char *data = matches[1];
+        while (1)
+        {
+            new_config = config = edit(data);
+            if (check_config(config) == 0 || yes_no(0, "The configuration contains errors, continue anyway"))
+                break;
+            data = config;
+        }
+    }
     else 
         new_config = matches[1];
 
