@@ -366,27 +366,17 @@ get_response(char *buffer, size_t length, const char *format, ...)
     return xreadline(buffer, length, prompt);
 }
 
-#ifdef __GLIBC__
 int 
 create_tmp(char *buffer, int size, const char *template, int suffix_length) 
 {
-    strncpy(buffer, template, size);
-    int fd = mkstemps(buffer, suffix_length);
-    if (fd == -1) 
-        die(1, "Cannot create temporary file");
-    return fd;
-}
-#else 
-int 
-create_tmp(char *buffer, int size, const char *template) 
-{
-    strncpy(buffer, template, size);
+    int len = strlen(template);
+    strncpy(buffer, template, len-suffix_length);
     int fd = mkstemp(buffer);
     if (fd == -1) 
         die(1, "Cannot create temporary file");
+    strncat(buffer, template + (len-suffix_length), suffix_length);
     return fd;
 }
-#endif
 
 static int
 diff(const char *text1, const char *text2, char **ret) 
@@ -409,13 +399,8 @@ diff(const char *text1, const char *text2, char **ret)
         return 1;
     }
 
-#ifdef __GLIBC__
     int fd1 = create_tmp(file1, sizeof(file1), "/tmp/dwbem_XXXXXX_orig.js", 8);
     int fd2 = create_tmp(file2, sizeof(file2), "/tmp/dwbem_XXXXXX_new.js", 7);
-#else
-    int fd1 = create_tmp(file1, sizeof(file1), "/tmp/dwbem_orig_XXXXXX");
-    int fd2 = create_tmp(file2, sizeof(file2), "/tmp/dwbem_new_XXXXXX");
-#endif
 
     char *text2_new = g_strdup_printf("// THIS FILE WILL BE DISCARDED\n%s// THIS FILE WILL BE DISCARDED", text2);
     if (g_file_set_contents(file1, text1, -1, &e) && g_file_set_contents(file2, text2_new, -1, &e)) 
@@ -453,11 +438,7 @@ edit(const char *text)
     char *new_config = NULL;
     char file[32];
 
-#ifdef __GLIBC__
     int fd = create_tmp(file, sizeof(file), "/tmp/dwbem_XXXXXX.js", 3);
-#else 
-    int fd = create_tmp(file, sizeof(file), "/tmp/dwbem_XXXXXX");
-#endif
 
     if (g_file_set_contents(file, text, -1, NULL)) 
     {
