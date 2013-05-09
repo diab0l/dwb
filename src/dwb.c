@@ -4988,6 +4988,51 @@ dwb_parse_commands(const char *line)
 }
 /*}}}*/
 
+static gboolean 
+dwb_remove_group(const char *path, const char *group)
+{
+    gboolean result = false;
+    char *data;
+    GKeyFile *kf = g_key_file_new(); 
+    if (kf == NULL)
+        return result;
+    if (g_key_file_load_from_file(kf, path, G_KEY_FILE_KEEP_COMMENTS, NULL))
+    {
+        if (g_key_file_remove_group(kf, group, NULL))
+        {
+            if ((data = g_key_file_to_data(kf, NULL, NULL)) != NULL)
+            {
+                util_set_file_content(path, data);
+                g_free(data);
+                result = true;
+            }
+        }
+    }
+    g_key_file_free(kf);
+    return result;
+}
+gboolean 
+dwb_delete_profile(const char *profile)
+{
+    gboolean success = false;
+    char *path = util_build_path();
+
+    char *filename = g_build_filename(path, "keys", NULL);
+    success = dwb_remove_group(filename, profile) || success;
+    g_free(filename);
+
+    filename = g_build_filename(path, "settings", NULL);
+    success = dwb_remove_group(filename, profile) || success;
+    g_free(filename);
+
+    filename = g_build_filename(path, profile, NULL);
+    success = util_rmdir(filename, false, true) || success;
+    g_free(filename);
+
+    g_free(path);
+    return success;
+}
+
 void
 dwb_version() 
 {

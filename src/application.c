@@ -40,6 +40,7 @@ static gboolean s_opt_override_restore = false;
 static gboolean s_opt_version = false;
 static gboolean s_opt_force = false;
 static gboolean s_opt_enable_scripts = false;
+static gchar **s_opt_delete_profile = NULL;
 static gchar *s_opt_restore = NULL;
 static gchar **s_opt_exe = NULL;
 static gchar **s_scripts;
@@ -56,6 +57,7 @@ static GOptionEntry options[] = {
     { "execute", 'x', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_exe, "Execute commands", NULL},
     { "version", 'v', 0, G_OPTION_ARG_NONE, &s_opt_version, "Show version information and exit", NULL},
     { "enable-scripts", 'S', 0, G_OPTION_ARG_NONE, &s_opt_enable_scripts, "Enable javascript api", NULL},
+    { "delete-profile", 'd', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_delete_profile, "Deletes a profile", NULL},
     { "set-as-default", 0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, &application_parse_option, "Sets dwb as default browser", NULL},
     { NULL, 0, 0, 0, NULL, NULL, NULL }
 };
@@ -159,13 +161,6 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     char *appid;
     GDBusConnection *bus;
 
-    //GDesktopAppInfo *info = g_desktop_app_info_new("dwb.desktop");
-    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/html", NULL);
-    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "text/xml", NULL);
-    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "application/xhtml+xml", NULL);
-    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/http", NULL);
-    //g_app_info_set_as_default_for_type(G_APP_INFO(info), "x-scheme-handler/https", NULL);
-
     GOptionContext *c = application_get_option_context();
     if (!g_option_context_parse(c, &argc, argv, &error)) 
     {
@@ -182,6 +177,17 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     if (s_opt_exe != NULL)
         argc_exe = g_strv_length(s_opt_exe);
 
+    if (s_opt_delete_profile != NULL)
+    {
+        for (int i=0; s_opt_delete_profile[i]; i++)
+        {
+            if (!dwb_delete_profile(s_opt_delete_profile[i]))
+            {
+                fprintf(stderr, "Deleting profile \"%s\" failed\n", s_opt_delete_profile[i]);
+            }
+        }
+        return true;
+    }
     if (s_opt_list_sessions) 
     {
         session_list();

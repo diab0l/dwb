@@ -10,7 +10,7 @@ __profile() {
     COMPREPLY=( $( compgen -W "$( while read line; do
         [[ "$line" == \[* ]] && {
             line="${line#\[}"
-            printf "${line%\]}"
+            printf "${line%\]} "
         } done < "${HOME}/.config/dwb/settings" )" -- $cur ) )
 }
 
@@ -83,8 +83,8 @@ _dwb() {
     local cur prev opts lopts
     _init_completion || return 
 
-    opts="-h -c -e -f -l -n -r -R -p -x -v -S"
-    lopts="--help --check-script --embed --force --list-sessions --new-instance
+    opts="-h -c -d -e -f -l -n -r -R -p -x -v -S"
+    lopts="--help --check-script --delete-profile --embed --force --list-sessions --new-instance
     --restore --override-restore --profile --execute --version --enable-scripts
     --set-as-default"
 
@@ -96,6 +96,9 @@ _dwb() {
             __session
             return 0;;
         -p|--profile)
+            __profile
+            return 0;;
+        -d|--delete-profile)
             __profile
             return 0;;
         -x|--execute)

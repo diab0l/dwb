@@ -318,12 +318,12 @@ util_get_directory_content(GString *buffer, const char *dirname, const char *ext
     }
 
 }/*}}}*/
-void 
+gboolean 
 util_rmdir(const char *path, gboolean only_content, gboolean recursive) 
 {
     GDir *dir = g_dir_open(path, 0, NULL);
     if (dir == NULL) 
-        return;
+        return false;
     const char *filename = NULL;
     char *fullpath = NULL;
     while ( (filename = g_dir_read_name(dir)) )  
@@ -342,6 +342,7 @@ util_rmdir(const char *path, gboolean only_content, gboolean recursive)
         rmdir(path);
 
     g_dir_close(dir);
+    return true;
 }
 /* util_get_file_content(const char *filename)    return: char * (alloc) {{{*/
 char *

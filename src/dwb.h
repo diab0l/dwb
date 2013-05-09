@@ -1014,6 +1014,7 @@ DwbStatus dwb_pack(const char *layout, gboolean rebuild);
 void dwb_init_signals(void);
 void dwb_init_vars(void);
 void dwb_parse_commands(const char *line);
+gboolean dwb_delete_profile(const gchar *);
 DwbStatus dwb_scheme_handler(GList *gl, WebKitNetworkRequest *request);
 GList *dwb_get_simple_list(GList *, const char *filename);
 char * dwb_prompt(gboolean visibility, char *prompt, ...);
