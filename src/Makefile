@@ -3,6 +3,7 @@
 BASEDIR=..
 
 include $(BASEDIR)/config.mk
+include config.mk
 
 
 DEPS=$(patsubst %.o, %.d, $(OBJ))

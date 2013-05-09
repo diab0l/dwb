@@ -150,11 +150,6 @@ else
 M4FLAGS += --define=WITH_HSTS=1
 endif
 
-# If execinfo.h is not available, e.g. freebsd
-ifneq (${WITHOUT_EXECINFO}, 1)
-CFLAGS += -DHAS_EXECINFO
-endif
-
 CFLAGS_OPTIONS := $(CFLAGS)
 
 ifeq (${USEGTK3}, 1) 
