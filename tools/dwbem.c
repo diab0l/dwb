@@ -545,6 +545,22 @@ check_config(const char *config)
     JSGlobalContextRelease(ctx);
     return ret;
 }
+static char *
+do_edit(const char *config)
+{
+    char *new_config, *tmp_config = NULL;
+    while(1)
+    {
+        new_config = edit(config);
+        if (tmp_config != NULL)
+            g_free(tmp_config);
+        if (check_config(new_config) == 0 || yes_no(0, "The configuration contains errors, continue anyway"))
+            break;
+        config = new_config;
+        tmp_config = new_config;
+    }
+    return new_config;
+}
 
 
 static int 
@@ -604,14 +620,7 @@ add_to_loader(const char *name, const char *content, int flags)
     }
     else if (!(flags & F_NO_CONFIG) && yes_no(1, "Edit configuration") == 1) 
     {
-        char *data = matches[1];
-        while (1)
-        {
-            new_config = config = edit(data);
-            if (check_config(config) == 0 || yes_no(0, "The configuration contains errors, continue anyway"))
-                break;
-            data = config;
-        }
+        new_config = do_edit(matches[1]);
     }
     else 
         new_config = matches[1];
@@ -800,7 +809,7 @@ cl_change_config(const char *name, int flags)
             new_config = config;
         else 
         {
-            new_config = edit(config);
+            new_config = do_edit(config);
             g_free(config);
         }
 
@@ -1128,7 +1137,7 @@ cl_edit(const char *name, int flags)
     char *config = get_config(name);
     if (config != NULL) 
     {
-        char *new_config = edit(config);
+        char *new_config = do_edit(config);
         if (new_config != NULL) 
         {
             set_data(name, new_config, TMPL_CONFIG, 0);
