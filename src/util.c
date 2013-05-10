@@ -959,3 +959,27 @@ util_resolve_symlink(char *path)
     }
     return ret;
 }
+gboolean 
+util_keyfile_do(char *path, KeyFileAction action, const void *data)
+{
+    char *content;
+    gboolean result = false;
+    GKeyFile *kf = g_key_file_new(); 
+    if (kf == NULL)
+        return result;
+
+    if (g_key_file_load_from_file(kf, path, G_KEY_FILE_KEEP_COMMENTS, NULL))
+    {
+        if (action(kf, data))
+        {
+            if ((content = g_key_file_to_data(kf, NULL, NULL)) != NULL)
+            {
+                util_set_file_content(path, content);
+                g_free(content);
+                result = true;
+            }
+        }
+    }
+    g_key_file_free(kf);
+    return result;
+}

@@ -19,6 +19,7 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+typedef gboolean (*KeyFileAction)(GKeyFile *, const void *data);
 
 // strings
 char * util_string_replace(const char *haystack, const char *needle, const char *replacemant);
@@ -103,6 +104,7 @@ Sanitize util_string_to_sanitize(const char *);
 char *util_create_json(int, ...);
 int util_modulo(int, int);
 char *util_resolve_symlink(char *path);
+gboolean util_keyfile_do(char *path, KeyFileAction action, const void *data);
 
 
 #endif
