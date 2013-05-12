@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef ADBLOCK_H
-#define ADBLOCK_H
+#ifndef __DWB_ADBLOCK_H__
+#define __DWB_ADBLOCK_H__
 
 gboolean adblock_init();
 gboolean adblock_running();
@@ -25,4 +25,4 @@ void adblock_end();
 void adblock_connect(GList *gl);
 void adblock_disconnect(GList *gl);
 
-#endif // ADBLOCK_H
+#endif // __DWB_ADBLOCK_H__

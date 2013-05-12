@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef APPLICATION_H
-#define APPLICATION_H
+#ifndef __DWB_APPLICATION_H__
+#define __DWB_APPLICATION_H__
 
 gint application_run(int, char **);
 void application_stop(void);

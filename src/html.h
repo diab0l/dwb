@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef HTML_H
-#define HTML_H
+#ifndef __DWB_HTML_H__
+#define __DWB_HTML_H__
 
 gboolean html_load(GList *, const char *);
 

@@ -17,8 +17,8 @@
  */
 
 #ifndef DISABLE_HSTS
-#ifndef HSTS_H
-#define HSTS_H
+#ifndef __DWB_HSTS_H__
+#define __DWB_HSTS_H__
 
 gboolean hsts_running();
 gboolean hsts_init();
@@ -27,5 +27,5 @@ void hsts_save();
 void hsts_activate();
 void hsts_deactivate();
 
-#endif // HSTS_H
+#endif // __DWB_HSTS_H__
 #endif

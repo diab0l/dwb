@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef DOWNLOAD_H
-#define DOWNLOAD_H
+#ifndef __DWB_DOWNLOAD_H__
+#define __DWB_DOWNLOAD_H__
 
 
 void download_get_path(GList *, WebKitDownload *);

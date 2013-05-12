@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef DWB_H
-#define DWB_H
+#ifndef __DWB_DWB_H__
+#define __DWB_DWB_H__
 #include <gtk/gtk.h>
 #include <webkit/webkit.h>
 #include <gdk/gdkkeysyms.h> 

@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#ifndef __DWB_UTIL_H__
+#define __DWB_UTIL_H__
 
 typedef gboolean (*KeyFileAction)(GKeyFile *, const void *data);
 

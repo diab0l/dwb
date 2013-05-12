@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef JS_H
-#define JS_H
+#ifndef __DWB_JS_H__
+#define __DWB_JS_H__
 #include <JavaScriptCore/JavaScript.h>
 
 typedef struct js_iterator_s js_array_iterator;

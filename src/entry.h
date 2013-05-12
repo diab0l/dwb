@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef ENTRY_H
-#define ENTRY_H
+#ifndef __DWB_ENTRY_H__
+#define __DWB_ENTRY_H__
 DwbStatus entry_history_forward(GList **last);
 DwbStatus entry_history_back(GList **list, GList **last);
 void entry_focus();

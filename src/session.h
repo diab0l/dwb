@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SESSION_H
-#define SESSION_H
+#ifndef __DWB_SESSION_H__
+#define __DWB_SESSION_H__
 
 enum SessionFlags {
   SESSION_FORCE = 1<<0,

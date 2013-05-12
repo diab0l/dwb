@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef DOM_H
-#define DOM_H
+#ifndef __DWB_DOM_H__
+#define __DWB_DOM_H__
 
 char * dom_node_get_attribute(WebKitDOMNode *node, const char *attribute);
 gboolean dom_add_frame_listener(WebKitWebFrame *frame, const char *signal, GCallback callback, gboolean bubble, GList *gl);

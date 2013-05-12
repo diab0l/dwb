@@ -18,8 +18,8 @@
  */
 
 
-#ifndef DOMAIN_H
-#define DOMAIN_H
+#ifndef __DWB_DOMAIN_H__
+#define __DWB_DOMAIN_H__
 
 #define SUBDOMAIN_MAX 32
 

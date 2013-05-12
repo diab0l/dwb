@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SCRIPTS_H
-#define SCRIPTS_H
+#ifndef __DWB_SCRIPTS_H__
+#define __DWB_SCRIPTS_H__
 
 #include <JavaScriptCore/JavaScript.h>
 

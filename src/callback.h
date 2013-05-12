@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef CALLBACKS_H
-#define CALLBACKS_H
+#ifndef __DWB_CALLBACK_H__
+#define __DWB_CALLBACK_H__
 
 gboolean callback_entry_key_release(GtkWidget *, GdkEventKey *);
 gboolean callback_entry_key_press(GtkWidget *, GdkEventKey *);

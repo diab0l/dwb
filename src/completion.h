@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef COMPLETION_H
-#define COMPLETION_H
+#ifndef __DWB_COMPLETION_H__
+#define __DWB_COMPLETION_H__
 
 
 #define COMP_EVENT_BOX(X)    (((Completion*)((X)->data))->event)

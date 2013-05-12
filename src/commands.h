@@ -16,8 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef COMMANDS_H
-#define COMMANDS_H
+#ifndef __DWB_COMMANDS_H__
+#define __DWB_COMMANDS_H__
 
 
 DwbStatus commands_simple_command(KeyMap *km, const char *);
