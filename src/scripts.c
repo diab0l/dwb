@@ -1720,6 +1720,54 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
 /*}}}*/
 
 /* global_include {{{*/
+/** 
+ * Includes a file. 
+ * Note that included files are not visible in other scripts unless they are
+ * explicitly injected into the global scope. To use functions or variables from
+ * an included script the script can either return an object containing the
+ * public functions/variables or {@link provide} can be called in the included
+ * script. 
+ *
+ * @name include 
+ * @function
+ * @param {String} path 
+ *      The path to the script
+ * @param {Boolean} global
+ *      Whether the script should be included into the global scope.
+ *
+ * @return {Object}
+ *      The object returned from the included script 
+ *      
+ * @example
+ * // included script 
+ * function foo()
+ * {
+ *     io.print("bar");
+ * }
+ * return {
+ *      foo : foo
+ * }
+ *
+ * // including script
+ * var x = include("/path/to/script"); 
+ * x.foo();
+ *
+ *
+ * // included script
+ * provide("foo", {
+ *      foo : function() 
+ *      {
+ *          io.print("bar");
+ *      }
+ * });
+ *
+ * // including script
+ * include("/path/to/script");
+ * require(["foo"], function(foo) {
+ *      foo.foo();
+ * });
+ * */
+
 static JSValueRef 
 global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
