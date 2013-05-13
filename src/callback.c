@@ -88,7 +88,10 @@ callback_entry_key_press(GtkWidget* entry, GdkEventKey *e)
         return true;
     }
     else if (mode & COMPLETE_SCRIPTS && !DWB_COMPLETE_KEY(e)) 
-        return dwb.state.script_comp_readonly;
+        if (dwb.state.script_comp_readonly)
+            return true;
+        else 
+            goto skip;
     else if (e->keyval == GDK_KEY_BackSpace && !complete) 
         return false;
     else if (mode == HINT_MODE) 
