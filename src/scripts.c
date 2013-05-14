@@ -39,6 +39,9 @@
 #include "application.h" 
 #include "completion.h" 
 #include "entry.h" 
+
+#define API_VERSION 1
+
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -1628,6 +1631,8 @@ error_out:
 /** 
  * Refers to the global object
  * @name global 
+ * @type Object
+ * @readonly
  *
  * */
 static JSValueRef 
@@ -1640,6 +1645,7 @@ global_get(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
  *
  * @name session 
  * @type SoupSession
+ * @readonly
  *
  * */
 static JSValueRef 
@@ -4787,6 +4793,14 @@ create_global_object()
      * @static 
      * */
     JSObjectRef global_object = JSContextGetGlobalObject(ctx);
+    /**
+     * The api-version
+     * @name version 
+     * @readonly
+     * @type Number
+     * */
+    js_set_object_number_property(ctx, global_object, "version", API_VERSION, NULL);
+
 
     JSStaticValue data_values[] = {
         { "profile",        data_get_profile, NULL, kJSDefaultAttributes },
@@ -4837,6 +4851,7 @@ create_global_object()
      * Object that can be used to get dwb's settings, to set dwb's settings use
      * {@link execute}
      * @name settings 
+     * @type Object
      * @example 
      * if (settings.enableScripts == true)
      *      execute("local_set enable-scripts false");
