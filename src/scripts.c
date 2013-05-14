@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <glib.h>
+#include <cairo.h>
 #include "dwb.h"
 #include "scripts.h" 
 #include "session.h" 
