@@ -158,6 +158,7 @@ html_input(proxy, text, Toggle proxy)
 
 html_header(Miscellaneous)
 dnl
+html_input(adblock_reload_rules, text, Reload adblock rules)
 html_input(allow_cookie, text, Allow persistent cookies for current site)
 html_input(allow_session_cookie, text, Allow session cookies for current site)
 html_input(allow_session_cookie_tmp, text, Allow session cookies for current site temporarily)

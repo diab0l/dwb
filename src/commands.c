@@ -1077,3 +1077,10 @@ commands_tabdo(KeyMap *km, Arg *arg)
     dwb_focus_view(current, "tabdo");
     return STATUS_OK;
 }
+DwbStatus
+commands_adblock_reload_rules(KeyMap *km, Arg *arg)
+{
+    adblock_reload();
+    dwb_set_normal_message(dwb.state.fview, true, "Adblock rules reloaded");
+    return STATUS_OK;
+}

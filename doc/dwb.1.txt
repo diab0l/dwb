@@ -736,6 +736,7 @@ COMMAND OVERVIEW
 [options="header"]
 |================
 |Command                 |Alias           |Description
+|adblock_reload_rules    |                |Reload adblocker rules
 |allow_cookie            |cookie          |Allow persistent cookies for current site
 |allow_session_cookie    |scookie         |Allow session cookies for currrent site
 |allow_session_cookie_tmp|tcookie         |Allow session cookies for current site

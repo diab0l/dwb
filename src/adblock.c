@@ -906,29 +906,52 @@ error_out:
 void 
 adblock_end() 
 {
+    if (!s_init)
+        return;
     for (GSList *l = s_css_hider_list; l; l=l->next) 
         g_free(l->data);
     
     g_slist_free(s_css_hider_list);
+    s_css_hider_list = NULL;
+
     if (s_css_exceptions != NULL) 
+    {
         g_string_free(s_css_exceptions, true);
+        s_css_exceptions = NULL;
+    }
     if (s_rules != NULL) 
+    {
         g_ptr_array_free(s_rules, true);
+        s_rules = NULL;
+    }
     if (s_simple_rules != NULL) 
+    {
         g_ptr_array_free(s_simple_rules, true);
+        s_simple_rules = NULL;
+    }
     if (s_simple_exceptions != NULL) 
+    {
         g_ptr_array_free(s_simple_exceptions, true);
+        s_simple_exceptions = NULL;
+    }
     if(s_exceptions != NULL) 
+    {
         g_ptr_array_free(s_exceptions, true);
+        s_exceptions = NULL;
+    }
     if (s_hider_rules != NULL) 
+    {
         g_hash_table_remove_all(s_hider_rules);
+    }
     if (s_hider_list != NULL) 
     {
         for (GSList *l = s_hider_list; l; l=l->next) 
             adblock_element_hider_free((AdblockElementHider*)l->data);
 
         g_slist_free(s_hider_list);
+        s_hider_list = NULL;
     }
+    s_init = false;
 }/*}}}*/
 
 /* adblock_init() {{{*/
@@ -965,3 +988,14 @@ adblock_init()
 
     return true;
 }/*}}}*//*}}}*/
+gboolean 
+adblock_reload()
+{
+    for (GList *gl = dwb.state.views; gl; gl=gl->next)
+        adblock_disconnect(gl);
+    adblock_end();
+    gboolean ret = adblock_init();
+    for (GList *gl = dwb.state.views; gl; gl=gl->next)
+        adblock_connect(gl);
+    return ret;
+}

@@ -19,9 +19,10 @@
 #ifndef __DWB_ADBLOCK_H__
 #define __DWB_ADBLOCK_H__
 
-gboolean adblock_init();
-gboolean adblock_running();
-void adblock_end();
+gboolean adblock_init(void);
+gboolean adblock_running(void);
+void adblock_end(void);
+gboolean adblock_reload(void);
 void adblock_connect(GList *gl);
 void adblock_disconnect(GList *gl);
 

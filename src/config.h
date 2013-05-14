@@ -189,6 +189,7 @@ static KeyValue KEYS[] = {
   { "reload_bookmarks",         {   NULL,         0, 0 }, }, 
   { "reload_quickmarks",        {   NULL,         0, 0 }, }, 
   { "print_preview",            {   NULL,         0, 0 }, }, 
+  { "adblock_reload_rules",     {   NULL,         0, 0 }, }, 
 };
 
 /* FUNCTION_MAP{{{*/
@@ -206,6 +207,11 @@ static FunctionMap FMAP [] = {
   { { "reload_bookmarks",              "Reload bookmarks",                    }, CP_COMMANDLINE, 
     (Func)commands_reload_bookmarks,            NULL,                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },
+
+  { { "adblock_reload_rules",              "Reload adblock rulse",                    }, CP_COMMANDLINE, 
+    (Func)commands_adblock_reload_rules,            NULL,                            POST_SM,     
+    { .p = NULL },                          EP_NONE,    { NULL }, },
+
   { { "toggle_tab",              "Toggle between last and current tab",                    }, CP_COMMANDLINE, 
     (Func)commands_toggle_tab,            NULL,                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { "ttab" }, },
