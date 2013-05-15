@@ -507,8 +507,8 @@
                             },
                             /**
                              * Includes a script, same as {@link include} but
-                             * the path must be relative to including script
-                             * path. 
+                             * the path must be relative to the including
+                             * script's path. 
                              *
                              * @name include
                              * @memberOf script
