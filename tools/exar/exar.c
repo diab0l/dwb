@@ -35,10 +35,20 @@ void
 help(int ret)
 {
     printf("USAGE: \n"
-            "   exar option [argument]\n\n" 
+            "   exar option [arguments]\n\n" 
            "OPTIONS:\n" 
-           "    p path        : pack file or directory 'path'\n"
-           "    u file [dir]  : unpack 'file' to directory 'dir' or to current directory\n");
+           "    h                : Print this help and exit.\n"
+           "    p[v] path        : Pack file or directory 'path'.\n"
+           "    u[v] file [dir]  : Pack 'file' to directory 'dir' or to \n" 
+           "                       current directory.\n"
+           "    v                : Verbose, pass multiple times (up to 3) to \n"
+           "                       get more verbose messages.\n\n"
+           "EXAMPLES:\n"
+           "    exar p /tmp/foo        -- pack /tmp/foo to foo.exar\n"
+           "    exar uvvv foo.exar     -- unpack foo.exar to current directory, \n" 
+           "                              verbosity level 3\n"
+           "    exar vu foo.exar /tmp  -- unpack foo.exar to current directory, \n" 
+           "                              verbosity level 1\n");
     exit(ret);
 }
 int 
@@ -49,7 +59,7 @@ main (int argc, char **argv)
     {
         help(EXIT_FAILURE);
     }
-    char *options = argv[1];
+    const char *options = argv[1];
     while (*options)
     {
         switch (*options) 
@@ -74,6 +84,7 @@ main (int argc, char **argv)
         help(EXIT_FAILURE);
     if (flag & EXAR_VERBOSE_MASK)
         exar_verbose(flag);
+
     if (flag & FLAG_U)
         exar_unpack(argv[2], argv[3]);
     else if (flag & FLAG_P)

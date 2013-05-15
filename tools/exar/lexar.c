@@ -56,7 +56,6 @@ pack(const char *fpath, const struct stat *st, int tf)
     FILE *f = NULL;
     const char *stripped = &fpath[s_offset];
 
-
     memset(buffer, 0, sizeof(buffer));
     strncpy(buffer + HDR_NAME, stripped, SZ_NAME);
 
@@ -106,7 +105,6 @@ exar_pack(const char *path)
     const char *tmp = path, *slash;
     size_t len = strlen(path);
 
-
     // strip trailing '/'
     while (tmp[len-1] == '/')
         len--;
@@ -125,7 +123,7 @@ exar_pack(const char *path)
     LOG(3, "Opening %s for writing\n", buffer);
     if ((s_out = fopen(buffer, "w")) == NULL)
     {
-        fprintf(stderr, "Cannot open %s\n", buffer);
+        perror("fopen");
         return -1;
     }
 
@@ -162,6 +160,7 @@ exar_unpack(const char *path, const char *dest)
         return -1;
     }
     LOG(1, "Found version %s\n", version);
+
     memcpy(orig_version, VERSION, sizeof(orig_version));
     if (memcmp(version, orig_version, SZ_VERSION))
     {
