@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 Stefan Bolte <portix@gmx.net>
+ * Copyright (c) 2013 Stefan Bolte <portix@gmx.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,7 +113,7 @@ main (int argc, char **argv)
             exar_cat(argv[2], argv[3]);
     }
     else 
-        help(EXIT_SUCCESS);
+        help(EXIT_FAILURE);
 
     return EXIT_SUCCESS;
 }
