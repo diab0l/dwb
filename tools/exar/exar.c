@@ -144,9 +144,10 @@ exar_pack(const char *path)
 int 
 exar_unpack(const char *path, const char *dest)
 {
+    int ret = -1;
     char name[SZ_NAME], size[SZ_SIZE], flag, rbuf;
     size_t fs;
-    FILE *of, *f;
+    FILE *of, *f = NULL;
     unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
 
     LOG(3, "Opening %s for reading\n", path);
@@ -160,7 +161,7 @@ exar_unpack(const char *path, const char *dest)
     if (fread(version, 1, sizeof(version), f) != sizeof(version))
     {
         fprintf(stderr, "Not an exar file?\n");
-        return -1;
+        goto error_out;
     }
 
     memcpy(orig_version, VERSION, sizeof(orig_version));
@@ -169,14 +170,14 @@ exar_unpack(const char *path, const char *dest)
     if (strncmp((char*)version, VERSION_BASE, 5))
     {
         fprintf(stderr, "Not an exar file?\n");
-        return -1;
+        goto error_out;
     }
 
     LOG(1, "Found version %s\n", version);
     if (memcmp(version, orig_version, SZ_VERSION))
     {
         fprintf(stderr, "Incompatible version number\n");
-        return -1;
+        goto error_out;
     }
     if (dest != NULL)
     {
@@ -184,7 +185,7 @@ exar_unpack(const char *path, const char *dest)
         if (chdir(dest) != 0)
         {
             perror("chdir");
-            return -1;
+            goto error_out;
         }
     }
 
@@ -222,9 +223,14 @@ exar_unpack(const char *path, const char *dest)
             fclose(of);
         }
     }
-    LOG(3, "Closing %s\n", path);
-    fclose(f);
-    return 0;
+    ret = 0;
+error_out:
+    if (f != NULL)
+    {
+        LOG(3, "Closing %s\n", path);
+        fclose(f);
+    }
+    return ret;
 }
 void 
 exar_verbose(unsigned char v)
