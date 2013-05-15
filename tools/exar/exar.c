@@ -15,82 +15,207 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
-#include "lexar.h"
+#include <stdio.h>
+#include <sys/stat.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <ftw.h>
+#include "exar.h"
+#define VERSION "exar-1"
+#define EXTENSION "exar"
 
-enum {
-    FLAG_V = 1<<0,
-    FLAG_P = 1<<3,
-    FLAG_U = 1<<4,
-};
-#ifndef MIN
-#define MIN(X, Y) ((X) > (Y) ? (Y) : (X))
-#endif
-#ifndef MAX
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
-#endif
-void 
-help(int ret)
+#define SZ_VERSION 8
+#define SZ_DFLAG  1
+#define SZ_NAME  115
+#define SZ_SIZE  12 
+#define HDR_NAME (0)
+
+#define HDR_DFLAG (HDR_NAME + SZ_NAME)
+#define HDR_SIZE (HDR_DFLAG + SZ_DFLAG)
+#define HDR_END (HDR_SIZE + SZ_SIZE)
+
+#define DIR_FLAG    (100)
+#define FILE_FLAG  (102);
+static size_t s_offset;
+static FILE *s_out;
+static unsigned char s_verbose = 0;
+#define LOG(level, format, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
+    fprintf(stderr, "exar-log%d: "format, level, __VA_ARGS__); } while(0)
+
+static int
+pack(const char *fpath, const struct stat *st, int tf)
 {
-    printf("USAGE: \n"
-            "   exar option [arguments]\n\n" 
-           "OPTIONS:\n" 
-           "    h                : Print this help and exit.\n"
-           "    p[v] path        : Pack file or directory 'path'.\n"
-           "    u[v] file [dir]  : Pack 'file' to directory 'dir' or to \n" 
-           "                       current directory.\n"
-           "    v                : Verbose, pass multiple times (up to 3) to \n"
-           "                       get more verbose messages.\n\n"
-           "EXAMPLES:\n"
-           "    exar p /tmp/foo        -- pack /tmp/foo to foo.exar\n"
-           "    exar uvvv foo.exar     -- unpack foo.exar to current directory, \n" 
-           "                              verbosity level 3\n"
-           "    exar vu foo.exar /tmp  -- unpack foo.exar to /tmp, verbosity \n" 
-           "                              level 1\n");
-    exit(ret);
+    (void)tf;
+
+    char buffer[HDR_END] = {0};
+    char rbuf[32];
+    size_t r;
+    FILE *f = NULL;
+    const char *stripped = &fpath[s_offset];
+
+    memset(buffer, 0, sizeof(buffer));
+    strncpy(buffer + HDR_NAME, stripped, SZ_NAME);
+
+    LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
+    if (S_ISDIR(st->st_mode))
+        buffer[HDR_DFLAG] = DIR_FLAG;
+    else if (S_ISREG(st->st_mode))
+    {
+        buffer[HDR_DFLAG] = FILE_FLAG;
+        LOG(3, "Opening %s for reading\n", fpath);
+        f = fopen(fpath, "r");
+        if (f == NULL)
+        {
+            perror("fopen");
+            return 0;
+        }
+    }
+    else 
+    {
+        LOG(1, "Only directories and regular files will be packed, ignoring %s\n", fpath);
+        return 0;
+    }
+
+    LOG(2, "Writing file header for %s\n", fpath);
+    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.11o", (unsigned int)st->st_size);
+    fwrite(buffer, 1, sizeof(buffer), s_out);
+
+    if (f != NULL)
+    {
+        LOG(2, "Writing %s (%lu bytes)\n", stripped, (st->st_size));
+        while ((r = fread(rbuf, 1, sizeof(rbuf), f)) > 0)
+            fwrite(rbuf, 1, r, s_out);
+
+        LOG(3, "Closing %s\n", fpath);
+        fclose(f);
+    }
+    return 0;
+}
+
+int 
+exar_pack(const char *path)
+{
+    int ret, i=0;
+    unsigned char version[SZ_VERSION] = {0};
+    char buffer[512];
+    const char *tmp = path, *slash;
+    size_t len = strlen(path);
+
+    // strip trailing '/'
+    while (tmp[len-1] == '/')
+        len--;
+    strncpy(buffer, path, len);
+
+    // get base name offset
+    slash = strrchr(buffer, '/');
+    if (slash != NULL)
+        s_offset = slash - buffer + 1;
+
+    // construct filename
+    for (tmp = path + s_offset; *tmp && *tmp != '/'; i++, tmp++)
+        buffer[i] = *tmp;
+    strncpy(&buffer[i], "." EXTENSION, sizeof(buffer) - i);
+
+    LOG(3, "Opening %s for writing\n", buffer);
+    if ((s_out = fopen(buffer, "w")) == NULL)
+    {
+        perror("fopen");
+        return -1;
+    }
+
+    // set version header
+    LOG(2, "Writing version header (%s)\n", VERSION);
+    memcpy(version, VERSION, sizeof(version));
+    fwrite(version, 1, sizeof(version), s_out);
+
+    ret = ftw(path, pack, 64);
+
+    LOG(3, "Closing %s\n", buffer);
+    fclose(s_out);
+    return ret;
 }
 int 
-main (int argc, char **argv)
+exar_unpack(const char *path, const char *dest)
 {
-    int flag = 0;
-    if (argc < 3)
+    char name[SZ_NAME], size[SZ_SIZE], flag, rbuf;
+    size_t fs;
+    FILE *of, *f;
+    unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
+
+    LOG(3, "Opening %s for reading\n", path);
+    if ((f = fopen(path, "r")) == NULL)
     {
-        help(EXIT_FAILURE);
+        fprintf(stderr, "Cannot open %s\n", path);
+        return -1;
     }
-    const char *options = argv[1];
-    while (*options)
+    // Compare version header
+    LOG(2, "Reading version header %s\n", "");
+    if (fread(version, 1, sizeof(version), f) != sizeof(version))
     {
-        switch (*options) 
+        fprintf(stderr, "Not an exar file?\n");
+        return -1;
+    }
+    LOG(1, "Found version %s\n", version);
+
+    memcpy(orig_version, VERSION, sizeof(orig_version));
+    if (memcmp(version, orig_version, SZ_VERSION))
+    {
+        fprintf(stderr, "Incompatible version number\n");
+        return -1;
+    }
+    if (dest != NULL)
+    {
+        LOG(2, "Changing to directory %s\n", dest);
+        if (chdir(dest) != 0)
         {
-            case 'p' : 
-                flag |= FLAG_P;
-                break;
-            case 'u' : 
-                flag |= FLAG_U;
-                break;
-            case 'v' : 
-                flag |= MAX(FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
-                break;
-            case 'h' : 
-                help(EXIT_SUCCESS);
-            default : 
-                help(EXIT_FAILURE);
+            perror("chdir");
+            return -1;
         }
-        options++;
     }
-    if ((flag & (FLAG_U | FLAG_P)) == (FLAG_U | FLAG_P))
-        help(EXIT_FAILURE);
-    if (flag & EXAR_VERBOSE_MASK)
-        exar_verbose(flag);
 
-    if (flag & FLAG_U)
-        exar_unpack(argv[2], argv[3]);
-    else if (flag & FLAG_P)
-        exar_pack(argv[2]);
-    else 
-        help(EXIT_SUCCESS);
+    while (1) 
+    {
+        if (fread(name, 1, SZ_NAME, f) != SZ_NAME)
+            break;
+        if (fread(&flag, 1, SZ_DFLAG, f) != SZ_DFLAG)
+            break;
+        if (fread(size, 1, SZ_SIZE, f) != SZ_SIZE)
+            break;
+        if (flag == DIR_FLAG) 
+        {
+            LOG(1, "Creating directory %s\n", name);
+            mkdir(name, 0755);
+        }
+        else 
+        {
+            LOG(1, "Unpacking %s\n", name);
+            fs = strtoul(size, NULL, 8);
+            LOG(3, "Opening %s for writing\n", name);
+            of = fopen(name, "w");
+            if (of == NULL)
+            {
+                perror("fopen");
+            }
 
-    return EXIT_SUCCESS;
+            LOG(2, "Writing %s (%lu bytes)\n", name, fs);
+            for (size_t i=0; i<fs; i++)
+            {
+                if (fread(&rbuf, 1, 1, f) != 0)
+                    fwrite(&rbuf, 1, 1, of);
+            }
+            LOG(3, "Closing %s\n", name);
+            fclose(of);
+        }
+    }
+    LOG(3, "Closing %s\n", path);
+    fclose(f);
+    return 0;
+}
+void 
+exar_verbose(unsigned char v)
+{
+    s_verbose = v & EXAR_VERBOSE_MASK;
 }

@@ -34,8 +34,8 @@
  *                  - file size            : 12 bytes   (unsigned int, octal)
  * */
 
-#ifndef __DWB_LEXAR_H__
-#define __DWB_LEXAR_H__
+#ifndef __EXAR_H__
+#define __EXAR_H__
 
 enum {
     EXAR_VERBOSE_L1 = 1<<0,
