@@ -15,8 +15,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef __DWB_LEXAR_H__
-#define __DWB_LEXAR_H__
+
 /* 
  * Pack/Unpack files/directories to dwb-extension archive. Only directories and
  * regular files are supported. Unlike tar exar doesn't preserve symbolic links,
@@ -26,14 +25,17 @@
  *
  * File format:
  *
- *  [version header][file header][file][file header][file][file header...
+ * [version header][file header][file][file header][file][file header...
  *
- *  version header : 8 bytes
- *  file header    : 128 bytes
- *                    - filename             : 115 bytes
- *                    - directory flag(d|f)  : 1 bytes
- *                    - file size            : 12 byte
+ * version header : 8 bytes
+ * file header    : 128 bytes
+ *                  - filename             : 115 bytes, (char*)
+ *                  - directory flag(d|f)  : 1 byte     (char)
+ *                  - file size            : 12 bytes   (unsigned int, octal)
  * */
+
+#ifndef __DWB_LEXAR_H__
+#define __DWB_LEXAR_H__
 
 enum {
     EXAR_VERBOSE_L1 = 1<<0,
