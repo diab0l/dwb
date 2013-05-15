@@ -47,8 +47,8 @@ help(int ret)
            "    exar p /tmp/foo        -- pack /tmp/foo to foo.exar\n"
            "    exar uvvv foo.exar     -- unpack foo.exar to current directory, \n" 
            "                              verbosity level 3\n"
-           "    exar vu foo.exar /tmp  -- unpack foo.exar to current directory, \n" 
-           "                              verbosity level 1\n");
+           "    exar vu foo.exar /tmp  -- unpack foo.exar to /tmp, verbosity \n" 
+           "                              level 1\n");
     exit(ret);
 }
 int 
