@@ -198,6 +198,8 @@ exar_unpack(const char *path, const char *dest)
             break;
         if (fread(size, 1, SZ_SIZE, f) != SZ_SIZE)
             break;
+        name[SZ_NAME-1] = 0;
+        size[SZ_SIZE-1] = 0;
         if (flag != DIR_FLAG && flag != FILE_FLAG)
         {
             LOG(1, "No file flag found for %s\n", name);
