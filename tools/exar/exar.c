@@ -40,7 +40,7 @@
 #define HDR_END (HDR_SIZE + SZ_SIZE)
 
 #define DIR_FLAG    (100)
-#define FILE_FLAG  (102);
+#define FILE_FLAG  (102)
 
 #define LOG(level, format, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
     fprintf(stderr, "exar-log%d: "format, level, __VA_ARGS__); } while(0)
@@ -148,6 +148,7 @@ exar_unpack(const char *path, const char *dest)
     char name[SZ_NAME], size[SZ_SIZE], flag, rbuf;
     size_t fs;
     FILE *of, *f = NULL;
+    char *endptr;
     unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
 
     LOG(3, "Opening %s for reading\n", path);
@@ -197,6 +198,12 @@ exar_unpack(const char *path, const char *dest)
             break;
         if (fread(size, 1, SZ_SIZE, f) != SZ_SIZE)
             break;
+        if (flag != DIR_FLAG && flag != FILE_FLAG)
+        {
+            LOG(1, "No file flag found for %s\n", name);
+            fprintf(stderr, "The archive seems to be corrupted%s", "\n");
+            goto error_out;
+        }
         if (flag == DIR_FLAG) 
         {
             LOG(1, "Creating directory %s\n", name);
@@ -205,7 +212,15 @@ exar_unpack(const char *path, const char *dest)
         else 
         {
             LOG(1, "Unpacking %s\n", name);
-            fs = strtoul(size, NULL, 8);
+
+            fs = strtoul(size, &endptr, 8);
+            if (*endptr)
+            {
+                LOG(1, "Cannot determine file size for %s\n", name);
+                fprintf(stderr, "The archive seems to be corrupted%s", "\n");
+                goto error_out;
+            }
+
             LOG(3, "Opening %s for writing\n", name);
             of = fopen(name, "w");
             if (of == NULL)
