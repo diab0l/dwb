@@ -1,5 +1,4 @@
 CFLAGS += -Wall -pedantic -Werror -std=c99 -g 
-CFLAGS += -D_BSD_SOURCE
 
 TARGET=exar
 OBJ=$(patsubst %.c, %.o, $(wildcard *.c))
