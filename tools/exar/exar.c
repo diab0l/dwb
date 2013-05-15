@@ -211,6 +211,7 @@ exar_unpack(const char *path, const char *dest)
             if (of == NULL)
             {
                 perror("fopen");
+                goto error_out;
             }
 
             LOG(2, "Writing %s (%lu bytes)\n", name, fs);
