@@ -59,6 +59,7 @@ pack(const char *fpath, const struct stat *st, int tf)
     memset(buffer, 0, sizeof(buffer));
     strncpy(buffer + HDR_NAME, stripped, SZ_NAME);
 
+    LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
     if (S_ISDIR(st->st_mode))
         buffer[HDR_DFLAG] = DIR_FLAG;
     else if (S_ISREG(st->st_mode))
@@ -81,8 +82,6 @@ pack(const char *fpath, const struct stat *st, int tf)
     LOG(2, "Writing file header for %s\n", fpath);
     snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.11o", (unsigned int)st->st_size);
     fwrite(buffer, 1, sizeof(buffer), s_out);
-
-    LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
 
     if (f != NULL)
     {
