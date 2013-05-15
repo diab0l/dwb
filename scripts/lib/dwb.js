@@ -504,6 +504,32 @@
                                 { 
                                     return object[key + id];
                                 }.bind(self, id)
+                            },
+                            /**
+                             * Includes a script, same as {@link include} but
+                             * the path must be relative to including script
+                             * path. 
+                             *
+                             * @name include
+                             * @memberOf script
+                             * @function
+                             *
+                             * @param {String} relPath 
+                             *      The relative path of the script
+                             * @param {Boolean} global 
+                             *      Whether to inject the script into the global
+                             *      scope
+                             *
+                             * @returns {Object}
+                             *      The object returned from the included script
+                             * */
+                            "include" : 
+                            {
+                                value : function(relPath, global)
+                                {
+                                    var dirName = path.substring(0, path.lastIndexOf("/") + 1);
+                                    return include(dirName + relPath, global);
+                                }
                             }
                     });
                     Object.preventExtensions(self);
