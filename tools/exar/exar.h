@@ -61,6 +61,16 @@ exar_verbose(unsigned char v_flags);
 int 
 exar_pack(const char *path);
 
+/* 
+ * Concatenates two archives or an archive and a file or directory
+ * @file1: The archive to append
+ * @file2: The archive, file or directory that will be appended
+ *
+ * @returns 0 on success and -1 on error
+ * */
+int 
+exar_cat(const char *file1, const char *file2);
+
 /*
  * Unpacks a file
  * @path: Path to the extension archive

@@ -42,8 +42,9 @@
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102)
 
-#define LOG(level, format, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
-    fprintf(stderr, "exar-log%d: "format, level, __VA_ARGS__); } while(0)
+#define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
+    fprintf(stderr, "exar-log%d: ", level); \
+    fprintf(stderr, __VA_ARGS__); } while(0)
 
 static size_t s_offset;
 static FILE *s_out;
@@ -99,14 +100,13 @@ pack(const char *fpath, const struct stat *st, int tf)
     return 0;
 }
 
-int 
-exar_pack(const char *path)
+size_t 
+get_offset(char *buffer, size_t n, const char *path, int *end)
 {
-    int ret, i=0;
-    unsigned char version[SZ_VERSION] = {0};
-    char buffer[512];
     const char *tmp = path, *slash;
     size_t len = strlen(path);
+    size_t offset = 0;
+    int i=0;
 
     // strip trailing '/'
     while (tmp[len-1] == '/')
@@ -116,11 +116,25 @@ exar_pack(const char *path)
     // get base name offset
     slash = strrchr(buffer, '/');
     if (slash != NULL)
-        s_offset = slash - buffer + 1;
-
-    // construct filename
+        offset = slash - buffer + 1;
     for (tmp = path + s_offset; *tmp && *tmp != '/'; i++, tmp++)
         buffer[i] = *tmp;
+    if (end != NULL)
+        *end = i;
+    return offset;
+}
+
+
+int 
+exar_pack(const char *path)
+{
+    int ret;
+    unsigned char version[SZ_VERSION] = {0};
+    char buffer[512];
+    int i = 0;
+
+    s_offset = get_offset(buffer, sizeof(buffer), path, &i);
+
     strncpy(&buffer[i], "." EXTENSION, sizeof(buffer) - i);
 
     LOG(3, "Opening %s for writing\n", buffer);
@@ -141,6 +155,35 @@ exar_pack(const char *path)
     fclose(s_out);
     return ret;
 }
+static int 
+check_version(FILE *f, int verbose)
+{
+    unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
+    LOG(2, "Reading version header\n");
+    if (fread(version, 1, sizeof(version), f) != sizeof(version))
+    {
+        if (verbose)
+            fprintf(stderr, "Not an exar file?\n");
+        return -1;
+    }
+    memcpy(orig_version, VERSION, sizeof(orig_version));
+    LOG(2, "Checking filetype\n");
+    if (strncmp((char*)version, VERSION_BASE, 5))
+    {
+        if (verbose)
+            fprintf(stderr, "Not an exar file?\n");
+        return -1;
+    }
+
+    LOG(1, "Found version %s\n", version);
+    if (memcmp(version, orig_version, SZ_VERSION))
+    {
+        if (verbose)
+            fprintf(stderr, "Incompatible version number\n");
+        return -1;
+    }
+    return 0;
+}
 int 
 exar_unpack(const char *path, const char *dest)
 {
@@ -149,7 +192,6 @@ exar_unpack(const char *path, const char *dest)
     size_t fs;
     FILE *of, *f = NULL;
     char *endptr;
-    unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
 
     LOG(3, "Opening %s for reading\n", path);
     if ((f = fopen(path, "r")) == NULL)
@@ -157,29 +199,9 @@ exar_unpack(const char *path, const char *dest)
         fprintf(stderr, "Cannot open %s\n", path);
         return -1;
     }
-    // Compare version header
-    LOG(2, "Reading version header %s\n", "");
-    if (fread(version, 1, sizeof(version), f) != sizeof(version))
-    {
-        fprintf(stderr, "Not an exar file?\n");
+    if (check_version(f, 1) != 0)
         goto error_out;
-    }
 
-    memcpy(orig_version, VERSION, sizeof(orig_version));
-
-    LOG(2, "Checking filetype%s", "\n");
-    if (strncmp((char*)version, VERSION_BASE, 5))
-    {
-        fprintf(stderr, "Not an exar file?\n");
-        goto error_out;
-    }
-
-    LOG(1, "Found version %s\n", version);
-    if (memcmp(version, orig_version, SZ_VERSION))
-    {
-        fprintf(stderr, "Incompatible version number\n");
-        goto error_out;
-    }
     if (dest != NULL)
     {
         LOG(2, "Changing to directory %s\n", dest);
@@ -247,6 +269,56 @@ error_out:
     {
         LOG(3, "Closing %s\n", path);
         fclose(f);
+    }
+    return ret;
+}
+int 
+exar_cat(const char *file1, const char *file2)
+{
+    int ret = -1;
+    size_t r;
+    FILE *f1 = NULL, *f2 = NULL;
+    char buffer[64];
+    char offset_buffer[512];
+
+    LOG(3, "Opening file %s for writing\n", file1);
+    if ((f1 = fopen(file1, "a")) == NULL)
+    {
+        perror("fopen");
+        goto error_out;
+    }
+    LOG(3, "Opening file %s for reading\n", file2);
+    if ((f2 = fopen(file2, "r")) == NULL)
+    {
+        perror("fopen");
+        goto error_out;
+    }
+    if (check_version(f2, 0) == 0)
+    {
+        LOG(1, "Concatenating archive\n");
+        while ((r = fread(buffer, 1, sizeof(buffer), f2)) > 0)
+        {
+            fwrite(buffer, 1, r, f1);
+        }
+    }
+    else 
+    {
+        s_offset = get_offset(offset_buffer, sizeof(offset_buffer), file2, NULL);
+        LOG(1, "Concatenating regular files\n");
+        s_out = f1;
+        ftw(file2, pack, 64);
+    }
+    ret = 0;
+error_out: 
+    if (f1 != NULL)
+    {
+        LOG(3, "Closing %s\n", file1);
+        fclose(f1);
+    }
+    if (f2 != NULL)
+    {
+        LOG(3, "Closing %s\n", file2);
+        fclose(f2);
     }
     return ret;
 }
