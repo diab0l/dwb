@@ -156,7 +156,7 @@ exar_unpack(const char *path, const char *dest)
     LOG(2, "Reading version header %s\n", "");
     if (fread(version, 1, sizeof(version), f) != sizeof(version))
     {
-        fprintf(stderr, "Not a exar file?\n");
+        fprintf(stderr, "Not an exar file?\n");
         return -1;
     }
     LOG(1, "Found version %s\n", version);
