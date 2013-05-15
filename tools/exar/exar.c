@@ -24,26 +24,30 @@
 #include <unistd.h>
 #include <ftw.h>
 #include "exar.h"
-#define VERSION "exar-1"
+
+#define VERSION_BASE "exar-"
+#define VERSION VERSION_BASE "1"
 #define EXTENSION "exar"
 
 #define SZ_VERSION 8
 #define SZ_DFLAG  1
 #define SZ_NAME  115
 #define SZ_SIZE  12 
-#define HDR_NAME (0)
 
+#define HDR_NAME (0)
 #define HDR_DFLAG (HDR_NAME + SZ_NAME)
 #define HDR_SIZE (HDR_DFLAG + SZ_DFLAG)
 #define HDR_END (HDR_SIZE + SZ_SIZE)
 
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102);
+
+#define LOG(level, format, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
+    fprintf(stderr, "exar-log%d: "format, level, __VA_ARGS__); } while(0)
+
 static size_t s_offset;
 static FILE *s_out;
 static unsigned char s_verbose = 0;
-#define LOG(level, format, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
-    fprintf(stderr, "exar-log%d: "format, level, __VA_ARGS__); } while(0)
 
 static int
 pack(const char *fpath, const struct stat *st, int tf)
@@ -158,9 +162,17 @@ exar_unpack(const char *path, const char *dest)
         fprintf(stderr, "Not an exar file?\n");
         return -1;
     }
-    LOG(1, "Found version %s\n", version);
 
     memcpy(orig_version, VERSION, sizeof(orig_version));
+
+    LOG(2, "Checking filetype%s", "\n");
+    if (strncmp((char*)version, VERSION_BASE, 5))
+    {
+        fprintf(stderr, "Not an exar file?\n");
+        return -1;
+    }
+
+    LOG(1, "Found version %s\n", version);
     if (memcmp(version, orig_version, SZ_VERSION))
     {
         fprintf(stderr, "Incompatible version number\n");
