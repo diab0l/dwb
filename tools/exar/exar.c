@@ -388,6 +388,7 @@ exar_extract(const char *archive, const char *file, size_t *s)
                     fprintf(stderr, "Failed to read %s\n", name);
                     *s = -1;
                     ret = NULL;
+                    free(ret);
                 }
                 else 
                     *s = fs;
