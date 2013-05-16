@@ -5,8 +5,11 @@ BASEDIR=..
 include $(BASEDIR)/config.mk
 include config.mk
 
+CFLAGS+=-I$(BASEDIR)/$(EXARDIR)
 
-DEPS=$(patsubst %.o, %.d, $(OBJ))
+DEPS=$(patsubst %.o, %.d, $(OBJ)) 
+
+OBJ += $(BASEDIR)/exar/exar.o
 
 all: $(TARGET)
 

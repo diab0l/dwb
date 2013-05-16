@@ -18,12 +18,15 @@ $(TARGET): $(SUBDIRS:%=%.subdir-make)
 
 #$(SRCDIR)/%: $(SUBDIR_BUILD_FIRST:%=%.subdir-buildfirst)
 
-%.subdir-buildfirst:
+%.subdir-buildfirst: $(SUBDIR_BUILD_LIB:%=%.subdir-buildlib)
 	@$(MAKE) $(MFLAGS) -C $*
 
-clean:  $(SUBDIRS:%=%.subdir-clean) $(SUBDIR_BUILD_FIRST:%=%.subdir-cleanfirst)
+%.subdir-buildlib:
+	@$(MAKE) $(MFLAGS) -C $*
 
-%.subdir-clean %.subdir-cleanfirst:
+clean:  $(SUBDIRS:%=%.subdir-clean) $(SUBDIR_BUILD_FIRST:%=%.subdir-cleanfirst) $(SUBDIR_BUILD_LIB:%=%.subdir-cleanlib)
+
+%.subdir-clean %.subdir-cleanfirst %.subdir-cleanlib:
 	@$(MAKE) $(MFLAGS) clean -C $*
 
 

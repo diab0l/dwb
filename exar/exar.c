@@ -42,6 +42,7 @@
 
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102)
+#define MAX_FILE_HANDLES 64
 
 #define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
@@ -50,6 +51,7 @@
 static size_t s_offset;
 static FILE *s_out;
 static unsigned char s_verbose = 0;
+static unsigned char s_version[SZ_VERSION];
 
 static void *
 xmalloc(size_t size)
@@ -86,13 +88,12 @@ get_offset(char *buffer, size_t n, const char *path, int *end)
         *end = i;
     return offset;
 }
-
 static int 
 check_version(FILE *f, int verbose)
 {
-    unsigned char version[SZ_VERSION] = {0}, orig_version[SZ_VERSION] = {0};
+    unsigned char orig_version[SZ_VERSION] = {0};
     LOG(2, "Reading version header\n");
-    if (fread(version, 1, sizeof(version), f) != sizeof(version))
+    if (fread(s_version, 1, SZ_VERSION, f) != SZ_VERSION)
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
@@ -100,15 +101,15 @@ check_version(FILE *f, int verbose)
     }
     memcpy(orig_version, VERSION, sizeof(orig_version));
     LOG(2, "Checking filetype\n");
-    if (strncmp((char*)version, VERSION_BASE, 5))
+    if (strncmp((char*)s_version, VERSION_BASE, 5))
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
         return -1;
     }
 
-    LOG(1, "Found version %s\n", version);
-    if (memcmp(version, orig_version, SZ_VERSION))
+    LOG(1, "Found version %s\n", s_version);
+    if (memcmp(s_version, orig_version, SZ_VERSION))
     {
         if (verbose)
             fprintf(stderr, "Incompatible version number\n");
@@ -116,7 +117,24 @@ check_version(FILE *f, int verbose)
     }
     return 0;
 }
-static char 
+/*
+ * Opens archive and checks version 
+ * */ 
+static FILE * 
+open_archive(const char *path, const char *mode, int *ret_version_check, int verbose)
+{
+    FILE *f = NULL;
+    LOG(3, "Opening %s for %s\n", path, strcmp(mode, "r") == 0 ? "reading" : strcmp(mode, "w") ? "writing" : "reading and writing");
+    if ((f = fopen(path, mode)) == NULL)
+    {
+        perror(path);
+        return NULL;
+    }
+    *ret_version_check = check_version(f, verbose);
+    return f;
+}
+
+static int 
 get_file_header(FILE *f, char *name, char *flag, size_t *size)
 {
     char *endptr;
@@ -150,6 +168,7 @@ get_file_header(FILE *f, char *name, char *flag, size_t *size)
     }
     return 0;
 }
+
 
 static int
 pack(const char *fpath, const struct stat *st, int tf)
@@ -227,7 +246,7 @@ exar_pack(const char *path)
     memcpy(version, VERSION, sizeof(version));
     fwrite(version, 1, sizeof(version), s_out);
 
-    ret = ftw(path, pack, 64);
+    ret = ftw(path, pack, MAX_FILE_HANDLES);
 
     LOG(3, "Closing %s\n", buffer);
     fclose(s_out);
@@ -244,14 +263,10 @@ exar_unpack(const char *path, const char *dest)
     unsigned char rbuf;
     size_t fs;
     FILE *of, *f = NULL;
+    int vers_check;
 
-    LOG(3, "Opening %s for reading\n", path);
-    if ((f = fopen(path, "r")) == NULL)
-    {
-        perror(path);
-        return -1;
-    }
-    if (check_version(f, 1) != 0)
+    f = open_archive(path, "r", &vers_check, 1);
+    if (f == NULL || vers_check == -1)
         goto error_out;
 
     if (dest != NULL)
@@ -314,6 +329,7 @@ exar_cat(const char *file1, const char *file2)
     FILE *f1 = NULL, *f2 = NULL;
     unsigned char buffer[64];
     char offset_buffer[512];
+    int vers_check;
 
     LOG(3, "Opening file %s for writing\n", file1);
     if ((f1 = fopen(file1, "a")) == NULL)
@@ -321,13 +337,10 @@ exar_cat(const char *file1, const char *file2)
         perror(file1);
         goto error_out;
     }
-    LOG(3, "Opening file %s for reading\n", file2);
-    if ((f2 = fopen(file2, "r")) == NULL)
-    {
-        perror(file2);
+    if ((f2 = open_archive(file2, "r", &vers_check, 0)) == NULL)
         goto error_out;
-    }
-    if (check_version(f2, 0) == 0)
+
+    if (vers_check == 0)
     {
         LOG(1, "Concatenating archive\n");
         while ((r = fread(buffer, 1, sizeof(buffer), f2)) > 0)
@@ -340,7 +353,7 @@ exar_cat(const char *file1, const char *file2)
         s_offset = get_offset(offset_buffer, sizeof(offset_buffer), file2, NULL);
         LOG(1, "Concatenating regular files\n");
         s_out = f1;
-        ftw(file2, pack, 64);
+        ftw(file2, pack, MAX_FILE_HANDLES);
     }
     ret = 0;
 error_out: 
@@ -365,15 +378,10 @@ exar_extract(const char *archive, const char *file, size_t *s)
     size_t fs = 0;
     FILE *f = NULL;
     unsigned char *ret = NULL;
+    int vers_check;
     *s = 0;
 
-    LOG(3, "Opening file %s for reading\n", archive);
-    if ((f = fopen(archive, "r")) == NULL)
-    {
-        perror(archive);
-        return NULL;
-    }
-    if (check_version(f, 1) != 0)
+    if ((f = open_archive(archive, "r", &vers_check, 1)) == NULL || vers_check != 0)
         goto finish;
     while (get_file_header(f, name, &flag, &fs) == 0)
     {
@@ -415,6 +423,7 @@ finish:
     }
     return ret;
 }
+
 void 
 exar_verbose(unsigned char v)
 {

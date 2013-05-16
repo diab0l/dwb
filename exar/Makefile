@@ -2,8 +2,12 @@ CFLAGS += -Wall -pedantic -Werror -std=c99 -g
 
 TARGET=exar
 OBJ=$(patsubst %.c, %.o, $(wildcard *.c))
+LIBEXAR=libexar.a
 
-all: $(TARGET)
+all: $(TARGET) $(LIBEXAR)
+
+$(LIBEXAR): exar.o
+	@$(AR) rcs $@ $<
 
 $(TARGET): $(OBJ)
 	@echo $(CC) $@
