@@ -25,6 +25,7 @@ enum {
     FLAG_P = 1<<3,
     FLAG_U = 1<<4,
     FLAG_C = 1<<5,
+    FLAG_E = 1<<6,
 };
 #ifndef MIN
 #define MIN(X, Y) ((X) > (Y) ? (Y) : (X))
@@ -32,6 +33,9 @@ enum {
 #ifndef MAX
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #endif
+
+#define OP_FLAG(flag) ((flag) & ((FLAG_P|FLAG_U|FLAG_C|FLAG_E)^(flag)))
+#define CHECK_FLAG(x, flag) (((x) & (flag)) && !((x) & ( (FLAG_P|FLAG_U|FLAG_C|FLAG_E)^(flag) ) ))
 void 
 help(int ret)
 {
@@ -41,6 +45,9 @@ help(int ret)
            "    h                 : Print this help and exit.\n"
            "    c[v] archive file : Concatenates a file, directory or archive to \n" 
            "                        an existing archive.\n"
+           "    e[v] archive file : Extracts an file from an archive and writes the content\n" 
+           "                        to stdout, the archive is not modified, the file path \n"
+           "                        is the relative file path of the file in the archive.\n"
            "    p[v] path         : Pack file or directory 'path'.\n"
            "    u[v] file [dir]   : Pack 'file' to directory 'dir' or to \n" 
            "                        current directory.\n"
@@ -78,6 +85,9 @@ main (int argc, char **argv)
             case 'c' : 
                 flag |= FLAG_C;
                 break;
+            case 'e' : 
+                flag |= FLAG_E;
+                break;
             case 'v' : 
                 flag |= MAX(FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
                 break;
@@ -91,26 +101,21 @@ main (int argc, char **argv)
     if (flag & EXAR_VERBOSE_MASK)
         exar_verbose(flag);
 
-    if (flag & FLAG_U)
+    if (CHECK_FLAG(flag, FLAG_U))
+        exar_unpack(argv[2], argv[3]);
+    else if (CHECK_FLAG(flag, FLAG_P))
+        exar_pack(argv[2]);
+    else if (CHECK_FLAG(flag, FLAG_C) && argc > 3)
+        exar_cat(argv[2], argv[3]);
+    else if (CHECK_FLAG(flag, FLAG_E) && argc > 3)
     {
-        if (flag & (FLAG_P | FLAG_C))
-            help(EXIT_FAILURE);
-        else
-            exar_unpack(argv[2], argv[3]);
-    }
-    else if (flag & FLAG_P)
-    {
-        if (flag & (FLAG_U | FLAG_C))
-            help(EXIT_FAILURE);
-        else
-            exar_pack(argv[2]);
-    }
-    else if (flag & FLAG_C)
-    {
-        if (flag & (FLAG_U | FLAG_P) || argc < 4)
-            help(EXIT_FAILURE);
-        else
-            exar_cat(argv[2], argv[3]);
+        size_t s;
+        unsigned char *content = exar_extract(argv[2], argv[3], &s);
+        if (content != NULL)
+        {
+            fwrite(content, 1, s, stdout);
+            free(content);
+        }
     }
     else 
         help(EXIT_FAILURE);

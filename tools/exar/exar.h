@@ -45,7 +45,8 @@ enum {
 #define EXAR_VERBOSE_MASK (0x7)
 
 /*
- * Set verbosity flags, exar will be most verbose if all flags are set
+ * Set verbosity flags, exar will be most verbose if all flags are set, log
+ * messages are printed to stderr.
  * @v_flags 
  */
 void 
@@ -61,16 +62,6 @@ exar_verbose(unsigned char v_flags);
 int 
 exar_pack(const char *path);
 
-/* 
- * Concatenates two archives or an archive and a file or directory
- * @file1: The archive to append
- * @file2: The archive, file or directory that will be appended
- *
- * @returns 0 on success and -1 on error
- * */
-int 
-exar_cat(const char *file1, const char *file2);
-
 /*
  * Unpacks a file
  * @path: Path to the extension archive
@@ -81,4 +72,25 @@ exar_cat(const char *file1, const char *file2);
 int 
 exar_unpack(const char *path, const char *dest);
 
+/* 
+ * Concatenates two archives or an archive and a file or directory
+ * @file1: The archive to append
+ * @file2: The archive, file or directory that will be appended
+ *
+ * @returns 0 on success and -1 on error
+ * */
+int 
+exar_cat(const char *file1, const char *file2);
+
+/* 
+ * Extracts a file from an extension archive
+ * @archive The archive
+ * @file    The path of the file in the archive
+ * @size    Return location for the size, if an error occurs size will be set to -1
+ *
+ * @returns A newly allocated char buffer with the file content or NULL if an error
+ *          occured or the file was not found int the archive
+ * */
+unsigned char * 
+exar_extract(const char *archive, const char *file, size_t *size);
 #endif

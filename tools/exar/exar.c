@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <ftw.h>
+#include <assert.h>
 #include "exar.h"
 
 #define VERSION_BASE "exar-"
@@ -42,65 +43,27 @@
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102)
 
-#define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) \
+#define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
-    fprintf(stderr, __VA_ARGS__); } while(0)
+    fprintf(stderr, __VA_ARGS__); } } while(0)
 
 static size_t s_offset;
 static FILE *s_out;
 static unsigned char s_verbose = 0;
 
-static int
-pack(const char *fpath, const struct stat *st, int tf)
+static void *
+xmalloc(size_t size)
 {
-    (void)tf;
-
-    char buffer[HDR_END] = {0};
-    char rbuf[32];
-    size_t r;
-    FILE *f = NULL;
-    const char *stripped = &fpath[s_offset];
-
-    memset(buffer, 0, sizeof(buffer));
-    strncpy(buffer + HDR_NAME, stripped, SZ_NAME);
-
-    LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
-    if (S_ISDIR(st->st_mode))
-        buffer[HDR_DFLAG] = DIR_FLAG;
-    else if (S_ISREG(st->st_mode))
+    void *ret = malloc(size);
+    if (ret == NULL)
     {
-        buffer[HDR_DFLAG] = FILE_FLAG;
-        LOG(3, "Opening %s for reading\n", fpath);
-        f = fopen(fpath, "r");
-        if (f == NULL)
-        {
-            perror("fopen");
-            return 0;
-        }
+        fprintf(stderr, "Cannot malloc %lu bytes\n", size);
+        exit(EXIT_FAILURE);
     }
-    else 
-    {
-        LOG(1, "Only directories and regular files will be packed, ignoring %s\n", fpath);
-        return 0;
-    }
-
-    LOG(2, "Writing file header for %s\n", fpath);
-    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.11o", (unsigned int)st->st_size);
-    fwrite(buffer, 1, sizeof(buffer), s_out);
-
-    if (f != NULL)
-    {
-        LOG(2, "Writing %s (%lu bytes)\n", stripped, (st->st_size));
-        while ((r = fread(rbuf, 1, sizeof(rbuf), f)) > 0)
-            fwrite(rbuf, 1, r, s_out);
-
-        LOG(3, "Closing %s\n", fpath);
-        fclose(f);
-    }
-    return 0;
+    return ret;
 }
 
-size_t 
+static size_t 
 get_offset(char *buffer, size_t n, const char *path, int *end)
 {
     const char *tmp = path, *slash;
@@ -124,37 +87,6 @@ get_offset(char *buffer, size_t n, const char *path, int *end)
     return offset;
 }
 
-
-int 
-exar_pack(const char *path)
-{
-    int ret;
-    unsigned char version[SZ_VERSION] = {0};
-    char buffer[512];
-    int i = 0;
-
-    s_offset = get_offset(buffer, sizeof(buffer), path, &i);
-
-    strncpy(&buffer[i], "." EXTENSION, sizeof(buffer) - i);
-
-    LOG(3, "Opening %s for writing\n", buffer);
-    if ((s_out = fopen(buffer, "w")) == NULL)
-    {
-        perror("fopen");
-        return -1;
-    }
-
-    // set version header
-    LOG(2, "Writing version header (%s)\n", VERSION);
-    memcpy(version, VERSION, sizeof(version));
-    fwrite(version, 1, sizeof(version), s_out);
-
-    ret = ftw(path, pack, 64);
-
-    LOG(3, "Closing %s\n", buffer);
-    fclose(s_out);
-    return ret;
-}
 static int 
 check_version(FILE *f, int verbose)
 {
@@ -184,19 +116,139 @@ check_version(FILE *f, int verbose)
     }
     return 0;
 }
+static char 
+get_file_header(FILE *f, char *name, char *flag, size_t *size)
+{
+    char *endptr;
+    char fsize[SZ_SIZE];
+    size_t fs;
+    *size = 0;
+    if (fread(name, 1, SZ_NAME, f) != SZ_NAME)
+        return -1;
+    if (fread(flag, 1, SZ_DFLAG, f) != SZ_DFLAG)
+        return -1;
+    if (fread(fsize, 1, SZ_SIZE, f) != SZ_SIZE)
+        return -1;
+    name[SZ_NAME-1] = 0;
+    fsize[SZ_SIZE-1] = 0;
+    if (*flag != DIR_FLAG && *flag != FILE_FLAG)
+    {
+        LOG(1, "No file flag found for %s\n", name);
+        fprintf(stderr, "The archive seems to be corrupted%s", "\n");
+        return -1;
+    }
+    if (*flag == FILE_FLAG)
+    {
+        fs = strtoul(fsize, &endptr, 8);
+        if (*endptr)
+        {
+            LOG(1, "Cannot determine file size for %s\n", name);
+            fprintf(stderr, "The archive seems to be corrupted%s", "\n");
+            return -1;
+        }
+        *size = fs;
+    }
+    return 0;
+}
+
+static int
+pack(const char *fpath, const struct stat *st, int tf)
+{
+    (void)tf;
+
+    char buffer[HDR_END] = {0};
+    unsigned char rbuf[32];
+    size_t r;
+    FILE *f = NULL;
+    const char *stripped = &fpath[s_offset];
+
+    memset(buffer, 0, sizeof(buffer));
+    strncpy(buffer + HDR_NAME, stripped, SZ_NAME);
+
+    LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
+    if (S_ISDIR(st->st_mode))
+        buffer[HDR_DFLAG] = DIR_FLAG;
+    else if (S_ISREG(st->st_mode))
+    {
+        buffer[HDR_DFLAG] = FILE_FLAG;
+        LOG(3, "Opening %s for reading\n", fpath);
+        f = fopen(fpath, "r");
+        if (f == NULL)
+        {
+            perror(fpath);
+            return 0;
+        }
+    }
+    else 
+    {
+        LOG(1, "Only directories and regular files will be packed, ignoring %s\n", fpath);
+        return 0;
+    }
+
+    LOG(2, "Writing file header for %s\n", fpath);
+    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.11o", (unsigned int)st->st_size);
+    fwrite(buffer, 1, sizeof(buffer), s_out);
+
+    if (f != NULL)
+    {
+        LOG(2, "Writing %s (%lu bytes)\n", stripped, (st->st_size));
+        while ((r = fread(rbuf, 1, sizeof(rbuf), f)) > 0)
+            fwrite(rbuf, 1, r, s_out);
+
+        LOG(3, "Closing %s\n", fpath);
+        fclose(f);
+    }
+    return 0;
+}
+
+int 
+exar_pack(const char *path)
+{
+    assert(path != NULL);
+
+    int ret;
+    unsigned char version[SZ_VERSION] = {0};
+    char buffer[512];
+    int i = 0;
+
+    s_offset = get_offset(buffer, sizeof(buffer), path, &i);
+
+    strncpy(&buffer[i], "." EXTENSION, sizeof(buffer) - i);
+
+    LOG(3, "Opening %s for writing\n", buffer);
+    if ((s_out = fopen(buffer, "w")) == NULL)
+    {
+        perror(buffer);
+        return -1;
+    }
+
+    // set version header
+    LOG(2, "Writing version header (%s)\n", VERSION);
+    memcpy(version, VERSION, sizeof(version));
+    fwrite(version, 1, sizeof(version), s_out);
+
+    ret = ftw(path, pack, 64);
+
+    LOG(3, "Closing %s\n", buffer);
+    fclose(s_out);
+    return ret;
+}
+
 int 
 exar_unpack(const char *path, const char *dest)
 {
+    assert(path != NULL);
+
     int ret = -1;
-    char name[SZ_NAME], size[SZ_SIZE], flag, rbuf;
+    char name[SZ_NAME], flag;
+    unsigned char rbuf;
     size_t fs;
     FILE *of, *f = NULL;
-    char *endptr;
 
     LOG(3, "Opening %s for reading\n", path);
     if ((f = fopen(path, "r")) == NULL)
     {
-        fprintf(stderr, "Cannot open %s\n", path);
+        perror(path);
         return -1;
     }
     if (check_version(f, 1) != 0)
@@ -214,20 +266,8 @@ exar_unpack(const char *path, const char *dest)
 
     while (1) 
     {
-        if (fread(name, 1, SZ_NAME, f) != SZ_NAME)
+        if (get_file_header(f, name, &flag, &fs) != 0)
             break;
-        if (fread(&flag, 1, SZ_DFLAG, f) != SZ_DFLAG)
-            break;
-        if (fread(size, 1, SZ_SIZE, f) != SZ_SIZE)
-            break;
-        name[SZ_NAME-1] = 0;
-        size[SZ_SIZE-1] = 0;
-        if (flag != DIR_FLAG && flag != FILE_FLAG)
-        {
-            LOG(1, "No file flag found for %s\n", name);
-            fprintf(stderr, "The archive seems to be corrupted%s", "\n");
-            goto error_out;
-        }
         if (flag == DIR_FLAG) 
         {
             LOG(1, "Creating directory %s\n", name);
@@ -237,19 +277,11 @@ exar_unpack(const char *path, const char *dest)
         {
             LOG(1, "Unpacking %s\n", name);
 
-            fs = strtoul(size, &endptr, 8);
-            if (*endptr)
-            {
-                LOG(1, "Cannot determine file size for %s\n", name);
-                fprintf(stderr, "The archive seems to be corrupted%s", "\n");
-                goto error_out;
-            }
-
             LOG(3, "Opening %s for writing\n", name);
             of = fopen(name, "w");
             if (of == NULL)
             {
-                perror("fopen");
+                perror(name);
                 goto error_out;
             }
 
@@ -275,22 +307,24 @@ error_out:
 int 
 exar_cat(const char *file1, const char *file2)
 {
+    assert(file1 != NULL && file2 != NULL);
+
     int ret = -1;
     size_t r;
     FILE *f1 = NULL, *f2 = NULL;
-    char buffer[64];
+    unsigned char buffer[64];
     char offset_buffer[512];
 
     LOG(3, "Opening file %s for writing\n", file1);
     if ((f1 = fopen(file1, "a")) == NULL)
     {
-        perror("fopen");
+        perror(file1);
         goto error_out;
     }
     LOG(3, "Opening file %s for reading\n", file2);
     if ((f2 = fopen(file2, "r")) == NULL)
     {
-        perror("fopen");
+        perror(file2);
         goto error_out;
     }
     if (check_version(f2, 0) == 0)
@@ -319,6 +353,64 @@ error_out:
     {
         LOG(3, "Closing %s\n", file2);
         fclose(f2);
+    }
+    return ret;
+}
+unsigned char * 
+exar_extract(const char *archive, const char *file, size_t *s)
+{
+    assert(archive != NULL && file != NULL);
+
+    char name[SZ_NAME] = {0}, flag = 0;
+    size_t fs = 0;
+    FILE *f = NULL;
+    unsigned char *ret = NULL;
+    *s = 0;
+
+    LOG(3, "Opening file %s for reading\n", archive);
+    if ((f = fopen(archive, "r")) == NULL)
+    {
+        perror(archive);
+        return NULL;
+    }
+    if (check_version(f, 1) != 0)
+        goto finish;
+    while (get_file_header(f, name, &flag, &fs) == 0)
+    {
+        if (flag == FILE_FLAG) 
+        {
+            if (strcmp(file, name) == 0)
+            {
+                ret = xmalloc(fs);
+                LOG(3, "Reading %s\n", name);
+                if (fread(ret, 1, fs, f) != fs)
+                {
+                    fprintf(stderr, "Failed to read %s\n", name);
+                    *s = -1;
+                    ret = NULL;
+                }
+                else 
+                    *s = fs;
+                goto finish;
+            }
+            else 
+            {
+                LOG(3, "Skipping %s\n", name);
+                fseek(f, fs, SEEK_CUR);
+            }
+        }
+        else if (flag == DIR_FLAG && strcmp(file, name) == 0)
+        {
+            fprintf(stderr, "%s is a directory, only regular files can be extracted\n", file);
+            goto finish;
+        }
+    }
+    fprintf(stderr, "File %s was not found in %s\n", file, archive);
+finish:
+    if (f != NULL)
+    {
+        LOG(3, "Closing %s\n", archive);
+        fclose(f);
     }
     return ret;
 }
