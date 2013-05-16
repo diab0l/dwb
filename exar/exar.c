@@ -26,8 +26,8 @@
 #include <assert.h>
 #include "exar.h"
 
-#define VERSION_BASE "exar-"
-#define VERSION VERSION_BASE "1"
+#define EXAR_VERSION_BASE "exar-"
+#define EXAR_VERSION EXAR_VERSION_BASE "1"
 #define EXTENSION "exar"
 
 #define SZ_VERSION 8
@@ -56,7 +56,7 @@ static unsigned char s_version[SZ_VERSION];
 static void *
 xmalloc(size_t size)
 {
-    void *ret = malloc(size);
+    void *ret = calloc(1, size);
     if (ret == NULL)
     {
         fprintf(stderr, "Cannot malloc %lu bytes\n", size);
@@ -99,9 +99,9 @@ check_version(FILE *f, int verbose)
             fprintf(stderr, "Not an exar file?\n");
         return -1;
     }
-    memcpy(orig_version, VERSION, sizeof(orig_version));
+    memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
     LOG(2, "Checking filetype\n");
-    if (strncmp((char*)s_version, VERSION_BASE, 5))
+    if (strncmp((char*)s_version, EXAR_VERSION_BASE, 5))
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
@@ -242,8 +242,8 @@ exar_pack(const char *path)
     }
 
     // set version header
-    LOG(2, "Writing version header (%s)\n", VERSION);
-    memcpy(version, VERSION, sizeof(version));
+    LOG(2, "Writing version header (%s)\n", EXAR_VERSION);
+    memcpy(version, EXAR_VERSION, sizeof(version));
     fwrite(version, 1, sizeof(version), s_out);
 
     ret = ftw(path, pack, MAX_FILE_HANDLES);

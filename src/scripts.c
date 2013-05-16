@@ -29,6 +29,7 @@
 #include <JavaScriptCore/JavaScript.h>
 #include <glib.h>
 #include <cairo.h>
+#include <exar.h>
 #include "dwb.h"
 #include "scripts.h" 
 #include "session.h" 
@@ -46,12 +47,14 @@
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
-#define SCRIPT_TEMPLATE_START "try{_initNewContext(this, arguments, '%s');const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_XSTART "try{_initNewContext(this,arguments,'%s');const xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
 #define SCRIPT_TEMPLATE SCRIPT_TEMPLATE_START"//!javascript\n"SCRIPT_TEMPLATE_END
 #define SCRIPT_TEMPLATE_INCLUDE SCRIPT_TEMPLATE_START SCRIPT_TEMPLATE_END
+#define SCRIPT_TEMPLATE_XINCLUDE SCRIPT_TEMPLATE_XSTART SCRIPT_TEMPLATE_END
 
 #define SCRIPT_WEBVIEW(o) (WEBVIEW(((GList*)JSObjectGetPrivate(o))))
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
@@ -1726,6 +1729,31 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
 }
 /*}}}*/
 
+static JSValueRef 
+do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, JSValueRef *exc)
+{
+    JSStringRef js_script;
+    JSValueRef ret = NIL;
+
+    if (global)
+    {
+        js_script = JSStringCreateWithUTF8CString(script);
+        ret = JSEvaluateScript(ctx, js_script, NULL, NULL, 0, exc);
+    }
+    else 
+    {
+        char *debug = g_strdup_printf(is_archive ? SCRIPT_TEMPLATE_XINCLUDE : SCRIPT_TEMPLATE_INCLUDE, path, script);
+        js_script = JSStringCreateWithUTF8CString(debug);
+        JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, js_script, NULL, 1, exc);
+        if (function != NULL) 
+        {
+            ret = JSObjectCallAsFunction(ctx, function, function, 0, NULL, exc);
+        }
+        g_free(debug);
+    }
+    JSStringRelease(js_script);
+    return ret;
+}
 /* global_include {{{*/
 /** 
  * Includes a file. 
@@ -1776,10 +1804,9 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
  * */
 
 static JSValueRef 
-global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    JSValueRef ret = NULL;
-    JSStringRef script;
+    JSValueRef ret = NIL;
     gboolean global = false;
     char *path = NULL, *content = NULL; 
 
@@ -1805,35 +1832,57 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
         } while(*tmp && *tmp != '\n');
         tmp++;
     }
-
-    if (global) 
-    {
-        script = JSStringCreateWithUTF8CString(tmp);
-        ret = JSEvaluateScript(ctx, script, NULL, NULL, 0, exc);
-    }
-    else 
-    {
-        char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, path, tmp);
-        script = JSStringCreateWithUTF8CString(debug);
-        JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, script, NULL, 1, exc);
-        if (function != NULL) 
-        {
-            JSObjectRef this = JSObjectMake(ctx, NULL, NULL);
-            JSValueProtect(ctx, this);
-            js_set_object_property(ctx, this, "path", path, exc);
-            ret = JSObjectCallAsFunction(ctx, function, this, 0, NULL, exc);
-        }
-        g_free(debug);
-    }
-    JSStringRelease(script);
+    ret = do_include(ctx, path, tmp, global, false, exc);
 
 error_out: 
     g_free(content);
     g_free(path);
-    if (ret == NULL)
-        return NIL;
     return ret;
 }/*}}}*/
+
+/** 
+ * Include scripts from an archive.
+ *
+ * Same as {@link include} but this function can only be called from scripts
+ * inside an archive, so this is only useful in extensions. However it is
+ * possible to include scripts from an archive calling the internal function
+ * _xinclude which takes two parameters, the path of the archive and the path of
+ * the included file in the archive.
+ * Unlike {@link inlucde} included archive-scripts cannot be included into the
+ * global scope. 
+ *
+ * @name xinclude
+ * @param path {String} 
+ *      Path of the file in the archive
+ *
+ * @returns {Object}
+ *      The object returned from the included file.
+ * */
+
+static JSValueRef
+global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *archive = NULL, *path = NULL, *content = NULL;
+    JSValueRef ret = NIL;
+    size_t fs;
+
+    if (argc < 2)
+        return NIL;
+    if ((archive = js_value_to_char(ctx, argv[0], -1, exc)) == NULL)
+        goto error_out;
+    if ((path = js_value_to_char(ctx, argv[1], -1, exc)) == NULL)
+        goto error_out;
+
+    content = (char*)exar_extract(archive, path, &fs);
+    if (content != NULL)
+        do_include(ctx, archive, content, false, true, exc);
+
+error_out:
+    g_free(archive);
+    g_free(path);
+    g_free(content);
+    return ret;
+}
 
 
 /* global_send_request {{{*/
@@ -4772,10 +4821,11 @@ create_global_object()
 
     JSStaticFunction global_functions[] = { 
         { "execute",          global_execute,         kJSDefaultAttributes },
-        { "exit",             global_exit,         kJSDefaultAttributes },
-        { "bind",             global_bind,         kJSDefaultAttributes },
-        { "unbind",           global_unbind,         kJSDefaultAttributes },
+        { "exit",             global_exit,            kJSDefaultAttributes },
+        { "bind",             global_bind,            kJSDefaultAttributes },
+        { "unbind",           global_unbind,          kJSDefaultAttributes },
         { "include",          global_include,         kJSDefaultAttributes },
+        { "_xinclude",         global_xinclude,        kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
 
