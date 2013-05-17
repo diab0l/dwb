@@ -28,6 +28,8 @@
 #ifdef HAS_EXECINFO
 #include <execinfo.h>
 #endif
+
+#include <exar.h>
 #include "dwb.h"
 #include "soup.h"
 #include "completion.h"
@@ -3407,7 +3409,7 @@ dwb_get_scripts()
     GList *gl = NULL;
     Navigation *n;
     GError *error = NULL;
-    FILE *f;
+    FILE *f = NULL;
     int l1, l2;
 
     if ( (dir = g_dir_open(dwb.files[FILES_USERSCRIPTS], 0, NULL)) ) 
@@ -3437,18 +3439,27 @@ dwb_get_scripts()
                     path = realpath;
                 }
             }
-            if (dwb.misc.js_api != JS_API_DISABLED && (f = fopen(path, "r")) != NULL && (l1 = fgetc(f)) && (l2 = fgetc(f)) ) 
+            if (dwb.misc.js_api != JS_API_DISABLED)
             {
-                if ( (l1 == '#' && l2 == '!') || (l1 == '/' && l2 == '/' && fgetc(f) == '!')  ) 
+                if (exar_check_version(path, 0) == 0)
                 {
-                    if (fgets(buf, sizeof(buf), f) != NULL && !g_strcmp0(buf, "javascript")) 
+                    content = (char *) exar_search_extract(path, "main.js", NULL);
+                    if (content != NULL)
+                        scripts_init_archive(path, content);
+                    goto loop_end;
+                }
+                else if (  (f = fopen(path, "r")) != NULL)  
+                {
+                    if ( ( (l1 = fgetc(f)) && (l2 = fgetc(f)) ) &&  
+                         ( (l1 == '#' && l2 == '!') || (l1 == '/' && l2 == '/' && fgetc(f) == '!') ) && 
+                         (fgets(buf, sizeof(buf), f) != NULL && !g_strcmp0(buf, "javascript")) )
                     {
                         int next = fgetc(f);
                         if (g_ascii_isspace(next)) 
                             javascript = true;
                     }
+                    fclose(f);
                 }
-                fclose(f);
 
             }
 

@@ -116,11 +116,12 @@ exar_delete(const char *archive, const char *file);
  * Checks if the file is an archive file with compatible version number
  *
  * @archive  The archive
+ * @verbose  Whether to print error messages to stderr
  *
  * @returns 0 on success and -1 on error
  */
 int 
-exar_check_version(const char *archive);
+exar_check_version(const char *archive, int verbose);
 
 /*
  * Print info about the archive to stdout.

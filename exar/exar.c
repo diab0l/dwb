@@ -582,12 +582,12 @@ finish:
 }
 
 int
-exar_check_version(const char *archive)
+exar_check_version(const char *archive, int verbose)
 {
     assert(archive != NULL);
 
     int vers_check;
-    FILE *f = open_archive(archive, "r", &vers_check, 1);
+    FILE *f = open_archive(archive, "r", &vers_check, verbose);
     close_file(f, archive);
     return vers_check;
 }

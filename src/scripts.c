@@ -5533,9 +5533,8 @@ scripts_remove_tab(JSObjectRef obj)
     CONTEXT_UNLOCK;
 }/*}}}*/
 
-/* scripts_init_script {{{*/
-void
-scripts_init_script(const char *path, const char *script) 
+void 
+init_script(const char *path, const char *script, const char *templates)
 {
     char *debug = NULL;
     if (s_global_context == NULL) 
@@ -5549,9 +5548,21 @@ scripts_init_script(const char *path, const char *script)
         if (function != NULL) 
             s_script_list = g_slist_prepend(s_script_list, function);
     }
-
     g_free(debug);
+}
+
+/* scripts_init_script {{{*/
+void
+scripts_init_script(const char *path, const char *script) 
+{
+    init_script(path, script, SCRIPT_TEMPLATE);
 }/*}}}*/
+
+void
+scripts_init_archive(const char *path, const char *script) 
+{
+    init_script(path, script, SCRIPT_TEMPLATE_XINCLUDE);
+}
 
 void
 evaluate(const char *script) 
