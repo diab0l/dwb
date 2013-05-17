@@ -243,7 +243,7 @@ Object.freeze((function () {
         {
             if (element.hasAttribute("onclick")) 
             {
-                p_mouseEvent(element, ev, !globals.newTab);
+                p_mouseEvent(element, "click", !globals.newTab);
                 clicked = true;
             }
             if (element.hasAttribute("onmousedown")) 
