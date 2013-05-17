@@ -205,5 +205,4 @@ HDR = $(wildcard *.h)
 # OUTPUT 
 # Objects
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
-DOBJ = $(patsubst %.c, %.do, $(wildcard *.c))
-
+DOBJ = $(patsubst %.c, %.do, $(wildcard *.c)) 

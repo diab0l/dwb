@@ -11,6 +11,8 @@ DEPS=$(patsubst %.o, %.d, $(OBJ))
 
 OBJ += $(BASEDIR)/exar/exar.o
 
+DOBJ += $(BASEDIR)/exar/exar.do
+
 all: $(TARGET)
 
 $(TARGET): $(OBJ) 

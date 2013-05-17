@@ -17,6 +17,8 @@ tar xvf master.tar.gz -C "${DWBDIR}" --strip-components=1
  
 cd "${DWBDIR}/src/util"
 make
+cd "${DWBDIR}/exar"
+make
 cd "${DWBDIR}/src"
 make debug
 gdb -batch -ex "set logging on ${LOGFILE}" -ex "run" -ex "bt" -ex "quit" dwb_d 
