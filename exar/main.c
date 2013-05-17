@@ -26,6 +26,8 @@ enum {
     FLAG_U = 1<<4,
     FLAG_C = 1<<5,
     FLAG_E = 1<<6,
+    FLAG_D = 1<<7,
+    FLAG_I = 1<<8,
 };
 #ifndef MIN
 #define MIN(X, Y) ((X) > (Y) ? (Y) : (X))
@@ -34,8 +36,9 @@ enum {
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
-#define OP_FLAG(flag) ((flag) & ((FLAG_P|FLAG_U|FLAG_C|FLAG_E)^(flag)))
-#define CHECK_FLAG(x, flag) (((x) & (flag)) && !((x) & ( (FLAG_P|FLAG_U|FLAG_C|FLAG_E)^(flag) ) ))
+
+#define OPTION_FLAG (0xffff & ~(0x7))
+#define CHECK_FLAG(x, flag) !!(((x) & (flag)) && !((x) & ( (OPTION_FLAG)^(flag) ) ))
 void 
 help(int ret)
 {
@@ -88,6 +91,12 @@ main (int argc, char **argv)
             case 'e' : 
                 flag |= FLAG_E;
                 break;
+            case 'd' : 
+                flag |= FLAG_D;
+                break;
+            case 'i' : 
+                flag |= FLAG_I;
+                break;
             case 'v' : 
                 flag |= MAX(FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
                 break;
@@ -105,12 +114,16 @@ main (int argc, char **argv)
         exar_unpack(argv[2], argv[3]);
     else if (CHECK_FLAG(flag, FLAG_P))
         exar_pack(argv[2]);
+    else if (CHECK_FLAG(flag, FLAG_I))
+        exar_info(argv[2]);
     else if (CHECK_FLAG(flag, FLAG_C) && argc > 3)
         exar_cat(argv[2], argv[3]);
+    else if (CHECK_FLAG(flag, FLAG_D) && argc > 3)
+        exar_delete(argv[2], argv[3]);
     else if (CHECK_FLAG(flag, FLAG_E) && argc > 3)
     {
         size_t s;
-        unsigned char *content = exar_extract(argv[2], argv[3], &s);
+        unsigned char *content = exar_search_extract(argv[2], argv[3], &s);
         if (content != NULL)
         {
             fwrite(content, 1, s, stdout);

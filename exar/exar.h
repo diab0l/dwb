@@ -29,9 +29,10 @@
  *
  * version header : 8 bytes
  * file header    : 128 bytes
- *                  - filename             : 115 bytes, (char*)
+ *                  - filename             : 108 bytes, (char*)
  *                  - directory flag(d|f)  : 1 byte     (char)
- *                  - file size            : 12 bytes   (unsigned int, octal)
+ *                  - file size            : 12 bytes   (char*, octal representation)
+ *                  - checksum:            : 7 bytes    (char*, octal representation)
  * */
 
 #ifndef __EXAR_H__
@@ -44,18 +45,9 @@ enum {
 };
 #define EXAR_VERBOSE_MASK (0x7)
 
-/*
- * Set verbosity flags, exar will be most verbose if all flags are set, log
- * messages are printed to stderr.
- * @v_flags 
- */
-void 
-exar_verbose(unsigned char v_flags);
-
-
 /* 
  * Packs a file or directory
- * @path: Path to the file to pack
+ * @path: Path to the file or directory to pack
  *
  * @returns 0 on success and -1 on error
  * */
@@ -63,7 +55,7 @@ int
 exar_pack(const char *path);
 
 /*
- * Unpacks a file
+ * Unpacks an archive
  * @path: Path to the extension archive
  * @dest: Destination directory or NULL for current directory
  *
@@ -89,8 +81,60 @@ exar_cat(const char *file1, const char *file2);
  * @size    Return location for the size, if an error occurs size will be set to -1
  *
  * @returns A newly allocated char buffer with the file content or NULL if an error
- *          occured or the file was not found int the archive
+ *          occured or the file was not found in the archive
  * */
 unsigned char * 
 exar_extract(const char *archive, const char *file, size_t *size);
+
+/* 
+ * Searches for a file and extracts the content from the archive. 
+ * 
+ * @archive The archive
+ * @search  The search term. The term is is compared with the end of each
+ *          filename in the archive
+ * @size    Return location for the size, if an error occurs size will be set to -1
+ *
+ * @returns A newly allocated char buffer with the file content or NULL if an error
+ *          occured or the file was not found in the archive
+ * */
+unsigned char * 
+exar_search_extract(const char *archive, const char *search, size_t *size);
+
+/*
+ * Deletes a file from the archive, if it is a directory it is removed
+ * recursively.
+ *
+ * @archive  The archive
+ * @file     The file to delete
+ *
+ * @returns 0 on success and -1 on error
+ */
+int 
+exar_delete(const char *archive, const char *file);
+
+/*
+ * Checks if the file is an archive file with compatible version number
+ *
+ * @archive  The archive
+ *
+ * @returns 0 on success and -1 on error
+ */
+int 
+exar_check_version(const char *archive);
+
+/*
+ * Print info about the archive to stdout.
+ *
+ * @archive  The archive
+ * */
+void 
+exar_info(const char *archive);
+
+/*
+ * Set verbosity flags, exar will be most verbose if all flags are set, log
+ * messages are printed to stderr.
+ * @v_flags 
+ */
+void 
+exar_verbose(unsigned char v_flags);
 #endif
