@@ -5,25 +5,25 @@ BASEDIR=..
 include $(BASEDIR)/config.mk
 include config.mk
 
-CFLAGS+=-I$(BASEDIR)/$(EXARDIR)
+CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIRS)
 
 DEPS=$(patsubst %.o, %.d, $(OBJ)) 
 
-OBJ += $(BASEDIR)/exar/exar.o
+OBJ += $(BASEDIR)/$(OBJLIB)
 
 DOBJ += $(BASEDIR)/exar/exar.do
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ) 
-	@echo "$(CC) $@"
+	@echo $(CC) -o $@
 	@$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS) 
 
 -include $(OBJ:.o=.d)
 -include $(DOBJ:.do=.dd)
 
 %.o: %.c %.h config.h dwb.h
-	@echo "${CC} $<"
+	@echo $(CC) $<
 	@$(CC) -c -o $@ $< $(CFLAGS) $(CPPFLAGS) 
 
 debug: $(DTARGET)

@@ -3,7 +3,12 @@
 include ../config.mk
 TARGET=dwbem
 
-OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
+BASEDIR = ..
+
+CFLAGS += -I$(BASEDIR)/$(DWB_LIB_DIRS)
+
+OBJ = $(patsubst %.c, %.o, $(wildcard *.c)) $(BASEDIR)/$(OBJLIB)
+
 
 SYSTEM_EXTENSION_DIR=$(PREFIX)/share/dwb/extensions
 
@@ -21,11 +26,11 @@ LDFLAGS += $(shell pkg-config --libs $(LIBS))
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	@echo $(CC) $@
-	@$(CC) $< -o $@ $(LDFLAGS)
+	@echo $(CC) -o $@
+	@$(CC) $(OBJ) -o $@ $(LDFLAGS)
 
 %.o: %.c
-	@echo $(CC) $<
+	@echo $(CC) $< 
 	@$(CC) $(CFLAGS) -c $< -o $@ $(CPPFLAGS)
 
 clean: 

@@ -19,7 +19,7 @@
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE 
 #endif
-#ifndef _BSD_SOURCE
+#ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE 
 #endif
 
@@ -36,6 +36,8 @@
 
 #include <glib-2.0/glib.h>
 #include <libsoup-2.4/libsoup/soup.h>
+
+#include <exar.h>
 
 #define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
 #define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
@@ -1148,6 +1150,19 @@ cl_edit(const char *name, int flags)
     }
     return -1;
 }
+static int 
+cl_exar_pack(const char *path, int flags) 
+{
+    (void) flags;
+    return exar_pack(path);
+}
+
+static int 
+cl_exar_unpack(const char *path, int flags) 
+{
+    (void) flags;
+    return exar_unpack(path, NULL);
+}
 
 int 
 main(int argc, char **argv) 
@@ -1171,6 +1186,8 @@ main(int argc, char **argv)
     char **o_show_config = NULL;
     char **o_edit = NULL;
     char *o_proxy = NULL;
+    char **o_pack = NULL;
+    char **o_unpack = NULL;
     gboolean o_noconfig = false;
     gboolean o_update = false;
     gboolean o_list_installed = false;
@@ -1196,6 +1213,8 @@ main(int argc, char **argv)
         { "proxy",   'p', 0, G_OPTION_ARG_STRING, &o_proxy, "HTTP-proxy to use", NULL },
         { "upgrade",   'u', 0, G_OPTION_ARG_NONE, &o_update,  "Update all extensions", NULL },
         { "update",   'U', 0, G_OPTION_ARG_STRING_ARRAY, &o_update_ext,  "Update <extension>", "<extension>" },
+        { "archive-pack",   0, 0, G_OPTION_ARG_FILENAME_ARRAY, &o_pack,  "Pack <path> to an archive", "<path>" },
+        { "archive-unpack",   0, 0, G_OPTION_ARG_FILENAME_ARRAY, &o_unpack,  "Unpack <archive>", "<archive>" },
         { NULL, 0, 0, 0, NULL, NULL, NULL },
     };
 
@@ -1271,6 +1290,9 @@ main(int argc, char **argv)
     for_each(o_install, flags, cl_install);
     for_each(o_show_config, flags, cl_show_config);
     for_each(o_edit, flags, cl_edit);
+    for_each(o_pack, flags, cl_exar_pack);
+    for_each(o_unpack, flags, cl_exar_unpack);
+
     clean_up();
     return 0;
 }

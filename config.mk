@@ -21,12 +21,11 @@ TOOLDIR=tools
 EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
 
-# Extension archive
-EXARDIR=exar
+DWB_LIB_DIRS = exar
 
 SUBDIRS=$(M4DIR) $(SRCDIR) $(TOOLDIR) 
 SUBDIR_BUILD_FIRST=$(UTILDIR)
-SUBDIR_BUILD_LIB=$(EXARDIR)
+SUBDIR_BUILD_LIB=$(DWB_LIB_DIRS)
 
 EXTENSION_MANAGER=dwbem
 
@@ -206,3 +205,4 @@ HDR = $(wildcard *.h)
 # Objects
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 DOBJ = $(patsubst %.c, %.do, $(wildcard *.c)) 
+OBJLIB = exar/exar.o

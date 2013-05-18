@@ -34,7 +34,7 @@ $(TLDS_H): $(TLDS_IN) $(MKTLDS)
 	@./$(MKTLDS) < $(TLDS_IN) > $@
 
 $(MKTLDS): $(MKTLDS_SRC)
-	@echo "${CC} $<"
+	@echo $(CC) $< 
 	@$(CC) -o $@ $< $(CFLAGS) $(CPPFLAGS) $(LDFLAGS)
 
 $(HSTS_PRELOAD): $(HSTS) $(TRANSPORT_SECURITY_CERTS) $(TRANSPORT_SECURITY_JSON)
@@ -42,7 +42,7 @@ $(HSTS_PRELOAD): $(HSTS) $(TRANSPORT_SECURITY_CERTS) $(TRANSPORT_SECURITY_JSON)
 	@./$(HSTS) > $@
 
 $(HSTS): $(HSTS).c
-	@echo "${CC} $<"
+	@echo $(CC) $< 
 	@$(CC) $(CFLAGS) $(CPPFLAGS) -o $(HSTS) $(HSTS).c $(LDFLAGS)
 
 clean: 

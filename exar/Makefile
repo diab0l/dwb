@@ -6,11 +6,11 @@ OBJ=$(patsubst %.c, %.o, $(wildcard *.c))
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	@echo $(CC) $@
+	@echo $(CC) -o $@
 	@$(CC) $(OBJ) -o $@ $(CFLAGS) $(CPPFLAGS)
 
 %.o: %.c 
-	@echo $(CC) $<
+	@echo $(CC) $< 
 	@$(CC) -c $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean: 
