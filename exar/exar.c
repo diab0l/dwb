@@ -252,8 +252,8 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
                 {
                     fprintf(stderr, "Failed to read %s\n", name);
                     *s = -1;
-                    ret = NULL;
                     free(ret);
+                    ret = NULL;
                 }
                 else if (s != NULL)
                     *s = fs;
