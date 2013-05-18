@@ -31,7 +31,7 @@ install: $(TARGET) install-man install-data
 	@# Install binaries
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(SRCDIR)/$(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
-	install -m 755 $(TOOLDIR)/$(EXTENSION_MANAGER) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
+	install -m 755 $(DWBEMDIR)/$(EXTENSION_MANAGER) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
 
 install-man: all
 	install -d $(DESTDIR)$(MAN1DIR)
