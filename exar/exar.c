@@ -49,6 +49,7 @@
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102)
 #define MAX_FILE_HANDLES 64
+#define MIN(X, Y)  ((X) > (Y) ? (Y) : (X))
 
 #define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
@@ -82,7 +83,7 @@ get_offset(char *buffer, size_t n, const char *path, int *end)
     // strip trailing '/'
     while (tmp[len-1] == '/')
         len--;
-    strncpy(buffer, path, len);
+    strncpy(buffer, path, MIN(n, len));
 
     // get base name offset
     slash = strrchr(buffer, '/');
