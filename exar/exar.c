@@ -302,7 +302,7 @@ pack(const char *fpath, const struct stat *st, int tf)
     (void)tf;
 
     int result = -1;
-    unsigned char rbuf[32];
+    unsigned char rbuf[512];
     size_t r;
     FILE *f = NULL;
     char flag;
