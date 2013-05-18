@@ -63,6 +63,19 @@
 #define EXT(name) "\033[1m"#name"\033[0m"
 #define FREE0(X) (X == NULL ? NULL : (X = (g_free(X), NULL)))
 
+enum {
+    EXAR_FLAG_V = 1<<0,
+    EXAR_FLAG_P = 1<<3,
+    EXAR_FLAG_U = 1<<4,
+    EXAR_FLAG_C = 1<<5,
+    EXAR_FLAG_E = 1<<6,
+    EXAR_FLAG_D = 1<<7,
+    EXAR_FLAG_I = 1<<8,
+    EXAR_FLAG_S = 1<<9,
+};
+#define EXAR_OPTION_FLAG (0xffff & ~(0x7))
+#define EXAR_CHECK_FLAG(x, flag) !!(((x) & (flag)) && !((x) & ( (EXAR_OPTION_FLAG)^(flag) ) ))
+
 enum 
 {
     F_NO_CONFIG       = 1<<0,
@@ -1150,18 +1163,119 @@ cl_edit(const char *name, int flags)
     }
     return -1;
 }
-static int 
-cl_exar_pack(const char *path, int flags) 
+void 
+exar_help(int ret)
 {
-    (void) flags;
-    return exar_pack(path);
+    printf("USAGE: \n"
+            "   dwbem --archive option [arguments]\n\n" 
+           "OPTIONS:\n" 
+           "    h                   Print this help and exit.\n"
+           "    c[v] archive file   Concatenates a file, directory or archive to \n" 
+           "                        an existing archive.\n"
+           "    d[v] archive file   Deletes a file from an archive, the file path is the\n"
+           "                        relative file path of the file in the archive\n"
+           "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
+           "                        to stdout, the archive is not modified, the file path \n"
+           "                        is the relative file path of the file in the archive.\n"
+           "    i[v] archive        Prints info about an archive\n"
+           "    p[v] path           Pack file or directory 'path'.\n"
+           "    s[v] archive file   Search for a file and write the content to stdout, the \n" 
+           "                        archive is not modified, the filename is the basename\n" 
+           "                        plus suffix of the file in the archive, all directory\n"
+           "                        parts are stripped\n"
+           "    u[v] file [dir]     Pack 'file' to directory 'dir' or to current directory.\n"
+           "    v                   Verbose, pass multiple times (up to 3) to \n"
+           "                        get more verbose messages.\n\n"
+           "EXAMPLES:\n"
+           "    dwbem --archive p /tmp/foo          -- pack /tmp/foo to foo.exar\n"
+           "    dwbem --archive c foo.exar bar.txt  -- Concatenates bar.txt to archive foo.exar\n"
+           "    dwbem --archive c foo.exar bar.exar -- Concatenates archive bar.exar to archive foo.exar\n"
+           "    dwbem --archive s foo.js > foo.js   -- Extract foo.js from the archive\n"
+           "    dwbem --archive uvvv foo.exar       -- unpack foo.exar to current directory,\n" 
+           "                                           verbosity level 3\n"
+           "    dwbem --archive vu foo.exar /tmp    -- unpack foo.exar to /tmp, verbosity\n" 
+           "                                           level 1\n");
+    exit(ret);
 }
-
-static int 
-cl_exar_unpack(const char *path, int flags) 
+static void 
+exar_xextract(const char *archive, const char *path, 
+        unsigned char * (*extract_func)(const char *, const char *, size_t *))
 {
-    (void) flags;
-    return exar_unpack(path, NULL);
+    size_t s;
+    unsigned char *content = extract_func(archive, path, &s);
+    if (content != NULL)
+    {
+        fwrite(content, 1, s, stdout);
+        free(content);
+    }
+}
+void 
+parse_exar_options(char **argv)
+{
+    int argc = 0, flag = 0;
+    const char *options;
+
+    if (argv == NULL)
+        exar_help(EXIT_FAILURE);
+
+    argc = g_strv_length(argv);
+    if (argc < 2)
+        exar_help(EXIT_FAILURE);
+    options = argv[0];
+    while (*options)
+    {
+        switch (*options) 
+        {
+            case 'p' : 
+                flag |= EXAR_FLAG_P;
+                break;
+            case 'u' : 
+                flag |= EXAR_FLAG_U;
+                break;
+            case 'c' : 
+                flag |= EXAR_FLAG_C;
+                break;
+            case 'e' : 
+                flag |= EXAR_FLAG_E;
+                break;
+            case 'd' : 
+                flag |= EXAR_FLAG_D;
+                break;
+            case 'i' : 
+                flag |= EXAR_FLAG_I;
+                break;
+            case 's' : 
+                flag |= EXAR_FLAG_S;
+                break;
+            case 'v' : 
+                flag |= MAX(EXAR_FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
+                break;
+            case 'h' : 
+                exar_help(EXIT_SUCCESS);
+            default : 
+                exar_help(EXIT_FAILURE);
+        }
+        options++;
+    }
+    if (flag & EXAR_VERBOSE_MASK)
+        exar_verbose(flag);
+
+    if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_U))
+        exar_unpack(argv[1], argv[2]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
+        exar_pack(argv[1]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_I))
+        exar_info(argv[1]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_C) && argc > 2)
+        exar_cat(argv[1], argv[2]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 2)
+        exar_delete(argv[1], argv[2]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_E) && argc > 2)
+        exar_xextract(argv[1], argv[2], exar_extract);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_S) && argc > 2)
+        exar_xextract(argv[1], argv[2], exar_search_extract);
+    else 
+        exar_help(EXIT_FAILURE);
 }
 
 int 
@@ -1186,8 +1300,8 @@ main(int argc, char **argv)
     char **o_show_config = NULL;
     char **o_edit = NULL;
     char *o_proxy = NULL;
-    char **o_pack = NULL;
-    char **o_unpack = NULL;
+    char **o_archive_options = NULL;
+    gboolean o_archive = NULL;
     gboolean o_noconfig = false;
     gboolean o_update = false;
     gboolean o_list_installed = false;
@@ -1213,8 +1327,8 @@ main(int argc, char **argv)
         { "proxy",   'p', 0, G_OPTION_ARG_STRING, &o_proxy, "HTTP-proxy to use", NULL },
         { "upgrade",   'u', 0, G_OPTION_ARG_NONE, &o_update,  "Update all extensions", NULL },
         { "update",   'U', 0, G_OPTION_ARG_STRING_ARRAY, &o_update_ext,  "Update <extension>", "<extension>" },
-        { "archive-pack",   0, 0, G_OPTION_ARG_FILENAME_ARRAY, &o_pack,  "Pack <path> to an archive", "<path>" },
-        { "archive-unpack",   0, 0, G_OPTION_ARG_FILENAME_ARRAY, &o_unpack,  "Unpack <archive>", "<archive>" },
+        { "archive",   0, 0, G_OPTION_ARG_NONE, &o_archive,  "Create, open or modify extension archives", NULL },
+        { G_OPTION_REMAINING,   0, 0, G_OPTION_ARG_STRING_ARRAY, &o_archive_options,  NULL, NULL },
         { NULL, 0, 0, 0, NULL, NULL, NULL },
     };
 
@@ -1279,6 +1393,8 @@ main(int argc, char **argv)
         list(m_installed, "Installed extensions", false);
     if (o_update) 
         cl_update(flags);
+    if (o_archive)
+        parse_exar_options(o_archive_options);
 
     for_each(o_update_ext, flags, cl_update_ext);
     for_each(o_info, flags, cl_info);
@@ -1290,8 +1406,6 @@ main(int argc, char **argv)
     for_each(o_install, flags, cl_install);
     for_each(o_show_config, flags, cl_show_config);
     for_each(o_edit, flags, cl_edit);
-    for_each(o_pack, flags, cl_exar_pack);
-    for_each(o_unpack, flags, cl_exar_unpack);
 
     clean_up();
     return 0;

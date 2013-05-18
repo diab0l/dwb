@@ -21,13 +21,14 @@
 #include "exar.h"
 
 enum {
-    FLAG_V = 1<<0,
-    FLAG_P = 1<<3,
-    FLAG_U = 1<<4,
-    FLAG_C = 1<<5,
-    FLAG_E = 1<<6,
-    FLAG_D = 1<<7,
-    FLAG_I = 1<<8,
+    EXAR_FLAG_V = 1<<0,
+    EXAR_FLAG_P = 1<<3,
+    EXAR_FLAG_U = 1<<4,
+    EXAR_FLAG_C = 1<<5,
+    EXAR_FLAG_E = 1<<6,
+    EXAR_FLAG_D = 1<<7,
+    EXAR_FLAG_I = 1<<8,
+    EXAR_FLAG_S = 1<<9,
 };
 #ifndef MIN
 #define MIN(X, Y) ((X) > (Y) ? (Y) : (X))
@@ -37,34 +38,53 @@ enum {
 #endif
 
 
-#define OPTION_FLAG (0xffff & ~(0x7))
-#define CHECK_FLAG(x, flag) !!(((x) & (flag)) && !((x) & ( (OPTION_FLAG)^(flag) ) ))
+#define EXAR_OPTION_FLAG (0xffff & ~(0x7))
+#define EXAR_CHECK_FLAG(x, flag) !!(((x) & (flag)) && !((x) & ( (EXAR_OPTION_FLAG)^(flag) ) ))
 void 
 help(int ret)
 {
     printf("USAGE: \n"
             "   exar option [arguments]\n\n" 
            "OPTIONS:\n" 
-           "    h                 : Print this help and exit.\n"
-           "    c[v] archive file : Concatenates a file, directory or archive to \n" 
+           "    h                   Print this help and exit.\n"
+           "    c[v] archive file   Concatenates a file, directory or archive to \n" 
            "                        an existing archive.\n"
-           "    e[v] archive file : Extracts an file from an archive and writes the content\n" 
+           "    d[v] archive file   Deletes a file from an archive, the file path is the\n"
+           "                        relative file path of the file in the archive\n"
+           "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
            "                        to stdout, the archive is not modified, the file path \n"
            "                        is the relative file path of the file in the archive.\n"
-           "    p[v] path         : Pack file or directory 'path'.\n"
-           "    u[v] file [dir]   : Pack 'file' to directory 'dir' or to \n" 
-           "                        current directory.\n"
-           "    v                 : Verbose, pass multiple times (up to 3) to \n"
+           "    i[v] archive        Prints info about an archive\n"
+           "    p[v] path           Pack file or directory 'path'.\n"
+           "    s[v] archive file   Search for a file and write the content to stdout, the \n" 
+           "                        archive is not modified, the filename is the basename\n" 
+           "                        plus suffix of the file in the archive, all directory\n"
+           "                        parts are stripped\n"
+           "    u[v] file [dir]     Pack 'file' to directory 'dir' or to current directory.\n"
+           "    v                   Verbose, pass multiple times (up to 3) to \n"
            "                        get more verbose messages.\n\n"
            "EXAMPLES:\n"
            "    exar p /tmp/foo          -- pack /tmp/foo to foo.exar\n"
            "    exar c foo.exar bar.txt  -- Concatenates bar.txt to archive foo.exar\n"
            "    exar c foo.exar bar.exar -- Concatenates archive bar.exar to archive foo.exar\n"
-           "    exar uvvv foo.exar       -- unpack foo.exar to current directory, \n" 
+           "    exar s foo.js > foo.js   -- Extract foo.js from the archive\n"
+           "    exar uvvv foo.exar       -- unpack foo.exar to current directory,\n" 
            "                                verbosity level 3\n"
-           "    exar vu foo.exar /tmp    -- unpack foo.exar to /tmp, verbosity \n" 
+           "    exar vu foo.exar /tmp    -- unpack foo.exar to /tmp, verbosity\n" 
            "                                level 1\n");
     exit(ret);
+}
+static void 
+extract(const char *archive, const char *path, 
+        unsigned char * (*extract_func)(const char *, const char *, size_t *))
+{
+    size_t s;
+    unsigned char *content = extract_func(archive, path, &s);
+    if (content != NULL)
+    {
+        fwrite(content, 1, s, stdout);
+        free(content);
+    }
 }
 int 
 main (int argc, char **argv)
@@ -80,25 +100,28 @@ main (int argc, char **argv)
         switch (*options) 
         {
             case 'p' : 
-                flag |= FLAG_P;
+                flag |= EXAR_FLAG_P;
                 break;
             case 'u' : 
-                flag |= FLAG_U;
+                flag |= EXAR_FLAG_U;
                 break;
             case 'c' : 
-                flag |= FLAG_C;
+                flag |= EXAR_FLAG_C;
                 break;
             case 'e' : 
-                flag |= FLAG_E;
+                flag |= EXAR_FLAG_E;
                 break;
             case 'd' : 
-                flag |= FLAG_D;
+                flag |= EXAR_FLAG_D;
                 break;
             case 'i' : 
-                flag |= FLAG_I;
+                flag |= EXAR_FLAG_I;
+                break;
+            case 's' : 
+                flag |= EXAR_FLAG_S;
                 break;
             case 'v' : 
-                flag |= MAX(FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
+                flag |= MAX(EXAR_FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
                 break;
             case 'h' : 
                 help(EXIT_SUCCESS);
@@ -110,26 +133,20 @@ main (int argc, char **argv)
     if (flag & EXAR_VERBOSE_MASK)
         exar_verbose(flag);
 
-    if (CHECK_FLAG(flag, FLAG_U))
+    if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_U))
         exar_unpack(argv[2], argv[3]);
-    else if (CHECK_FLAG(flag, FLAG_P))
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
         exar_pack(argv[2]);
-    else if (CHECK_FLAG(flag, FLAG_I))
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_I))
         exar_info(argv[2]);
-    else if (CHECK_FLAG(flag, FLAG_C) && argc > 3)
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_C) && argc > 3)
         exar_cat(argv[2], argv[3]);
-    else if (CHECK_FLAG(flag, FLAG_D) && argc > 3)
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 3)
         exar_delete(argv[2], argv[3]);
-    else if (CHECK_FLAG(flag, FLAG_E) && argc > 3)
-    {
-        size_t s;
-        unsigned char *content = exar_search_extract(argv[2], argv[3], &s);
-        if (content != NULL)
-        {
-            fwrite(content, 1, s, stdout);
-            free(content);
-        }
-    }
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_E) && argc > 3)
+        extract(argv[2], argv[3], exar_extract);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_S) && argc > 3)
+        extract(argv[2], argv[3], exar_search_extract);
     else 
         help(EXIT_FAILURE);
 
