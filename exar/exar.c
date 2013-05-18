@@ -379,10 +379,11 @@ exar_unpack(const char *archive, const char *dest)
 
     int ret = -1;
     char name[SZ_NAME], flag;
-    unsigned char rbuf;
     size_t fs;
     FILE *of, *f = NULL;
     int vers_check;
+    unsigned char buf[512];
+    size_t r;
 
     f = open_archive(archive, "r", &vers_check, 1);
     if (f == NULL || vers_check == -1)
@@ -420,10 +421,10 @@ exar_unpack(const char *archive, const char *dest)
             }
 
             LOG(2, "Writing %s (%lu bytes)\n", name, fs);
-            for (size_t i=0; i<fs; i++)
+            for (size_t i=0; i<fs; i += sizeof(buf))
             {
-                if (fread(&rbuf, 1, 1, f) != 0)
-                    fwrite(&rbuf, 1, 1, of);
+                if ( (r = fread(buf, 1, MIN(sizeof(buf), fs-i), f)) != 0)
+                    fwrite(buf, 1, r, of);
             }
             LOG(3, "Closing %s\n", name);
             fclose(of);
