@@ -27,6 +27,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <ftw.h>
+#include <errno.h>
 #include <assert.h>
 #include "exar.h"
 
@@ -34,22 +35,33 @@
 #define EXAR_VERSION EXAR_VERSION_BASE "1"
 #define EXTENSION "exar"
 
-#define SZ_VERSION 8
+#define SZ_VERSION 7
 #define SZ_DFLAG  1
-#define SZ_NAME  100
-#define SZ_SIZE  12 
-#define SZ_CHKSUM  7 
+#define SZ_SIZE  14 
 
-#define HDR_NAME (0)
-#define HDR_DFLAG (HDR_NAME + SZ_NAME)
+#define HDR_DFLAG (0)
 #define HDR_SIZE (HDR_DFLAG + SZ_DFLAG)
-#define HDR_CHKSUM (HDR_SIZE + SZ_SIZE)
-#define HDR_END (HDR_CHKSUM + SZ_CHKSUM)
+#define HDR_NAME (HDR_SIZE + SZ_SIZE)
 
 #define DIR_FLAG    (100)
 #define FILE_FLAG  (102)
+
 #define MAX_FILE_HANDLES 64
+
 #define MIN(X, Y)  ((X) > (Y) ? (Y) : (X))
+
+#define EXAR_NAME_MAX 4096
+
+#define EE_OK     0
+#define EE_ERROR -1
+#define EE_EOF   -2
+
+struct exar_header_s {
+    unsigned char eh_flag;
+    size_t eh_size;
+    char eh_name[EXAR_NAME_MAX];
+};
+
 
 #define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
@@ -103,12 +115,12 @@ check_version(FILE *f, int verbose)
     if (fread(version, 1, SZ_VERSION, f) != SZ_VERSION)
     {
         if (feof(f))
-            return 0;
+            return EE_EOF;
         else 
         {
             if (verbose)
                 fprintf(stderr, "Not an exar file?\n");
-            return -1;
+            return EE_ERROR;
         }
     }
     memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
@@ -117,7 +129,7 @@ check_version(FILE *f, int verbose)
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
-        return -1;
+        return EE_ERROR;
     }
 
     LOG(1, "Found version %s\n", version);
@@ -125,9 +137,9 @@ check_version(FILE *f, int verbose)
     {
         if (verbose)
             fprintf(stderr, "Incompatible version number\n");
-        return -1;
+        return EE_ERROR;
     }
-    return 0;
+    return EE_OK;
 }
 static int 
 write_version_header(FILE *f)
@@ -139,9 +151,9 @@ write_version_header(FILE *f)
     if (fwrite(version, 1, sizeof(version), f) != sizeof(version))
     {
         fprintf(stderr, "Failed to write %zu bytes", sizeof(version));
-        return -1;
+        return EE_ERROR;
     }
-    return 0;
+    return EE_OK;
 }
 /*
  * Opens archive and checks version, mode is either read or read-write
@@ -167,82 +179,76 @@ close_file(FILE *f, const char *archive)
         fclose(f);
     }
 }
-static int 
-get_chksum(char *header)
-{
-    int chksum = 0;
-    for (int i=0; i<HDR_CHKSUM; i++)
-    {
-        chksum += (unsigned char)*header;
-        header++;
-    }
-    LOG(3, "Computing checksum (%d)\n", chksum);
-    return chksum;
-}
 
 static int 
-get_file_header(FILE *f, char *name, char *flag, size_t *size)
+get_file_header(FILE *f, struct exar_header_s *head)
 {
     char *endptr;
-    char header[HDR_END];
+    char header[HDR_NAME];
     size_t fs;
-    int chksum, fsum = 0;
-    *size = 0;
+    char rb;
+    size_t i = 0;
+    int st_version = 0;
 
-    if (check_version(f, 1) != 0)
-        return -1;
+    if ((st_version = check_version(f, 1)) != 0)
+        return st_version;
 
     LOG(2, "Reading file header\n");
-    if (fread(header, 1, HDR_END, f) != HDR_END)
-        return -1;
-
-    LOG(3, "Checking checksums\n");
-    chksum = get_chksum(header);
-    fsum = strtoul(&header[HDR_CHKSUM], &endptr, 8);
-    if (*endptr || fsum != chksum)
+    if (fread(header, 1, HDR_NAME, f) != HDR_NAME)
     {
-        LOG(1, "Checksums differ (found: %d expected: %d)\n", chksum, fsum);
-        fprintf(stderr, "The archive seems to be corrupted\n");
-        return -1;
+        fprintf(stderr, "Reading file header failed");
+        return EE_ERROR;
     }
 
-    header[SZ_NAME-1] = 0;
-    strncpy(name, header, SZ_NAME);
+    head->eh_flag = header[HDR_DFLAG];
 
-    *flag = header[HDR_DFLAG];
-
-    if (*flag != DIR_FLAG && *flag != FILE_FLAG)
+    if (head->eh_flag != DIR_FLAG && head->eh_flag != FILE_FLAG)
     {
-        LOG(1, "No file flag found for %s\n", name);
+        LOG(1, "No file flag found\n");
         fprintf(stderr, "The archive seems to be corrupted\n");
-        return -1;
+        return EE_ERROR;
     }
-    if (*flag == FILE_FLAG)
+    if (head->eh_flag == FILE_FLAG)
     {
         fs = strtoul(&header[HDR_SIZE], &endptr, 8);
         if (*endptr)
         {
-            LOG(1, "Cannot determine file size for %s\n", name);
+            LOG(1, "Cannot determine file size\n");
             fprintf(stderr, "The archive seems to be corrupted\n");
-            return -1;
+            return EE_ERROR;
         }
-        *size = fs;
+        head->eh_size = fs;
     }
-    LOG(2, "Found file header (%s, %c, %zu, %d)\n", name, *flag, *size, chksum);
-    return 0;
+    else 
+        head->eh_size = 0;
+
+    while (fread(&rb, 1, 1, f) > 0)
+    {
+        head->eh_name[i] = rb;
+        i++;
+        if (rb == '\0')
+            break;
+        else if (i == EXAR_NAME_MAX)
+        {
+            fprintf(stderr, "Cannot get filename\n");
+            return EE_ERROR;
+        }
+    }
+
+    LOG(2, "Found file header (%s, %c, %zu)\n", head->eh_name, head->eh_flag, head->eh_size);
+    return EE_OK;
 }
 static int 
 find_cmp(const char *name, const char *search)
 {
-    char buffer[SZ_NAME];
-    size_t offset = get_offset(buffer, SZ_NAME, name, NULL);
+    char buffer[EXAR_NAME_MAX];
+    size_t offset = get_offset(buffer, EXAR_NAME_MAX, name, NULL);
     return strcmp(&name[offset], search);
 }
 static unsigned char *
 extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char *, const char *))
 {
-    char name[SZ_NAME] = {0}, flag = 0;
-    size_t fs = 0;
+    struct exar_header_s header;
     FILE *f = NULL;
     unsigned char *ret = NULL;
     if (s != NULL)
@@ -250,23 +256,23 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while (get_file_header(f, name, &flag, &fs) == 0)
+    while (get_file_header(f, &header) == 0)
     {
-        if (cmp(name, file) == 0)
+        if (cmp(header.eh_name, file) == 0)
         {
-            if (flag == FILE_FLAG)
+            if (header.eh_flag == FILE_FLAG)
             {
-                ret = xmalloc(fs);
-                LOG(3, "Reading %s\n", name);
-                if (fread(ret, 1, fs, f) != fs)
+                ret = xmalloc(header.eh_size);
+                LOG(3, "Reading %s\n", header.eh_name);
+                if (fread(ret, 1, header.eh_size, f) != header.eh_size)
                 {
-                    fprintf(stderr, "Failed to read %s\n", name);
+                    fprintf(stderr, "Failed to read %s\n", header.eh_name);
                     *s = -1;
                     free(ret);
                     ret = NULL;
                 }
                 else if (s != NULL)
-                    *s = fs;
+                    *s = header.eh_size;
             }
             else 
             {
@@ -274,10 +280,10 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
             }
             goto finish;
         }
-        else if (flag == FILE_FLAG)
+        else if (header.eh_flag == FILE_FLAG)
         {
-            LOG(3, "Skipping %s\n", name);
-            fseek(f, fs, SEEK_CUR);
+            LOG(3, "Skipping %s\n", header.eh_name);
+            fseek(f, header.eh_size, SEEK_CUR);
         }
     }
     fprintf(stderr, "File %s was not found in %s\n", file, archive);
@@ -289,22 +295,31 @@ finish:
 static int 
 write_file_header(FILE *f, const char *name, char flag, size_t r)
 {
-    char buffer[HDR_END] = {0};
-    int chksum;
+    char buffer[HDR_NAME] = {0};
+    size_t l_name; 
+    char term = 0;
+
+    l_name = strlen(name);
+    if (l_name > EXAR_NAME_MAX)
+    {
+        fprintf(stderr, "Filename too long\n");
+        return EE_ERROR;
+    }
 
     LOG(2, "Writing file header for %s\n", name);
     if (write_version_header(f) != 0) 
-        return -1;
+        return EE_ERROR;
 
     memset(buffer, 0, sizeof(buffer));
-    strncpy(buffer + HDR_NAME, name, SZ_NAME);
     buffer[HDR_DFLAG] = flag;
-    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.11o", (unsigned int)r);
-    chksum = get_chksum(buffer);
-    snprintf(buffer + HDR_CHKSUM, SZ_CHKSUM, "%.6o", (unsigned int)chksum);
-    if (fwrite(buffer, 1, HDR_END, f) != HDR_END)
-        return -1;
-    return 0;
+    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.13x", (unsigned int)r);
+    if (fwrite(buffer, 1, HDR_NAME, f) != HDR_NAME)
+        return EE_ERROR;
+    if (fwrite(name, 1, l_name, f) != l_name)
+        return EE_ERROR;
+    if (fwrite(&term, 1, 1, f) != 1)
+        return EE_ERROR;
+    return EE_OK;
 
 }
 
@@ -378,12 +393,13 @@ exar_pack(const char *path)
     if ((s_out = fopen(buffer, "w")) == NULL)
     {
         perror(buffer);
-        return -1;
+        return EE_ERROR;
     }
 
     ret = ftw(path, pack, MAX_FILE_HANDLES);
 
     LOG(3, "Closing %s\n", buffer);
+
     fclose(s_out);
     return ret;
 }
@@ -393,9 +409,8 @@ exar_unpack(const char *archive, const char *dest)
 {
     assert(archive != NULL);
 
-    int ret = -1;
-    char name[SZ_NAME], flag;
-    size_t fs = 0;
+    struct exar_header_s header;
+    int ret = EE_ERROR;
     FILE *of, *f = NULL;
     unsigned char buf[512];
     size_t r = 0;
@@ -416,29 +431,33 @@ exar_unpack(const char *archive, const char *dest)
 
     while (1) 
     {
-        if (get_file_header(f, name, &flag, &fs) != 0)
+        if (get_file_header(f, &header) != 0)
             break;
-        if (flag == DIR_FLAG) 
+        if (header.eh_flag == DIR_FLAG) 
         {
-            LOG(1, "Creating directory %s\n", name);
-            mkdir(name, 0755);
+            LOG(1, "Creating directory %s\n", header.eh_name);
+            if (mkdir(header.eh_name, 0755) != 0 && errno != EEXIST) 
+            {
+                perror(header.eh_name);
+                goto finish;
+            }
         }
         else 
         {
-            LOG(1, "Unpacking %s\n", name);
+            LOG(1, "Unpacking %s\n", header.eh_name);
 
-            LOG(3, "Opening %s for writing\n", name);
-            of = fopen(name, "w");
+            LOG(3, "Opening %s for writing\n", header.eh_name);
+            of = fopen(header.eh_name, "w");
             if (of == NULL)
             {
-                perror(name);
+                perror(header.eh_name);
                 goto finish;
             }
 
-            LOG(2, "Writing %s (%zu bytes)\n", name, fs);
-            for (size_t i=0; i<fs; i += sizeof(buf))
+            LOG(2, "Writing %s (%zu bytes)\n", header.eh_name, header.eh_size);
+            for (size_t i=0; i<header.eh_size; i += sizeof(buf))
             {
-                if ( (r = fread(buf, 1, MIN(sizeof(buf), fs-i), f)) != 0)
+                if ( (r = fread(buf, 1, MIN(sizeof(buf), header.eh_size - i), f)) != 0)
                 {
                     if (fwrite(buf, 1, r, of) != r)
                     {
@@ -447,11 +466,11 @@ exar_unpack(const char *archive, const char *dest)
                     }
                 }
             }
-            LOG(3, "Closing %s\n", name);
+            LOG(3, "Closing %s\n", header.eh_name);
             fclose(of);
         }
     }
-    ret = 0;
+    ret = EE_OK;
 finish:
     close_file(f, archive);
     return ret;
@@ -476,12 +495,11 @@ exar_delete(const char *archive, const char *file)
 {
     assert(archive != NULL && file != NULL);
 
-    int result = -1;
-    char name[SZ_NAME] = {0}, flag = 0;
-    size_t fs = 0;
+    int result = EE_ERROR;
+    struct exar_header_s header;
     FILE *f = NULL, *ftmp = NULL;
     char tmp_file[128];
-    char dir_name[SZ_NAME + 1] = {0};
+    char dir_name[EXAR_NAME_MAX-1] = {0};
     unsigned char rbuf;
     size_t dir_length = 0;
 
@@ -499,35 +517,35 @@ exar_delete(const char *archive, const char *file)
     if ((ftmp = fopen(tmp_file, "w")) == NULL)
         goto finish;
 
-    while (get_file_header(f, name, &flag, &fs) == 0)
+    while (get_file_header(f, &header) == 0)
     {
-        if (strcmp(name, file) == 0)
+        if (strcmp(header.eh_name, file) == 0)
         {
-            if (flag == FILE_FLAG)
+            if (header.eh_flag == FILE_FLAG)
             {
-                LOG(1, "Skipping %s\n", name);
-                fseek(f, fs, SEEK_CUR);
+                LOG(1, "Skipping %s\n", header.eh_name);
+                fseek(f, header.eh_size, SEEK_CUR);
             }
-            else if (flag == DIR_FLAG)
-                dir_length = snprintf(dir_name, sizeof(dir_name), "%s/", name);
+            else if (header.eh_flag == DIR_FLAG)
+                dir_length = snprintf(dir_name, sizeof(dir_name), "%s/", header.eh_name);
         }
-        else if (*dir_name && strncmp(dir_name, name, dir_length) == 0 && flag == FILE_FLAG)
+        else if (*dir_name && strncmp(dir_name, header.eh_name, dir_length) == 0 && header.eh_flag == FILE_FLAG)
         {
-            LOG(1, "Skipping %s\n", name);
-            fseek(f, fs, SEEK_CUR);
+            LOG(1, "Skipping %s\n", header.eh_name);
+            fseek(f, header.eh_size, SEEK_CUR);
         }
         else 
         {
-            LOG(1, "Packing %s\n", name);
-            write_file_header(ftmp, name, flag, fs);
-            if (flag == FILE_FLAG)
+            LOG(1, "Packing %s\n", header.eh_name);
+            write_file_header(ftmp, header.eh_name, header.eh_flag, header.eh_size);
+            if (header.eh_flag == FILE_FLAG)
             {
-                LOG(2, "Copying %s (%zu bytes)\n", name, fs);
-                for (size_t s=0; s<fs; s++)
+                LOG(2, "Copying %s (%zu bytes)\n", header.eh_name, header.eh_size);
+                for (size_t s=0; s<header.eh_size; s++)
                 {
                     if (fread(&rbuf, 1, 1, f) != 1 || fwrite(&rbuf, 1, 1, ftmp) != 1)
                     {
-                        fprintf(stderr, "Error copying %s\n", name);
+                        fprintf(stderr, "Error copying %s\n", header.eh_name);
                         goto finish;
                     }
                 }
@@ -538,7 +556,7 @@ exar_delete(const char *archive, const char *file)
     if (rename(tmp_file, archive) == -1)
         perror(archive);
     else 
-        result = 0;
+        result = EE_OK;
 finish:
     close_file(f, archive);
     close_file(ftmp, tmp_file);
@@ -548,16 +566,15 @@ void
 exar_info(const char *archive)
 {
     FILE *f = NULL;
-    char name[SZ_NAME], flag;
-    size_t fs; 
+    struct exar_header_s header;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while(get_file_header(f, name, &flag, &fs) == 0)
+    while(get_file_header(f, &header) == 0)
     {
-        fprintf(stdout, "%c %-12zu %s\n", flag, fs, name);
-        if (flag == FILE_FLAG)
-            fseek(f, fs, SEEK_CUR);
+        fprintf(stdout, "%c %-12zu %s\n", header.eh_flag, header.eh_size, header.eh_name);
+        if (header.eh_flag == FILE_FLAG)
+            fseek(f, header.eh_size, SEEK_CUR);
     }
 finish:
     close_file(f, archive);

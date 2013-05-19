@@ -25,18 +25,22 @@
  *
  * File format:
  *
- * [version header][file header][file][version header][file header][file][version ...
+ * [file header][file][file header][file][file he...
  *
- * file header    : 128 bytes
- *                  - version              : 8 bytes
- *                  - filename             : 100 bytes, (char*)
- *                  - directory flag(d|f)  : 1 byte     (char)
- *                  - file size            : 12 bytes   (char*, octal representation)
- *                  - checksum:            : 7 bytes    (char*, octal representation)
+ * file header    : - file info 22 bytes
+ *                      - 7 bytes  version header, null terminated  (char)
+ *                      - 1 byte   filetype flag (d|f)              (char)
+ *                      - 14 byte  file size, null terminated       (char, hex)
+ *                  - file name, null terminated, maximum 4096 bytes
+ * file           : saved as unsigned char
  * */
 
 #ifndef __EXAR_H__
 #define __EXAR_H__
+
+#include <stdio.h>
+
+
 
 enum {
     EXAR_VERBOSE_L1 = 1<<0,
