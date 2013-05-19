@@ -66,7 +66,7 @@ xmalloc(size_t size)
     void *ret = calloc(1, size);
     if (ret == NULL)
     {
-        fprintf(stderr, "Cannot malloc %lu bytes\n", size);
+        fprintf(stderr, "Cannot malloc %zu bytes\n", size);
         exit(EXIT_FAILURE);
     }
     return ret;
@@ -124,14 +124,19 @@ check_version(FILE *f, int verbose)
     }
     return 0;
 }
-static void 
+static int 
 write_version_header(FILE *f)
 {
     unsigned char version[SZ_VERSION] = {0};
 
     LOG(2, "Writing version header (%s)\n", EXAR_VERSION);
     memcpy(version, EXAR_VERSION, sizeof(version));
-    fwrite(version, 1, sizeof(version), f);
+    if (fwrite(version, 1, sizeof(version), f) != sizeof(version))
+    {
+        fprintf(stderr, "Failed to write %zu bytes", sizeof(version));
+        return -1;
+    }
+    return 0;
 }
 /*
  * Opens archive and checks version, mode is either read or read-write
@@ -215,16 +220,14 @@ get_file_header(FILE *f, char *name, char *flag, size_t *size)
         }
         *size = fs;
     }
-    LOG(2, "Found file header (%s, %c, %lu, %d)\n", name, *flag, *size, chksum);
+    LOG(2, "Found file header (%s, %c, %zu, %d)\n", name, *flag, *size, chksum);
     return 0;
 }
 static int 
 find_cmp(const char *name, const char *search)
 {
-    //size_t ss = strlen(search);
     char buffer[SZ_NAME];
     size_t offset = get_offset(buffer, SZ_NAME, name, NULL);
-    //size_t sn = strlen(name);
     return strcmp(&name[offset], search);
 }
 static unsigned char *
@@ -333,9 +336,15 @@ pack(const char *fpath, const struct stat *st, int tf)
 
     if (f != NULL)
     {
-        LOG(2, "Writing %s (%lu bytes)\n", stripped, (st->st_size));
+        LOG(2, "Writing %s (%zu bytes)\n", stripped, (st->st_size));
         while ((r = fread(rbuf, 1, sizeof(rbuf), f)) > 0)
-            fwrite(rbuf, 1, r, s_out);
+        {
+            if (fwrite(rbuf, 1, r, s_out) != r)
+            {
+                fprintf(stderr, "Failed to write %zu bytes", r);
+                goto finish;
+            }
+        }
     }
     result = 0;
 finish: 
@@ -363,7 +372,8 @@ exar_pack(const char *path)
         return -1;
     }
 
-    write_version_header(s_out);
+    if (write_version_header(s_out) != 0) 
+        return -1;
 
     ret = ftw(path, pack, MAX_FILE_HANDLES);
 
@@ -387,7 +397,7 @@ exar_unpack(const char *archive, const char *dest)
 
     f = open_archive(archive, "r", &vers_check, 1);
     if (f == NULL || vers_check == -1)
-        goto error_out;
+        goto finish;
 
     if (dest != NULL)
     {
@@ -395,7 +405,7 @@ exar_unpack(const char *archive, const char *dest)
         if (chdir(dest) != 0)
         {
             perror("chdir");
-            goto error_out;
+            goto finish;
         }
     }
 
@@ -417,21 +427,27 @@ exar_unpack(const char *archive, const char *dest)
             if (of == NULL)
             {
                 perror(name);
-                goto error_out;
+                goto finish;
             }
 
-            LOG(2, "Writing %s (%lu bytes)\n", name, fs);
+            LOG(2, "Writing %s (%zu bytes)\n", name, fs);
             for (size_t i=0; i<fs; i += sizeof(buf))
             {
                 if ( (r = fread(buf, 1, MIN(sizeof(buf), fs-i), f)) != 0)
-                    fwrite(buf, 1, r, of);
+                {
+                    if (fwrite(buf, 1, r, of) != r)
+                    {
+                        fprintf(stderr, "Failed to write %zu bytes\n", r);
+                        goto finish;
+                    }
+                }
             }
             LOG(3, "Closing %s\n", name);
             fclose(of);
         }
     }
     ret = 0;
-error_out:
+finish:
     close_file(f, archive);
     return ret;
 }
@@ -445,23 +461,27 @@ exar_cat(const char *file1, const char *file2)
     FILE *f1 = NULL, *f2 = NULL;
     unsigned char buffer[64];
     char offset_buffer[512];
-    int vers_check;
+    int vers_check = -1;
 
     LOG(3, "Opening file %s for writing\n", file1);
     if ((f1 = fopen(file1, "a")) == NULL)
     {
         perror(file1);
-        goto error_out;
+        goto finish;
     }
     if ((f2 = open_archive(file2, "r", &vers_check, 0)) == NULL)
-        goto error_out;
+        goto finish;
 
     if (vers_check == 0)
     {
         LOG(1, "Concatenating archive\n");
         while ((r = fread(buffer, 1, sizeof(buffer), f2)) > 0)
         {
-            fwrite(buffer, 1, r, f1);
+            if (fwrite(buffer, 1, r, f1) != r)
+            {
+                fprintf(stderr, "Failed to write %zu bytes\n", r);
+                goto finish;
+            }
         }
     }
     else 
@@ -472,7 +492,7 @@ exar_cat(const char *file1, const char *file2)
         ftw(file2, pack, MAX_FILE_HANDLES);
     }
     ret = 0;
-error_out: 
+finish: 
     close_file(f1, file1);
     close_file(f2, file2);
     return ret;
@@ -511,12 +531,17 @@ exar_delete(const char *archive, const char *file)
         goto finish;
 
     snprintf(tmp_file, sizeof(tmp_file), "%s.XXXXXX", archive);
-    mktemp(tmp_file);
+    if (mktemp(tmp_file) == NULL)
+    {
+        fprintf(stderr, "Failed to create temporary file\n");
+        goto finish;
+    }
 
     LOG(3, "Opening %s for writing\n", tmp_file);
     if ((ftmp = fopen(tmp_file, "w")) == NULL)
         goto finish;
-    write_version_header(ftmp);
+    if (write_version_header(ftmp) != 0)
+        goto finish;
 
     while (get_file_header(f, name, &flag, &fs) == 0)
     {
@@ -541,7 +566,7 @@ exar_delete(const char *archive, const char *file)
             write_file_header(ftmp, name, flag, fs);
             if (flag == FILE_FLAG)
             {
-                LOG(2, "Copying %s (%lu bytes)\n", name, fs);
+                LOG(2, "Copying %s (%zu bytes)\n", name, fs);
                 for (size_t s=0; s<fs; s++)
                 {
                     if (fread(&rbuf, 1, 1, f) != 1 || fwrite(&rbuf, 1, 1, ftmp) != 1)
@@ -575,7 +600,7 @@ exar_info(const char *archive)
         goto finish;
     while(get_file_header(f, name, &flag, &fs) == 0)
     {
-        fprintf(stdout, "%c %-12lu %s\n", flag, fs, name);
+        fprintf(stdout, "%c %-12zu %s\n", flag, fs, name);
         if (flag == FILE_FLAG)
             fseek(f, fs, SEEK_CUR);
     }
