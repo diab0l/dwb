@@ -58,7 +58,6 @@
 static size_t s_offset;
 static FILE *s_out;
 static unsigned char s_verbose = 0;
-static unsigned char s_version[SZ_VERSION];
 
 static void *
 xmalloc(size_t size)
@@ -98,9 +97,10 @@ get_offset(char *buffer, size_t n, const char *path, int *end)
 static int 
 check_version(FILE *f, int verbose)
 {
+    unsigned char version[SZ_VERSION] = {0};
     unsigned char orig_version[SZ_VERSION] = {0};
     LOG(2, "Reading version header\n");
-    if (fread(s_version, 1, SZ_VERSION, f) != SZ_VERSION)
+    if (fread(version, 1, SZ_VERSION, f) != SZ_VERSION)
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
@@ -108,15 +108,15 @@ check_version(FILE *f, int verbose)
     }
     memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
     LOG(2, "Checking filetype\n");
-    if (strncmp((char*)s_version, EXAR_VERSION_BASE, 5))
+    if (strncmp((char*)version, EXAR_VERSION_BASE, 5))
     {
         if (verbose)
             fprintf(stderr, "Not an exar file?\n");
         return -1;
     }
 
-    LOG(1, "Found version %s\n", s_version);
-    if (memcmp(s_version, orig_version, SZ_VERSION))
+    LOG(1, "Found version %s\n", version);
+    if (memcmp(version, orig_version, SZ_VERSION))
     {
         if (verbose)
             fprintf(stderr, "Incompatible version number\n");
@@ -237,7 +237,7 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
     size_t fs = 0;
     FILE *f = NULL;
     unsigned char *ret = NULL;
-    int vers_check;
+    int vers_check = -1;
     if (s != NULL)
         *s = 0;
 
@@ -389,11 +389,11 @@ exar_unpack(const char *archive, const char *dest)
 
     int ret = -1;
     char name[SZ_NAME], flag;
-    size_t fs;
+    size_t fs = 0;
     FILE *of, *f = NULL;
-    int vers_check;
+    int vers_check = 1;
     unsigned char buf[512];
-    size_t r;
+    size_t r = 0;
 
     f = open_archive(archive, "r", &vers_check, 1);
     if (f == NULL || vers_check == -1)
