@@ -3441,7 +3441,7 @@ dwb_get_scripts()
             }
             if (dwb.misc.js_api != JS_API_DISABLED)
             {
-                if (exar_check_version(path, 0) == 0)
+                if (exar_check_version(path) == 0)
                 {
                     content = (char *) exar_search_extract(path, "main.js", NULL);
                     if (content != NULL)

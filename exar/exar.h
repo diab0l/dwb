@@ -25,11 +25,11 @@
  *
  * File format:
  *
- * [version header][file header][file][file header][file][file header...
+ * [version header][file header][file][version header][file header][file][version ...
  *
- * version header : 8 bytes
  * file header    : 128 bytes
- *                  - filename             : 108 bytes, (char*)
+ *                  - version              : 8 bytes
+ *                  - filename             : 100 bytes, (char*)
  *                  - directory flag(d|f)  : 1 byte     (char)
  *                  - file size            : 12 bytes   (char*, octal representation)
  *                  - checksum:            : 7 bytes    (char*, octal representation)
@@ -63,16 +63,6 @@ exar_pack(const char *path);
  * */
 int 
 exar_unpack(const char *path, const char *dest);
-
-/* 
- * Concatenates two archives or an archive and a file or directory
- * @file1: The archive to append
- * @file2: The archive, file or directory that will be appended
- *
- * @returns 0 on success and -1 on error
- * */
-int 
-exar_cat(const char *file1, const char *file2);
 
 /* 
  * Extracts a file from an extension archive
@@ -121,7 +111,7 @@ exar_delete(const char *archive, const char *file);
  * @returns 0 on success and -1 on error
  */
 int 
-exar_check_version(const char *archive, int verbose);
+exar_check_version(const char *archive);
 
 /*
  * Print info about the archive to stdout.

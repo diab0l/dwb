@@ -36,7 +36,7 @@
 
 #define SZ_VERSION 8
 #define SZ_DFLAG  1
-#define SZ_NAME  108
+#define SZ_NAME  100
 #define SZ_SIZE  12 
 #define SZ_CHKSUM  7 
 
@@ -102,9 +102,14 @@ check_version(FILE *f, int verbose)
     LOG(2, "Reading version header\n");
     if (fread(version, 1, SZ_VERSION, f) != SZ_VERSION)
     {
-        if (verbose)
-            fprintf(stderr, "Not an exar file?\n");
-        return -1;
+        if (feof(f))
+            return 0;
+        else 
+        {
+            if (verbose)
+                fprintf(stderr, "Not an exar file?\n");
+            return -1;
+        }
     }
     memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
     LOG(2, "Checking filetype\n");
@@ -142,7 +147,7 @@ write_version_header(FILE *f)
  * Opens archive and checks version, mode is either read or read-write
  * */ 
 static FILE * 
-open_archive(const char *path, const char *mode, int *ret_version_check, int verbose)
+open_archive(const char *path, const char *mode)
 {
     FILE *f = NULL;
     LOG(3, "Opening %s for %s\n", path, strcmp(mode, "r") == 0 ? "reading" : "reading and writing");
@@ -151,7 +156,6 @@ open_archive(const char *path, const char *mode, int *ret_version_check, int ver
         perror(path);
         return NULL;
     }
-    *ret_version_check = check_version(f, verbose);
     return f;
 }
 static void 
@@ -184,6 +188,10 @@ get_file_header(FILE *f, char *name, char *flag, size_t *size)
     size_t fs;
     int chksum, fsum = 0;
     *size = 0;
+
+    if (check_version(f, 1) != 0)
+        return -1;
+
     LOG(2, "Reading file header\n");
     if (fread(header, 1, HDR_END, f) != HDR_END)
         return -1;
@@ -237,11 +245,10 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
     size_t fs = 0;
     FILE *f = NULL;
     unsigned char *ret = NULL;
-    int vers_check = -1;
     if (s != NULL)
         *s = 0;
 
-    if ((f = open_archive(archive, "r", &vers_check, 1)) == NULL || vers_check != 0)
+    if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
     while (get_file_header(f, name, &flag, &fs) == 0)
     {
@@ -286,6 +293,8 @@ write_file_header(FILE *f, const char *name, char flag, size_t r)
     int chksum;
 
     LOG(2, "Writing file header for %s\n", name);
+    if (write_version_header(f) != 0) 
+        return -1;
 
     memset(buffer, 0, sizeof(buffer));
     strncpy(buffer + HDR_NAME, name, SZ_NAME);
@@ -372,9 +381,6 @@ exar_pack(const char *path)
         return -1;
     }
 
-    if (write_version_header(s_out) != 0) 
-        return -1;
-
     ret = ftw(path, pack, MAX_FILE_HANDLES);
 
     LOG(3, "Closing %s\n", buffer);
@@ -391,12 +397,11 @@ exar_unpack(const char *archive, const char *dest)
     char name[SZ_NAME], flag;
     size_t fs = 0;
     FILE *of, *f = NULL;
-    int vers_check = 1;
     unsigned char buf[512];
     size_t r = 0;
 
-    f = open_archive(archive, "r", &vers_check, 1);
-    if (f == NULL || vers_check == -1)
+    f = open_archive(archive, "r");
+    if (f == NULL)
         goto finish;
 
     if (dest != NULL)
@@ -451,52 +456,6 @@ finish:
     close_file(f, archive);
     return ret;
 }
-int 
-exar_cat(const char *file1, const char *file2)
-{
-    assert(file1 != NULL && file2 != NULL);
-
-    int ret = -1;
-    size_t r;
-    FILE *f1 = NULL, *f2 = NULL;
-    unsigned char buffer[64];
-    char offset_buffer[512];
-    int vers_check = -1;
-
-    LOG(3, "Opening file %s for writing\n", file1);
-    if ((f1 = fopen(file1, "a")) == NULL)
-    {
-        perror(file1);
-        goto finish;
-    }
-    if ((f2 = open_archive(file2, "r", &vers_check, 0)) == NULL)
-        goto finish;
-
-    if (vers_check == 0)
-    {
-        LOG(1, "Concatenating archive\n");
-        while ((r = fread(buffer, 1, sizeof(buffer), f2)) > 0)
-        {
-            if (fwrite(buffer, 1, r, f1) != r)
-            {
-                fprintf(stderr, "Failed to write %zu bytes\n", r);
-                goto finish;
-            }
-        }
-    }
-    else 
-    {
-        s_offset = get_offset(offset_buffer, sizeof(offset_buffer), file2, NULL);
-        LOG(1, "Concatenating regular files\n");
-        s_out = f1;
-        ftw(file2, pack, MAX_FILE_HANDLES);
-    }
-    ret = 0;
-finish: 
-    close_file(f1, file1);
-    close_file(f2, file2);
-    return ret;
-}
 
 unsigned char * 
 exar_extract(const char *archive, const char *file, size_t *s)
@@ -521,13 +480,12 @@ exar_delete(const char *archive, const char *file)
     char name[SZ_NAME] = {0}, flag = 0;
     size_t fs = 0;
     FILE *f = NULL, *ftmp = NULL;
-    int vers_check;
     char tmp_file[128];
     char dir_name[SZ_NAME + 1] = {0};
     unsigned char rbuf;
     size_t dir_length = 0;
 
-    if ((f = open_archive(archive, "r", &vers_check, 1)) == NULL || vers_check != 0)
+    if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
 
     snprintf(tmp_file, sizeof(tmp_file), "%s.XXXXXX", archive);
@@ -539,8 +497,6 @@ exar_delete(const char *archive, const char *file)
 
     LOG(3, "Opening %s for writing\n", tmp_file);
     if ((ftmp = fopen(tmp_file, "w")) == NULL)
-        goto finish;
-    if (write_version_header(ftmp) != 0)
         goto finish;
 
     while (get_file_header(f, name, &flag, &fs) == 0)
@@ -594,9 +550,8 @@ exar_info(const char *archive)
     FILE *f = NULL;
     char name[SZ_NAME], flag;
     size_t fs; 
-    int vers_check;
 
-    if ((f = open_archive(archive, "r", &vers_check, 1)) == NULL || vers_check != 0)
+    if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
     while(get_file_header(f, name, &flag, &fs) == 0)
     {
@@ -609,14 +564,15 @@ finish:
 }
 
 int
-exar_check_version(const char *archive, int verbose)
+exar_check_version(const char *archive)
 {
     assert(archive != NULL);
-
-    int vers_check;
-    FILE *f = open_archive(archive, "r", &vers_check, verbose);
+    int result = -1;
+    FILE *f; 
+    if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0))
+        result = 0; 
     close_file(f, archive);
-    return vers_check;
+    return result;
 }
 void 
 exar_verbose(unsigned char v)

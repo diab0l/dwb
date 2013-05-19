@@ -24,7 +24,6 @@ enum {
     EXAR_FLAG_V = 1<<0,
     EXAR_FLAG_P = 1<<3,
     EXAR_FLAG_U = 1<<4,
-    EXAR_FLAG_C = 1<<5,
     EXAR_FLAG_E = 1<<6,
     EXAR_FLAG_D = 1<<7,
     EXAR_FLAG_I = 1<<8,
@@ -47,8 +46,6 @@ help(int ret)
             "   exar option [arguments]\n\n" 
            "OPTIONS:\n" 
            "    h                   Print this help and exit.\n"
-           "    c[v] archive file   Concatenates a file, directory or archive to \n" 
-           "                        an existing archive.\n"
            "    d[v] archive file   Deletes a file from an archive, the file path is the\n"
            "                        relative file path of the file in the archive\n"
            "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
@@ -65,8 +62,6 @@ help(int ret)
            "                        get more verbose messages.\n\n"
            "EXAMPLES:\n"
            "    exar p /tmp/foo          -- pack /tmp/foo to foo.exar\n"
-           "    exar c foo.exar bar.txt  -- Concatenates bar.txt to archive foo.exar\n"
-           "    exar c foo.exar bar.exar -- Concatenates archive bar.exar to archive foo.exar\n"
            "    exar s foo.js > foo.js   -- Extract foo.js from the archive\n"
            "    exar uvvv foo.exar       -- unpack foo.exar to current directory,\n" 
            "                                verbosity level 3\n"
@@ -105,9 +100,6 @@ main (int argc, char **argv)
             case 'u' : 
                 flag |= EXAR_FLAG_U;
                 break;
-            case 'c' : 
-                flag |= EXAR_FLAG_C;
-                break;
             case 'e' : 
                 flag |= EXAR_FLAG_E;
                 break;
@@ -139,8 +131,6 @@ main (int argc, char **argv)
         exar_pack(argv[2]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_I))
         exar_info(argv[2]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_C) && argc > 3)
-        exar_cat(argv[2], argv[3]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 3)
         exar_delete(argv[2], argv[3]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_E) && argc > 3)
