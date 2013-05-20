@@ -80,7 +80,10 @@ extract(const char *archive, const char *path,
     unsigned char *content = extract_func(archive, path, &s);
     if (content != NULL)
     {
-        fwrite(content, 1, s, stdout);
+        if (fwrite(content, 1, s, stdout) != (size_t)s)
+        {
+            fprintf(stderr, "An error occured\n");
+        }
         free(content);
     }
 }

@@ -1,4 +1,4 @@
-CFLAGS += -Wall -pedantic -Werror -std=c99 -g 
+CFLAGS += -Wall -pedantic -Werror -Wextra -std=c99 -g 
 
 TARGET=exar
 OBJ=$(patsubst %.c, %.o, $(wildcard *.c))
