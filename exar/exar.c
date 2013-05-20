@@ -616,7 +616,7 @@ exar_check_version(const char *archive)
 
     int result = EE_ERROR;
     FILE *f; 
-    if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0))
+    if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0) == 0)
         result = EE_OK; 
     close_file(f, archive);
     return result;
