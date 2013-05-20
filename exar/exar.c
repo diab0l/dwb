@@ -72,12 +72,12 @@ static FILE *s_out;
 static unsigned char s_verbose = 0;
 
 static void *
-xmalloc(size_t size)
+xcalloc(size_t nmemb, size_t size)
 {
-    void *ret = calloc(1, size);
+    void *ret = calloc(nmemb, size);
     if (ret == NULL)
     {
-        fprintf(stderr, "Cannot malloc %zu bytes\n", size);
+        fprintf(stderr, "Cannot malloc %zu bytes\n", size * nmemb);
         exit(EXIT_FAILURE);
     }
     return ret;
@@ -210,7 +210,7 @@ get_file_header(FILE *f, struct exar_header_s *head)
     }
     if (head->eh_flag == FILE_FLAG)
     {
-        fs = strtoul(&header[HDR_SIZE], &endptr, 8);
+        fs = strtoul(&header[HDR_SIZE], &endptr, 16);
         if (*endptr)
         {
             LOG(1, "Cannot determine file size\n");
@@ -262,7 +262,7 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
         {
             if (header.eh_flag == FILE_FLAG)
             {
-                ret = xmalloc(header.eh_size);
+                ret = xcalloc(header.eh_size, sizeof(unsigned char));
                 LOG(3, "Reading %s\n", header.eh_name);
                 if (fread(ret, 1, header.eh_size, f) != header.eh_size)
                 {
