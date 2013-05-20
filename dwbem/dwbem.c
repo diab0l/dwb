@@ -64,16 +64,17 @@
 #define FREE0(X) (X == NULL ? NULL : (X = (g_free(X), NULL)))
 
 enum {
-    EXAR_FLAG_V = 1<<0,
-    EXAR_FLAG_P = 1<<3,
-    EXAR_FLAG_U = 1<<4,
-    EXAR_FLAG_E = 1<<6,
-    EXAR_FLAG_D = 1<<7,
-    EXAR_FLAG_L = 1<<8,
-    EXAR_FLAG_S = 1<<9,
+    EXAR_FLAG_v = 1<<0,
+    EXAR_FLAG_p = 1<<3,
+    EXAR_FLAG_u = 1<<4,
+    EXAR_FLAG_e = 1<<6,
+    EXAR_FLAG_d = 1<<7,
+    EXAR_FLAG_l = 1<<8,
+    EXAR_FLAG_s = 1<<9,
+    EXAR_FLAG_a = 1<<10,
 };
 #define EXAR_OPTION_FLAG (0xffff & ~(0x7))
-#define EXAR_CHECK_FLAG(x, flag) !!(((x) & (flag)) && !((x) & ( (EXAR_OPTION_FLAG)^(flag) ) ))
+#define EXAR_CHECK_FLAG(x, flag) !!(((x) & (EXAR_FLAG_##flag)) && !((x) & ( (EXAR_OPTION_FLAG)^(EXAR_FLAG_##flag) ) ))
 
 enum 
 {
@@ -1169,6 +1170,7 @@ exar_help(int ret)
             "   dwbem --archive option [arguments]\n\n" 
            "OPTIONS:\n" 
            "    h                   Print this help and exit.\n"
+           "    a[v] archive file   Appends a file or directory to an archive\n"
            "    d[v] archive file   Deletes a file from an archive, the file path is the\n"
            "                        relative file path of the file in the archive\n"
            "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
@@ -1221,26 +1223,29 @@ parse_exar_options(char **argv)
     {
         switch (*options) 
         {
-            case 'p' : 
-                flag |= EXAR_FLAG_P;
-                break;
-            case 'u' : 
-                flag |= EXAR_FLAG_U;
-                break;
-            case 'e' : 
-                flag |= EXAR_FLAG_E;
+            case 'a' : 
+                flag |= EXAR_FLAG_a;
                 break;
             case 'd' : 
-                flag |= EXAR_FLAG_D;
+                flag |= EXAR_FLAG_d;
+                break;
+            case 'e' : 
+                flag |= EXAR_FLAG_e;
                 break;
             case 'l' : 
-                flag |= EXAR_FLAG_L;
+                flag |= EXAR_FLAG_l;
+                break;
+            case 'p' : 
+                flag |= EXAR_FLAG_p;
                 break;
             case 's' : 
-                flag |= EXAR_FLAG_S;
+                flag |= EXAR_FLAG_s;
+                break;
+            case 'u' : 
+                flag |= EXAR_FLAG_u;
                 break;
             case 'v' : 
-                flag |= MAX(EXAR_FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
+                flag |= MAX(EXAR_FLAG_v, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
                 break;
             case 'h' : 
                 exar_help(EXIT_SUCCESS);
@@ -1252,18 +1257,20 @@ parse_exar_options(char **argv)
     if (flag & EXAR_VERBOSE_MASK)
         exar_verbose(flag);
 
-    if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_U))
-        exar_unpack(argv[1], argv[2]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
-        exar_pack(argv[1]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_L))
-        exar_info(argv[1]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 2)
+    if (EXAR_CHECK_FLAG(flag, a) && argc > 2)
+        exar_append(argv[1], argv[2]);
+    else if (EXAR_CHECK_FLAG(flag, d) && argc > 2)
         exar_delete(argv[1], argv[2]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_E) && argc > 2)
+    else if (EXAR_CHECK_FLAG(flag, e) && argc > 2)
         exar_xextract(argv[1], argv[2], exar_extract);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_S) && argc > 2)
+    else if (EXAR_CHECK_FLAG(flag, l))
+        exar_info(argv[1]);
+    else if (EXAR_CHECK_FLAG(flag, p))
+        exar_pack(argv[1]);
+    else if (EXAR_CHECK_FLAG(flag, s) && argc > 2)
         exar_xextract(argv[1], argv[2], exar_search_extract);
+    else if (EXAR_CHECK_FLAG(flag, u))
+        exar_unpack(argv[1], argv[2]);
     else 
         exar_help(EXIT_FAILURE);
 }

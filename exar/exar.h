@@ -40,8 +40,6 @@
 
 #include <stdio.h>
 
-
-
 enum {
     EXAR_VERBOSE_L1 = 1<<0,
     EXAR_VERBOSE_L2 = 1<<1,
@@ -57,6 +55,16 @@ enum {
  * */
 int 
 exar_pack(const char *path);
+
+/*
+ * Appends a file or directory to the archive
+ * @archive The archive
+ * @path    The file or directory to append
+ *
+ * @returns 0 on success
+ */
+int 
+exar_append(const char *archive, const char *path);
 
 /*
  * Unpacks an archive

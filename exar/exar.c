@@ -322,7 +322,7 @@ write_file_header(FILE *f, const char *name, char flag, size_t r)
 }
 
 static int
-pack(const char *fpath, const struct stat *st, int tf)
+ftw_pack(const char *fpath, const struct stat *st, int tf)
 {
     (void)tf;
 
@@ -373,33 +373,49 @@ finish:
     close_file(f, fpath);
     return result;
 }
+static int 
+pack (const char *archive, const char *path, const char *mode)
+{
+    int ret = EE_OK;
+
+    LOG(3, "Opening %s for writing\n", archive);
+    if ((s_out = fopen(archive, mode)) == NULL)
+    {
+        perror(archive);
+        return EE_ERROR;
+    }
+
+    ret = ftw(path, ftw_pack, MAX_FILE_HANDLES);
+
+    LOG(3, "Closing %s\n", archive);
+
+    fclose(s_out);
+    return ret;
+}
 
 int 
 exar_pack(const char *path)
 {
     assert(path != NULL);
 
-    int ret;
-    char buffer[512];
+    char archive[EXAR_NAME_MAX];
     int i = 0;
 
-    s_offset = get_offset(buffer, sizeof(buffer), path, &i);
+    s_offset = get_offset(archive, sizeof(archive), path, &i);
 
-    strncpy(&buffer[i], "." EXTENSION, sizeof(buffer) - i);
+    strncpy(&archive[i], "." EXTENSION, sizeof(archive) - i);
 
-    LOG(3, "Opening %s for writing\n", buffer);
-    if ((s_out = fopen(buffer, "w")) == NULL)
-    {
-        perror(buffer);
-        return EE_ERROR;
-    }
+    return pack(archive, path, "w");
+}
+int 
+exar_append(const char *archive, const char *path)
+{
+    assert(path != NULL);
+    char stripped[EXAR_NAME_MAX];
 
-    ret = ftw(path, pack, MAX_FILE_HANDLES);
+    s_offset = get_offset(stripped, sizeof(stripped), path, 0);
 
-    LOG(3, "Closing %s\n", buffer);
-
-    fclose(s_out);
-    return ret;
+    return pack(archive, path, "a");
 }
 
 int 
