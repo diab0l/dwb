@@ -359,7 +359,7 @@ ftw_pack(const char *fpath, const struct stat *st, int tf)
 
     if (f != NULL)
     {
-        LOG(2, "Writing %s (%zu bytes)\n", stripped, (st->st_size));
+        LOG(2, "Writing %s (%jd bytes)\n", stripped, (intmax_t)(st->st_size));
         while ((r = fread(rbuf, 1, sizeof(rbuf), f)) > 0)
         {
             if (fwrite(rbuf, 1, r, s_out) != r)
@@ -560,7 +560,7 @@ exar_delete(const char *archive, const char *file)
             write_file_header(ftmp, header.eh_name, header.eh_flag, header.eh_size);
             if (header.eh_flag == FILE_FLAG)
             {
-                LOG(2, "Copying %s (%zu bytes)\n", header.eh_name, header.eh_size);
+                LOG(2, "Copying %s (%jd bytes)\n", header.eh_name, (intmax_t)header.eh_size);
                 for (off_t s=0; s<header.eh_size; s++)
                 {
                     if (fread(&rbuf, 1, 1, f) != 1 || fwrite(&rbuf, 1, 1, ftmp) != 1)
