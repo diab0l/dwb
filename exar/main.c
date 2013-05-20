@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include "exar.h"
 
 enum {
@@ -28,6 +29,7 @@ enum {
     EXAR_FLAG_D = 1<<7,
     EXAR_FLAG_L = 1<<8,
     EXAR_FLAG_S = 1<<9,
+    EXAR_FLAG_A = 1<<10,
 };
 #ifndef MIN
 #define MIN(X, Y) ((X) > (Y) ? (Y) : (X))
@@ -46,6 +48,7 @@ help(int ret)
             "   exar option [arguments]\n\n" 
            "OPTIONS:\n" 
            "    h                   Print this help and exit.\n"
+           "    a[v] archive file   Appends a file or directory to the archive\n"
            "    d[v] archive file   Deletes a file from an archive, the file path is the\n"
            "                        relative file path of the file in the archive\n"
            "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
@@ -71,9 +74,9 @@ help(int ret)
 }
 static void 
 extract(const char *archive, const char *path, 
-        unsigned char * (*extract_func)(const char *, const char *, size_t *))
+        unsigned char * (*extract_func)(const char *, const char *, off_t *))
 {
-    size_t s;
+    off_t s;
     unsigned char *content = extract_func(archive, path, &s);
     if (content != NULL)
     {
@@ -94,23 +97,26 @@ main (int argc, char **argv)
     {
         switch (*options) 
         {
-            case 'p' : 
-                flag |= EXAR_FLAG_P;
-                break;
-            case 'u' : 
-                flag |= EXAR_FLAG_U;
-                break;
-            case 'e' : 
-                flag |= EXAR_FLAG_E;
+            case 'a' : 
+                flag |= EXAR_FLAG_A;
                 break;
             case 'd' : 
                 flag |= EXAR_FLAG_D;
                 break;
+            case 'e' : 
+                flag |= EXAR_FLAG_E;
+                break;
             case 'l' : 
                 flag |= EXAR_FLAG_L;
                 break;
+            case 'p' : 
+                flag |= EXAR_FLAG_P;
+                break;
             case 's' : 
                 flag |= EXAR_FLAG_S;
+                break;
+            case 'u' : 
+                flag |= EXAR_FLAG_U;
                 break;
             case 'v' : 
                 flag |= MAX(EXAR_FLAG_V, MIN(EXAR_VERBOSE_MASK, ((flag & EXAR_VERBOSE_MASK) << 1)));
@@ -127,6 +133,8 @@ main (int argc, char **argv)
 
     if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_U))
         exar_unpack(argv[2], argv[3]);
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_A) && argc > 3)
+        exar_append(argv[2], argv[3]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
         exar_pack(argv[2]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_L))

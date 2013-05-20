@@ -1865,7 +1865,7 @@ global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t 
 {
     char *archive = NULL, *path = NULL, *content = NULL;
     JSValueRef ret = NIL;
-    size_t fs;
+    off_t fs;
 
     if (argc < 2)
         return NIL;

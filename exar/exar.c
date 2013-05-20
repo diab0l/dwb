@@ -29,6 +29,7 @@
 #include <ftw.h>
 #include <errno.h>
 #include <assert.h>
+#include <inttypes.h>
 #include "exar.h"
 
 #define EXAR_VERSION_BASE "exar-"
@@ -58,7 +59,7 @@
 
 struct exar_header_s {
     unsigned char eh_flag;
-    size_t eh_size;
+    off_t eh_size;
     char eh_name[EXAR_NAME_MAX];
 };
 
@@ -185,7 +186,7 @@ get_file_header(FILE *f, struct exar_header_s *head)
 {
     char *endptr;
     char header[HDR_NAME];
-    size_t fs;
+    off_t fs;
     char rb;
     size_t i = 0;
     int st_version = 0;
@@ -210,7 +211,7 @@ get_file_header(FILE *f, struct exar_header_s *head)
     }
     if (head->eh_flag == FILE_FLAG)
     {
-        fs = strtoul(&header[HDR_SIZE], &endptr, 16);
+        fs = strtol(&header[HDR_SIZE], &endptr, 16);
         if (*endptr)
         {
             LOG(1, "Cannot determine file size\n");
@@ -235,7 +236,7 @@ get_file_header(FILE *f, struct exar_header_s *head)
         }
     }
 
-    LOG(2, "Found file header (%s, %c, %zu)\n", head->eh_name, head->eh_flag, head->eh_size);
+    LOG(2, "Found file header (%s, %c, %jd)\n", head->eh_name, head->eh_flag, (intmax_t)head->eh_size);
     return EE_OK;
 }
 static int 
@@ -246,7 +247,7 @@ find_cmp(const char *name, const char *search)
     return strcmp(&name[offset], search);
 }
 static unsigned char *
-extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char *, const char *))
+extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *, const char *))
 {
     struct exar_header_s header;
     FILE *f = NULL;
@@ -264,7 +265,7 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
             {
                 ret = xcalloc(header.eh_size, sizeof(unsigned char));
                 LOG(3, "Reading %s\n", header.eh_name);
-                if (fread(ret, 1, header.eh_size, f) != header.eh_size)
+                if (fread(ret, 1, header.eh_size, f) != (size_t)header.eh_size)
                 {
                     fprintf(stderr, "Failed to read %s\n", header.eh_name);
                     *s = -1;
@@ -291,7 +292,7 @@ finish:
 }
 
 static int 
-write_file_header(FILE *f, const char *name, char flag, size_t r)
+write_file_header(FILE *f, const char *name, char flag, off_t r)
 {
     char buffer[HDR_NAME] = {0};
     size_t l_name; 
@@ -472,10 +473,10 @@ exar_unpack(const char *archive, const char *dest)
                 goto finish;
             }
 
-            LOG(2, "Writing %s (%zu bytes)\n", header.eh_name, header.eh_size);
-            for (size_t i=0; i<header.eh_size; i += sizeof(buf))
+            LOG(2, "Writing %s (%jd bytes)\n", header.eh_name, (intmax_t)header.eh_size);
+            for (off_t i=0; i<header.eh_size; i += sizeof(buf))
             {
-                if ( (r = fread(buf, 1, MIN(sizeof(buf), header.eh_size - i), f)) != 0)
+                if ( (r = fread(buf, 1, MIN(sizeof(buf), (size_t)header.eh_size - i), f)) != 0)
                 {
                     if (fwrite(buf, 1, r, of) != r)
                     {
@@ -495,14 +496,14 @@ finish:
 }
 
 unsigned char * 
-exar_extract(const char *archive, const char *file, size_t *s)
+exar_extract(const char *archive, const char *file, off_t *s)
 {
     assert(archive != NULL && file != NULL);
 
     return extract(archive, file, s, strcmp);
 }
 unsigned char * 
-exar_search_extract(const char *archive, const char *file, size_t *s)
+exar_search_extract(const char *archive, const char *file, off_t *s)
 {
     assert(archive != NULL && file != NULL);
 
@@ -560,7 +561,7 @@ exar_delete(const char *archive, const char *file)
             if (header.eh_flag == FILE_FLAG)
             {
                 LOG(2, "Copying %s (%zu bytes)\n", header.eh_name, header.eh_size);
-                for (size_t s=0; s<header.eh_size; s++)
+                for (off_t s=0; s<header.eh_size; s++)
                 {
                     if (fread(&rbuf, 1, 1, f) != 1 || fwrite(&rbuf, 1, 1, ftmp) != 1)
                     {
@@ -601,7 +602,7 @@ exar_info(const char *archive)
         goto finish;
     while(get_file_header(f, &header) == 0)
     {
-        fprintf(stdout, "%c %-14zu %s\n", header.eh_flag, header.eh_size, header.eh_name);
+        fprintf(stdout, "%c %-14jd %s\n", header.eh_flag, (intmax_t)header.eh_size, header.eh_name);
         if (header.eh_flag == FILE_FLAG)
             fseek(f, header.eh_size, SEEK_CUR);
     }

@@ -1196,9 +1196,9 @@ exar_help(int ret)
 }
 static void 
 exar_xextract(const char *archive, const char *path, 
-        unsigned char * (*extract_func)(const char *, const char *, size_t *))
+        unsigned char * (*extract_func)(const char *, const char *, off_t *))
 {
-    size_t s;
+    off_t s;
     unsigned char *content = extract_func(archive, path, &s);
     if (content != NULL)
     {

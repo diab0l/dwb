@@ -38,7 +38,7 @@
 #ifndef __EXAR_H__
 #define __EXAR_H__
 
-#include <stdio.h>
+#include <sys/types.h>
 
 enum {
     EXAR_VERBOSE_L1 = 1<<0,
@@ -86,7 +86,7 @@ exar_unpack(const char *path, const char *dest);
  *          occured or the file was not found in the archive
  * */
 unsigned char * 
-exar_extract(const char *archive, const char *file, size_t *size);
+exar_extract(const char *archive, const char *file, off_t *size);
 
 /* 
  * Searches for a file and extracts the content from the archive. 
@@ -100,7 +100,7 @@ exar_extract(const char *archive, const char *file, size_t *size);
  *          occured or the file was not found in the archive
  * */
 unsigned char * 
-exar_search_extract(const char *archive, const char *search, size_t *size);
+exar_search_extract(const char *archive, const char *search, off_t *size);
 
 /*
  * Deletes a file from the archive, if it is a directory it is removed
