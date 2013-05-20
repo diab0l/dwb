@@ -48,7 +48,7 @@
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
-#define SCRIPT_TEMPLATE_XSTART "try{_initNewContext(this,arguments,'%s');const xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_XSTART "try{_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
@@ -1820,11 +1820,21 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
     if ( (path = js_value_to_char(ctx, argv[0], PATH_MAX, exc)) == NULL) 
         goto error_out;
 
-    if ( (content = util_get_file_content(path, NULL)) == NULL) 
+    if (exar_check_version(path) == 0)
+    {
+        content = (char*) exar_search_extract(path, "main.js", NULL);
+        if (content == NULL)
+        {
+            js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
+            goto error_out;
+        }
+    }
+    else if ( (content = util_get_file_content(path, NULL)) == NULL) 
     {
         js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
         goto error_out;
     }
+
     const char *tmp = content;
     if (*tmp == '#') 
     {
@@ -1845,11 +1855,11 @@ error_out:
  * Include scripts from an archive.
  *
  * Same as {@link include} but this function can only be called from scripts
- * inside an archive, so this is only useful in extensions. However it is
+ * inside an archive, so this is mostly useful in extensions. However it is
  * possible to include scripts from an archive calling the internal function
  * _xinclude which takes two parameters, the path of the archive and the path of
  * the included file in the archive.
- * Unlike {@link inlucde} included archive-scripts cannot be included into the
+ * Unlike {@link include} included archive-scripts cannot be included into the
  * global scope. 
  *
  * @name xinclude
@@ -4826,7 +4836,7 @@ create_global_object()
         { "bind",             global_bind,            kJSDefaultAttributes },
         { "unbind",           global_unbind,          kJSDefaultAttributes },
         { "include",          global_include,         kJSDefaultAttributes },
-        { "_xinclude",         global_xinclude,        kJSDefaultAttributes },
+        { "_xinclude",         global_xinclude,       kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
 
@@ -5535,7 +5545,7 @@ scripts_remove_tab(JSObjectRef obj)
 }/*}}}*/
 
 void 
-init_script(const char *path, const char *script, const char *templates)
+init_script(const char *path, const char *script, const char *template)
 {
     char *debug = NULL;
     if (s_global_context == NULL) 
@@ -5543,7 +5553,7 @@ init_script(const char *path, const char *script, const char *templates)
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
-        debug = g_strdup_printf(SCRIPT_TEMPLATE, path, script);
+        debug = g_strdup_printf(template, path, script);
         JSObjectRef function = js_make_function(s_global_context, debug, path, 1);
 
         if (function != NULL) 

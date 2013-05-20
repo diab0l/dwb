@@ -97,17 +97,11 @@
 
   var getPlugin = function(name, filename) 
   {
-      var ret = null;
-      try 
-      {
-          if (system.fileTest(filename, FileTest.exists)) 
-              ret = include(filename);
-      }
-      catch(e) 
-      {
-          extensions.error(name, "Error in line " + e.line + " parsing " + filename);
-      }
-      return ret;
+      if (system.fileTest(filename, FileTest.exists)) 
+          return include(filename);
+      else if (system.fileTest(filename + ".exar", FileTest.exists))
+          return include(filename + ".exar");
+      return null;
   };
   var getStack = function(offset) 
   {
@@ -128,7 +122,7 @@
   {
       if (_registered[name] !== undefined) 
       {
-          if (_registered[name].end instanceof Function) 
+          if (typeof _registered[name].end == "function") 
           {
               _registered[name].end();
               extensions.message(name, "Extension unloaded.");
@@ -298,6 +292,11 @@
                       extensions.error(name, "Couldn't find extension.");
                       return;
                   }
+              }
+              if (plugin === undefined || typeof plugin.init != "function")
+              {
+                  extensions.warning(name, "Missing initializer");
+                  return;
               }
               try 
               {
