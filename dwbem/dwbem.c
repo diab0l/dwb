@@ -69,7 +69,7 @@ enum {
     EXAR_FLAG_U = 1<<4,
     EXAR_FLAG_E = 1<<6,
     EXAR_FLAG_D = 1<<7,
-    EXAR_FLAG_I = 1<<8,
+    EXAR_FLAG_L = 1<<8,
     EXAR_FLAG_S = 1<<9,
 };
 #define EXAR_OPTION_FLAG (0xffff & ~(0x7))
@@ -1174,7 +1174,7 @@ exar_help(int ret)
            "    e[v] archive file   Extracts a file from an archive and writes the content\n" 
            "                        to stdout, the archive is not modified, the file path \n"
            "                        is the relative file path of the file in the archive.\n"
-           "    i[v] archive        Prints info about an archive\n"
+           "    l[v] archive        List archive content\n"
            "    p[v] path           Pack file or directory 'path'.\n"
            "    s[v] archive file   Search for a file and write the content to stdout, the \n" 
            "                        archive is not modified, the filename is the basename\n" 
@@ -1233,8 +1233,8 @@ parse_exar_options(char **argv)
             case 'd' : 
                 flag |= EXAR_FLAG_D;
                 break;
-            case 'i' : 
-                flag |= EXAR_FLAG_I;
+            case 'l' : 
+                flag |= EXAR_FLAG_L;
                 break;
             case 's' : 
                 flag |= EXAR_FLAG_S;
@@ -1256,7 +1256,7 @@ parse_exar_options(char **argv)
         exar_unpack(argv[1], argv[2]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
         exar_pack(argv[1]);
-    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_I))
+    else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_L))
         exar_info(argv[1]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 2)
         exar_delete(argv[1], argv[2]);

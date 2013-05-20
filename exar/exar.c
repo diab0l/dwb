@@ -412,9 +412,9 @@ exar_unpack(const char *archive, const char *dest)
     FILE *of, *f = NULL;
     unsigned char buf[512];
     size_t r = 0;
+    int status;
 
-    f = open_archive(archive, "r");
-    if (f == NULL)
+    if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
 
     if (dest != NULL)
@@ -429,8 +429,12 @@ exar_unpack(const char *archive, const char *dest)
 
     while (1) 
     {
-        if (get_file_header(f, &header) != 0)
+        status = get_file_header(f, &header);
+        if (status == EE_EOF)
             break;
+        else if (status == EE_ERROR)
+            goto finish;
+
         if (header.eh_flag == DIR_FLAG) 
         {
             LOG(1, "Creating directory %s\n", header.eh_name);
@@ -500,6 +504,7 @@ exar_delete(const char *archive, const char *file)
     char dir_name[EXAR_NAME_MAX-1] = {0};
     unsigned char rbuf;
     size_t dir_length = 0;
+    int status;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
@@ -515,7 +520,7 @@ exar_delete(const char *archive, const char *file)
     if ((ftmp = fopen(tmp_file, "w")) == NULL)
         goto finish;
 
-    while (get_file_header(f, &header) == 0)
+    while ((status = get_file_header(f, &header)) == 0)
     {
         if (strcmp(header.eh_name, file) == 0)
         {
@@ -550,11 +555,19 @@ exar_delete(const char *archive, const char *file)
             }
         }
     }
-    LOG(2, "Copying %s to %s\n", tmp_file, archive);
-    if (rename(tmp_file, archive) == -1)
-        perror(archive);
-    else 
-        result = EE_OK;
+    if (status == EE_EOF)
+    {
+        LOG(2, "Copying %s to %s\n", tmp_file, archive);
+        if (rename(tmp_file, archive) == -1)
+            perror(archive);
+        else 
+            result = EE_OK;
+    }
+    else if (status == EE_ERROR)
+    {
+        LOG(1, "An error occured, removing temporary file\n");
+        unlink(tmp_file);
+    }
 finish:
     close_file(f, archive);
     close_file(ftmp, tmp_file);
@@ -572,7 +585,7 @@ exar_info(const char *archive)
         goto finish;
     while(get_file_header(f, &header) == 0)
     {
-        fprintf(stdout, "%c %-12zu %s\n", header.eh_flag, header.eh_size, header.eh_name);
+        fprintf(stdout, "%c %-14zu %s\n", header.eh_flag, header.eh_size, header.eh_name);
         if (header.eh_flag == FILE_FLAG)
             fseek(f, header.eh_size, SEEK_CUR);
     }
