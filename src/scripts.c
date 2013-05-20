@@ -134,6 +134,7 @@ static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_CHANGE_MODE, "changeMode" },
     { SCRIPTS_SIG_EXECUTE_COMMAND, "executeCommand" },
     { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
+    { SCRIPTS_SIG_ERROR,    "error" },
     { 0, NULL },
 };
 

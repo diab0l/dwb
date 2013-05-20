@@ -1164,6 +1164,38 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 static gboolean 
 view_load_error_cb(WebKitWebView *web, WebKitWebFrame *frame, char *uri, GError *weberror, GList *gl) 
 {
+    if (EMIT_SCRIPT(ERROR))
+    {
+        /**
+         * Emitted when an error occurs dureing a page load 
+         *
+         * @event error
+         * @memberOf signals
+         * @param {signals~onError} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the load-status of a WebKitWebView changes
+         * @callback signals~onLoadStatus
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {WebKitWebFrame}  frame 
+         *      The webframe that emitted the signal
+         * @param {Object} error
+         *      The error
+         * @param {Object} error.message
+         *      The error message
+         * @param {Object} error.code
+         *      The error code
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the default action
+         * */
+        char *json = util_create_json(2, INTEGER, "code", weberror->code, 
+                CHAR, "message", weberror->message);
+        ScriptSignal sig = { SCRIPTS_WV(gl), { G_OBJECT(frame) }, SCRIPTS_SIG_META(json, ERROR, 1) };
+        SCRIPTS_EMIT_RETURN(sig, json, true);
+    }
     if (weberror->code == WEBKIT_NETWORK_ERROR_CANCELLED 
             || weberror->code == WEBKIT_PLUGIN_ERROR_WILL_HANDLE_LOAD 
             || weberror->code == WEBKIT_POLICY_ERROR_FRAME_LOAD_INTERRUPTED_BY_POLICY_CHANGE) 
