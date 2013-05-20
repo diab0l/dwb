@@ -275,9 +275,7 @@ extract(const char *archive, const char *file, size_t *s, int (*cmp)(const char 
                     *s = header.eh_size;
             }
             else 
-            {
                 fprintf(stderr, "%s is a directory, only regular files can be extracted\n", file);
-            }
             goto finish;
         }
         else if (header.eh_flag == FILE_FLAG)
@@ -319,8 +317,8 @@ write_file_header(FILE *f, const char *name, char flag, size_t r)
         return EE_ERROR;
     if (fwrite(&term, 1, 1, f) != 1)
         return EE_ERROR;
-    return EE_OK;
 
+    return EE_OK;
 }
 
 static int
@@ -424,7 +422,7 @@ exar_unpack(const char *archive, const char *dest)
         LOG(2, "Changing to directory %s\n", dest);
         if (chdir(dest) != 0)
         {
-            perror("chdir");
+            perror(dest);
             goto finish;
         }
     }
@@ -565,6 +563,8 @@ finish:
 void 
 exar_info(const char *archive)
 {
+    assert(archive != NULL);
+
     FILE *f = NULL;
     struct exar_header_s header;
 
@@ -584,10 +584,11 @@ int
 exar_check_version(const char *archive)
 {
     assert(archive != NULL);
-    int result = -1;
+
+    int result = EE_ERROR;
     FILE *f; 
     if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0))
-        result = 0; 
+        result = EE_OK; 
     close_file(f, archive);
     return result;
 }
