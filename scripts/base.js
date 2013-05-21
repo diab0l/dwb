@@ -620,20 +620,15 @@ Object.freeze((function () {
         {
             e.target = null;
         }
-        if (type > 0) 
+        if (type == HintTypes.HINT_T_IMAGES)
         {
-            switch (type) 
-            {
-                case HintTypes.HINT_T_IMAGES: 
-                    ret = e.src; p_clear(); 
-                    return ret;
-                case HintTypes.HINT_T_URL   : 
-                    ret = e.hasAttribute("href") ? e.href : e.src; p_clear(); 
-                    return ret;
-                default: break;
-            }
+            ret = e.src;
         }
-        if ((tagname && (tagname == "input" || tagname == "textarea"))) 
+        else if (type == HintTypes.HINT_T_URL)
+        {
+            ret = e.hasAttribute("href") ? e.href : e.src;
+        }
+        else if ((tagname && (tagname == "input" || tagname == "textarea"))) 
         {
             if (type == "radio" || type == "checkbox") 
             {

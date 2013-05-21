@@ -2166,6 +2166,7 @@ dwb_update_hints(GdkEventKey *e)
     {
         com = "followActive";
         snprintf(json, sizeof(json), "{ \"type\" : \"%d\" }", hint_map[dwb.state.hint_type].arg);
+        ret = true;
     }
     else if (DWB_COMPLETE_KEY(e)) 
     {
@@ -2190,8 +2191,8 @@ dwb_update_hints(GdkEventKey *e)
     {
         buffer = js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, com, *json ? json : NULL, *json ? kJSTypeObject : kJSTypeUndefined, &buffer);
     }
-    if (buffer != NULL) {
-
+    if (buffer != NULL) 
+    {
         if (dwb_evaluate_hints(buffer) == STATUS_END) 
             ret = true;
         g_free(buffer);
