@@ -1183,9 +1183,9 @@ view_load_error_cb(WebKitWebView *web, WebKitWebFrame *frame, char *uri, GError 
          *      The webframe that emitted the signal
          * @param {Object} error
          *      The error
-         * @param {Object} error.message
+         * @param {String} error.message
          *      The error message
-         * @param {Object} error.code
+         * @param {Number} error.code
          *      The error code
          *
          * @returns {Boolean}

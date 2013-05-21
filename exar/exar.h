@@ -92,8 +92,8 @@ exar_extract(const char *archive, const char *file, off_t *size);
  * Searches for a file and extracts the content from the archive. 
  * 
  * @archive The archive
- * @search  The search term. The term is is compared with the end of each
- *          filename in the archive
+ * @search  The search term. The search term must either match the full path or
+ *          the filename 
  * @size    Return location for the size, if an error occurs size will be set to -1
  *
  * @returns A newly allocated char buffer with the file content or NULL if an error
@@ -133,6 +133,28 @@ exar_check_version(const char *archive);
 void 
 exar_info(const char *archive);
 
+/* 
+ * Checks if an archive contains a file
+ *
+ * @archive The archive
+ * @path    The path of the file in the archive
+ *
+ * @returns 0 if the file was found, -1 otherwise
+ * */
+int 
+exar_contains(const char *archive, const char *path);
+
+/* 
+ * Checks if an archive contains a file
+ *
+ * @archive The archive
+ * @search  The search term. The search term must either match the full path or
+ *          the filename 
+ *
+ * @returns 0 if the file was found, -1 otherwise
+ * */
+int 
+exar_search_contains(const char *archive, const char *search);
 /*
  * Set verbosity flags, exar will be most verbose if all flags are set, log
  * messages are printed to stderr.

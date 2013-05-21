@@ -63,7 +63,6 @@ struct exar_header_s {
     char eh_name[EXAR_NAME_MAX];
 };
 
-
 #define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
     fprintf(stderr, __VA_ARGS__); } } while(0)
@@ -240,16 +239,57 @@ get_file_header(FILE *f, struct exar_header_s *head)
     return EE_OK;
 }
 static int 
+next_file(FILE *f, struct exar_header_s *header)
+{
+    if (*(header->eh_name))
+    {
+        if (header->eh_flag == FILE_FLAG)
+        {
+            if (fseek(f, header->eh_size, SEEK_CUR) != 0)
+                return EE_ERROR;
+            else 
+                LOG(3, "Skipping %s\n", header->eh_name);
+        }
+    }
+    return get_file_header(f, header);
+}
+static int 
 find_cmp(const char *name, const char *search)
 {
     char buffer[EXAR_NAME_MAX];
-    size_t offset = get_offset(buffer, EXAR_NAME_MAX, name, NULL);
-    return strcmp(&name[offset], search);
+    if (strcmp(name, search) != 0)
+    {
+        size_t offset = get_offset(buffer, EXAR_NAME_MAX, name, NULL);
+        return strcmp(&name[offset], search);
+    }
+    return 0;
+}
+static int 
+contains(const char *archive, const char *name, int (*cmp)(const char *, const char *))
+{
+    FILE *f = NULL;
+    struct exar_header_s header = { 0, 0, {0} };
+    int result = EE_ERROR;
+
+    if ((f = open_archive(archive, "r")) == NULL)
+        goto finish;
+    while (next_file(f, &header) == 0)
+    {
+        if (cmp(header.eh_name, name) == 0)
+        {
+            result = EE_OK;
+            break;
+        }
+    }
+
+finish:
+    close_file(f, archive);
+    return result;
 }
 static unsigned char *
 extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *, const char *))
 {
-    struct exar_header_s header;
+    struct exar_header_s header = { 0, 0, { 0 }};
     FILE *f = NULL;
     unsigned char *ret = NULL;
     if (s != NULL)
@@ -596,18 +636,28 @@ exar_info(const char *archive)
     assert(archive != NULL);
 
     FILE *f = NULL;
-    struct exar_header_s header;
+    struct exar_header_s header = { 0, 0, {0} };
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while(get_file_header(f, &header) == 0)
-    {
+    while(next_file(f, &header) == 0)
         fprintf(stdout, "%c %-14jd %s\n", header.eh_flag, (intmax_t)header.eh_size, header.eh_name);
-        if (header.eh_flag == FILE_FLAG)
-            fseek(f, header.eh_size, SEEK_CUR);
-    }
 finish:
     close_file(f, archive);
+}
+int
+exar_contains(const char *archive, const char *name)
+{
+    assert(archive != NULL);
+
+    return contains(archive, name, strcmp);
+}
+int
+exar_search_contains(const char *archive, const char *name)
+{
+    assert(archive != NULL);
+
+    return contains(archive, name, find_cmp);
 }
 
 int
