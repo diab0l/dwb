@@ -1176,7 +1176,7 @@ view_load_error_cb(WebKitWebView *web, WebKitWebFrame *frame, char *uri, GError 
          * */
         /**
          * Callback called when the load-status of a WebKitWebView changes
-         * @callback signals~onLoadStatus
+         * @callback signals~onError
          * @param {WebKitWebView}  webview 
          *      The webview that emitted the signal
          * @param {WebKitWebFrame}  frame 

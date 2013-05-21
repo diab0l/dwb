@@ -1825,7 +1825,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
         content = (char*) exar_search_extract(path, "main.js", NULL);
         if (content == NULL)
         {
-            js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
+            js_make_exception(ctx, exc, EXCEPTION("include: main.js was not found in %s."), path);
             goto error_out;
         }
     }

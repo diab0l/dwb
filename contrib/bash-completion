@@ -78,6 +78,13 @@ __enabled_extension() {
         [[  " ${disabled} " != *" ${installed} "* ]] && printf "${installed} "
     done)" -- $cur ) )
 }
+__archive() {
+    COMPREPLY=( $( compgen -W "$( case $prev in 
+        --archive) printf 'a h d e l p s u ';;
+        *) _filedir;;
+    esac)"  -- $cur ) )
+}
+
 
 _dwb() {
     local cur prev opts lopts
@@ -127,7 +134,7 @@ _dwbem() {
     opts="-h -a -b -B -c -d -e -E -i -I -l -L -n -N -r -p -u -U"
     lopts="--help --list-all --bind --setbind --config --disable --enable --edit
     --install --info --list-installed --setload --no-config --no-confirm
-    --remove --proxy --upgrade --update"
+    --remove --proxy --upgrade --update --archive"
 
     extinstops=" -B --setbind -c --config -d --disable -e --enable -E --edit
     -L --setload -r --remove -U --update "
@@ -139,6 +146,10 @@ _dwbem() {
     }
     [[ " -e --enable " == *" ${prev} "* ]] && {
         __disabled_extension
+        return 0
+    }
+    [[ " --archive " == *" ${prev} "* ]] && {
+        __archive
         return 0
     }
     [[ "${extinstops}" == *" ${prev} "* ]] && {
@@ -154,8 +165,11 @@ _dwbem() {
         --*)
             COMPREPLY=( $( compgen -W "${lopts}" -- $cur ) )
             return 0;;
-        *)
+        -*)
             COMPREPLY=( $( compgen -W "${opts} ${lopts}" -- $cur ) )
+            return 0;;
+        *)
+            _filedir
             return 0;;
     esac
 } && 
