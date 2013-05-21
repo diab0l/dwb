@@ -48,7 +48,7 @@
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
-#define SCRIPT_TEMPLATE_XSTART "try{var archive=arguments[0];_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_XSTART "try{var exports=arguments[0];_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
@@ -1880,7 +1880,7 @@ error_out:
  * possible to include scripts from an archive calling the internal function
  * _xinclude which takes two parameters, the path of the archive and the path of
  * the included file in the archive.
- * All scripts in an archive share on object <b>archive</b> which can be used
+ * All scripts in an archive share on object <b>exports</b> which can be used
  * to share data between scripts in an archive.
  *
  * Unlike {@link include} included archive-scripts cannot be included into the
@@ -1909,10 +1909,10 @@ error_out:
  * function getFoo() {
  *      return 37;
  * }
- * archive.getFoo = getFoo;
+ * exports.getFoo = getFoo;
  *
  * // content/bar.js
- * var x = archive.getFoo();
+ * var x = exports.getFoo();
  *
  * */
 
