@@ -49,6 +49,14 @@ js_set_object_property(JSContextRef ctx, JSObjectRef arg, const char *name, cons
     JSObjectSetProperty(ctx, arg, js_key, js_value, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly, exc);
     JSStringRelease(js_key);
 }
+gboolean 
+js_object_has_property(JSContextRef ctx, JSObjectRef arg, const char *name)
+{
+    JSStringRef js_key = JSStringCreateWithUTF8CString(name);
+    gboolean result = JSObjectHasProperty(ctx, arg, js_key);
+    JSStringRelease(js_key);
+    return result;
+}
 void 
 js_set_object_number_property(JSContextRef ctx, JSObjectRef arg, const char *name, gdouble value, JSValueRef *exc) 
 {

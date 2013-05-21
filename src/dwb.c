@@ -3625,7 +3625,7 @@ dwb_clean_up()
         KeyMap *m = l->data;
         if (m->map->prop & CP_SCRIPT) 
         {
-            scripts_unbind(m->map->arg.p);
+            scripts_unprotect(m->map->arg.p);
             g_free(m->map->n.first);
             g_free(m->map->n.second);
         }

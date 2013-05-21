@@ -48,7 +48,7 @@
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
-#define SCRIPT_TEMPLATE_XSTART "try{_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_XSTART "try{var archive=arguments[0];_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
@@ -184,6 +184,8 @@ static JSObjectRef s_soup_session;
 static GSList *s_timers = NULL;
 static GPtrArray *s_gobject_signals = NULL;
 static gboolean s_debugging = false;
+static GHashTable *s_exports = NULL;
+
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -1804,12 +1806,28 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
  * });
  * */
 
+static JSObjectRef
+get_exports(JSContextRef ctx, const char *path)
+{
+    JSObjectRef ret = g_hash_table_lookup(s_exports, path);
+    if (ret == NULL)
+    {
+        ret = JSObjectMake(ctx, NULL, NULL);
+        JSValueProtect(ctx, ret);
+        g_hash_table_insert(s_exports, g_strdup(path), ret);
+    }
+    return ret;
+}
+
+
 static JSValueRef 
 global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     JSValueRef ret = NIL;
     gboolean global = false;
     char *path = NULL, *content = NULL; 
+    JSValueRef exports[1];
+    gboolean is_archive = false;
 
     if (argc < 1) 
         return NIL;
@@ -1828,6 +1846,8 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
             js_make_exception(ctx, exc, EXCEPTION("include: main.js was not found in %s."), path);
             goto error_out;
         }
+        exports[0] = get_exports(ctx, path);
+        is_archive = true;
     }
     else if ( (content = util_get_file_content(path, NULL)) == NULL) 
     {
@@ -1843,7 +1863,8 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
         } while(*tmp && *tmp != '\n');
         tmp++;
     }
-    ret = do_include(ctx, path, tmp, global, false, 0, NULL, exc);
+
+    ret = do_include(ctx, path, tmp, global, is_archive, is_archive ? 1 : 0, is_archive ? exports : NULL, exc);
 
 error_out: 
     g_free(content);
@@ -1859,15 +1880,16 @@ error_out:
  * possible to include scripts from an archive calling the internal function
  * _xinclude which takes two parameters, the path of the archive and the path of
  * the included file in the archive.
+ * All scripts in an archive share on object <b>archive</b> which can be used
+ * to share data between scripts in an archive.
+ *
  * Unlike {@link include} included archive-scripts cannot be included into the
  * global scope. 
  *
  * @name xinclude
- * @param path {String} 
+ * @function
+ * @param {String} path
  *      Path of the file in the archive
- * @param {...Object} {varargs} 
- *      Additional arguments passed to include, the arguments are accessible via
- *      arguments
  *
  * @returns {Object}
  *      The object returned from the included file.
@@ -1880,22 +1902,17 @@ error_out:
  * // content/bar.js
  *
  * // main.js
- * var foo = xinclude("content/foo.js");
- * var bar = xinclude("content/bar.js", foo);
+ * xinclude("content/foo.js");
+ * xinclude("content/bar.js");
  *
  * // content/foo.js
  * function getFoo() {
  *      return 37;
  * }
- * return {
- *      getFoo : getFoo
- * };
+ * archive.getFoo = getFoo;
  *
  * // content/bar.js
- * var foo = arguments[0];
- *
- * var x = foo.getFoo();
- *
+ * var x = archive.getFoo();
  *
  * */
 
@@ -1915,7 +1932,10 @@ global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t 
 
     content = (char*)exar_extract(archive, path, &fs);
     if (content != NULL)
-        ret = do_include(ctx, archive, content, false, true, argc-2, argc > 2 ? &argv[2] : NULL, exc);
+    {
+        JSValueRef exports[] = { get_exports(ctx, archive) };
+        ret = do_include(ctx, archive, content, false, true, 1, exports, exc);
+    }
 
 error_out:
     g_free(archive);
@@ -5490,6 +5510,9 @@ apply_scripts()
 {
     int length = g_slist_length(s_script_list); 
     int i=0;
+    JSValueRef exports[1];
+    size_t argc = 0;
+    char *path;
 
     // XXX Not needed?
     JSObjectRef *objects = g_malloc(length * sizeof(JSObjectRef));
@@ -5507,7 +5530,15 @@ apply_scripts()
 
     for (GSList *l = s_script_list; l; l=l->next) 
     {
-        JSObjectCallAsFunction(s_global_context, l->data, l->data, 0, NULL, NULL);
+        argc = 0;
+        path = js_get_string_property(s_global_context, l->data, "path");
+        if (path != NULL)
+        {
+            exports[0] = get_exports(s_global_context, path);
+            argc = 1;
+        }
+
+        JSObjectCallAsFunction(s_global_context, l->data, l->data, argc, argc > 0 ? exports : NULL, NULL);
     }
     g_slist_free(s_script_list);
     s_script_list = NULL;
@@ -5574,7 +5605,7 @@ scripts_remove_tab(JSObjectRef obj)
 }/*}}}*/
 
 void 
-init_script(const char *path, const char *script, const char *template)
+init_script(const char *path, const char *script, gboolean is_archive, const char *template, int offset)
 {
     char *debug = NULL;
     if (s_global_context == NULL) 
@@ -5583,7 +5614,9 @@ init_script(const char *path, const char *script, const char *template)
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
         debug = g_strdup_printf(template, path, script);
-        JSObjectRef function = js_make_function(s_global_context, debug, path, 1);
+        JSObjectRef function = js_make_function(s_global_context, debug, path, offset);
+        if (is_archive)
+            js_set_object_property(s_global_context, function, "path", path, NULL);
 
         if (function != NULL) 
             s_script_list = g_slist_prepend(s_script_list, function);
@@ -5595,13 +5628,13 @@ init_script(const char *path, const char *script, const char *template)
 void
 scripts_init_script(const char *path, const char *script) 
 {
-    init_script(path, script, SCRIPT_TEMPLATE);
+    init_script(path, script, false, SCRIPT_TEMPLATE, 1);
 }/*}}}*/
 
 void
 scripts_init_archive(const char *path, const char *script) 
 {
-    init_script(path, script, SCRIPT_TEMPLATE_XINCLUDE);
+    init_script(path, script, true, SCRIPT_TEMPLATE_XINCLUDE, 0);
 }
 
 void
@@ -5659,6 +5692,7 @@ scripts_init(gboolean force)
             return false;
     }
     s_gobject_signals = g_ptr_array_new();
+    s_exports = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)scripts_unprotect);
 
     dwb.state.script_completion = NULL;
 
@@ -5706,7 +5740,7 @@ scripts_execute_one(const char *script)
     return ret;
 }
 void
-scripts_unbind(JSObjectRef obj) 
+scripts_unprotect(JSObjectRef obj) 
 {
     if (!TRY_CONTEXT_LOCK)
         return;
@@ -5773,6 +5807,7 @@ scripts_end()
         }
         g_ptr_array_free(s_gobject_signals, false);
         s_gobject_signals = NULL;
+        g_hash_table_unref(s_exports);
 
         
         for (int i=0; i<CONSTRUCTOR_LAST; i++) 
