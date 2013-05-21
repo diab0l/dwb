@@ -1731,7 +1731,7 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
 /*}}}*/
 
 static JSValueRef 
-do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, JSValueRef *exc)
+do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc)
 {
     JSStringRef js_script;
     JSValueRef ret = NIL;
@@ -1748,7 +1748,7 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
         JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, js_script, NULL, 1, exc);
         if (function != NULL) 
         {
-            ret = JSObjectCallAsFunction(ctx, function, function, 0, NULL, exc);
+            ret = JSObjectCallAsFunction(ctx, function, function, argc, argv, exc);
         }
         g_free(debug);
     }
@@ -1843,7 +1843,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
         } while(*tmp && *tmp != '\n');
         tmp++;
     }
-    ret = do_include(ctx, path, tmp, global, false, exc);
+    ret = do_include(ctx, path, tmp, global, false, 0, NULL, exc);
 
 error_out: 
     g_free(content);
@@ -1865,9 +1865,38 @@ error_out:
  * @name xinclude
  * @param path {String} 
  *      Path of the file in the archive
+ * @param {...Object} {varargs} 
+ *      Additional arguments passed to include, the arguments are accessible via
+ *      arguments
  *
  * @returns {Object}
  *      The object returned from the included file.
+ *
+ * @example
+ * // Archive structure
+ * //
+ * // main.js
+ * // content/foo.js
+ * // content/bar.js
+ *
+ * // main.js
+ * var foo = xinclude("content/foo.js");
+ * var bar = xinclude("content/bar.js", foo);
+ *
+ * // content/foo.js
+ * function getFoo() {
+ *      return 37;
+ * }
+ * return {
+ *      getFoo : getFoo
+ * };
+ *
+ * // content/bar.js
+ * var foo = arguments[0];
+ *
+ * var x = foo.getFoo();
+ *
+ *
  * */
 
 static JSValueRef
@@ -1886,7 +1915,7 @@ global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t 
 
     content = (char*)exar_extract(archive, path, &fs);
     if (content != NULL)
-        do_include(ctx, archive, content, false, true, exc);
+        ret = do_include(ctx, archive, content, false, true, argc-2, argc > 2 ? &argv[2] : NULL, exc);
 
 error_out:
     g_free(archive);
