@@ -561,7 +561,7 @@ exar_delete(const char *archive, const char *file)
     char dir_name[EXAR_NAME_MAX-1] = {0};
     unsigned char rbuf;
     size_t dir_length = 0;
-    int status;
+    int status = EE_ERROR;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
