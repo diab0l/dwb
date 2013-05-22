@@ -612,6 +612,7 @@ exar_delete(const char *archive, const char *file)
             }
         }
     }
+finish:
     if (status == EE_EOF)
     {
         LOG(2, "Copying %s to %s\n", tmp_file, archive);
@@ -625,7 +626,6 @@ exar_delete(const char *archive, const char *file)
         LOG(1, "An error occured, removing temporary file\n");
         unlink(tmp_file);
     }
-finish:
     close_file(f, archive);
     close_file(ftmp, tmp_file);
     return result;
