@@ -3212,7 +3212,7 @@ dwb_change_mode(Mode mode, ...)
          * */
 
         char buffer[] = { BASIC_MODES(mode) + 48, 0 };
-        ScriptSignal sig = { SCRIPTS_WV(dwb.state.fview), SCRIPTS_SIG_META(buffer, CHANGE_MODE, 0) };
+        ScriptSignal sig = { .jsobj = (dwb.state.fview ? CURRENT_VIEW()->script_wv : NULL), SCRIPTS_SIG_META(buffer, CHANGE_MODE, 0) };
         if (scripts_emit(&sig))
             return STATUS_OK;
     }
