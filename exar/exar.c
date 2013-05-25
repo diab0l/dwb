@@ -273,7 +273,7 @@ contains(const char *archive, const char *name, int (*cmp)(const char *, const c
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while (next_file(f, &header) == 0)
+    while (next_file(f, &header) == EE_OK)
     {
         if (cmp(header.eh_name, name) == 0)
         {
@@ -297,7 +297,7 @@ extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while (get_file_header(f, &header) == 0)
+    while (get_file_header(f, &header) == EE_OK)
     {
         if (cmp(header.eh_name, file) == 0)
         {
@@ -577,7 +577,7 @@ exar_delete(const char *archive, const char *file)
     if ((ftmp = fopen(tmp_file, "w")) == NULL)
         goto finish;
 
-    while ((status = get_file_header(f, &header)) == 0)
+    while ((status = get_file_header(f, &header)) == EE_OK)
     {
         if (strcmp(header.eh_name, file) == 0)
         {
@@ -640,7 +640,7 @@ exar_info(const char *archive)
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
-    while(next_file(f, &header) == 0)
+    while(next_file(f, &header) == EE_OK)
         fprintf(stdout, "%c %-14jd %s\n", header.eh_flag, (intmax_t)header.eh_size, header.eh_name);
 finish:
     close_file(f, archive);
