@@ -132,7 +132,7 @@ check_version(FILE *f, int verbose)
         return EE_ERROR;
     }
 
-    LOG(1, "Found version %s\n", version);
+    LOG(2, "Found version %s\n", version);
     if (memcmp(version, orig_version, SZ_VERSION))
     {
         if (verbose)
@@ -589,10 +589,13 @@ exar_delete(const char *archive, const char *file)
             else if (header.eh_flag == DIR_FLAG)
                 dir_length = snprintf(dir_name, sizeof(dir_name), "%s/", header.eh_name);
         }
-        else if (*dir_name && strncmp(dir_name, header.eh_name, dir_length) == 0 && header.eh_flag == FILE_FLAG)
+        else if (*dir_name && strncmp(dir_name, header.eh_name, dir_length) == 0)
         {
-            LOG(1, "Skipping %s\n", header.eh_name);
-            fseek(f, header.eh_size, SEEK_CUR);
+            if (header.eh_flag == FILE_FLAG)
+            {
+                LOG(1, "Skipping %s\n", header.eh_name);
+                fseek(f, header.eh_size, SEEK_CUR);
+            }
         }
         else 
         {

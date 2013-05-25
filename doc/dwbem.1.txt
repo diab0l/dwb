@@ -112,6 +112,10 @@ OPTIONS
   the configuration has been changed after using *--upgrade* in combination
   with *--no-confirm*.
 
+*--archive*::
+  Create, unpack or manipulate extension archives, use 'dwbem --archive h' for
+  detailed information.
+
 
 ENVIRONMENT VARIABLES
 ---------------------
