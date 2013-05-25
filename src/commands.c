@@ -336,8 +336,7 @@ commands_zoom(KeyMap *km, Arg *arg)
 DwbStatus 
 commands_scroll(KeyMap *km, Arg *arg) 
 {
-    GList *gl = arg->p ? arg->p : dwb.state.fview;
-    dwb_scroll(gl, dwb.misc.scroll_step, arg->n);
+    dwb_scroll(dwb.state.fview, dwb.misc.scroll_step, arg->n);
     return STATUS_OK;
 }/*}}}*/
 
@@ -345,10 +344,9 @@ commands_scroll(KeyMap *km, Arg *arg)
 DwbStatus 
 commands_set_zoom_level(KeyMap *km, Arg *arg) 
 {
-    GList *gl = arg->p ? arg->p : dwb.state.fview;
     double zoomlevel = dwb.state.nummod < 0 ? arg->d : (double)dwb.state.nummod  / 100;
 
-    webkit_web_view_set_zoom_level(WEBKIT_WEB_VIEW(((View*)gl->data)->web), zoomlevel);
+    webkit_web_view_set_zoom_level(CURRENT_WEBVIEW(), zoomlevel);
     dwb_set_normal_message(dwb.state.fview, true, "Zoomlevel: %d%%", (int)(zoomlevel * 100));
     return STATUS_OK;
 }/*}}}*/

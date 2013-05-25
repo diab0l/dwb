@@ -4915,27 +4915,27 @@ dwb_parse_command_line(const char *line)
         return STATUS_OK;
 
     DwbStatus ret = STATUS_OK;
-    const char *bak;
-    int nummod;
-    line = util_str_chug(line);
-    bak = dwb_parse_nummod(line);
-    nummod = dwb.state.nummod;
-    char **token = g_strsplit(bak, " ", 2);
+    const char *bak = NULL;
+    char **token = NULL; 
     KeyMap *m = NULL;
-    gboolean found;
+    gboolean found = false;
     gboolean has_arg = false;
     const char *argument = NULL;
 
+    line = util_str_chug(line);
+    bak = dwb_parse_nummod(line);
+    token = g_strsplit(bak, " ", 2);
+
     if (!token[0]) 
         return STATUS_OK;
+
+    bak = token[0];
 
     if (token[1])
         has_arg = true;
 
     for (GList *l = dwb.keymap; l; l=l->next) 
     {
-        bak = token[0];
-        found = false;
         m = l->data;
         if (!g_strcmp0(m->map->n.first, bak)) 
             found = true;
@@ -4955,7 +4955,6 @@ dwb_parse_command_line(const char *line)
             if (m->map->prop & CP_HAS_MODE) 
                 dwb_change_mode(NORMAL_MODE, true);
 
-            dwb.state.nummod = nummod;
             if (token[1] && ! m->map->arg.ro) 
             {
                 g_strstrip(token[1]);
