@@ -142,20 +142,6 @@ check_version(FILE *f, int verbose)
     }
     return EE_OK;
 }
-static int 
-write_version_header(FILE *f)
-{
-    unsigned char version[SZ_VERSION] = {0};
-
-    LOG(2, "Writing version header (%s)\n", EXAR_VERSION);
-    memcpy(version, EXAR_VERSION, sizeof(version));
-    if (fwrite(version, 1, sizeof(version), f) != sizeof(version))
-    {
-        fprintf(stderr, "Failed to write %zu bytes", sizeof(version));
-        return EE_ERROR;
-    }
-    return EE_OK;
-}
 /*
  * Opens archive and checks version, mode is either read or read-write
  * */ 
@@ -191,7 +177,7 @@ get_file_header(FILE *f, struct exar_header_s *head)
     size_t i = 0;
     int st_version = 0;
 
-    if ((st_version = check_version(f, 1)) != 0)
+    if ((st_version = check_version(f, 1)) != EE_OK)
         return st_version;
 
     LOG(2, "Reading file header\n");
@@ -335,6 +321,7 @@ finish:
 static int 
 write_file_header(FILE *f, const char *name, char flag, off_t r)
 {
+    unsigned char version[SZ_VERSION] = {0};
     char buffer[HDR_NAME] = {0};
     size_t l_name; 
     char term = 0;
@@ -346,13 +333,20 @@ write_file_header(FILE *f, const char *name, char flag, off_t r)
         return EE_ERROR;
     }
 
-    LOG(2, "Writing file header for %s\n", name);
-    if (write_version_header(f) != 0) 
+    LOG(2, "Writing version header (%s)\n", EXAR_VERSION);
+
+    memcpy(version, EXAR_VERSION, sizeof(version));
+    if (fwrite(version, 1, sizeof(version), f) != sizeof(version))
+    {
+        fprintf(stderr, "Failed to write %zu bytes", sizeof(version));
         return EE_ERROR;
+    }
+
+    LOG(2, "Writing file header for %s\n", name);
 
     memset(buffer, 0, sizeof(buffer));
     buffer[HDR_DFLAG] = flag;
-    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.13x", (unsigned int)r);
+    snprintf(buffer + HDR_SIZE, SZ_SIZE, "%.13x", flag == FILE_FLAG ? (unsigned int)r : 0);
     if (fwrite(buffer, 1, HDR_NAME, f) != HDR_NAME)
         return EE_ERROR;
     if (fwrite(name, 1, l_name, f) != l_name)
@@ -671,7 +665,7 @@ exar_check_version(const char *archive)
 
     int result = EE_ERROR;
     FILE *f; 
-    if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0) == 0)
+    if ( (f = fopen(archive, "r")) != NULL && check_version(f, 0) == EE_OK)
         result = EE_OK; 
     close_file(f, archive);
     return result;
