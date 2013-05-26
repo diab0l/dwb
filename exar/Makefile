@@ -6,10 +6,12 @@ CFLAGS += $(ORIG_CFLAGS)
 DCFLAGS += -g -O0 -Wall -pedantic -Werror -Wextra -std=c99 
 DCFLAGS += $(ORIG_CFLAGS)
 
-TARGET=exar
-OBJ=$(patsubst %.c, %.o, $(wildcard *.c))
+TARGET = exar
+OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 
-all: $(TARGET)
+SHARED_OBJ = exar.o 
+
+all: $(SHARED_OBJ)
 
 $(TARGET): $(OBJ)
 	@echo $(CC) -o $@
