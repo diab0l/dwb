@@ -62,6 +62,7 @@ struct exar_header_s {
     off_t eh_size;
     char eh_name[EXAR_NAME_MAX];
 };
+#define EXAR_HEADER_EMPTY  { 0, 0, { 0 } }  
 
 #define LOG(level, ...) do { if (s_verbose & EXAR_VERBOSE_L##level) { \
     fprintf(stderr, "exar-log%d: ", level); \
@@ -268,7 +269,7 @@ static int
 contains(const char *archive, const char *name, int (*cmp)(const char *, const char *))
 {
     FILE *f = NULL;
-    struct exar_header_s header = { 0, 0, {0} };
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
     int result = EE_ERROR;
 
     if ((f = open_archive(archive, "r")) == NULL)
@@ -289,7 +290,7 @@ finish:
 static unsigned char *
 extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *, const char *))
 {
-    struct exar_header_s header = { 0, 0, { 0 }};
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
     FILE *f = NULL;
     unsigned char *ret = NULL;
     if (s != NULL)
@@ -464,7 +465,7 @@ exar_unpack(const char *archive, const char *dest)
 {
     assert(archive != NULL);
 
-    struct exar_header_s header;
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
     int ret = EE_ERROR;
     FILE *of, *f = NULL;
     unsigned char buf[512];
@@ -555,7 +556,7 @@ exar_delete(const char *archive, const char *file)
     assert(archive != NULL && file != NULL);
 
     int result = EE_ERROR;
-    struct exar_header_s header;
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
     FILE *f = NULL, *ftmp = NULL;
     char tmp_file[128];
     char dir_name[EXAR_NAME_MAX-1] = {0};
@@ -639,7 +640,7 @@ exar_info(const char *archive)
     assert(archive != NULL);
 
     FILE *f = NULL;
-    struct exar_header_s header = { 0, 0, {0} };
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
