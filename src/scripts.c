@@ -48,7 +48,12 @@
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
-#define SCRIPT_TEMPLATE_XSTART "try{var exports=arguments[0];_initNewContext(this,arguments,'%s');var xinclude=_xinclude.bind(this,this.path);const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_XSTART "try{"\
+"var exports=arguments[0];"\
+"_initNewContext(this,arguments,'%s');"\
+"var xinclude=_xinclude.bind(this,this.path);"\
+"const script=this;"\
+"if(!exports.id)Object.defineProperty(exports,'id',{value:script.generateId()});/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
@@ -1880,8 +1885,10 @@ error_out:
  * possible to include scripts from an archive calling the internal function
  * _xinclude which takes two parameters, the path of the archive and the path of
  * the included file in the archive.
- * All scripts in an archive share on object <b>exports</b> which can be used
- * to share data between scripts in an archive.
+ * All scripts in an archive share an object <b>exports</b> which can be used
+ * to share data between scripts in an archive, all exports objects have a
+ * readonly property <b>id</id> which is unique to all archives, it can be used
+ * together with require/provide to define unique module names..
  *
  * Unlike {@link include} included archive-scripts cannot be included into the
  * global scope. 
@@ -1913,6 +1920,18 @@ error_out:
  *
  * // content/bar.js
  * var x = exports.getFoo();
+ *
+ * // using require/provide
+ * // main.js
+ * require(["foo" + exports.id], function(foo) {
+ *      io.print(foo.bar);
+ * });
+ * xinclude("content/foo.js");
+ *
+ * // content/foo.js
+ * provide("foo" + exports.id, {
+ *     bar : 37
+ * }); 
  *
  * */
 
@@ -5613,6 +5632,7 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
+        puts(template);
         debug = g_strdup_printf(template, path, script);
         JSObjectRef function = js_make_function(s_global_context, debug, path, offset);
         if (is_archive)
@@ -5683,6 +5703,7 @@ scripts_reapply()
 gboolean 
 scripts_init(gboolean force) 
 {
+    puts(SCRIPT_TEMPLATE_XINCLUDE);
     dwb.misc.script_signals = 0;
     if (s_global_context == NULL) 
     {
