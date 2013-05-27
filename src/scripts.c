@@ -5632,7 +5632,6 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
 
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
-        puts(template);
         debug = g_strdup_printf(template, path, script);
         JSObjectRef function = js_make_function(s_global_context, debug, path, offset);
         if (is_archive)
