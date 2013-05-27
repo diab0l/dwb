@@ -2161,7 +2161,6 @@ dwb_update_hints(GdkEventKey *e)
     char *val;
     gboolean ret = false;
     char json[BUFFER_LENGTH] = {0};
-    const char *text;
     char *escaped;
 
     if (IS_RETURN_KEY(e)) 
