@@ -2161,6 +2161,8 @@ dwb_update_hints(GdkEventKey *e)
     char *val;
     gboolean ret = false;
     char json[BUFFER_LENGTH] = {0};
+    const char *text;
+    char *escaped;
 
     if (IS_RETURN_KEY(e)) 
     {
@@ -2183,9 +2185,11 @@ dwb_update_hints(GdkEventKey *e)
     else 
     {
         val = util_keyval_to_char(e->keyval, true);
-        snprintf(json, sizeof(json), "{ \"input\" : \"%s%s\", \"type\" : %d }", GET_TEXT(), val ? val : "", hint_map[dwb.state.hint_type].arg);
+        escaped = g_strescape(GET_TEXT(), NULL);
+        snprintf(json, sizeof(json), "{ \"input\" : \"%s%s\", \"type\" : %d }", escaped, val ?  (*val == '\\' ? "\\\\" : val) : "", hint_map[dwb.state.hint_type].arg);
         com = "updateHints";
         g_free(val);
+        g_free(escaped);
     }
     if (com) 
     {

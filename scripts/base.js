@@ -9,6 +9,8 @@ Object.freeze((function () {
     };
     var globals = {
         active : null,
+        matchHint : -1,
+        escapeChar : "\\",
         activeArr : [],
         activeInput : null,
         elements : [],
@@ -216,7 +218,7 @@ Object.freeze((function () {
                 var inArr = input.split(" ");
                 for (i=0; i<inArr.length; i++) 
                 {
-                    if (!this.element.textContent.toUpperCase().match(inArr[i])) 
+                    if (!this.element.textContent.toUpperCase().match(inArr[i].toUpperCase())) 
                         return false;
                 }
                 return true;
@@ -506,7 +508,16 @@ Object.freeze((function () {
         globals.lastInput = input;
         if (input) 
         {
-            if (globals.style == "number") 
+            if (input[input.length-1] == globals.escapeChar && globals.matchHint == -1)
+            {
+                globals.matchHint = input.indexOf(globals.escapeChar) + 1;
+                return null;
+            }
+            if (globals.matchHint != -1)
+            {
+                input = input.substring(globals.matchHint);
+            }
+            else if (globals.style == "number") 
             {
                 if (input[input.length-1].isInt()) 
                 {
@@ -602,6 +613,7 @@ Object.freeze((function () {
         globals.lastPosition = 0;
         globals.lastInput = null;
         globals.positions = [];
+        globals.matchHint = -1;
         if (globals.notify && globals.notify.parentNode)
         {
             globals.notify.parentNode.removeChild(globals.notify);

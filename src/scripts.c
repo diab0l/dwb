@@ -5702,7 +5702,6 @@ scripts_reapply()
 gboolean 
 scripts_init(gboolean force) 
 {
-    puts(SCRIPT_TEMPLATE_XINCLUDE);
     dwb.misc.script_signals = 0;
     if (s_global_context == NULL) 
     {
