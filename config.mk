@@ -144,7 +144,7 @@ CFLAGS += -D_NETBSD_SOURCE
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 
 ifeq ($(shell pkg-config --exists '$(LIBSOUP) >= 2.38' && echo 1), 1)
-M4FLAGS += --define=WITH_LIBSOUP_2_38=1 -G
+M4FLAGS += -DWITH_LIBSOUP_2_38=1 -G
 CFLAGS += -DWITH_LIBSOUP_2_38=1
 endif
 
