@@ -647,7 +647,9 @@ commands_undo(KeyMap *km, Arg *arg)
 {
   if (dwb.state.undo_list) 
   {
-      WebKitWebView *web = WEBVIEW(view_add(NULL, false));
+
+      GList *gl = view_add(NULL, false);
+      WebKitWebView *web = WEBVIEW(gl);
       WebKitWebBackForwardList *bflist = webkit_web_back_forward_list_new_with_web_view(web);
 
       for (GList *l = dwb.state.undo_list->data; l; l=l->next) 
@@ -655,9 +657,10 @@ commands_undo(KeyMap *km, Arg *arg)
           Navigation *n = l->data;
           WebKitWebHistoryItem *item = webkit_web_history_item_new_with_data(n->first, n->second);
 
-          webkit_web_back_forward_list_add_item(bflist, item);
           if (!l->next) 
-              webkit_web_view_go_to_back_forward_item(web, item);
+              dwb_load_uri(gl, n->first);
+          else 
+              webkit_web_back_forward_list_add_item(bflist, item);
 
           dwb_navigation_free(n);
       }
