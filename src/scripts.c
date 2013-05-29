@@ -3058,6 +3058,8 @@ get_environment(JSContextRef ctx, JSValueRef v, JSValueRef *exc)
     JSValueRef current;
 
     char **envp = g_get_environ();
+    if (JSValueIsNull(ctx, v))
+        return envp;
     JSObjectRef o = JSValueToObject(ctx, v, exc);
     if (o)
     {
@@ -3193,6 +3195,7 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  *                             used to write to stdin of the childs and stdout
  *                             is read line by line, if set to true stdout is
  *                             read all at once.
+ * @param {String}  [stdin] String that will be piped to stdin.
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
@@ -3212,6 +3215,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     JSObjectRef oc = NULL, ec = NULL;
     GPid pid;
     gboolean get_stdin = false;
+    char *pipe_stdin = NULL;
 
 
     if (argc == 0) 
@@ -3237,12 +3241,15 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         envp = get_environment(ctx, argv[3], exc);
     if (argc > 4)
         get_stdin = JSValueToBoolean(ctx, argv[4]);
+    if (argc > 5)
+        pipe_stdin = js_value_to_char(ctx, argv[5], -1, exc);
+
     
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
                 NULL, NULL, &pid,  
-                get_stdin && (oc != NULL || ec != NULL) ? NULL : &infd,
+                (get_stdin && (oc != NULL || ec != NULL)) || pipe_stdin != NULL ? &infd : NULL,
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
     {
@@ -3264,6 +3271,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
+    if (pipe_stdin != NULL && infd != -1)
+    {
+        if (write(infd, pipe_stdin, strlen(pipe_stdin)) != -1)
+            write(infd, "\n", 1);
+    }
     if (infd != -1)
         close(infd);
     JSObjectRef deferred = deferred_new(s_global_context);
@@ -3273,6 +3285,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 
 error_out:
     CONTEXT_UNLOCK;
+    g_free(pipe_stdin);
     g_strfreev(envp);
     g_free(cmdline);
     g_strfreev(srgv);
