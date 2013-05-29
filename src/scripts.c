@@ -3189,13 +3189,13 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  *                            string the string is passed to stdin of the
  *                            spawned process, pass <i>null</i> if stderr is not
  *                            needed and environment variables should be set
+ * @param {String}  [stdin] String that will be piped to stdin.
  * @param {Object}   [environ] Object that can be used to add environment
  *                             variables to the childs environment
  * @param {Boolean}  [toStdin] If set to <i>true</i> stdout- and stderr-callback can be
  *                             used to write to stdin of the childs and stdout
  *                             is read line by line, if set to true stdout is
  *                             read all at once.
- * @param {String}  [stdin] String that will be piped to stdin.
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
@@ -3238,11 +3238,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         ec = js_value_to_function(ctx, argv[2], NULL);
     
     if (argc > 3)
-        envp = get_environment(ctx, argv[3], exc);
+        pipe_stdin = js_value_to_char(ctx, argv[3], -1, exc);
     if (argc > 4)
-        get_stdin = JSValueToBoolean(ctx, argv[4]);
+        envp = get_environment(ctx, argv[4], exc);
     if (argc > 5)
-        pipe_stdin = js_value_to_char(ctx, argv[5], -1, exc);
+        get_stdin = JSValueToBoolean(ctx, argv[5]);
 
     
 
