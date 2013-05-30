@@ -528,7 +528,16 @@ deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
             deferred_transition(ctx, next, o)->reject = NULL;
         }
         else 
-            deferred_resolve(ctx, f, next, argc, argv, exc);
+        {
+            if (ret && !JSValueIsUndefined(ctx, ret))
+            {
+                JSValueRef args[] = { ret };
+                deferred_resolve(ctx, f, next, 1, args, exc);
+            }
+            else 
+                deferred_resolve(ctx, f, next, argc, argv, exc);
+
+        }
     }
     return UNDEFINED;
 }
@@ -564,7 +573,15 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
             deferred_transition(ctx, next, o)->resolve = NULL;
         }
         else 
-            deferred_reject(ctx, f, next, argc, argv, exc);
+        {
+            if (ret && !JSValueIsUndefined(ctx, ret))
+            {
+                JSValueRef args[] = { ret };
+                deferred_resolve(ctx, f, next, 1, args, exc);
+            }
+            else 
+                deferred_resolve(ctx, f, next, argc, argv, exc);
+        }
     }
     return UNDEFINED;
 }/*}}}*/
@@ -3175,7 +3192,7 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  *   io.print(stdin);
  * }, function(stderr) {
  *   io.print(stderr, "stderr");
- * }, { foo : "bar"});
+ * }, null, { foo : "bar"});
  *
  * @param {String} command The command to execute
  * @param {Function} [stdout] A callback function that is called when a line from
@@ -3189,13 +3206,14 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  *                            string the string is passed to stdin of the
  *                            spawned process, pass <i>null</i> if stderr is not
  *                            needed and environment variables should be set
- * @param {String}  [stdin] String that will be piped to stdin.
+ * @param {String}  [stdin] String that will be piped to stdin, a newline will
+ *                          be appended to the string.
  * @param {Object}   [environ] Object that can be used to add environment
  *                             variables to the childs environment
  * @param {Boolean}  [toStdin] If set to <i>true</i> stdout- and stderr-callback can be
- *                             used to write to stdin of the childs and stdout
- *                             is read line by line, if set to true stdout is
- *                             read all at once.
+ *                             used to write to stdin of the child and stdout
+ *                             and stderr is read line by line, if set to false
+ *                             stdout is read all at once.
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
