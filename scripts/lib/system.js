@@ -17,7 +17,7 @@
                                     var ret;
                                     stderr = response;
                                     if (onStderr)
-                                        ret = onStderr.call(onStdout, response);
+                                        ret = onStderr.call(onStderr, response);
                                     return ret;
                                 }, 
                                 stdin, environ, toStdin).then(
