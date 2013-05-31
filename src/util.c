@@ -371,6 +371,11 @@ util_get_lines(const char *filename)
 char * 
 util_expand_home(char *buffer, const char *filename, size_t length) 
 {
+    if (strlen(filename) >= length)
+    {
+        *buffer = 0;
+        return NULL;
+    }
     if (*filename == '~') 
     {
         const char *home = g_getenv("HOME");

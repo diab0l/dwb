@@ -3298,6 +3298,7 @@ system_file_test(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
 static JSValueRef 
 system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
+    char expanded[4096];
     gboolean ret = false;
     if (argc < 2) 
     {
@@ -3308,8 +3309,15 @@ system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     double mode = JSValueToNumber(ctx, argv[1], exc);
     if (path != NULL && !isnan(mode)) 
     {
-        ret = g_mkdir_with_parents(path, (gint)mode) == 0;
+        if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
+        {
+            js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
+            goto error_out;
+        }
+
+        ret = g_mkdir_with_parents(expanded, (gint)mode) == 0;
     }
+error_out:
     g_free(path);
     return JSValueMakeBoolean(ctx, ret);
 
@@ -3374,6 +3382,7 @@ io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
 static JSValueRef 
 io_read(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
+    char expanded[4096];
     JSValueRef ret = NULL;
     char *path = NULL, *content = NULL;
     if (argc < 1) 
@@ -3384,7 +3393,12 @@ io_read(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t a
     if ( (path = js_value_to_char(ctx, argv[0], PATH_MAX, exc) ) == NULL )
         goto error_out;
 
-    if ( (content = util_get_file_content(path, NULL) ) == NULL ) 
+    if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
+        goto error_out;
+    }
+    if ( (content = util_get_file_content(expanded, NULL) ) == NULL ) 
         goto error_out;
 
     ret = js_char_to_value(ctx, content);
@@ -3466,15 +3480,21 @@ io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (argc < 1) 
         return NIL;
 
-    JSValueRef ret;
+    char expanded[4096];
+    JSValueRef ret = NIL;
     GDir *dir;
     char *dir_name = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
     const char *name;
 
     if (dir_name == NULL)
         return NIL;
+    if (util_expand_home(expanded, dir_name, sizeof(expanded)) == NULL)
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
+        goto error_out;
+    }
 
-    if ((dir = g_dir_open(dir_name, 0, NULL)) != NULL) 
+    if ((dir = g_dir_open(expanded, 0, NULL)) != NULL) 
     {
         GSList *list = NULL;
         while ((name = g_dir_read_name(dir)) != NULL) 
@@ -3495,6 +3515,7 @@ io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     else 
         ret = NIL;
 
+error_out:
     g_free(dir_name);
     return ret;
 }
@@ -3516,6 +3537,7 @@ io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 static JSValueRef 
 io_write(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
+    char expanded[4096];
     gboolean ret = false;
     FILE *f;
     char *path = NULL, *content = NULL, *mode = NULL;
@@ -3539,7 +3561,12 @@ io_write(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
     if ( (content = js_value_to_char(ctx, argv[2], -1, exc)) == NULL ) 
         goto error_out;
 
-    if ( (f = fopen(path, mode)) != NULL) 
+    if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
+        goto error_out;
+    }
+    if ( (f = fopen(expanded, mode)) != NULL) 
     {
         fputs(content, f);
         fclose(f);
