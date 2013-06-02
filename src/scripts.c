@@ -3202,8 +3202,8 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
                 NULL, NULL, &pid,  
-                NULL,
-                //pipe_stdin != NULL ? &infd : NULL,
+                //NULL,
+                pipe_stdin != NULL ? &infd : NULL,
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
     {
@@ -3215,6 +3215,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     {
         out_channel = g_io_channel_unix_new(outfd);
         JSValueProtect(ctx, oc);
+        g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, oc);
         g_io_channel_set_close_on_unref(out_channel, true);
     }
@@ -3222,6 +3223,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     {
         err_channel = g_io_channel_unix_new(errfd);
         JSValueProtect(ctx, ec);
+        g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, ec);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
@@ -5018,7 +5020,7 @@ create_global_object()
      * @static
      * */
     JSStaticFunction system_functions[] = { 
-        { "spawn",          system_spawn,           kJSDefaultAttributes },
+        { "_spawn",          system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
         { "fileTest",        system_file_test,            kJSDefaultAttributes },
