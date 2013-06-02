@@ -3227,8 +3227,8 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
     if (pipe_stdin != NULL && infd != -1)
     {
-        if (write(infd, pipe_stdin, strlen(pipe_stdin)) != -1)
-            write(infd, "\n", 1);
+        if (write(infd, pipe_stdin, strlen(pipe_stdin)) == -1 || write(infd, "\n", 1) == -1)
+            perror("system.spawn");
     }
     if (infd != -1)
         close(infd);
