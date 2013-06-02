@@ -3195,13 +3195,15 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     
     if (argc > 3)
         pipe_stdin = js_value_to_char(ctx, argv[3], -1, exc);
+
     if (argc > 4)
         envp = get_environment(ctx, argv[4], exc);
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
                 NULL, NULL, &pid,  
-                pipe_stdin != NULL ? &infd : NULL,
+                NULL,
+                //pipe_stdin != NULL ? &infd : NULL,
                 oc != NULL ? &outfd : NULL, 
                 ec != NULL ? &errfd : NULL, NULL)) 
     {
@@ -5016,7 +5018,7 @@ create_global_object()
      * @static
      * */
     JSStaticFunction system_functions[] = { 
-        { "_spawn",          system_spawn,           kJSDefaultAttributes },
+        { "spawn",          system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
         { "fileTest",        system_file_test,            kJSDefaultAttributes },
