@@ -2968,7 +2968,7 @@ dwb_eval_key(GdkEventKey *e)
     if (key == NULL)
         return false;
 
-    if (DIGIT(e)) 
+    if (dwb.state.buffer->len == 0 && DIGIT(e)) 
     {
         keynum = e->keyval - GDK_KEY_0;
         if (dwb.state.nummod >= 0) 
