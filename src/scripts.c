@@ -1455,6 +1455,10 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
  * @callback bindCallback
  * 
  * @param {Object} arguments 
+ * @param {String} arguments.shortcut
+ *      The shortcut that was pressed
+ * @param {Number} arguments.modifier
+ *      The modifier
  * @param {Number} arguments.nummod 
  *      Numerical modifier that was used or -1 if no modifier was used.
  * @param {Number} [arguments.arg]
@@ -1472,9 +1476,14 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     if (s_global_context != NULL)
     {
         if (arg->p == NULL) 
-            json = util_create_json(1, INTEGER, "nummod", dwb.state.nummod);
+            json = util_create_json(3, CHAR, "key", m->key, 
+                    INTEGER, "modifier", m->mod,  
+                    INTEGER, "nummod", dwb.state.nummod);
         else 
-            json = util_create_json(2, INTEGER, "nummod", dwb.state.nummod, CHAR, "arg", arg->p);
+            json = util_create_json(4, CHAR, "key", m->key, 
+                    INTEGER, "modifier", m->mod,  
+                    INTEGER, "nummod", dwb.state.nummod, 
+                    CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
         call_as_function_debug(s_global_context, arg->js, arg->js, 1, argv);
@@ -1881,8 +1890,8 @@ error_out:
  * the included file in the archive.
  * All scripts in an archive share an object <b>exports</b> which can be used
  * to share data between scripts in an archive, all exports objects have a
- * readonly property <b>id</id> which is unique to all archives, it can be used
- * together with require/provide to define unique module names..
+ * readonly property <b>id</b> which is unique to all archives, it can be used
+ * together with require/provide to define unique module names.
  *
  * Unlike {@link include} included archive-scripts cannot be included into the
  * global scope. 
