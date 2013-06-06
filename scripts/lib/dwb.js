@@ -912,4 +912,5 @@
         });
     }
 })();
+
 Object.preventExtensions(this);
