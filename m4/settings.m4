@@ -155,7 +155,7 @@ html_input(download-no-confirm, checkbox, Whether to immediately start a downloa
 html_input(download-use-external-program, checkbox, Whether to use an external download helper)
 html_input(editable, checkbox, Whether content can be modified)
 html_input(editor, text, External editor used for inputs/textareas)
-html_input(enable-accelerated-compositing, checkbox, Whether to enable gpu accelerated compositing)
+dnl html_input(enable-accelerated-compositing, checkbox, Whether to enable gpu accelerated compositing)
 html_input(enable-caret-browsing, checkbox, Whether to enable caret browsing)
 html_input(enable-default-context-menu, checkbox, Whether to enable the right click context menu)
 html_input(enable-developer-extras, checkbox, Whether developer extensions should be enabled)
