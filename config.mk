@@ -107,8 +107,18 @@ else
 $(error Cannot find $(GNUTLS))
 endif
 
+# >=json-c-0.11 renamed its library, pc file, and include dir
+# first check for >=0.11, if it doesn't exist check for <0.11
+ifeq ($(shell pkg-config --exists json-c && echo 1), 1)
+JSONC=json-c
+else
 ifeq ($(shell pkg-config --exists json && echo 1), 1)
-LIBS+=$(GNUTLS)
+JSONC=json
+endif
+endif
+
+ifdef JSONC
+LIBS+=$(JSONC)
 else
 $(error Cannot find json-c)
 endif
