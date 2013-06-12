@@ -939,7 +939,7 @@ wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
     }
     return NIL;
 }/*}}}*/
-#if WEBKIT_CHECK_VERSION(1, 10, 0)
+#if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
 
 /** 
  * Renders a webview to a png file
@@ -5227,7 +5227,7 @@ create_global_object()
         { "history",         wv_history,             kJSDefaultAttributes },
         { "reload",          wv_reload,             kJSDefaultAttributes },
         { "inject",          wv_inject,             kJSDefaultAttributes },
-#if WEBKIT_CHECK_VERSION(1, 10, 0)
+#if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
         { "toPng",           wv_to_png,             kJSDefaultAttributes },
 #endif
         { 0, 0, 0 }, 
