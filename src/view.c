@@ -868,6 +868,57 @@ view_create_plugin_widget_cb(WebKitWebView *web, char *mime_type, char *uri, GHa
 static gboolean
 view_scroll_cb(GtkWidget *w, GdkEventScroll *e, GList *gl) 
 {
+    if (EMIT_SCRIPT(SCROLL))
+    {
+        /**
+         * Emitted when the webview is scrolled using the mouse
+         *
+         * @event scroll
+         * @memberOf signals
+         * @param {signals~onScroll} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called when the webview is scrolled using the mouse
+         * @callback signals~onScroll
+         * @param {WebKitWebView}  webview 
+         *      The webview that emitted the signal
+         * @param {Object} event
+         * @param {String} event.direction 
+         *      The scroll direction
+         * @param {Modifier} event.state 
+         *      A bitmask of {@link Enums and Flags.Modifier|Modifiers} pressed
+         * @param {Number} event.time 
+         *      The time in milliseconds when the button was pressed
+         * @param {Number} event.x 
+         *      x-position relative to the window
+         * @param {Number} event.xRoot
+         *      x-position relative to the screen
+         * @param {Number} event.y 
+         *      y-position relative to the window
+         * @param {Number} event.yRoot
+         *      y-position relative to the screen
+         *
+         * @returns {Boolean}
+         *      Return true to prevent the default action
+         * */
+        char *direction;
+        switch (e->direction)
+        {
+            case GDK_SCROLL_UP : direction = "up"; break;
+            case GDK_SCROLL_DOWN : direction = "down"; break;
+            case GDK_SCROLL_LEFT : direction = "left"; break;
+            case GDK_SCROLL_RIGHT : direction = "right"; break;
+            default : direction = ""; break;
+        }
+        char *json = util_create_json(7, 
+                CHAR, "direction", direction,
+                DOUBLE,   "x", e->x, DOUBLE, "y", e->y, 
+                UINTEGER, "state", e->state, UINTEGER, "time", e->time, 
+                DOUBLE,   "xRoot", e->x_root, DOUBLE,   "yRoot", e->y_root);
+        ScriptSignal signal = { SCRIPTS_WV(gl), SCRIPTS_SIG_META(json, SCROLL, 0) };
+        SCRIPTS_EMIT_RETURN(signal, json, true);
+    }
     dwb_update_status_text(gl, NULL);
     if (GET_BOOL("enable-frame-flattening")) 
     {

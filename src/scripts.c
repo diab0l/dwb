@@ -136,6 +136,7 @@ static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_EXECUTE_COMMAND, "executeCommand" },
     { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
     { SCRIPTS_SIG_ERROR,    "error" },
+    { SCRIPTS_SIG_SCROLL,    "scroll" },
     { 0, NULL },
 };
 
