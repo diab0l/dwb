@@ -3084,8 +3084,6 @@ dwb_eval_key(GdkEventKey *e)
 gboolean 
 dwb_eval_override_key(GdkEventKey *e, CommandProperty prop) 
 {
-    if (DIGIT(e))
-        return false;
     char *key = NULL;
     unsigned int mod; 
     gboolean isprint;
