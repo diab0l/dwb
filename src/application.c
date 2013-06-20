@@ -39,6 +39,7 @@ static gboolean s_opt_single = false;
 static gboolean s_opt_override_restore = false;
 static gboolean s_opt_version = false;
 static gboolean s_opt_force = false;
+static gboolean s_opt_fallback = false;
 static gboolean s_opt_enable_scripts = false;
 static gchar **s_opt_delete_profile = NULL;
 static gchar *s_opt_restore = NULL;
@@ -50,6 +51,7 @@ static GOptionEntry options[] = {
     { "embed", 'e', 0, G_OPTION_ARG_INT64, &dwb.gui.wid, "Embed into window with window id wid", "wid"},
     { "force", 'f', 0, G_OPTION_ARG_NONE, &s_opt_force, "Force restoring a saved session, even if another process has restored the session", NULL },
     { "list-sessions", 'l', 0, G_OPTION_ARG_NONE, &s_opt_list_sessions, "List saved sessions and exit", NULL },
+    { "fifo", 0, 0, G_OPTION_ARG_NONE, &s_opt_fallback, "Use a fifo for single-instance instead of dbus", NULL },
     { "new-instance", 'n', 0, G_OPTION_ARG_NONE, &s_opt_single, "Open a new instance, overrides 'single-instance'", NULL},
     { "restore", 'r', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, &application_parse_option, "Restore session with name 'sessionname' or default if name is omitted", "sessionname"},
     { "override-restore", 'R', 0, G_OPTION_ARG_NONE, &s_opt_override_restore, "Don't restore last session even if 'save-session' is set", NULL},
@@ -212,7 +214,7 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
         g_application_set_flags(app, G_APPLICATION_NON_UNIQUE);
 
     bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-    if (bus != NULL && g_application_register(app, NULL, &error)) 
+    if (!s_opt_fallback && bus != NULL && g_application_register(app, NULL, &error)) 
     { 
         g_object_unref(bus);
         remote = g_application_get_is_remote(app);
@@ -257,7 +259,10 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     /* Fallback */
     else 
     {
-        fprintf(stderr, "D-Bus-registration failed, using fallback mode\n");
+        if (!s_opt_fallback)
+        {
+            fprintf(stderr, "D-Bus-registration failed, using fallback mode\n");
+        }
         if (!single_instance) 
         {
             application_start(app, *argv);

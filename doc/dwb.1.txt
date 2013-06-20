@@ -36,6 +36,10 @@ OPTIONS
   Force restoring a previously saved session, even if it seems that another
   process has opened a session with the same name.
 
+*--fifo*::
+  Use a fifo for single instance instead of dbus, all instances must pass this
+  option to use the fifo.
+
 *-l,  --list-sessions*::
   List previously saved sessions. A '*' indicates that another instance has
   currently opened the session.

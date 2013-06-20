@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 06/11/2013
+.\"      Date: 06/20/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "06/11/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "06/20/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -55,6 +55,11 @@ Embed dwb into <wid>\&.
 \fB\-f, \-\-force\fR
 .RS 4
 Force restoring a previously saved session, even if it seems that another process has opened a session with the same name\&.
+.RE
+.PP
+\fB\-\-fifo\fR
+.RS 4
+Use a fifo for single instance instead of dbus, all instances must pass this option to use the fifo\&.
 .RE
 .PP
 \fB\-l, \-\-list\-sessions\fR

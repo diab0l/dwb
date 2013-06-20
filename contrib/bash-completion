@@ -93,7 +93,7 @@ _dwb() {
     opts="-h -c -d -e -f -l -n -r -R -p -x -v -S"
     lopts="--help --check-script --delete-profile --embed --force --list-sessions --new-instance
     --restore --override-restore --profile --execute --version --enable-scripts
-    --set-as-default"
+    --set-as-default --fifo"
 
     case "${prev}" in
         -c|--check-script)
