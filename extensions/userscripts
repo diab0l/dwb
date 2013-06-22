@@ -121,25 +121,25 @@ var GM_compatability = function ()
     {
         DWB_scriptPrefix = DWB_scriptPrefix + DWB_scriptId + "_";
     }
-    var GM_addStyle = function (styles) 
+    function GM_addStyle (styles) 
     {
         var style = document.createElement("style");
         style.setAttribute("type", "text/css");
         style.appendChild(document.createTextNode(styles));
         document.getElementsByTagName("head")[0].appendChild(style);
     };
-    var GM_log = function (text) 
+    function GM_log (text) 
     {
         console.log(text);
     };
-    var GM_setValue = function (key, value) 
+    function GM_setValue (key, value) 
     {
         if (localStorage !== null && (typeof value === "string" || typeof value === "number" || typeof value == "boolean") )
             localStorage.setItem(DWB_scriptPrefix + key, value);
         else 
             GM_log("GM_setValue only works with enabled localStorage and only for strings, numbers and booleans");
     };
-    var GM_getValue = function (key, def) 
+    function GM_getValue (key, def) 
     {
         if (localStorage !== null) 
             return localStorage.getItem(DWB_scriptPrefix + key) || def;
@@ -147,14 +147,14 @@ var GM_compatability = function ()
             GM_log("GM_getValue only works with enabled localStorage");
         return undefined;
     };
-    var GM_deleteValue = function (key) 
+    function GM_deleteValue (key) 
     {
         if (localStorage !== null) 
             localStorage.removeItem(DWB_scriptPrefix + key);
         else 
             GM_log("GM_deleteValue only works with enabled localStorage");
     };
-    var GM_listValues = function () 
+    function GM_listValues () 
     {
         var i;
         var a = [];
@@ -163,9 +163,9 @@ var GM_compatability = function ()
         }
         return a;
     };
-    var GM_info = function () { return undefined; };
-    var GM_registerMenuCommand = function () { return undefined; };
-    var GM_openInTab = function (url) { return null; };
+    function GM_info () { return undefined; };
+    function GM_registerMenuCommand () { return undefined; };
+    function GM_openInTab (url) { return null; };
     //var GM_getResourceText = function (name) 
     //{
     //    // TODO implemnt
