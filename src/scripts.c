@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <JavaScriptCore/JavaScript.h>
@@ -2980,6 +2981,22 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     return js_char_to_value(ctx, env);
 }/*}}}*/
 
+/** 
+ * Get a environment variable
+ * 
+ * @name getPid 
+ * @memberOf system
+ * @function 
+ *
+ * @returns {Number}
+ *      The process id of the dwb instance 
+ * */
+static JSValueRef 
+system_get_pid(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    return JSValueMakeNumber(ctx, getpid());
+}
+
 /* spawn_output {{{*/
 static gboolean
 spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback) 
@@ -5033,6 +5050,7 @@ create_global_object()
         { "_spawn",          system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
+        { "getPid",          system_get_pid,           kJSDefaultAttributes },
         { "fileTest",        system_file_test,            kJSDefaultAttributes },
         { "mkdir",           system_mkdir,            kJSDefaultAttributes },
         { 0, 0, 0 }, 
