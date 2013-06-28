@@ -24,6 +24,7 @@
 #include "util.h"
 #include "domain.h"
 #include "soup.h"
+#include "js.h"
 #define DWB_SOUP_CHECK_EXPIRATION(multiplier) \
     (s_expiration = (s_expiration != LONG_MIN && s_expiration != LONG_MAX && LONG_MAX / (multiplier) > s_expiration) ? \
         s_expiration * (multiplier) : -1)
@@ -482,7 +483,7 @@ dwb_soup_set_cookie_expiration(const char *expiration_string)
 void 
 on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean retry, gpointer userdata)
 {
-    char *username = dwb_prompt(true, "Authentication required! Username:");
+    char *username = dwb_prompt(true, "Username:");
     if (username != NULL)
     {
         char *password = dwb_prompt(false, "Password:");
