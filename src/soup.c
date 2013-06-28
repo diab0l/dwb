@@ -479,6 +479,22 @@ dwb_soup_set_cookie_expiration(const char *expiration_string)
     return STATUS_ERROR;
 }
 
+void 
+on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean retry, gpointer userdata)
+{
+    char *username = dwb_prompt(true, "Authentication required! Username:");
+    if (username != NULL)
+    {
+        char *password = dwb_prompt(false, "Password:");
+        if (password != NULL)
+        {
+            soup_auth_authenticate(auth, username, password);
+            g_free(password);
+        }
+        g_free(username);
+    }
+}
+
 /* dwb_soup_init_session_features() {{{*/
 DwbStatus 
 dwb_soup_init_session_features() 
@@ -495,6 +511,8 @@ dwb_soup_init_session_features()
                 SOUP_SESSION_SSL_CA_FILE, cert, NULL);
     }
 #endif
+    soup_session_remove_feature_by_type(dwb.misc.soupsession, WEBKIT_TYPE_SOUP_AUTH_DIALOG);
+    g_signal_connect(dwb.misc.soupsession, "authenticate", G_CALLBACK(on_authenticate), NULL);
     g_object_set(dwb.misc.soupsession, SOUP_SESSION_SSL_STRICT, GET_BOOL("ssl-strict"), NULL);
     return STATUS_OK;
 }/*}}}*/
