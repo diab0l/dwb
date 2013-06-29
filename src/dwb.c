@@ -218,10 +218,14 @@ static DwbStatus
 dwb_set_block_insecure_content(GList *gl, WebSettings *s)
 {
     dwb.state.block_insecure_content = s->arg_local.b;
-    for (GList *gl = dwb.state.views; gl; gl = gl->next)
+    if (!s->arg_local.b)
     {
-        g_object_steal_qdata(WEBVIEW(gl), dwb.misc.https_quark);
+        for (GList *gl = dwb.state.views; gl; gl = gl->next)
+        {
+            g_object_steal_qdata(G_OBJECT(WEBVIEW(gl)), dwb.misc.https_quark);
+        }
     }
+    return STATUS_OK;
 }
 static DwbStatus
 dwb_set_tab_orientation(GList *gl, WebSettings *s) 
