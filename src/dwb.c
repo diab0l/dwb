@@ -87,6 +87,7 @@ static DwbStatus dwb_set_show_single_tab(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_javascript_api(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_block_insecure_content(GList *gl, WebSettings *s);
 #if !_HAS_GTK3 
 static DwbStatus dwb_set_tab_orientation(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_tab_width(GList *gl, WebSettings *s);
@@ -213,6 +214,15 @@ dwb_set_javascript_api(GList *gl, WebSettings *s)
     return STATUS_OK;
 }/*}}}*/
 #if !_HAS_GTK3
+static DwbStatus
+dwb_set_block_insecure_content(GList *gl, WebSettings *s)
+{
+    dwb.state.block_insecure_content = s->arg_local.b;
+    for (GList *gl = dwb.state.views; gl; gl = gl->next)
+    {
+        g_object_steal_qdata(WEBVIEW(gl), dwb.misc.https_quark);
+    }
+}
 static DwbStatus
 dwb_set_tab_orientation(GList *gl, WebSettings *s) 
 {
@@ -2920,6 +2930,16 @@ dwb_get_key(GdkEventKey *e, unsigned int *mod_mask, gboolean *isprint)
     return key;
 }/*}}}*/
 
+void
+dwb_set_nummod(GdkEventKey *e)
+{
+    int keynum = e->keyval - GDK_KEY_0;
+    if (dwb.state.nummod >= 0) 
+        dwb.state.nummod = MIN(10*dwb.state.nummod + keynum, 314159);
+    else 
+        dwb.state.nummod = e->keyval - GDK_KEY_0;
+}
+
 /* dwb_eval_key(GdkEventKey *e) {{{*/
 gboolean
 dwb_eval_key(GdkEventKey *e) 
@@ -2927,7 +2947,6 @@ dwb_eval_key(GdkEventKey *e)
     gboolean ret = true, isprint = false;
     int keyval = e->keyval;
     unsigned int mod_mask = 0;
-    int keynum = -1;
     char *key;
     const char *buf;
     guint longest;
@@ -2970,11 +2989,7 @@ dwb_eval_key(GdkEventKey *e)
 
     if (dwb.state.buffer->len == 0 && DIGIT(e)) 
     {
-        keynum = e->keyval - GDK_KEY_0;
-        if (dwb.state.nummod >= 0) 
-            dwb.state.nummod = MIN(10*dwb.state.nummod + keynum, 314159);
-        else 
-            dwb.state.nummod = e->keyval - GDK_KEY_0;
+        dwb_set_nummod(e);
 
         if (mod_mask) {
 #define IS_NUMMOD(X)  (((X) & DWB_NUMMOD_MASK) && ((X) & ~DWB_NUMMOD_MASK) == mod_mask)
@@ -3092,12 +3107,13 @@ dwb_eval_override_key(GdkEventKey *e, CommandProperty prop)
     if (gtk_widget_has_focus(dwb.gui.entry) && e->keyval == GDK_KEY_BackSpace)
         entry_clear_history();
 
+#define IS_NUMMOD(X)  (((X) & DWB_NUMMOD_MASK) && ((X) & ~DWB_NUMMOD_MASK) == mod)
     if ((key = dwb_get_key(e, &mod, &isprint)) != NULL)  
     {
         for (GList *l = dwb.override_keys; l; l=l->next) 
         {
             KeyMap *m = l->data;
-            if (m->map->prop & prop && !g_strcmp0(m->key, key) && m->mod == mod) 
+            if ((m->map->prop & prop && !g_strcmp0(m->key, key) && m->mod == mod))
             {
                 m->map->func(m, &m->map->arg);
                 ret = true; 
@@ -3105,6 +3121,7 @@ dwb_eval_override_key(GdkEventKey *e, CommandProperty prop)
             }
         }
     }
+#undef IS_NUMMOD
     g_free(key);
     return ret;
 }/*}}}*/
@@ -4868,6 +4885,8 @@ dwb_init_vars(void)
     dwb.misc.sync_interval = 0;
     dwb.misc.synctimer = 0;
     dwb.misc.sync_files = SYNC_ALL;
+
+    dwb.misc.https_quark = g_quark_from_static_string("dwb_is_https");
 
     dwb.misc.bar_height = 0;
     dwb.state.last_tab = 0;

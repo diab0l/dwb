@@ -2951,7 +2951,7 @@ data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 /* SYSTEM {{{*/
 /* system_get_env {{{*/
 /** 
- * Get a environment variable
+ * Get the current process id 
  * 
  * @name getEnv 
  * @memberOf system

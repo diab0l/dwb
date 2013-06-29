@@ -2,12 +2,12 @@
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 06/20/2013
+.\"      Date: 06/29/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "06/20/2013" "\ \&" "\ \&"
+.TH "DWB" "1" "06/29/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3118,17 +3118,6 @@ Whether to perform a dns lookup for text typed into the address bar\&. If set to
 \fIfalse\fR\&.
 .RE
 .PP
-\fBbackground\-color\fR
-.RS 4
-The background color of the statusbar\&. Possible values: an rgb color\-string, default value:
-\fI#000000\fR\&.
-.RE
-.PP
-\fBbars\-padding\fR
-.RS 4
-Padding of the status, download, completion and tab bars, default value: 0\&.
-.RE
-.PP
 \fBauto\-completion\fR
 .RS 4
 Whether possible keystrokes should be shown\&. (Shift\-) Tab cycles through keystrokes\&. Possible values: true/false, default value:
@@ -3141,10 +3130,26 @@ Whether to go automatically in insert mode if an editable element has focus afte
 \fIfalse\fR\&.
 .RE
 .PP
+\fBbackground\-color\fR
+.RS 4
+The background color of the statusbar\&. Possible values: an rgb color\-string, default value:
+\fI#000000\fR\&.
+.RE
+.PP
 \fBbackground\-tabs\fR
 .RS 4
 Open new tabs in background\&. Possible values: true/false, default value:
 \fIfalse\fR\&.
+.RE
+.PP
+\fBbars\-padding\fR
+.RS 4
+Padding of the status, download, completion and tab bars, default value: 0\&.
+.RE
+.PP
+\fBblock\-insecure\-content\fR
+.RS 4
+Whether to block http\-requests on https\-encrypted sites, default value: false\&.
 .RE
 .PP
 \fBcache\-model\fR

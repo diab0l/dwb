@@ -105,6 +105,17 @@ view_resource_request_cb(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebReso
             SCRIPTS_WV(gl), .objects = { G_OBJECT(frame), G_OBJECT(request), G_OBJECT(response) }, SCRIPTS_SIG_META(NULL, RESOURCE, 3) };
         scripts_emit(&signal);
     }
+
+    if (dwb.state.block_insecure_content)
+    {
+        const char *uri = webkit_network_request_get_uri(request);
+        if ( dwb.state.block_insecure_content && g_object_get_qdata(G_OBJECT(wv), dwb.misc.https_quark) 
+                && g_str_has_prefix(uri, "http:"))
+        {
+            webkit_network_request_set_uri(request, "about:blank");
+        }
+    }
+
     if (dwb.state.do_not_track) 
     {
         SoupMessage *msg = webkit_network_request_get_message(request);
@@ -830,6 +841,17 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     }
     if (!ret && frame == webkit_web_view_get_main_frame(web))
     {
+        if (dwb.state.block_insecure_content)
+        {
+            if (g_str_has_prefix(uri, "https:"))
+            {
+                g_object_set_qdata(G_OBJECT(web), dwb.misc.https_quark, GINT_TO_POINTER(1));
+            }
+            else 
+            {
+                g_object_steal_qdata(G_OBJECT(web), dwb.misc.https_quark);
+            }
+        }
         if (VIEW(gl)->js_base != NULL) 
         {
             JSValueUnprotect(JS_CONTEXT_REF(gl), VIEW(gl)->js_base);
