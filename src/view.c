@@ -105,6 +105,17 @@ view_resource_request_cb(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebReso
             SCRIPTS_WV(gl), .objects = { G_OBJECT(frame), G_OBJECT(request), G_OBJECT(response) }, SCRIPTS_SIG_META(NULL, RESOURCE, 3) };
         scripts_emit(&signal);
     }
+
+    if (dwb.state.block_insecure_content)
+    {
+        const char *uri = webkit_network_request_get_uri(request);
+        if ( dwb.state.block_insecure_content && g_object_get_qdata(G_OBJECT(wv), dwb.misc.https_quark) 
+                && g_str_has_prefix(uri, "http:"))
+        {
+            webkit_network_request_set_uri(request, "about:blank");
+        }
+    }
+
     if (dwb.state.do_not_track) 
     {
         SoupMessage *msg = webkit_network_request_get_message(request);
@@ -658,8 +669,11 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     const char *uri = webkit_network_request_get_uri(request);
     gboolean ret = false;
     WebKitWebNavigationReason reason = webkit_web_navigation_action_get_reason(action);
+    gint button = webkit_web_navigation_action_get_button(action);
 
-    if (EMIT_SCRIPT(NAVIGATION)) 
+    /* Ignore button 2 which opens in a new tab and new windows, otherwise the
+     * signal will be emitted twice */
+    if (EMIT_SCRIPT(NAVIGATION) && button != 2 && !(dwb.state.nv & OPEN_NEW_WINDOW)) 
     {
         /**
          * Emitted before a new site or a new frame is loaded
@@ -759,7 +773,7 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
         webkit_web_policy_decision_ignore(policy);
         return true;
     }
-    if (webkit_web_navigation_action_get_button(action) == 2) 
+    if (button == 2) 
     {
         gboolean background = dwb.state.nv & OPEN_BACKGROUND;
         dwb.state.nv = OPEN_NORMAL;
@@ -830,6 +844,17 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     }
     if (!ret && frame == webkit_web_view_get_main_frame(web))
     {
+        if (dwb.state.block_insecure_content)
+        {
+            if (g_str_has_prefix(uri, "https:"))
+            {
+                g_object_set_qdata(G_OBJECT(web), dwb.misc.https_quark, GINT_TO_POINTER(1));
+            }
+            else 
+            {
+                g_object_steal_qdata(G_OBJECT(web), dwb.misc.https_quark);
+            }
+        }
         if (VIEW(gl)->js_base != NULL) 
         {
             JSValueUnprotect(JS_CONTEXT_REF(gl), VIEW(gl)->js_base);

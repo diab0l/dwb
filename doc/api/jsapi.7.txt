@@ -305,6 +305,14 @@ _name_;; Name of the variable
 _returns_;; The variable or null if the variable wasn't found
 ****
 
+==== Number system.getPid() 
+****
+
+Get the current process id of the instance.
+
+_returns_;; The process id. 
+****
+
 ==== Boolean system.mkdir(String path, Number mode)
 ****
 

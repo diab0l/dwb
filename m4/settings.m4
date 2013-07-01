@@ -20,6 +20,7 @@ html_input(accept-language, text, If set will be used for "Accept-Language" head
 ifdef(`WITH_LIBSOUP_2_38', 
 html_input(addressbar-dns-lookup, checkbox, Whether to first perform a dns lookup for text typed in the addressbar before loading the site)
 )
+html_input(block-insecure-content, checkbox, Whether to block http-requests on https-sites)
 html_input(cookie-expiration, text, ``The maximum expiration time for persistent cookies in seconds, with suffix <b>m</b> in minutes, with suffix <b>h</b> in hours, with suffix <b>d</b> in days, 0 means no explicit expriation'')
 html_select(cookies-accept-policy, html_options(always, never, nothirdparty), ``The cookies to accept, affects also session cookies'')
 html_select(cookies-store-policy, html_options(session, persistent, never), The storage policy for cookies)

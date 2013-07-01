@@ -640,6 +640,7 @@ struct _State {
 
   gint last_tab;
   gboolean do_not_track;
+  gboolean block_insecure_content;
 };
 
 typedef enum _SettingsApply {
@@ -823,6 +824,9 @@ struct _Misc {
   gint max_tabs;
   JsApi js_api;
 
+  GQuark https_quark;
+
+
   //gboolean javascript_debugging;
 };
 enum Files {
@@ -894,7 +898,6 @@ struct _Dwb {
   //Files files;
   char *files[FILES_LAST];
   FileContent fc;
-  gpointer *instance;
 };
 
 /*}}}*/

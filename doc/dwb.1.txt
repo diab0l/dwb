@@ -1202,14 +1202,6 @@ true dwb performs a dns lookup for all text that does not have a valid scheme
 and does not contain whitespaces. Default value:
 'false'.
 
-*background-color*::
-The background color of the statusbar. Possible values: an rgb color-string,
-default value:
-'#000000'.
-
-*bars-padding*::
-Padding of the status, download, completion and tab bars, default value: 0.
-
 *auto-completion*::
 Whether possible keystrokes should be shown. (Shift-) Tab cycles through keystrokes.
 Possible values: true/false,
@@ -1223,11 +1215,22 @@ Possible values: true/false,
 default value:
 'false'.
 
+*background-color*::
+The background color of the statusbar. Possible values: an rgb color-string,
+default value:
+'#000000'.
+
 *background-tabs*::
 Open new tabs in background.
 Possible values: true/false,
 default value:
 'false'.
+
+*bars-padding*::
+Padding of the status, download, completion and tab bars, default value: 0.
+
+*block-insecure-content*::
+Whether to block http-requests on https-encrypted sites, default value: false. 
 
 *cache-model*::
 The cache model used by webkit, possible values are 'webbrowser' and

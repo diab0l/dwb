@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
 #include <JavaScriptCore/JavaScript.h>
@@ -2950,7 +2951,7 @@ data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 /* SYSTEM {{{*/
 /* system_get_env {{{*/
 /** 
- * Get a environment variable
+ * Get the current process id 
  * 
  * @name getEnv 
  * @memberOf system
@@ -2979,6 +2980,22 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 
     return js_char_to_value(ctx, env);
 }/*}}}*/
+
+/** 
+ * Get a environment variable
+ * 
+ * @name getPid 
+ * @memberOf system
+ * @function 
+ *
+ * @returns {Number}
+ *      The process id of the dwb instance 
+ * */
+static JSValueRef 
+system_get_pid(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    return JSValueMakeNumber(ctx, getpid());
+}
 
 /* spawn_output {{{*/
 static gboolean
@@ -5033,6 +5050,7 @@ create_global_object()
         { "_spawn",          system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
+        { "getPid",          system_get_pid,           kJSDefaultAttributes },
         { "fileTest",        system_file_test,            kJSDefaultAttributes },
         { "mkdir",           system_mkdir,            kJSDefaultAttributes },
         { 0, 0, 0 }, 
