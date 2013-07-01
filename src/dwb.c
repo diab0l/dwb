@@ -213,7 +213,6 @@ dwb_set_javascript_api(GList *gl, WebSettings *s)
         return STATUS_ERROR;
     return STATUS_OK;
 }/*}}}*/
-#if !_HAS_GTK3
 static DwbStatus
 dwb_set_block_insecure_content(GList *gl, WebSettings *s)
 {
@@ -227,6 +226,7 @@ dwb_set_block_insecure_content(GList *gl, WebSettings *s)
     }
     return STATUS_OK;
 }
+#if !_HAS_GTK3
 static DwbStatus
 dwb_set_tab_orientation(GList *gl, WebSettings *s) 
 {
