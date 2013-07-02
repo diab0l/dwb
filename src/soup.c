@@ -21,6 +21,7 @@
 #include <time.h>
 #include <sys/file.h>
 #include "dwb.h"
+#include "entry.h"
 #include "util.h"
 #include "domain.h"
 #include "soup.h"
@@ -35,6 +36,36 @@ static SoupCookieJar *s_jar;
 static guint s_changed_id;
 static SoupCookieJar *s_tmp_jar;
 static long int s_expiration;
+
+typedef struct _Auth {
+    SoupSession *session;
+    SoupMessage *msg; 
+    SoupAuth *auth;
+    char *user;
+} Auth; 
+
+Auth *
+auth_new(SoupSession *session, SoupMessage *msg, SoupAuth *auth)
+{
+    Auth *ret = g_malloc(sizeof(Auth));
+    if (ret != NULL)
+    {
+        ret->session = session;
+        ret->msg = g_object_ref(msg);
+        ret->auth = g_object_ref(auth);
+        ret->user = NULL;
+    }
+    return ret;
+}
+void 
+auth_free(Auth *a)
+{
+    g_return_if_fail(a != NULL);
+
+    g_object_unref(a->msg);
+    g_object_unref(a->auth);
+    g_free(a->user);
+}
 
 /*{{{*/
 static void
@@ -480,20 +511,42 @@ dwb_soup_set_cookie_expiration(const char *expiration_string)
     return STATUS_ERROR;
 }
 
-void 
+static gboolean 
+entry_authenticate(GtkWidget *entry, GdkEventKey *e, Auth *a)
+{
+    if (e->keyval == GDK_KEY_Escape)
+    {
+        soup_session_unpause_message(a->session, a->msg);
+        auth_free(a);
+        entry_snoop_end(G_CALLBACK(entry_authenticate), a);
+    }
+    else if (IS_RETURN_KEY(e))
+    {
+        if (a->user != NULL)
+        {
+            const char *password = GET_TEXT();
+            soup_auth_authenticate(a->auth, a->user, password);
+            soup_session_unpause_message(a->session, a->msg);
+            entry_snoop_end(G_CALLBACK(entry_authenticate), a);
+            auth_free(a);
+        }
+        else 
+        {
+            dwb_set_status_bar_text(dwb.gui.lstatus, "Password:", &dwb.color.active_fg, dwb.font.fd_active, false);
+            a->user = g_strdup(GET_TEXT());
+            entry_clear(false);
+        }
+    }
+    return false;
+}
+
+static void 
 on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean retry, gpointer userdata)
 {
-    char *username = dwb_prompt(true, "Username:");
-    if (username != NULL)
-    {
-        char *password = dwb_prompt(false, "Password:");
-        if (password != NULL)
-        {
-            soup_auth_authenticate(auth, username, password);
-            g_free(password);
-        }
-        g_free(username);
-    }
+    Auth *a = auth_new(session, msg, auth);
+    soup_session_pause_message(session, msg);
+    entry_snoop(G_CALLBACK(entry_authenticate), a);
+    dwb_set_status_bar_text(dwb.gui.lstatus, "Username:", &dwb.color.active_fg, dwb.font.fd_active, false);
 }
 
 /* dwb_soup_init_session_features() {{{*/

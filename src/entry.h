@@ -26,4 +26,8 @@ void entry_clear_history();
 void entry_set_text(const char *text);
 void entry_insert_text(const char *text);
 void entry_move_cursor_step(GtkMovementStep step, int stepcount, gboolean del);
+void entry_snoop(GCallback callback, gpointer data);
+void entry_snoop_end(GCallback callback, gpointer data);
+void entry_clear(gboolean visibility);
+gboolean entry_snooping();
 #endif

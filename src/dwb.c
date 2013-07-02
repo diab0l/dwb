@@ -2434,8 +2434,7 @@ dwb_prompt(gboolean visibility, char *prompt, ...)
     if (state == 0)
         result = g_strdup(GET_TEXT());
 
-    gtk_editable_delete_text(GTK_EDITABLE(dwb.gui.entry), 0, -1);
-    gtk_entry_set_visibility(GTK_ENTRY(dwb.gui.entry), true);
+    entry_clear(true);
     return result;
 }/*}}}*/
 
@@ -3180,6 +3179,7 @@ dwb_normal_mode(gboolean clean)
         webkit_web_view_set_highlight_text_matches(CURRENT_WEBVIEW(), false);
     
 
+    entry_clear(true);
     gtk_entry_set_text(GTK_ENTRY(dwb.gui.entry), "");
     dwb_clean_vars();
     return STATUS_OK;

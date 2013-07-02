@@ -187,6 +187,10 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         SCRIPTS_EMIT_RETURN(signal, json, true);
     }
 
+    if (entry_snooping())
+    {
+        return false;
+    }
     if (mode == CARET_MODE)
         return visual_caret(e);
     else if (e->keyval == GDK_KEY_Escape) 

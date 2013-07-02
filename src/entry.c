@@ -20,8 +20,10 @@
 #include <string.h>
 #include "dwb.h"
 #include "entry.h"
+#include "callback.h"
 static char *s_store;
 static GList *s_filterlist;
+static gboolean s_snoop = false;
 /* dwb_entry_history_forward {{{*/
 DwbStatus
 entry_history_forward(GList **last) 
@@ -147,3 +149,35 @@ entry_move_cursor_step(GtkMovementStep step, int stepcount, gboolean del)
     if (del)
         gtk_editable_delete_selection(GTK_EDITABLE(dwb.gui.entry));
 }/*}}}*/
+
+void 
+entry_snoop(GCallback callback, gpointer data)
+{
+    s_snoop = true;
+    entry_focus();
+    g_signal_handlers_block_by_func(dwb.gui.entry, callback_entry_insert_text, NULL);
+    g_signal_handlers_block_by_func(dwb.gui.entry, callback_entry_key_press, NULL);
+    g_signal_handlers_block_by_func(dwb.gui.entry, callback_entry_key_release, NULL);
+    g_signal_connect(dwb.gui.entry, "key-press-event", callback, data);
+}
+void 
+entry_snoop_end(GCallback callback, gpointer data)
+{
+    s_snoop = false;
+    g_signal_handlers_unblock_by_func(dwb.gui.entry, callback_entry_insert_text, NULL);
+    g_signal_handlers_unblock_by_func(dwb.gui.entry, callback_entry_key_press, NULL);
+    g_signal_handlers_unblock_by_func(dwb.gui.entry, callback_entry_key_release, NULL);
+    g_signal_handlers_disconnect_by_func(dwb.gui.entry, callback, data);
+    dwb_change_mode(NORMAL_MODE, true);
+}
+gboolean
+entry_snooping()
+{
+    return s_snoop;
+}
+void 
+entry_clear(gboolean visibility)
+{
+    gtk_editable_delete_text(GTK_EDITABLE(dwb.gui.entry), 0, -1);
+    gtk_entry_set_visibility(GTK_ENTRY(dwb.gui.entry), visibility);
+}
