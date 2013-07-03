@@ -37,6 +37,7 @@ static guint s_changed_id;
 static SoupCookieJar *s_tmp_jar;
 static long int s_expiration;
 
+#if !_HAS_GTK3
 typedef struct _Auth {
     SoupSession *session;
     SoupMessage *msg; 
@@ -66,6 +67,7 @@ auth_free(Auth *a)
     g_object_unref(a->auth);
     g_free(a->user);
 }
+#endif
 
 /*{{{*/
 static void
@@ -511,6 +513,7 @@ dwb_soup_set_cookie_expiration(const char *expiration_string)
     return STATUS_ERROR;
 }
 
+#if !_HAS_GTK3
 static gboolean 
 entry_authenticate(GtkWidget *entry, GdkEventKey *e, Auth *a)
 {
@@ -548,6 +551,7 @@ on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean
     entry_snoop(G_CALLBACK(entry_authenticate), a);
     dwb_set_status_bar_text(dwb.gui.lstatus, "Username:", &dwb.color.active_fg, dwb.font.fd_active, false);
 }
+#endif
 
 /* dwb_soup_init_session_features() {{{*/
 DwbStatus 
@@ -565,8 +569,10 @@ dwb_soup_init_session_features()
                 SOUP_SESSION_SSL_CA_FILE, cert, NULL);
     }
 #endif
+#if !_HAS_GTK3
     soup_session_remove_feature_by_type(dwb.misc.soupsession, WEBKIT_TYPE_SOUP_AUTH_DIALOG);
     g_signal_connect(dwb.misc.soupsession, "authenticate", G_CALLBACK(on_authenticate), NULL);
+#endif
     g_object_set(dwb.misc.soupsession, SOUP_SESSION_SSL_STRICT, GET_BOOL("ssl-strict"), NULL);
     return STATUS_OK;
 }/*}}}*/
