@@ -139,13 +139,12 @@ main(int argc, char **argv)
                             }
                         }
                     }
+                    fflush(stdout);
                 }
                 else 
                 {
                     printf("%s\n", list[0]);
                 }
-                if (type != GET_ONCE)
-                    fflush(stdout);
                 XFreeStringList(list);
             }
         }

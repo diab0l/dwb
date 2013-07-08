@@ -32,6 +32,7 @@ install: $(TARGET) install-man install-data
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(SRCDIR)/$(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 	install -m 755 $(DWBEMDIR)/$(EXTENSION_MANAGER) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
+	install -m 755 dwbrc/dwbrc $(DESTDIR)$(BINDIR)/dwbrc
 
 install-man: all
 	install -d $(DESTDIR)$(MAN1DIR)
@@ -75,6 +76,7 @@ uninstall: uninstall-man uninstall-data
 	@echo "Removing executable from $(subst //,/,$(DESTDIR)$(BINDIR))"
 	@$(RM) $(DESTDIR)$(BINDIR)/$(TARGET)
 	@$(RM) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
+	@$(RM) $(DESTDIR)$(BINDIR)/dwbrc
 
 uninstall-man: 
 	$(RM) $(DESTDIR)$(MAN1DIR)/$(MANFILE)
