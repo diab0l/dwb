@@ -28,7 +28,7 @@
 
 enum {
     GET_ONCE = 0,
-    GET_HOOK, 
+    GET_MULTIPLE, 
 };
 
 static void 
@@ -46,7 +46,7 @@ main(int argc, char **argv)
 
     char *end; 
     unsigned long wid;
-    char **hooks = NULL;
+    char **multiple_list = NULL;
     int ret = 0;
     Atom read_atom;
 
@@ -98,9 +98,15 @@ main(int argc, char **argv)
 
     if (STREQ(argv[arg_start], "hook"))
     {
-        type = GET_HOOK;
-        hooks = &argv[arg_start];
+        type = GET_MULTIPLE;
+        multiple_list = &argv[arg_start];
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_HOOK, False);
+    }
+    else if (STREQ(argv[arg_start], "bind"))
+    {
+        type = GET_MULTIPLE;
+        multiple_list = &argv[arg_start];
+        read_atom = XInternAtom(dpy, DWB_ATOM_IPC_BIND, False);
     }
     else 
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_CLIENT_READ, False);
@@ -120,13 +126,18 @@ main(int argc, char **argv)
         {
             if (count > 0)
             {
-                if (type == GET_HOOK)
+                if (type == GET_MULTIPLE)
                 {
                     for (int i=0; i<argc-arg_start; i++)
                     {
-                        if (!strcmp(list[0], hooks[i]))
-
-                            printf("%s%s%s\n", hooks[i], count > 1 ? " " : "", count > 1 ? list[1] : "");
+                        if (!strcmp(list[0], multiple_list[i]))
+                        {
+                            printf("%s", multiple_list[i]);
+                            if (count > 1)
+                            {
+                                printf(" %s\n", list[1]);
+                            }
+                        }
                     }
                 }
                 else 

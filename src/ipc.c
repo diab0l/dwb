@@ -36,6 +36,7 @@ enum {
     DWB_ATOM_WRITE,
     DWB_ATOM_STATUS,
     DWB_ATOM_HOOK,
+    DWB_ATOM_BIND,
     UTF8_STRING, 
 };
 guint id;
@@ -89,6 +90,14 @@ send_hook_list(const char *action, char **list, int count)
         g_string_append_printf(response, " %s", list[i]);
     ipc_send_hook("hook", response->str);
     g_string_free(response, true);
+}
+static DwbStatus 
+bind_callback(KeyMap *map, Arg *a)
+{
+    char *data = g_strdup_printf("%d %s", g_list_position(dwb.state.views, dwb.state.fview), CURRENT_URL());
+    char *argv[2] = { a->arg, data };
+    dwbrc_set_property_list(s_dpy, s_win, s_atoms[DWB_ATOM_BIND], argv, 2);
+    return STATUS_OK;
 }
 
 static int 
@@ -220,6 +229,31 @@ parse_commands(char **list, int count)
             send_hook_list("add", &list[1], count-1);
         dwb.state.ipc_hooks |= get_hooks(&list[1], count-1);
     }
+    else if (STREQ(list[0], "bind"))
+    {
+        char *com, *shortcut;
+        for (int i=1; i<count; i++)
+        {
+            char **binds = g_strsplit(list[i], ":", -1);
+            if (g_strv_length(binds) != 2)
+                continue;
+            else 
+            {
+                puts(binds[0]);
+                if (STREQ(binds[0], "none"))
+                    com = NULL;
+                else 
+                    com = g_strdup(binds[0]);
+                if (STREQ(binds[1], "none"))
+                    shortcut = NULL;
+                else 
+                    shortcut = g_strdup(binds[1]);
+                Arg a = { .arg = g_strdup(list[i]) };
+                dwb_add_key(shortcut, com, g_strdup("dwbrc"), (Func)bind_callback, CP_COMMANDLINE, &a);
+            }
+
+        }
+    }
     else 
     {
         return -1;
@@ -289,6 +323,7 @@ ipc_start(GtkWidget *widget)
     s_atoms[DWB_ATOM_WRITE] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_WRITE, false);
     s_atoms[DWB_ATOM_STATUS] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_STATUS, false);
     s_atoms[DWB_ATOM_HOOK] = XInternAtom(s_dpy, DWB_ATOM_IPC_HOOK, false);
+    s_atoms[DWB_ATOM_BIND] = XInternAtom(s_dpy, DWB_ATOM_IPC_BIND, false);
     s_atoms[UTF8_STRING] = XInternAtom(s_dpy, "UTF8_STRING", false);
 
     s_readatom = gdk_atom_intern(DWB_ATOM_IPC_SERVER_READ, false);
