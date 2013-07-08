@@ -69,6 +69,25 @@ auth_free(Auth *a)
 }
 #endif
 
+const char *
+dwb_soup_get_host(WebKitWebFrame *frame)
+{
+    SoupMessage *msg = dwb_soup_get_message(frame);
+    if (msg == NULL)
+        return NULL;
+
+    SoupURI *uri = soup_message_get_uri(msg);
+    return soup_uri_get_host(uri);
+}
+const char *
+dwb_soup_get_domain(WebKitWebFrame *frame)
+{
+    const char *host = dwb_soup_get_host(frame);
+    if (host == NULL)
+        return NULL;
+    return domain_get_base_for_host(host);
+}
+
 /*{{{*/
 static void
 dwb_soup_clear_jar(SoupCookieJar *jar) 

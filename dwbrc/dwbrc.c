@@ -1,0 +1,83 @@
+/*
+ * Copyright (c) 2013 Stefan Bolte <portix@gmx.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+#include "dwbrc.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
+
+
+int 
+dwbrc_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count)
+{
+    int result = True;
+    XTextProperty prop;
+    if (!XGetTextProperty(dpy, win, &prop, atom))
+    {
+        return False;
+    }
+    if (Xutf8TextPropertyToTextList(dpy, &prop, list, count) != Success)
+    {
+        result = False;
+    }
+    XFree(prop.value);
+
+    return result;
+}
+
+int 
+dwbrc_set_property_list(Display *dpy, Window win, Atom atom, char **list, int count)
+{
+    XTextProperty prop;
+    Xutf8TextListToTextProperty(dpy, list, count, XUTF8StringStyle, &prop);
+    XSetTextProperty(dpy, win, &prop, atom);
+    XFree(prop.value);
+    return 0;
+}
+
+int 
+dwbrc_set_property_list_by_name(Display *dpy, Window win, const char *name, char **list, int count)
+{
+    return dwbrc_set_property_list(dpy, win, XInternAtom(dpy, name, False), list, count);
+}
+
+int 
+dwbrc_set_property_value(Display *dpy, Window win, Atom atom, char *value)
+{
+    char *argv[] = { value };
+    return dwbrc_set_property_list(dpy, win, atom, argv, 1);
+}
+int 
+dwbrc_set_property_value_by_name(Display *dpy, Window win, const char *name, char *value)
+{
+    return dwbrc_set_property_value(dpy, win, XInternAtom(dpy, name, False), value);
+}
+
+int 
+dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...)
+{
+    va_list arg_list; 
+    char buffer[2048];
+
+    va_start(arg_list, format);
+    vsnprintf(buffer, sizeof(buffer), format, arg_list);
+    va_end(arg_list);
+    return dwbrc_set_property_value(dpy, win, atom, buffer);
+}
+

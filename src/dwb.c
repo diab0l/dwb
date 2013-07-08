@@ -24,6 +24,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <locale.h>
+#include <gdk/gdkx.h>
 #include <JavaScriptCore/JavaScript.h>
 #ifdef HAS_EXECINFO
 #include <execinfo.h>
@@ -50,6 +51,8 @@
 #include "application.h"
 #include "scripts.h"
 #include "dom.h"
+#include "ipc.h"
+#include <dwbrc.h>
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"
@@ -1659,6 +1662,8 @@ dwb_focus_view(GList *gl, const char *event)
     static int running;
     if (gl != dwb.state.fview) 
     {
+        if (dwb.state.ipc_hooks & IPC_HOOK_FOCUS_TAB)
+            ipc_send_hook("focus_tab", "%d", g_list_position(dwb.state.views, gl));
         if (EMIT_SCRIPT(TAB_FOCUS)) 
         {
             /**
@@ -3355,6 +3360,7 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
 {
     GError *error = NULL;
     char nummod[64];
+    char wid_buffer[32];
     GPid pid;
     char *fifo;
 
@@ -3387,6 +3393,11 @@ dwb_execute_user_script(KeyMap *km, Arg *a)
     const char *proxy = GET_CHAR("proxy-url");
     if (proxy)
         envp = g_environ_setenv(envp, "DWB_PROXY", proxy, true);
+
+    unsigned long wid = GDK_WINDOW_XID(gtk_widget_get_window(dwb.gui.window));
+    snprintf(wid_buffer, sizeof(wid_buffer), "%lu", wid);
+    envp = g_environ_setenv(envp, "DWB_WINID", wid_buffer, true);
+
 
 
     fifo = util_get_temp_filename("fifo_");
@@ -3516,6 +3527,7 @@ dwb_get_scripts()
             {
                 if (g_regex_match_simple(".*dwb:", lines[i], 0, 0)) 
                 {
+
                     char **line = g_strsplit(lines[i], "dwb:", 2);
                     if (line[1]) 
                     {
@@ -4007,6 +4019,30 @@ dwb_keymap_add(GList *gl, KeyValue key)
 /*}}}*/
 
 /* INIT {{{*/
+KeyMap * 
+dwb_add_key(char *keystring, char *name, char *description, Func callback, int option, Arg *arg)
+{
+    KeyMap *map = dwb_malloc(sizeof(KeyMap));
+    FunctionMap *fmap = dwb_malloc(sizeof(FunctionMap));
+    Key key = dwb_str_to_key(keystring);
+
+
+    map->key = key.str;
+    map->mod = key.mod;
+
+    if (arg == NULL)
+    {
+        Arg a = { 0 };
+        arg = &a;
+    }
+        
+    FunctionMap fm = { { name, description }, option, (Func)callback, NULL, POST_SM, *arg, EP_NONE,  {NULL} };
+    *fmap = fm;
+    map->map = fmap;
+
+    dwb.keymap = g_list_prepend(dwb.keymap, map);
+    return map;
+}
 
 /* dwb_init_key_map() {{{*/
 static void 
@@ -4053,6 +4089,40 @@ dwb_init_key_map()
 
     g_key_file_free(keyfile);
 }/*}}}*/
+
+void
+dwb_init_auto_started_files()
+{
+    GDir *dir;
+    const char *filename = NULL;
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%lu", GDK_WINDOW_XID(gtk_widget_get_window(dwb.gui.window)));
+    char **envp = g_get_environ();
+    envp = g_environ_setenv(envp, "DWB_WINID", buffer, true);
+
+    if ( (dir = g_dir_open(dwb.files[FILES_AUTOSTART], 0, NULL)) ) 
+    {
+        while ( (filename = g_dir_read_name(dir)) ) 
+        {
+            char *path = g_build_filename(dwb.files[FILES_AUTOSTART], filename, NULL);
+            path = util_resolve_symlink(path);
+            if (!g_file_test(path, G_FILE_TEST_IS_EXECUTABLE)) 
+            {
+                fprintf(stderr, "Warning: userscript %s isn't executable and will be ignored.\n", path);
+            }
+            else 
+            {
+                char *argv[2] = { path, NULL }; 
+                if (!g_spawn_async(NULL, argv, envp, 0, NULL, NULL, NULL, NULL))
+                {
+                    fprintf(stderr, "Warning: spawning %s failed.\n", path);
+                }
+            }
+            g_free(path);
+        }
+    }
+
+}
 
 /* dwb_init_settings() {{{*/
 void
@@ -4718,6 +4788,11 @@ dwb_init_files()
     userscripts                      = util_resolve_symlink(userscripts);
     dwb.files[FILES_USERSCRIPTS]     = util_check_directory(userscripts);
 
+    dwb.files[FILES_AUTOSTART]      = g_build_filename(dwb.files[FILES_USERSCRIPTS], "autostart", NULL);
+    dwb.files[FILES_AUTOSTART]      = util_resolve_symlink(dwb.files[FILES_AUTOSTART]);
+    dwb.files[FILES_AUTOSTART]      = util_check_directory(dwb.files[FILES_AUTOSTART]);
+
+
     dwb.fc.bookmarks = dwb_init_file_content(dwb.fc.bookmarks, dwb.files[FILES_BOOKMARKS], (Content_Func)dwb_navigation_new_from_line); 
     dwb.fc.history = dwb_init_file_content(dwb.fc.history, dwb.files[FILES_HISTORY], (Content_Func)dwb_navigation_new_from_line); 
     dwb.fc.quickmarks = dwb_init_file_content(dwb.fc.quickmarks, dwb.files[FILES_QUICKMARKS], (Content_Func)dwb_quickmark_new_from_line); 
@@ -4920,6 +4995,7 @@ dwb_init()
     dwb_init_style();
     dwb_init_gui();
     dwb_init_custom_keys(false);
+    ipc_start(dwb.gui.window);
     domain_init();
     adblock_init();
     dwb_init_hints(NULL, NULL);

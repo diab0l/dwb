@@ -21,7 +21,9 @@ TOOLDIR=tools
 EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
 
-DWB_LIB_DIRS = exar
+DWB_LIB_DIR_EXAR = exar
+DWB_LIB_DIR_RC = dwbrc
+DWB_LIB_DIRS = $(DWB_LIB_DIR_EXAR) $(DWB_LIB_DIR_RC)
 
 SUBDIRS=$(M4DIR) $(SRCDIR) $(DWBEMDIR) 
 SUBDIR_BUILD_FIRST=$(UTILDIR) $(DWB_LIB_DIRS)
@@ -195,7 +197,7 @@ CFLAGS += -DLIBJS_DIR=\"$(LIBJSDIR)\"
 
 # LDFLAGS
 LDFLAGS += $(shell pkg-config --libs $(LIBS))
-LDFLAGS += -lpthread -lm
+LDFLAGS += -lpthread -lm -lX11
 
 # Debug flags
 DCFLAGS = $(CFLAGS)
@@ -215,4 +217,6 @@ HDR = $(wildcard *.h)
 # Objects
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 DOBJ = $(patsubst %.c, %.do, $(wildcard *.c)) 
-OBJLIB = exar/exar.o
+OBJLIB = exar/exar.o dwbrc/dwbrc.o
+OBJEXAR = exar/exar.o 
+OBJRC = dwbrc/dwbrc.o 

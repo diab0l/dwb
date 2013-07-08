@@ -33,6 +33,8 @@
 #include "js.h"
 #include "scripts.h"
 #include "dom.h"
+#include "ipc.h"
+#include <dwbrc.h>
 
 static void view_ssl_state(GList *);
 static unsigned long s_click_time;
@@ -671,6 +673,13 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     WebKitWebNavigationReason reason = webkit_web_navigation_action_get_reason(action);
     gint button = webkit_web_navigation_action_get_button(action);
 
+    if (dwb.state.ipc_hooks & IPC_HOOK_NAVIGATION)
+    {
+        ipc_send_hook("navigation", "%d %s %s", g_list_position(dwb.state.views, gl), 
+                frame == webkit_web_view_get_main_frame(web) ? "true" : "false", 
+                uri);
+    }
+
     /* Ignore button 2 which opens in a new tab and new windows, otherwise the
      * signal will be emitted twice */
     if (EMIT_SCRIPT(NAVIGATION) && button != 2 && !(dwb.state.nv & OPEN_NEW_WINDOW)) 
@@ -1152,6 +1161,10 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             {
                 plugins_disconnect(gl);
             }
+            if (dwb.state.ipc_hooks & IPC_HOOK_LOAD_COMMITTED)
+            {
+                ipc_send_hook("load_committed", "%d %s", g_list_position(dwb.state.views, dwb.state.fview), uri);
+            }
             /**
              * Emitted when the load has just been commited, no data has been loaded
              * when this signal is emitted. This is the preferred signal for
@@ -1190,6 +1203,10 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             if (dwb.state.auto_insert_mode) 
                 dwb_check_auto_insert(gl);
 
+            if (dwb.state.ipc_hooks & IPC_HOOK_LOAD_FINISHED)
+            {
+                ipc_send_hook("load_finished", "%d %s", g_list_position(dwb.state.views, dwb.state.fview), uri);
+            }
             /**
              * Emitted when the site has completely loaded.
              *
@@ -1752,6 +1769,7 @@ view_clean(GList *gl)
 
     scripts_remove_tab(v->script_wv);
 
+
     if (v->status->exc_style) 
         g_object_unref(v->status->exc_style);
     
@@ -1871,6 +1889,9 @@ view_remove(GList *gl)
     dwb_focus_view(new_fview, "close_tab");
     view_clean(gl);
 
+    if (dwb.state.ipc_hooks & IPC_HOOK_CLOSE_TAB)
+        ipc_send_hook("close_tab", "%d", g_list_position(dwb.state.views, gl));
+
     dwb_source_remove();
 
     dwb.state.views = g_list_delete_link(dwb.state.views, gl);
@@ -1981,6 +2002,10 @@ view_add(const char *uri, gboolean background)
             gtk_widget_show_all(dwb.gui.tabcontainer);
 #endif
         }
+    }
+    if (dwb.state.ipc_hooks & IPC_HOOK_NEW_TAB)
+    {
+        ipc_send_hook("new_tab", "%d %s", g_list_position(dwb.state.views, ret), uri ? uri : "");
     }
     if (EMIT_SCRIPT(CREATE_TAB)) 
     {

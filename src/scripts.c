@@ -1366,14 +1366,10 @@ frame_get_domain(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
     if (frame == NULL)
         return NIL;
 
-    SoupMessage *msg = dwb_soup_get_message(frame);
-    if (msg == NULL)
+    const char *domain = dwb_soup_get_domain(frame);
+    if (domain == NULL)
         return NIL;
-
-    SoupURI *uri = soup_message_get_uri(msg);
-    const char *host = soup_uri_get_host(uri);
-
-    return js_char_to_value(ctx, domain_get_base_for_host(host));
+    return js_char_to_value(ctx, domain);
 }/*}}}*/
 
 /* frame_get_host {{{*/
@@ -1392,12 +1388,10 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
     if (frame == NULL)
         return NIL;
 
-    SoupMessage *msg = dwb_soup_get_message(frame);
-    if (msg == NULL)
+    const char *host = dwb_soup_get_host(frame);
+    if (host == NULL)
         return NIL;
-
-    SoupURI *uri = soup_message_get_uri(msg);
-    return js_char_to_value(ctx, soup_uri_get_host(uri));
+    return js_char_to_value(ctx, host);
 }/*}}}*/
 
 /* frame_inject {{{*/
@@ -1623,18 +1617,8 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
 
     JSValueProtect(ctx, func);
 
-    KeyMap *map = dwb_malloc(sizeof(KeyMap));
-    FunctionMap *fmap = dwb_malloc(sizeof(FunctionMap));
-    Key key = dwb_str_to_key(keystr);
-
-    map->key = key.str;
-    map->mod = key.mod;
-
-    FunctionMap fm = { { name, callback }, option, (Func)scripts_eval_key, NULL, POST_SM, { .js = func }, EP_NONE,  {NULL} };
-    *fmap = fm;
-    map->map = fmap;
-
-    dwb.keymap = g_list_prepend(dwb.keymap, map);
+    Arg a = { .js = func };
+    KeyMap *map = dwb_add_key(keystr, name, callback, (Func)scripts_eval_key, option, &a);
     if (override)
         dwb.override_keys = g_list_prepend(dwb.override_keys, map);
 
