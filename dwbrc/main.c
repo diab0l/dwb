@@ -150,7 +150,13 @@ main(int argc, char **argv)
     }
     else if (STREQ(argv[1], "-pid"))
     {
-        pid_t pid = strtol(argv[2], NULL, 10);
+        pid_t pid = (pid_t)strtoul(argv[2], &end, 10);
+        if (*end != '\0')
+        {
+            fprintf(stderr, "Failed to parse pid!\n");
+            ret = 1; 
+            goto finish;
+        }
         query_windows(dpy, RootWindow(dpy, DefaultScreen(dpy)), (void *)&pid, &win, cmp_pid);
     }
     else if (STREQ(argv[1], "-class"))
@@ -177,7 +183,7 @@ main(int argc, char **argv)
             wid = strtoul(window_id, &end, 10);
         if (*end != '\0')
         {
-            fprintf(stderr, "Parsing window id failed!\n");
+            fprintf(stderr, "Failed to parse window id!\n");
             ret = 1;
             goto finish;
         }
@@ -185,7 +191,7 @@ main(int argc, char **argv)
     }
     else if (win == 0)
     {
-        fprintf(stderr, "Could not determine window id!\n");
+        fprintf(stderr, "Failed to get window id!\n");
         ret = 1; 
         goto finish;
     }
@@ -229,8 +235,9 @@ main(int argc, char **argv)
                             printf("%s", multiple_list[i]);
                             if (count > 1)
                             {
-                                printf(" %s\n", list[1]);
+                                printf(" %s", list[1]);
                             }
+                            putchar('\n');
                         }
                     }
                     fflush(stdout);
