@@ -105,12 +105,11 @@ parse_commands(char **list, int count)
 {
     int status = 0;
     char *text = NULL; 
-    int argc = 0;
     if (count < 2)
     {
         return 1;
     }
-    if (STREQ(list[argc], "execute"))
+    if (STREQ(list[0], "execute"))
     {
         char *nlist[count];
         char *command; 
@@ -123,12 +122,13 @@ parse_commands(char **list, int count)
         status = dwb_parse_command_line(command);
         g_free(command);
     }
-    else if (STREQ(list[argc], "prompt"))
+    else if (STREQ(list[0], "prompt"))
     {
-        gboolean visible = true;
-        if (count > 2 && get_number(list[++argc]) == 1)
-            visible = false;
-        text = dwb_prompt(visible, list[++argc]);
+        text = dwb_prompt(true, list[1]);
+    }
+    else if (STREQ(list[0], "pwd_prompt"))
+    {
+        text = dwb_prompt(false, list[1]);
     }
     else if (STREQ(list[0], "settings"))
     {
@@ -155,7 +155,7 @@ parse_commands(char **list, int count)
             }
         }
     }
-    else if (STREQ(list[argc], "get") && count > 1)
+    else if (STREQ(list[0], "get") && count > 1)
     {
         GList *l = dwb.state.fview;
         int n;

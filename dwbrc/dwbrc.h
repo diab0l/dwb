@@ -28,7 +28,6 @@
 #define DWB_ATOM_IPC_BIND "__DWB_IPC_BIND"
 #define DWB_ATOM_IPC_CLIENT_READ  DWB_ATOM_IPC_SERVER_WRITE
 #define DWB_ATOM_IPC_CLIENT_WRITE DWB_ATOM_IPC_SERVER_READ
-#define DWB_ATOM_IPC_HOOKS "__DWB_IPC_SERVER_HOOKS"
 #define DWB_ATOM_IPC_SERVER_STATUS "__DWB_IPC_SERVER_STATUS"
 
 enum {
@@ -40,13 +39,6 @@ enum {
     IPC_HOOK_NEW_TAB = 1<<5, 
     IPC_HOOK_FOCUS_TAB = 1<<6, 
 };
-typedef struct _dwbrc_connection {
-    pid_t pid; 
-    int hooks; 
-} dwbrc_connection;
-
-dwbrc_connection *
-dwbrc_init(dwbrc_connection *conn);
 
 int 
 dwbrc_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count);

@@ -38,14 +38,84 @@ help(int ret)
             "   dwbrc [-i winid] <command> <arguments>\n");
     exit(ret);
 }
+
+Bool 
+is_toplevel(Display *dpy, Window win)
+{
+    Bool ret = False;
+    XWMHints *hints = XGetWMHints(dpy, win);
+    if (hints)
+    {
+        ret = True;
+        XFree(hints);
+    }
+    return ret;
+}
+
+Bool 
+cmp_pid(Display *dpy, Window win, void *data)
+{
+    pid_t orig_pid = *(pid_t *)data;
+    pid_t g_pid = 0;
+    
+    Atom actual_atom; 
+    int actual_format; 
+    unsigned long n_items, bytes_after; 
+    unsigned char *id;
+    XGetWindowProperty(dpy, win, XInternAtom(dpy, "_NET_WM_PID", False), 0, 32, False, XA_CARDINAL, 
+            &actual_atom, &actual_format, &n_items, &bytes_after, (unsigned char**)&id);
+    if (id)
+    {
+        g_pid = *(pid_t *)id;
+    }
+
+    return g_pid == orig_pid && is_toplevel(dpy, win);
+}
+Bool 
+cmp_class(Display *dpy, Window win, void *data)
+{
+    char *orig_class = (char *) data;
+    XClassHint hint;
+    int status = XGetClassHint(dpy, win, &hint);
+    return status != 0 && hint.res_class && STREQ(hint.res_class, orig_class) && is_toplevel(dpy, win);
+}
+
+Bool 
+cmp_name(Display *dpy, Window win, void *data)
+{
+    char *orig_name = (char *) data;
+    XClassHint hint;
+    int status = XGetClassHint(dpy, win, &hint);
+    return status != 0 && hint.res_class && STREQ(hint.res_name, orig_name) && is_toplevel(dpy, win);
+}
+void 
+query_windows(Display *dpy, Window win, void *data, Window *winret, Bool (*cmp)(Display *, Window win, void *data))
+{
+    Window unused_win; 
+    Window *children; 
+    unsigned int n_children;
+
+    if (XQueryTree(dpy, win, &unused_win, &unused_win, &children, &n_children) == 0)
+        return;
+    for (unsigned int i=0; i<n_children; i++)
+    {
+        if (cmp(dpy, children[i], data))
+        {
+            *winret = children[i];
+            break;
+        }
+        else 
+            query_windows(dpy, children[i], data, winret, cmp);
+    }
+}
 int 
 main(int argc, char **argv)
 {
     Display *dpy; 
-    Window win;
+    Window win = 0;
 
     char *end; 
-    unsigned long wid;
+    unsigned long wid = 0;;
     char **multiple_list = NULL;
     int ret = 0;
     Atom read_atom;
@@ -57,43 +127,67 @@ main(int argc, char **argv)
     int *status;
     char **list; 
     int count;
-    int arg_start = 1;
+    int arg_start = 3;
     char *window_id;
+    int parse_wid = 0;
 
     int type = GET_ONCE;
-
-    if (argc < 3)
-        help(1);
-    if (STREQ(argv[1], "-i"))
-    {
-        if (argc < 5)
-            help(1);
-        window_id = argv[2];
-        arg_start = 3;
-    }
-    else 
-    {
-        window_id = getenv("DWB_WINID");
-    }
-    if (window_id == NULL)
-        help(1);
-    if (STRNEQ(window_id, "0x", 2))
-        wid = strtoul(window_id + 2, &end, 16);
-    else 
-        wid = strtoul(window_id, &end, 10);
-    if (*end != '\0')
-    {
-        fprintf(stderr, "Parsing window id failed!\n");
-        help(1);
-        return -1;
-    }
-    win = wid;
-
     dpy = XOpenDisplay(NULL);
     if (dpy == NULL)
     {
         fprintf(stderr, "Cannot open display!\n");
         return -1;
+    }
+
+    if (argc < 3)
+        help(1);
+    if (STREQ(argv[1], "-id"))
+    {
+        if (argc < 5)
+            help(1);
+        window_id = argv[2];
+        parse_wid = 1;
+    }
+    else if (STREQ(argv[1], "-pid"))
+    {
+        pid_t pid = strtol(argv[2], NULL, 10);
+        query_windows(dpy, RootWindow(dpy, DefaultScreen(dpy)), (void *)&pid, &win, cmp_pid);
+    }
+    else if (STREQ(argv[1], "-class"))
+    {
+        query_windows(dpy, RootWindow(dpy, DefaultScreen(dpy)), argv[2], &win, cmp_class);
+    }
+    else if (STREQ(argv[1], "-name"))
+    {
+        query_windows(dpy, RootWindow(dpy, DefaultScreen(dpy)), argv[2], &win, cmp_name);
+    }
+    else 
+    {
+        window_id = getenv("DWB_WINID");
+        parse_wid = 1;
+        arg_start = 1;
+    }
+    if (parse_wid)
+    {
+        if (window_id == NULL)
+            help(1);
+        if (STRNEQ(window_id, "0x", 2))
+            wid = strtoul(window_id + 2, &end, 16);
+        else 
+            wid = strtoul(window_id, &end, 10);
+        if (*end != '\0')
+        {
+            fprintf(stderr, "Parsing window id failed!\n");
+            ret = 1;
+            goto finish;
+        }
+        win = wid;
+    }
+    else if (win == 0)
+    {
+        fprintf(stderr, "Could not determine window id!\n");
+        ret = 1; 
+        goto finish;
     }
 
     if (STREQ(argv[arg_start], "hook"))
@@ -159,6 +253,7 @@ main(int argc, char **argv)
         }
 
     }
+finish:
     XCloseDisplay(dpy);
     return ret;
 }
