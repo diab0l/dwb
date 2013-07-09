@@ -248,6 +248,7 @@ main(int argc, char **argv)
                 }
                 XFreeStringList(list);
             }
+            XDeleteProperty(dpy, win, read_atom);
         }
         if (type == GET_ONCE && pe->atom == XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False))
         {

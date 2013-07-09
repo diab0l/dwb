@@ -1,0 +1,191 @@
+// See COPYING for copyright and license details
+
+// vim: set ft=asciidoc:
+DWBRC(1)
+========
+:doctype: manpage
+
+
+NAME
+----
+dwbrc - dwb remote control
+
+SYNOPSIS
+--------
+*dwbrc* ['OPTION'] <command> <arguments>
+
+DESCRIPTION
+-----------
+*dwbrc* allows control dwb from command line. It communicates with dwb instances
+by setting its XProperties. Return values will be printed to stdout.
+
+OPTIONS
+-------
+
+Options are only required if the environment variable *DWB_WINID* is not set, in
+userscripts executed by dwb *DWB_WINID* will always be set. Only one option can
+be used at once. 
+
+*-class* 'wm_class'::
+    Search for window id by WM_CLASS, the commands are sent to the first match.
+
+*-id* 'window id'::
+    Send comands to window with id 'window id', window ids in hexadecimal format
+    must start with 0x.
+
+*-name* 'wm_name'::
+    Search for window id by WM_NAME, the commands are sent to the first match.
+
+*-pid* 'pid':: 
+    Search for window id by process id 'pid'.
+
+COMMANDS
+--------
+*execute* 'command'::
+    Executes a command, the command parsed the same way as if executed from
+    commandline.
+
+*get* 'argument'::
+    Gets miscellaneous properties
+
+    *Arguments*:::
+        *all_domains*::::
+            Gets newline seperated list of all domains.
+        *all_hosts*::::
+            Gets newline seperated list of all hosts.
+        *all_titles*::::
+            Gets newline seperated list of all titles.
+        *all_uris*::::
+            Gets newline seperated list of all uris.
+        *current_tab*::::
+            Gets number of the current tab, starting at 1.
+        *[n] domain*::::
+            Gets the effective top level domain of the nth tab or current tab is
+            n is omitted, e.g. for www.example.co.uk it will return
+            example.co.uk.
+        *[n] host*::::
+            Gets the host of the nth tab or current tab is n is omitted.
+        *ntabs*::::
+            Gets total number of tabs.
+        *[n] title*::::
+            Gets the title of the nth tab or current tab is n is omitted.
+        *[n] uri*::::
+            Gets the uri of the nth tab or current tab is n is omitted.
+
+*hook* 'hooks'::
+    Add a list of hooks.
+
+    *Hooks*:::
+
+        *close_tab* ;;
+            Emitted when a tab is closed, return format: 'close_tab <n>'
+            *n*::::
+                Number of tab that was closed
+        *focus_tab*;;
+            Emitted when a tab gets focus, return format: 'focus_tab <n>'
+            *n*::::
+                Number of tab that gets focus
+        *hook*;;
+            Emitted when the command 'hook', 'add_hooks' or 'clear_hooks' is
+            executed, return format: 'hook <action> <hooks>'
+            *action*::::
+                Either 'add' if add_hooks or hook is executed, 'clear' if
+                clear_hooks is executed
+            *hooks*::::
+                List of hooks.
+        *load_committed*;;
+            Emitted when new page load has been committed, return format: 'load_committed <n> <uri>'
+            *n*::::
+                Number of the tab 
+            *uri*::::
+                Uri that will be loaded
+        *load_finished*;;
+            Emitted when a page load has finished, return format: 'load_finished <n> <uri>'
+            *n*::::
+                Number of the tab 
+            *uri*::::
+                Uri that will be loaded
+        *navigation*;;
+            Emitted a tab or a frame in a tab requests a new page load, 
+            return format: 'navigation <n> <mainframe> <uri>'
+            *n*::::
+                Number of the tab 
+            *mainframe*::::
+                'true' if it is the mainframe, 'false' if it is a subframe that
+                requests the new page load
+            *uri*::::
+                Uri that will be loaded
+        *new_tab*;;
+            Emitted when a tab gets focus, return format: 'focus_tab <n>'
+            *n*::::
+                Number of the new tab
+
+*prompt* 'promptmessage'::
+    Shows a prompt dialog.
+        
+*pwd_prompt* 'promptmessage'::
+    Shows a password dialog. Note that using password prompt is not save.
+   
+    
+*setting* 'setting'::
+    Gets a setting
+
+
+EXAMPLES
+--------
+    Executing commands::
+    +
+----
+    dwbrc -pid 1234 execute tabopen google.de
+    dwbrc -pid 1234 execute 2close
+----
+
+    Getting properties::
+    +
+----
+    uri="$(dwbrc -id 0x1000001 get uri)"
+    title="$(dwbrc -id 0x1000001 get 2 title)"
+    scripts_enabled="$(dwbrc -class foo setting enable-settings)"
+----
+    User/Password prompt::
+    +
+----
+    username="$(dwbrc -pid 3141 prompt Username:)"
+    if [ "$username" ]; then 
+        password="$(dwbrc -pid 3141 pwd_prompt Password:)"
+    fi
+----
+
+
+    Multiple hooks with one dwbrc instance::
+    +
+-----
+    #!/bin/bash 
+
+    if [ "$DWB_WINID" ]; then 
+        DWBRC=dwbrc
+    else
+        DWBRC="dwbrc -class foo"
+    fi
+
+    while read -a array; do 
+        hook="${array[0]}"
+        case "$hook" in; 
+            navigation) 
+                ...
+                ;;
+            load_finished) 
+                ...
+                ;;
+            close_tab) 
+                ...
+                ;;
+        esac
+    done < <("$DWBRC" hook navigation load_finished close_tab)
+-----
+
+
+
+SEE ALSO
+--------
+*dwb*(1)

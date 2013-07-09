@@ -41,7 +41,7 @@ enum {
 };
 guint id;
 
-long 
+static long 
 get_number(const char *text)
 {
     char *endptr;
@@ -52,7 +52,7 @@ get_number(const char *text)
     return -1;
 }
 
-int 
+static int 
 get_hooks(char **list, int count)
 {
     int hooks = 0;
@@ -82,7 +82,7 @@ get_hooks(char **list, int count)
     return hooks;
 }
 
-void 
+static void 
 send_hook_list(const char *action, char **list, int count)
 {
     GString *response = g_string_new(action);
@@ -130,7 +130,7 @@ parse_commands(char **list, int count)
     {
         text = dwb_prompt(false, list[1]);
     }
-    else if (STREQ(list[0], "settings"))
+    else if (STREQ(list[0], "setting"))
     {
         WebSettings *s = g_hash_table_lookup(dwb.settings, list[1]);
         if (s == NULL) 
@@ -164,7 +164,7 @@ parse_commands(char **list, int count)
         {
             if ((n = get_number(list[argc++])) != -1)
             {
-                l = g_list_nth(dwb.state.views, n);
+                l = g_list_nth(dwb.state.views, n - 1);
                 if (l == NULL)
                 {
                     return -1;
@@ -211,10 +211,26 @@ parse_commands(char **list, int count)
             text = s->str;
             g_string_free(s, false);
         }
+        else if (STREQ(list[argc], "all_hosts"))
+        {
+            GString *s = g_string_new(NULL);
+            for (GList *l = dwb.state.views; l; l=l->next)
+                g_string_append_printf(s, "%s\n", dwb_soup_get_host(webkit_web_view_get_main_frame(WEBVIEW(l))));
+            text = s->str;
+            g_string_free(s, false);
+        }
+        else if (STREQ(list[argc], "all_domains"))
+        {
+            GString *s = g_string_new(NULL);
+            for (GList *l = dwb.state.views; l; l=l->next)
+                g_string_append_printf(s, "%s\n", dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
+            text = s->str;
+            g_string_free(s, false);
+        }
         else if (STREQ(list[argc], "current_tab"))
         {
             dwbrc_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE],
-                    "%d", g_list_position(dwb.state.views, dwb.state.fview));
+                    "%d", g_list_position(dwb.state.views, dwb.state.fview) + 1);
         }
     }
     else if (STREQ(list[0], "clear_hooks"))

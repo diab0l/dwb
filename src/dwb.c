@@ -1663,7 +1663,7 @@ dwb_focus_view(GList *gl, const char *event)
     if (gl != dwb.state.fview) 
     {
         if (dwb.state.ipc_hooks & IPC_HOOK_FOCUS_TAB)
-            ipc_send_hook("focus_tab", "%d", g_list_position(dwb.state.views, gl));
+            ipc_send_hook("focus_tab", "%d", g_list_position(dwb.state.views, gl) + 1);
         if (EMIT_SCRIPT(TAB_FOCUS)) 
         {
             /**

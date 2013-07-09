@@ -2,7 +2,7 @@
 
 all: man web
 
-man: dwb.1 dwbem.1
+man: dwb.1 dwbem.1 dwbrc.1
 
 web: dwb.1.html dwbem.1.html
 

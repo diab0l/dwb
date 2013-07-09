@@ -1,0 +1,352 @@
+'\" t
+.\"     Title: dwbrc
+.\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 07/09/2013
+.\"    Manual: \ \&
+.\"    Source: \ \&
+.\"  Language: English
+.\"
+.TH "DWBRC" "1" "07/09/2013" "\ \&" "\ \&"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+.SH "NAME"
+dwbrc \- dwb remote control
+.SH "SYNOPSIS"
+.sp
+\fBdwbrc\fR [\fIOPTION\fR] <command> <arguments>
+.SH "DESCRIPTION"
+.sp
+\fBdwbrc\fR allows control dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&.
+.SH "OPTIONS"
+.sp
+Options are only required if the environment variable \fBDWB_WINID\fR is not set, in userscripts executed by dwb \fBDWB_WINID\fR will always be set\&. Only one option can be used at once\&.
+.PP
+\fB\-class\fR \fIwm_class\fR
+.RS 4
+Search for window id by WM_CLASS, the commands are sent to the first match\&.
+.RE
+.PP
+\fB\-id\fR \fIwindow id\fR
+.RS 4
+Send comands to window with id
+\fIwindow id\fR, window ids in hexadecimal format must start with 0x\&.
+.RE
+.PP
+\fB\-name\fR \fIwm_name\fR
+.RS 4
+Search for window id by WM_NAME, the commands are sent to the first match\&.
+.RE
+.PP
+\fB\-pid\fR \fIpid\fR
+.RS 4
+Search for window id by process id
+\fIpid\fR\&.
+.RE
+.SH "COMMANDS"
+.PP
+\fBexecute\fR \fIcommand\fR
+.RS 4
+Executes a command, the command parsed the same way as if executed from commandline\&.
+.RE
+.PP
+\fBget\fR \fIargument\fR
+.RS 4
+Gets miscellaneous properties
+.PP
+\fBArguments\fR
+.RS 4
+.PP
+\fBall_domains\fR
+.RS 4
+Gets newline seperated list of all domains\&.
+.RE
+.PP
+\fBall_hosts\fR
+.RS 4
+Gets newline seperated list of all hosts\&.
+.RE
+.PP
+\fBall_titles\fR
+.RS 4
+Gets newline seperated list of all titles\&.
+.RE
+.PP
+\fBall_uris\fR
+.RS 4
+Gets newline seperated list of all uris\&.
+.RE
+.PP
+\fBcurrent_tab\fR
+.RS 4
+Gets number of the current tab, starting at 1\&.
+.RE
+.PP
+\fB[n] domain\fR
+.RS 4
+Gets the effective top level domain of the nth tab or current tab is n is omitted, e\&.g\&. for www\&.example\&.co\&.uk it will return example\&.co\&.uk\&.
+.RE
+.PP
+\fB[n] host\fR
+.RS 4
+Gets the host of the nth tab or current tab is n is omitted\&.
+.RE
+.PP
+\fBntabs\fR
+.RS 4
+Gets total number of tabs\&.
+.RE
+.PP
+\fB[n] title\fR
+.RS 4
+Gets the title of the nth tab or current tab is n is omitted\&.
+.RE
+.PP
+\fB[n] uri\fR
+.RS 4
+Gets the uri of the nth tab or current tab is n is omitted\&.
+.RE
+.RE
+.RE
+.PP
+\fBhook\fR \fIhooks\fR
+.RS 4
+Add a list of hooks\&.
+.PP
+\fBHooks\fR
+.RS 4
+.PP
+\fBclose_tab\fR
+.RS 4
+Emitted when a tab is closed, return format:
+\fIclose_tab <n>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of tab that was closed
+.RE
+.RE
+.PP
+\fBfocus_tab\fR
+.RS 4
+Emitted when a tab gets focus, return format:
+\fIfocus_tab <n>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of tab that gets focus
+.RE
+.RE
+.PP
+\fBhook\fR
+.RS 4
+Emitted when the command
+\fIhook\fR,
+\fIadd_hooks\fR
+or
+\fIclear_hooks\fR
+is executed, return format:
+\fIhook <action> <hooks>\fR
+.PP
+\fBaction\fR
+.RS 4
+Either
+\fIadd\fR
+if add_hooks or hook is executed,
+\fIclear\fR
+if clear_hooks is executed
+.RE
+.PP
+\fBhooks\fR
+.RS 4
+List of hooks\&.
+.RE
+.RE
+.PP
+\fBload_committed\fR
+.RS 4
+Emitted when new page load has been committed, return format:
+\fIload_committed <n> <uri>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of the tab
+.RE
+.PP
+\fBuri\fR
+.RS 4
+Uri that will be loaded
+.RE
+.RE
+.PP
+\fBload_finished\fR
+.RS 4
+Emitted when a page load has finished, return format:
+\fIload_finished <n> <uri>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of the tab
+.RE
+.PP
+\fBuri\fR
+.RS 4
+Uri that will be loaded
+.RE
+.RE
+.PP
+\fBnavigation\fR
+.RS 4
+Emitted a tab or a frame in a tab requests a new page load, return format:
+\fInavigation <n> <mainframe> <uri>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of the tab
+.RE
+.PP
+\fBmainframe\fR
+.RS 4
+\fItrue\fR
+if it is the mainframe,
+\fIfalse\fR
+if it is a subframe that requests the new page load
+.RE
+.PP
+\fBuri\fR
+.RS 4
+Uri that will be loaded
+.RE
+.RE
+.PP
+\fBnew_tab\fR
+.RS 4
+Emitted when a tab gets focus, return format:
+\fIfocus_tab <n>\fR
+.PP
+\fBn\fR
+.RS 4
+Number of the new tab
+.RE
+.RE
+.RE
+.RE
+.PP
+\fBprompt\fR \fIpromptmessage\fR
+.RS 4
+Shows a prompt dialog\&.
+.RE
+.PP
+\fBpwd_prompt\fR \fIpromptmessage\fR
+.RS 4
+Shows a password dialog\&.
+.RE
+.PP
+\fBsetting\fR \fIsetting\fR
+.RS 4
+Gets a setting
+.RE
+.SH "EXAMPLES"
+.PP
+Executing commands
+.RS 4
+.RE
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    dwbrc \-pid 1234 execute tabopen google\&.de
+    dwbrc \-pid 1234 execute 2close
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Getting properties
+.RS 4
+.RE
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    uri="$(dwbrc \-id 0x1000001 get uri)"
+    title="$(dwbrc \-id 0x1000001 get 2 title)"
+    scripts_enabled="$(dwbrc \-class foo setting enable\-settings)"
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+User/Password prompt
+.RS 4
+.RE
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    username="$(dwbrc \-pid 3141 prompt Username:)"
+    if [ "$username" ]; then
+        password="$(dwbrc \-pid 3141 pwd_prompt Password:)"
+    fi
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Multiple hooks with one dwbrc instance
+.RS 4
+.RE
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    #!/bin/bash
+
+    if [ "$DWB_WINID" ]; then
+        DWBRC=dwbrc
+    else
+        DWBRC="dwbrc \-class foo"
+    fi
+
+    while read \-a array; do
+        hook="${array[0]}"
+        case "$hook" in;
+            navigation)
+                \&.\&.\&.
+                ;;
+            load_finished)
+                \&.\&.\&.
+                ;;
+            close_tab)
+                \&.\&.\&.
+                ;;
+        esac
+    done < <("$DWBRC" hook navigation load_finished close_tab)
+.fi
+.if n \{\
+.RE
+.\}
+.SH "SEE ALSO"
+.sp
+\fBdwb\fR(1)

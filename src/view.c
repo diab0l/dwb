@@ -675,7 +675,7 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
 
     if (dwb.state.ipc_hooks & IPC_HOOK_NAVIGATION)
     {
-        ipc_send_hook("navigation", "%d %s %s", g_list_position(dwb.state.views, gl), 
+        ipc_send_hook("navigation", "%d %s %s", g_list_position(dwb.state.views, gl) + 1, 
                 frame == webkit_web_view_get_main_frame(web) ? "true" : "false", 
                 uri);
     }
@@ -1163,7 +1163,7 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             }
             if (dwb.state.ipc_hooks & IPC_HOOK_LOAD_COMMITTED)
             {
-                ipc_send_hook("load_committed", "%d %s", g_list_position(dwb.state.views, dwb.state.fview), uri);
+                ipc_send_hook("load_committed", "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
             }
             /**
              * Emitted when the load has just been commited, no data has been loaded
@@ -1205,7 +1205,7 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 
             if (dwb.state.ipc_hooks & IPC_HOOK_LOAD_FINISHED)
             {
-                ipc_send_hook("load_finished", "%d %s", g_list_position(dwb.state.views, dwb.state.fview), uri);
+                ipc_send_hook("load_finished", "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
             }
             /**
              * Emitted when the site has completely loaded.
@@ -1890,7 +1890,7 @@ view_remove(GList *gl)
     view_clean(gl);
 
     if (dwb.state.ipc_hooks & IPC_HOOK_CLOSE_TAB)
-        ipc_send_hook("close_tab", "%d", g_list_position(dwb.state.views, gl));
+        ipc_send_hook("close_tab", "%d", g_list_position(dwb.state.views, gl) + 1);
 
     dwb_source_remove();
 
@@ -2005,7 +2005,7 @@ view_add(const char *uri, gboolean background)
     }
     if (dwb.state.ipc_hooks & IPC_HOOK_NEW_TAB)
     {
-        ipc_send_hook("new_tab", "%d %s", g_list_position(dwb.state.views, ret), uri ? uri : "");
+        ipc_send_hook("new_tab", "%d %s", g_list_position(dwb.state.views, ret) + 1, uri ? uri : "");
     }
     if (EMIT_SCRIPT(CREATE_TAB)) 
     {
