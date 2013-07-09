@@ -248,6 +248,7 @@ parse_commands(char **list, int count)
     else if (STREQ(list[0], "bind"))
     {
         char *com, *shortcut;
+        int options = 0;
         for (int i=1; i<count; i++)
         {
             char **binds = g_strsplit(list[i], ":", -1);
@@ -255,17 +256,19 @@ parse_commands(char **list, int count)
                 continue;
             else 
             {
-                puts(binds[0]);
                 if (STREQ(binds[0], "none"))
                     com = NULL;
                 else 
+                {
                     com = g_strdup(binds[0]);
+                    options |= CP_COMMANDLINE;
+                }
                 if (STREQ(binds[1], "none"))
                     shortcut = NULL;
                 else 
                     shortcut = g_strdup(binds[1]);
                 Arg a = { .arg = g_strdup(list[i]) };
-                dwb_add_key(shortcut, com, g_strdup("dwbrc"), (Func)bind_callback, CP_COMMANDLINE, &a);
+                dwb_add_key(shortcut, com, g_strdup("dwbrc"), (Func)bind_callback, options, &a);
             }
 
         }
