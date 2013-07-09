@@ -32,12 +32,13 @@ install: $(TARGET) install-man install-data
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(SRCDIR)/$(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 	install -m 755 $(DWBEMDIR)/$(EXTENSION_MANAGER) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
-	install -m 755 dwbrc/dwbrc $(DESTDIR)$(BINDIR)/dwbrc
+	install -m 755 $(DWBRCDIR)/$(DWBRC) $(DESTDIR)$(BINDIR)/$(DWBRC)
 
 install-man: all
 	install -d $(DESTDIR)$(MAN1DIR)
 	install -m 644 $(DOCDIR)/$(MANFILE) $(DESTDIR)$(MAN1DIR)/$(MANFILE)
 	install -m 644 $(DOCDIR)/$(EXTENSION_MANAGER).1 $(DESTDIR)$(MAN1DIR)/$(EXTENSION_MANAGER).1
+	install -m 644 $(DOCDIR)/$(DWBRC).1 $(DESTDIR)$(MAN1DIR)/$(DWBRC).1
 	install -d $(DESTDIR)$(MAN7DIR)
 	install -m 644 $(DOCDIR)/$(MANAPI) $(DESTDIR)$(MAN7DIR)/$(MANAPI)
 
@@ -81,6 +82,7 @@ uninstall: uninstall-man uninstall-data
 uninstall-man: 
 	$(RM) $(DESTDIR)$(MAN1DIR)/$(MANFILE)
 	$(RM) $(DESTDIR)$(MAN1DIR)/$(EXTENSION_MANAGER).1
+	$(RM) $(DESTDIR)$(MAN1DIR)/$(DWBRC).1
 	$(RM) $(DESTDIR)$(MAN7DIR)/$(MANAPI)
 
 uninstall-data: 

@@ -62,6 +62,14 @@ Search for window id by process id
 .RE
 .SH "COMMANDS"
 .PP
+\fBbind\fR \fIcommand:shortcut\fR [\fIcommand:shortcut\fR \&...]
+.RS 4
+Bind a shorcut or command, to bind only a commandline command without binding a shortcut
+\fIcommand:none\fR
+must be used, to bind only a shortcut without binding a commandline command
+\fInone:shortcut\fR\&.
+.RE
+.PP
 \fBexecute\fR \fIcommand\fR
 .RS 4
 Executes a command, the command parsed the same way as if executed from commandline\&.
@@ -126,7 +134,7 @@ Gets the uri of the nth tab or current tab is n is omitted\&.
 .RE
 .RE
 .PP
-\fBhook\fR \fIhooks\fR
+\fBhook\fR \fIhook\fR [\fIhook\fR \&...]
 .RS 4
 Add a list of hooks\&.
 .PP
@@ -256,7 +264,7 @@ Shows a prompt dialog\&.
 .PP
 \fBpwd_prompt\fR \fIpromptmessage\fR
 .RS 4
-Shows a password dialog\&.
+Shows a password dialog\&. Note that using password prompt is not save\&.
 .RE
 .PP
 \fBsetting\fR \fIsetting\fR
@@ -331,7 +339,7 @@ Multiple hooks with one dwbrc instance
 
     while read \-a array; do
         hook="${array[0]}"
-        case "$hook" in;
+        case "$hook" in
             navigation)
                 \&.\&.\&.
                 ;;
@@ -343,6 +351,30 @@ Multiple hooks with one dwbrc instance
                 ;;
         esac
     done < <("$DWBRC" hook navigation load_finished close_tab)
+.fi
+.if n \{\
+.RE
+.\}
+.PP
+Binding multiple shortcuts
+.RS 4
+.RE
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+    while read \-a array; do
+        bind="${array[0]}"
+        case "$bind" in
+            none:xx)
+                \&.\&.\&.
+                ;;
+            foobar:gx)
+                \&.\&.\&.
+                ;;
+        esac
+    done < <(dwbrc \-pid 1234 bind none:xx foobar:gx)
 .fi
 .if n \{\
 .RE

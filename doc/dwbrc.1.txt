@@ -41,6 +41,11 @@ be used at once.
 
 COMMANDS
 --------
+*bind* 'command:shortcut' ['command:shortcut' ...]::
+    Bind a shorcut or command, to bind only a commandline command without
+    binding a shortcut 'command:none' must be used, to bind only a
+    shortcut without binding a commandline command 'none:shortcut'.
+    
 *execute* 'command'::
     Executes a command, the command parsed the same way as if executed from
     commandline.
@@ -72,7 +77,7 @@ COMMANDS
         *[n] uri*::::
             Gets the uri of the nth tab or current tab is n is omitted.
 
-*hook* 'hooks'::
+*hook* 'hook' ['hook' ...]::
     Add a list of hooks.
 
     *Hooks*:::
@@ -170,7 +175,7 @@ EXAMPLES
 
     while read -a array; do 
         hook="${array[0]}"
-        case "$hook" in; 
+        case "$hook" in 
             navigation) 
                 ...
                 ;;
@@ -182,6 +187,21 @@ EXAMPLES
                 ;;
         esac
     done < <("$DWBRC" hook navigation load_finished close_tab)
+-----
+    Binding multiple shortcuts::
+    +
+-----
+    while read -a array; do 
+        bind="${array[0]}"
+        case "$bind" in
+            none:xx) 
+                ...
+                ;;
+            foobar:gx) 
+                ...
+                ;;
+        esac
+    done < <(dwbrc -pid 1234 bind none:xx foobar:gx)
 -----
 
 
