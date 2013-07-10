@@ -4,7 +4,7 @@ all: man web
 
 man: dwb.1 dwbem.1 dwbrc.1
 
-web: dwb.1.html dwbem.1.html
+web: dwb.1.html dwbem.1.html dwbrc.1.html 
 
 #dwb.1: dwb.1.txt 
 %.1: %.1.txt

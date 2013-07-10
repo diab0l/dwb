@@ -16,7 +16,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-*dwbrc* allows control dwb from command line. It communicates with dwb instances
+*dwbrc* allows control to dwb from command line. It communicates with dwb instances
 by setting its XProperties. Return values will be printed to stdout.
 
 OPTIONS
@@ -29,8 +29,8 @@ be used at once.
 *-class* 'wm_class'::
     Search for window id by WM_CLASS, the commands are sent to the first match.
 
-*-id* 'window id'::
-    Send comands to window with id 'window id', window ids in hexadecimal format
+*-id* 'window_ id'::
+    Send comands to window with id 'window_id', window ids in hexadecimal format
     must start with 0x.
 
 *-name* 'wm_name'::
