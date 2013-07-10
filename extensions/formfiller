@@ -341,6 +341,7 @@ function onWrite() { return false; }
 function writeFormData(object) //{{{
 {
     var written = true, ret;
+    var data;
     if (config.useGPG) 
     {
         var data = JSON.stringify(object).replace(/"/g, "\\\"");
@@ -369,7 +370,7 @@ function writeFormData(object) //{{{
     }
     else 
     {
-        if (formfiller.exports.onWrite(config.formData))
+        if (formfiller.exports.onWrite(JSON.stringify(object)))
             return true;
         written = io.write(config.formData, "w", JSON.stringify(object, null, 2));
     }
