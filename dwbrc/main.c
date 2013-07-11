@@ -26,6 +26,19 @@
 #define STREQ(x, y) (strcmp((x), (y)) == 0)
 #define STRNEQ(x, y, n) (strncmp((x), (y), (n)) == 0)
 
+#ifndef NAME
+#define NAME "dwbrc"
+#endif
+#ifndef VERSION
+#define VERSION __DATE__
+#endif
+#ifndef COPYRIGHT
+#define COPYRIGHT "(C) 2010-2013 Stefan Bolte"
+#endif
+#ifndef LICENSE
+#define LICENSE "GNU General Public License, version 3 or later"
+#endif
+
 enum {
     GET_ONCE = 0,
     GET_MULTIPLE, 

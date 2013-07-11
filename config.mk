@@ -4,7 +4,7 @@ REAL_NAME=dwb
 
 include $(dir $(lastword $(MAKEFILE_LIST)))version.mk
 
-COPYRIGHT="© 2010-2013 Stefan Bolte"
+COPYRIGHT="(C) 2010-2013 Stefan Bolte"
 LICENSE="GNU General Public License, version 3 or later"
 
 # dirs

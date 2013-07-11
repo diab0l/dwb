@@ -2,13 +2,13 @@ ORIG_CFLAGS := $(CFLAGS)
 BASE_DIR=..
 
 REAL_NAME=dwbrc
-COPYRIGHT="© 2013 Stefan Bolte"
+COPYRIGHT="(C) 2013 Stefan Bolte"
 LICENSE="GNU General Public License, version 3 or later"
 
 include $(BASE_DIR)/version.mk
 
 
-CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -O0 -g
+CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -Os
 CFLAGS += $(ORIG_CFLAGS)
 CFLAGS += -DVERSION=\"$(VERSION)\"
 CFLAGS += -DNAME=\"$(NAME)\"
@@ -41,7 +41,7 @@ debug:
 
 cgdb: 
 	make CFLAGS="$(DCFLAGS)"
-	cgdb exar
+	cgdb dwbrc
 
 clean: 
 	$(RM) $(OBJ) $(TARGET)
