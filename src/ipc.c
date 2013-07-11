@@ -107,7 +107,7 @@ parse_commands(char **list, int count)
     char *text = NULL; 
     if (count < 2)
     {
-        return 1;
+        return 37;
     }
     if (STREQ(list[0], "execute"))
     {
@@ -199,7 +199,7 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s\n", webkit_web_view_get_uri(WEBVIEW(l)));
+                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", webkit_web_view_get_uri(WEBVIEW(l)));
             text = s->str;
             g_string_free(s, false);
         }
@@ -207,7 +207,7 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s\n", webkit_web_view_get_title(WEBVIEW(l)));
+                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", webkit_web_view_get_title(WEBVIEW(l)));
             text = s->str;
             g_string_free(s, false);
         }
@@ -215,7 +215,7 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s\n", dwb_soup_get_host(webkit_web_view_get_main_frame(WEBVIEW(l))));
+                g_string_append_printf(s, "%s%s\n", l == dwb.state.views ? "" : "\n", dwb_soup_get_host(webkit_web_view_get_main_frame(WEBVIEW(l))));
             text = s->str;
             g_string_free(s, false);
         }
@@ -223,7 +223,7 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s\n", dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
+                g_string_append_printf(s, "%s%s\n", l == dwb.state.views ? "" : "\n", dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
             text = s->str;
             g_string_free(s, false);
         }
@@ -275,7 +275,7 @@ parse_commands(char **list, int count)
     }
     else 
     {
-        return -1;
+        return 37;
     }
     if (text != NULL)
     {
@@ -301,7 +301,8 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
         status = parse_commands(list, count);
 
         XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_READ]);
-        XChangeProperty(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
+        dwbrc_set_status(s_dpy, s_win, status);
+        //XChangeProperty(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
 
         XFreeStringList(list);
 
@@ -334,6 +335,8 @@ ipc_start(GtkWidget *widget)
 
     s_dpy = gdk_x11_get_default_xdisplay();
     s_win = GDK_WINDOW_XID(gdkwin);
+
+    dwbrc_set_status(s_dpy, s_win, 0);
 
     GdkEventMask mask = gdk_window_get_events(gdkwin);
     gdk_window_set_events(gdkwin, mask | GDK_PROPERTY_CHANGE_MASK);

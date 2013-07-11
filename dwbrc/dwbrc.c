@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <X11/Xatom.h>
 
 
 int 
@@ -81,3 +82,27 @@ dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const ch
     return dwbrc_set_property_value(dpy, win, atom, buffer);
 }
 
+int 
+dwbrc_get_status(Display *dpy, Window win, Atom *atr)
+{
+    int *status;
+    int afr;
+    unsigned long nr, bar; 
+    XGetWindowProperty(dpy, win, 
+            XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), 
+            0L, 1, False, XA_INTEGER, 
+            atr, &afr, &nr, &bar, (unsigned char **)&status);
+    if (*atr != None)
+    {
+        return *(int *)status;
+    }
+    else
+    {
+        return -1;
+    }
+}
+int 
+dwbrc_set_status(Display *dpy, Window win, int status)
+{
+    return XChangeProperty(dpy, win, XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
+}

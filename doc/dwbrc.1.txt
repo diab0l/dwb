@@ -23,20 +23,23 @@ OPTIONS
 -------
 
 Options are only required if the environment variable *DWB_WINID* is not set, in
-userscripts executed by dwb *DWB_WINID* will always be set. Only one option can
-be used at once. 
+userscripts executed by dwb *DWB_WINID* will always be set. If multiple options
+are passed dwbrc will use the first matching window.
 
-*-class* 'wm_class'::
+*-c -class* 'wm_class'::
     Search for window id by WM_CLASS, the commands are sent to the first match.
 
-*-id* 'window_ id'::
+*-i -id* 'window_ id'::
     Send comands to window with id 'window_id', window ids in hexadecimal format
     must start with 0x.
 
-*-name* 'wm_name'::
+*-l --list*::
+    List all dwb window ids.
+
+*-n -name* 'wm_name'::
     Search for window id by WM_NAME, the commands are sent to the first match.
 
-*-pid* 'pid':: 
+*-p -pid* 'pid':: 
     Search for window id by process id 'pid'.
 
 COMMANDS

@@ -57,4 +57,10 @@ dwbrc_set_property_list(Display *dpy, Window win, Atom atom, char **list, int co
 
 int 
 dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...);
+
+int 
+dwbrc_get_status(Display *dpy, Window win, Atom *atr);
+
+int 
+dwbrc_set_status(Display *dpy, Window win, int status);
 #endif
