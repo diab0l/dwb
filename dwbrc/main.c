@@ -25,7 +25,6 @@
 #include "dwbrc.h"
 #define STREQ(x, y) (strcmp((x), (y)) == 0)
 #define STRNEQ(x, y, n) (strncmp((x), (y), (n)) == 0)
-#define ARR_SIZE(x) (x == NULL ? 0 : sizeof((x)) / sizeof((x)[0]))
 
 enum {
     GET_ONCE = 0,
@@ -36,8 +35,26 @@ static void
 help(int ret)
 {
     printf( "USAGE: \n" 
-            "   dwbrc [-i winid] <command> <arguments>\n");
+            "   dwbrc [options] <command> <arguments>\n\n"
+            "OPTIONS: \n"
+            "   -c --class <class>      Search for window id by WM_CLASS <class>\n"
+            "   -i --id    <windowid>   Send commands to window with id <windowid>\n"
+            "   -h --help               Show this help and exit\n"
+            "   -l --list               List all dwb window ids\n"
+            "   -n --name  <class>      Search for window id by WM_NAME <name>\n"
+            "   -p --pid   <pid>        Send commands to instance with process id <pid>\n"
+            "   -v --version            Print version information and exit\n");
     exit(ret);
+}
+static void
+version() 
+{
+    printf("    This is : "NAME"\n"
+           "    Version : "VERSION"\n"
+           "      Built : "__DATE__" "__TIME__"\n"
+           "  Copyright : "COPYRIGHT"\n"
+           "    License : "LICENSE"\n");
+    exit(0);
 }
 
 static Bool 
@@ -212,6 +229,18 @@ main(int argc, char **argv)
 
     for (; pargc > 0 && **pargv == '-'; pargc--, pargv++)
     {
+        if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
+        {
+            XCloseDisplay(dpy);
+            help(0);
+            return 0;
+        }
+        if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
+        {
+            XCloseDisplay(dpy);
+            version();
+            return 0;
+        }
         if (STREQ("-l", *pargv) || STREQ("-list", *pargv))
         {
             get_wins(dpy, root, &all_wins, &n_wins);
@@ -272,7 +301,6 @@ main(int argc, char **argv)
     }
     else 
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_CLIENT_READ, False);
-
 
     dwbrc_set_property_list_by_name(dpy, win, DWB_ATOM_IPC_CLIENT_WRITE, pargv, pargc);
     XSelectInput(dpy, win, PropertyChangeMask | StructureNotifyMask);

@@ -1,6 +1,9 @@
 # See COPYING for copyright and license details
 
 REAL_NAME=dwb
+
+include $(dir $(lastword $(MAKEFILE_LIST)))version.mk
+
 COPYRIGHT="© 2010-2013 Stefan Bolte"
 LICENSE="GNU General Public License, version 3 or later"
 
@@ -35,12 +38,11 @@ DWBRCDIR=dwbrc
 DWBRC=dwbrc
 
 DTARGET=$(TARGET)_d
-REAL_VERSION=$(BUILDDATE)
 # Version info
-GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short 2>/dev/null)
-VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
-NAME=$(shell if [ "$(GIT_VERSION)" ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
-BUILDDATE=`date +%Y.%m.%d`
+
+#GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short 2>/dev/null)
+#VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
+#NAME=$(shell if [ "$(GIT_VERSION)" ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
 
 # Targets
 TARGET = $(REAL_NAME)
