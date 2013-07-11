@@ -1,13 +1,13 @@
 '\" t
-.\"     Title: dwbrc
+.\"     Title: dwbremote
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/11/2013
+.\"      Date: 07/12/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWBRC" "1" "07/11/2013" "\ \&" "\ \&"
+.TH "DWBREMOTE" "1" "07/12/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -28,16 +28,16 @@
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
 .SH "NAME"
-dwbrc \- dwb remote control
+dwbremote \- dwb remote control
 .SH "SYNOPSIS"
 .sp
-\fBdwbrc\fR [\fIOPTION\fR] <command> <arguments>
+\fBdwbremote\fR [\fIOPTION\fR] <command> <arguments>
 .SH "DESCRIPTION"
 .sp
-\fBdwbrc\fR allows control to dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&.
+\fBdwbremote\fR allows control to dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&.
 .SH "OPTIONS"
 .sp
-Options are only required if the environment variable \fBDWB_WINID\fR is not set, in userscripts executed by dwb \fBDWB_WINID\fR will always be set\&. If multiple options are passed dwbrc will use the first matching window\&.
+Options are only required if the environment variable \fBDWB_WINID\fR is not set, in userscripts executed by dwb \fBDWB_WINID\fR will always be set\&. If multiple options are passed dwbremote will use the first matching window\&.
 .PP
 \fB\-c \-class\fR \fIwm_class\fR
 .RS 4
@@ -286,8 +286,8 @@ Executing commands
 .RS 4
 .\}
 .nf
-    dwbrc \-pid 1234 execute tabopen google\&.de
-    dwbrc \-pid 1234 execute 2close
+    dwbremote \-pid 1234 execute tabopen google\&.de
+    dwbremote \-pid 1234 execute 2close
 .fi
 .if n \{\
 .RE
@@ -301,9 +301,9 @@ Getting properties
 .RS 4
 .\}
 .nf
-    uri="$(dwbrc \-id 0x1000001 get uri)"
-    title="$(dwbrc \-id 0x1000001 get 2 title)"
-    scripts_enabled="$(dwbrc \-class foo setting enable\-settings)"
+    uri="$(dwbremote \-id 0x1000001 get uri)"
+    title="$(dwbremote \-id 0x1000001 get 2 title)"
+    scripts_enabled="$(dwbremote \-class foo setting enable\-settings)"
 .fi
 .if n \{\
 .RE
@@ -317,16 +317,16 @@ User/Password prompt
 .RS 4
 .\}
 .nf
-    username="$(dwbrc \-pid 3141 prompt Username:)"
+    username="$(dwbremote \-pid 3141 prompt Username:)"
     if [ "$username" ]; then
-        password="$(dwbrc \-pid 3141 pwd_prompt Password:)"
+        password="$(dwbremote \-pid 3141 pwd_prompt Password:)"
     fi
 .fi
 .if n \{\
 .RE
 .\}
 .PP
-Multiple hooks with one dwbrc instance
+Multiple hooks with one dwbremote instance
 .RS 4
 .RE
 .sp
@@ -337,9 +337,9 @@ Multiple hooks with one dwbrc instance
     #!/bin/bash
 
     if [ "$DWB_WINID" ]; then
-        DWBRC=dwbrc
+        DWBRC=dwbremote
     else
-        DWBRC="dwbrc \-class foo"
+        DWBRC="dwbremote \-class foo"
     fi
 
     while read \-a array; do
@@ -379,7 +379,7 @@ Binding multiple shortcuts
                 \&.\&.\&.
                 ;;
         esac
-    done < <(dwbrc \-pid 1234 bind none:xx foobar:gx)
+    done < <(dwbremote \-pid 1234 bind none:xx foobar:gx)
 .fi
 .if n \{\
 .RE

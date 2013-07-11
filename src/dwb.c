@@ -52,7 +52,7 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
-#include <dwbrc.h>
+#include <dwbremote.h>
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"

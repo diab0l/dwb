@@ -85,7 +85,7 @@ __archive() {
     esac)"  -- $cur ) )
 }
 
-__dwbrc_commands() {
+__dwbremote_commands() {
     local pprev=${COMP_WORDS[COMP_CWORD-2]}
     case "$pprev" in 
         -pid|-id|-class|-name)
@@ -94,7 +94,7 @@ __dwbrc_commands() {
             printf "";;
     esac
 }
-__dwbrc_arguments() {
+__dwbremote_arguments() {
     local opts
     local prev=${COMP_WORDS[COMP_CWORD-1]}
     local cur=${COMP_WORDS[COMP_CWORD]}
@@ -108,14 +108,14 @@ __dwbrc_arguments() {
         #    opts=$(awk -F '=' 'BEGIN { a=0 } /\[\w+\]/ { a=a+1 } /^\s*$/ { next } a==1 { printf " "$1 }' $HOME/.config/dwb/keys)
             #;;
         *) 
-            opts="$(__dwbrc_commands)"
+            opts="$(__dwbremote_commands)"
     esac
     COMPREPLY=( $( compgen -W "$opts" -- $cur ) )
 
 
 }
 
-_dwbrc()
+_dwbremote()
 {
     local cur prev opts
     _init_completion || return 
@@ -125,11 +125,11 @@ _dwbrc()
     case "${cur}" in
         -*) COMPREPLY=( $( compgen -W "$opts" -- $cur ) )
             return 0;;
-        *) __dwbrc_arguments
+        *) __dwbremote_arguments
             return 0;;
     esac
 } && 
-complete -F _dwbrc dwbrc
+complete -F _dwbremote dwbremote
 
 _dwb() {
     local cur prev opts lopts

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "dwbrc.h"
+#include "dwbremote.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -25,7 +25,7 @@
 
 
 int 
-dwbrc_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count)
+dwbremote_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count)
 {
     int result = True;
     XTextProperty prop;
@@ -43,7 +43,7 @@ dwbrc_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count
 }
 
 int 
-dwbrc_set_property_list(Display *dpy, Window win, Atom atom, char **list, int count)
+dwbremote_set_property_list(Display *dpy, Window win, Atom atom, char **list, int count)
 {
     XTextProperty prop;
     Xutf8TextListToTextProperty(dpy, list, count, XUTF8StringStyle, &prop);
@@ -53,25 +53,25 @@ dwbrc_set_property_list(Display *dpy, Window win, Atom atom, char **list, int co
 }
 
 int 
-dwbrc_set_property_list_by_name(Display *dpy, Window win, const char *name, char **list, int count)
+dwbremote_set_property_list_by_name(Display *dpy, Window win, const char *name, char **list, int count)
 {
-    return dwbrc_set_property_list(dpy, win, XInternAtom(dpy, name, False), list, count);
+    return dwbremote_set_property_list(dpy, win, XInternAtom(dpy, name, False), list, count);
 }
 
 int 
-dwbrc_set_property_value(Display *dpy, Window win, Atom atom, char *value)
+dwbremote_set_property_value(Display *dpy, Window win, Atom atom, char *value)
 {
     char *argv[] = { value };
-    return dwbrc_set_property_list(dpy, win, atom, argv, 1);
+    return dwbremote_set_property_list(dpy, win, atom, argv, 1);
 }
 int 
-dwbrc_set_property_value_by_name(Display *dpy, Window win, const char *name, char *value)
+dwbremote_set_property_value_by_name(Display *dpy, Window win, const char *name, char *value)
 {
-    return dwbrc_set_property_value(dpy, win, XInternAtom(dpy, name, False), value);
+    return dwbremote_set_property_value(dpy, win, XInternAtom(dpy, name, False), value);
 }
 
 int 
-dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...)
+dwbremote_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...)
 {
     va_list arg_list; 
     char buffer[2048];
@@ -79,11 +79,11 @@ dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const ch
     va_start(arg_list, format);
     vsnprintf(buffer, sizeof(buffer), format, arg_list);
     va_end(arg_list);
-    return dwbrc_set_property_value(dpy, win, atom, buffer);
+    return dwbremote_set_property_value(dpy, win, atom, buffer);
 }
 
 int 
-dwbrc_get_status(Display *dpy, Window win, Atom *atr)
+dwbremote_get_status(Display *dpy, Window win, Atom *atr)
 {
     int *status;
     int afr;
@@ -102,7 +102,7 @@ dwbrc_get_status(Display *dpy, Window win, Atom *atr)
     }
 }
 int 
-dwbrc_set_status(Display *dpy, Window win, int status)
+dwbremote_set_status(Display *dpy, Window win, int status)
 {
     return XChangeProperty(dpy, win, XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
 }

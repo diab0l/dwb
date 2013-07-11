@@ -34,7 +34,7 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
-#include <dwbrc.h>
+#include <dwbremote.h>
 
 static void view_ssl_state(GList *);
 static unsigned long s_click_time;

@@ -77,7 +77,7 @@ uninstall: uninstall-man uninstall-data
 	@echo "Removing executable from $(subst //,/,$(DESTDIR)$(BINDIR))"
 	@$(RM) $(DESTDIR)$(BINDIR)/$(TARGET)
 	@$(RM) $(DESTDIR)$(BINDIR)/$(EXTENSION_MANAGER)
-	@$(RM) $(DESTDIR)$(BINDIR)/dwbrc
+	@$(RM) $(DESTDIR)$(BINDIR)/$(DWBRC)
 
 uninstall-man: 
 	$(RM) $(DESTDIR)$(MAN1DIR)/$(MANFILE)

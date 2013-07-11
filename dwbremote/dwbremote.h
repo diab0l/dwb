@@ -41,26 +41,26 @@ enum {
 };
 
 int 
-dwbrc_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count);
+dwbremote_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count);
 
 int 
-dwbrc_set_property_value_by_name(Display *dpy, Window win, const char *name, char *value);
+dwbremote_set_property_value_by_name(Display *dpy, Window win, const char *name, char *value);
 
 int 
-dwbrc_set_property_value(Display *dpy, Window win, Atom atom, char *value);
+dwbremote_set_property_value(Display *dpy, Window win, Atom atom, char *value);
 
 int 
-dwbrc_set_property_list_by_name(Display *dpy, Window win, const char *name, char **list, int count);
+dwbremote_set_property_list_by_name(Display *dpy, Window win, const char *name, char **list, int count);
 
 int 
-dwbrc_set_property_list(Display *dpy, Window win, Atom atom, char **list, int count);
+dwbremote_set_property_list(Display *dpy, Window win, Atom atom, char **list, int count);
 
 int 
-dwbrc_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...);
+dwbremote_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...);
 
 int 
-dwbrc_get_status(Display *dpy, Window win, Atom *atr);
+dwbremote_get_status(Display *dpy, Window win, Atom *atr);
 
 int 
-dwbrc_set_status(Display *dpy, Window win, int status);
+dwbremote_set_status(Display *dpy, Window win, int status);
 #endif

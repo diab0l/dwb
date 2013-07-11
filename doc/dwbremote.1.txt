@@ -1,22 +1,22 @@
 // See COPYING for copyright and license details
 
 // vim: set ft=asciidoc:
-DWBRC(1)
-========
+DWBREMOTE(1)
+============
 :doctype: manpage
 
 
 NAME
 ----
-dwbrc - dwb remote control
+dwbremote - dwb remote control
 
 SYNOPSIS
 --------
-*dwbrc* ['OPTION'] <command> <arguments>
+*dwbremote* ['OPTION'] <command> <arguments>
 
 DESCRIPTION
 -----------
-*dwbrc* allows control to dwb from command line. It communicates with dwb instances
+*dwbremote* allows control to dwb from command line. It communicates with dwb instances
 by setting its XProperties. Return values will be printed to stdout.
 
 OPTIONS
@@ -24,7 +24,7 @@ OPTIONS
 
 Options are only required if the environment variable *DWB_WINID* is not set, in
 userscripts executed by dwb *DWB_WINID* will always be set. If multiple options
-are passed dwbrc will use the first matching window.
+are passed dwbremote will use the first matching window.
 
 *-c -class* 'wm_class'::
     Search for window id by WM_CLASS, the commands are sent to the first match.
@@ -144,36 +144,36 @@ EXAMPLES
     Executing commands::
     +
 ----
-    dwbrc -pid 1234 execute tabopen google.de
-    dwbrc -pid 1234 execute 2close
+    dwbremote -pid 1234 execute tabopen google.de
+    dwbremote -pid 1234 execute 2close
 ----
 
     Getting properties::
     +
 ----
-    uri="$(dwbrc -id 0x1000001 get uri)"
-    title="$(dwbrc -id 0x1000001 get 2 title)"
-    scripts_enabled="$(dwbrc -class foo setting enable-settings)"
+    uri="$(dwbremote -id 0x1000001 get uri)"
+    title="$(dwbremote -id 0x1000001 get 2 title)"
+    scripts_enabled="$(dwbremote -class foo setting enable-settings)"
 ----
     User/Password prompt::
     +
 ----
-    username="$(dwbrc -pid 3141 prompt Username:)"
+    username="$(dwbremote -pid 3141 prompt Username:)"
     if [ "$username" ]; then 
-        password="$(dwbrc -pid 3141 pwd_prompt Password:)"
+        password="$(dwbremote -pid 3141 pwd_prompt Password:)"
     fi
 ----
 
 
-    Multiple hooks with one dwbrc instance::
+    Multiple hooks with one dwbremote instance::
     +
 -----
     #!/bin/bash 
 
     if [ "$DWB_WINID" ]; then 
-        DWBRC=dwbrc
+        DWBRC=dwbremote
     else
-        DWBRC="dwbrc -class foo"
+        DWBRC="dwbremote -class foo"
     fi
 
     while read -a array; do 
@@ -204,7 +204,7 @@ EXAMPLES
                 ...
                 ;;
         esac
-    done < <(dwbrc -pid 1234 bind none:xx foobar:gx)
+    done < <(dwbremote -pid 1234 bind none:xx foobar:gx)
 -----
 
 

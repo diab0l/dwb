@@ -19,7 +19,7 @@
 #include "dwb.h"
 #include "ipc.h"
 #include "soup.h"
-#include <dwbrc.h>
+#include <dwbremote.h>
 #include <string.h>
 #include <stdlib.h>
 #include <gdk/gdkx.h>
@@ -96,7 +96,7 @@ bind_callback(KeyMap *map, Arg *a)
 {
     char *data = g_strdup_printf("%d %s", g_list_position(dwb.state.views, dwb.state.fview), CURRENT_URL());
     char *argv[2] = { a->arg, data };
-    dwbrc_set_property_list(s_dpy, s_win, s_atoms[DWB_ATOM_BIND], argv, 2);
+    dwbremote_set_property_list(s_dpy, s_win, s_atoms[DWB_ATOM_BIND], argv, 2);
     return STATUS_OK;
 }
 
@@ -134,22 +134,22 @@ parse_commands(char **list, int count)
     {
         WebSettings *s = g_hash_table_lookup(dwb.settings, list[1]);
         if (s == NULL) 
-            dwbrc_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "not found");
+            dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "not found");
         else 
         {
             switch (s->type) 
             {
                 case INTEGER : 
-                    dwbrc_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%d", s->arg_local.i);
+                    dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%d", s->arg_local.i);
                     break;
                 case DOUBLE : 
-                    dwbrc_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%.2f", s->arg_local.d);
+                    dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%.2f", s->arg_local.d);
                     break;
                 case BOOLEAN : 
-                    dwbrc_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.b ? "true" : "false");
+                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.b ? "true" : "false");
                     break;
                 case CHAR : 
-                    dwbrc_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p);
+                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p);
                     break;
                 default : break;
             }
@@ -229,7 +229,7 @@ parse_commands(char **list, int count)
         }
         else if (STREQ(list[argc], "current_tab"))
         {
-            dwbrc_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE],
+            dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE],
                     "%d", g_list_position(dwb.state.views, dwb.state.fview) + 1);
         }
     }
@@ -268,7 +268,7 @@ parse_commands(char **list, int count)
                 else 
                     shortcut = g_strdup(binds[1]);
                 Arg a = { .arg = g_strdup(list[i]) };
-                dwb_add_key(shortcut, com, g_strdup("dwbrc"), (Func)bind_callback, options, &a);
+                dwb_add_key(shortcut, com, g_strdup("dwbremote"), (Func)bind_callback, options, &a);
             }
 
         }
@@ -279,7 +279,7 @@ parse_commands(char **list, int count)
     }
     if (text != NULL)
     {
-        dwbrc_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], text);
+        dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], text);
         g_free(text);
     }
     return status;
@@ -293,7 +293,7 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
 
     if (e->state == GDK_PROPERTY_NEW_VALUE && e->atom == s_readatom)
     {
-        if (!dwbrc_get_property(s_dpy, s_win, s_atoms[DWB_ATOM_READ],  &list, &count))
+        if (!dwbremote_get_property(s_dpy, s_win, s_atoms[DWB_ATOM_READ],  &list, &count))
         {
             return false;
         }
@@ -301,7 +301,7 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
         status = parse_commands(list, count);
 
         XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_READ]);
-        dwbrc_set_status(s_dpy, s_win, status);
+        dwbremote_set_status(s_dpy, s_win, status);
         //XChangeProperty(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
 
         XFreeStringList(list);
@@ -321,10 +321,10 @@ ipc_send_hook(char *name, const char *format, ...)
         vsnprintf(buffer, sizeof(buffer), format, arg_list);
         va_end(arg_list);
         char *argv[] = { name, buffer };
-        dwbrc_set_property_list(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], argv, 2);
+        dwbremote_set_property_list(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], argv, 2);
     }
     else 
-        dwbrc_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], name);
+        dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], name);
 }
 void 
 ipc_start(GtkWidget *widget)
@@ -336,7 +336,7 @@ ipc_start(GtkWidget *widget)
     s_dpy = gdk_x11_get_default_xdisplay();
     s_win = GDK_WINDOW_XID(gdkwin);
 
-    dwbrc_set_status(s_dpy, s_win, 0);
+    dwbremote_set_status(s_dpy, s_win, 0);
 
     GdkEventMask mask = gdk_window_get_events(gdkwin);
     gdk_window_set_events(gdkwin, mask | GDK_PROPERTY_CHANGE_MASK);

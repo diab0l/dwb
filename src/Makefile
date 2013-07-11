@@ -37,9 +37,9 @@ deps.d: %.c %.h
 	@echo "${CC} $<"
 	@$(CC) -c -o $@ $< $(DCFLAGS) 
 
-$(DTARGET): $(DOBJ) ../exar/exar.o ../dwbrc/dwbrc.o
+$(DTARGET): $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o
 	@echo "$(CC) $@"
-	@$(CC) $(DOBJ) ../exar/exar.o ../dwbrc/dwbrc.o -o $(DTARGET) $(LDFLAGS) 
+	@$(CC) $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o -o $(DTARGET) $(LDFLAGS) 
 
 dependencies: $(DEPS)
 

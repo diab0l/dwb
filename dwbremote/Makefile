@@ -1,7 +1,7 @@
 ORIG_CFLAGS := $(CFLAGS)
 BASE_DIR=..
 
-REAL_NAME=dwbrc
+REAL_NAME=dwbremote
 COPYRIGHT="(C) 2013 Stefan Bolte"
 LICENSE="GNU General Public License, version 3 or later"
 
@@ -21,10 +21,10 @@ LDFLAGS += -lX11
 DCFLAGS += -g -O0 -Wall -pedantic -Werror -Wextra -std=c99 
 DCFLAGS += $(ORIG_CFLAGS)
 
-TARGET = dwbrc
+TARGET = dwbremote
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 
-SHARED_OBJ = dwbrc.o
+SHARED_OBJ = dwbremote.o
 
 all: $(TARGET)
 
@@ -41,7 +41,7 @@ debug:
 
 cgdb: 
 	make CFLAGS="$(DCFLAGS)"
-	cgdb dwbrc
+	cgdb dwbremote
 
 clean: 
 	$(RM) $(OBJ) $(TARGET)

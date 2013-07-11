@@ -22,12 +22,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
-#include "dwbrc.h"
+#include "dwbremote.h"
 #define STREQ(x, y) (strcmp((x), (y)) == 0)
 #define STRNEQ(x, y, n) (strncmp((x), (y), (n)) == 0)
 
 #ifndef NAME
-#define NAME "dwbrc"
+#define NAME "dwbremote"
 #endif
 #ifndef VERSION
 #define VERSION __DATE__
@@ -48,7 +48,7 @@ static void
 help(int ret)
 {
     printf( "USAGE: \n" 
-            "   dwbrc [options] <command> <arguments>\n\n"
+            "   dwbremote [options] <command> <arguments>\n\n"
             "OPTIONS: \n"
             "   -c --class <class>      Search for window id by WM_CLASS <class>\n"
             "   -i --id    <windowid>   Send commands to window with id <windowid>\n"
@@ -74,7 +74,7 @@ static Bool
 is_dwb_win(Display *dpy, Window win)
 {
     Atom a;
-    dwbrc_get_status(dpy, win, &a);
+    dwbremote_get_status(dpy, win, &a);
     return a != None;
 }
 
@@ -254,7 +254,7 @@ main(int argc, char **argv)
             version();
             return 0;
         }
-        if (STREQ("-l", *pargv) || STREQ("-list", *pargv))
+        if (STREQ("-l", *pargv) || STREQ("--list", *pargv))
         {
             get_wins(dpy, root, &all_wins, &n_wins);
             for (int i=0; i<n_wins; i++)
@@ -315,7 +315,7 @@ main(int argc, char **argv)
     else 
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_CLIENT_READ, False);
 
-    dwbrc_set_property_list_by_name(dpy, win, DWB_ATOM_IPC_CLIENT_WRITE, pargv, pargc);
+    dwbremote_set_property_list_by_name(dpy, win, DWB_ATOM_IPC_CLIENT_WRITE, pargv, pargc);
     XSelectInput(dpy, win, PropertyChangeMask | StructureNotifyMask);
 
     while (1)
@@ -326,7 +326,7 @@ main(int argc, char **argv)
         if (e.type != PropertyNotify)
             continue;
         pe = &(e.xproperty);
-        if (pe->atom == read_atom && dwbrc_get_property(dpy, win, read_atom, &list, &count))
+        if (pe->atom == read_atom && dwbremote_get_property(dpy, win, read_atom, &list, &count))
         {
             if (count > 0)
             {
@@ -356,7 +356,7 @@ main(int argc, char **argv)
         }
         if (type == GET_ONCE && pe->atom == XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False))
         {
-            status = dwbrc_get_status(dpy, win, &atr);
+            status = dwbremote_get_status(dpy, win, &atr);
             if (atr != None)
             {
                 ret = status;

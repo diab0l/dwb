@@ -25,7 +25,7 @@ EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
 
 DWB_LIB_DIR_EXAR = exar
-DWB_LIB_DIR_RC = dwbrc
+DWB_LIB_DIR_RC = dwbremote
 DWB_LIB_DIRS = $(DWB_LIB_DIR_EXAR) $(DWB_LIB_DIR_RC)
 
 SUBDIRS=$(M4DIR) $(SRCDIR) $(DWBEMDIR) 
@@ -34,8 +34,8 @@ SUBDIR_BUILD_FIRST=$(UTILDIR) $(DWB_LIB_DIRS)
 DWBEMDIR=dwbem
 EXTENSION_MANAGER=dwbem
 
-DWBRCDIR=dwbrc
-DWBRC=dwbrc
+DWBRCDIR=dwbremote
+DWBRC=dwbremote
 
 DTARGET=$(TARGET)_d
 # Version info
@@ -222,6 +222,6 @@ HDR = $(wildcard *.h)
 # Objects
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 DOBJ = $(patsubst %.c, %.do, $(wildcard *.c)) 
-OBJLIB = exar/exar.o dwbrc/dwbrc.o
+OBJLIB = exar/exar.o dwbremote/dwbremote.o
 OBJEXAR = exar/exar.o 
-OBJRC = dwbrc/dwbrc.o 
+OBJRC = dwbremote/dwbremote.o 
