@@ -29,7 +29,7 @@ are passed dwbremote will use the first matching window.
 *-c -class* 'wm_class'::
     Search for window id by WM_CLASS, the commands are sent to the first match.
 
-*-i -id* 'window_ id'::
+*-i -id* 'window_id'::
     Send comands to window with id 'window_id', window ids in hexadecimal format
     must start with 0x.
 
@@ -50,7 +50,7 @@ COMMANDS
     shortcut without binding a commandline command 'none:shortcut'.
     
 *execute* 'command'::
-    Executes a command, the command parsed the same way as if executed from
+    Executes a command, the command is parsed the same way as if executed from
     commandline.
 
 *get* 'argument'::
@@ -114,7 +114,7 @@ COMMANDS
             *uri*::::
                 Uri that will be loaded
         *navigation*;;
-            Emitted a tab or a frame in a tab requests a new page load, 
+            Emitted when a tab or a frame in a tab requests a new page load, 
             return format: 'navigation <n> <mainframe> <uri>'
             *n*::::
                 Number of the tab 
@@ -136,7 +136,7 @@ COMMANDS
    
     
 *setting* 'setting'::
-    Gets a setting
+    Gets a setting.
 
 
 EXAMPLES

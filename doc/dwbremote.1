@@ -44,7 +44,7 @@ Options are only required if the environment variable \fBDWB_WINID\fR is not set
 Search for window id by WM_CLASS, the commands are sent to the first match\&.
 .RE
 .PP
-\fB\-i \-id\fR \fIwindow_ id\fR
+\fB\-i \-id\fR \fIwindow_id\fR
 .RS 4
 Send comands to window with id
 \fIwindow_id\fR, window ids in hexadecimal format must start with 0x\&.
@@ -77,7 +77,7 @@ must be used, to bind only a shortcut without binding a commandline command
 .PP
 \fBexecute\fR \fIcommand\fR
 .RS 4
-Executes a command, the command parsed the same way as if executed from commandline\&.
+Executes a command, the command is parsed the same way as if executed from commandline\&.
 .RE
 .PP
 \fBget\fR \fIargument\fR
@@ -227,7 +227,7 @@ Uri that will be loaded
 .PP
 \fBnavigation\fR
 .RS 4
-Emitted a tab or a frame in a tab requests a new page load, return format:
+Emitted when a tab or a frame in a tab requests a new page load, return format:
 \fInavigation <n> <mainframe> <uri>\fR
 .PP
 \fBn\fR
@@ -274,7 +274,7 @@ Shows a password dialog\&. Note that using password prompt is not save\&.
 .PP
 \fBsetting\fR \fIsetting\fR
 .RS 4
-Gets a setting
+Gets a setting\&.
 .RE
 .SH "EXAMPLES"
 .PP
