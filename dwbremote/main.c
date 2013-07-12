@@ -232,15 +232,9 @@ main(int argc, char **argv)
         help(1);
 
     if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
-    {
         help(0);
-        return 0;
-    }
     if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
-    {
         version();
-        return 0;
-    }
 
     dpy = XOpenDisplay(NULL);
     if (dpy == NULL)
