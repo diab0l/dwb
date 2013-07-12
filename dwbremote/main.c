@@ -262,19 +262,19 @@ main(int argc, char **argv)
             query_windows(dpy, root, (void *) &wid, &win, cmp_winid);
             continue;
         }
-        if (consume_arg("-p", "-pid", &pargc, &pargv, win == 0))
+        if (consume_arg("-p", "--pid", &pargc, &pargv, win == 0))
         {
             pid_t pid = (pid_t)parse_number(*pargv);
             if (pid != 0)
                 query_windows(dpy, root, (void *)&pid, &win, cmp_pid);
             continue;
         }
-        if (consume_arg("-c", "-class", &pargc, &pargv, win == 0))
+        if (consume_arg("-c", "--class", &pargc, &pargv, win == 0))
         {
             query_windows(dpy, root, *pargv, &win, cmp_class);
             continue;
         }
-        if (consume_arg("-n", "-name", &pargc, &pargv, win == 0))
+        if (consume_arg("-n", "--name", &pargc, &pargv, win == 0))
         {
             query_windows(dpy, root, *pargv, &win, cmp_name);
             continue;
