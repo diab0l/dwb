@@ -20,6 +20,17 @@
 #define __DWB_IPC_H__
 #include <dwbremote.h>
 
+enum {
+    IPC_HOOK_hook = 1<<0, 
+    IPC_HOOK_navigation = 1<<1, 
+    IPC_HOOK_load_finished = 1<<2, 
+    IPC_HOOK_load_committed = 1<<3, 
+    IPC_HOOK_close_tab = 1<<4, 
+    IPC_HOOK_new_tab = 1<<5, 
+    IPC_HOOK_focus_tab = 1<<6, 
+    IPC_HOOK_execute = 1<<7, 
+};
+
 void ipc_start(GtkWidget *);
 void ipc_send_hook(char *hook, const char *format, ...);
 
