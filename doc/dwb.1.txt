@@ -368,11 +368,11 @@ Show hints, open link in a new window. (command
 Follow image (command
 'hints_images', aliases: 'ihints', 'ihi').
 
-*;I*::
+*;It*::
 Follow image in a new tab (command
 'hints_images_tab', aliases: 'itabhints', 'ithi').
 
-*.i*::
+*.Ib*::
 Follow image in a background tab (command
 'hints_images_background', aliases: 'ibackhints').
 
@@ -384,11 +384,11 @@ Focus editable elements via hints (command
 Set hint\'s url in commandline (command
 'hints_url', aliases: 'uhints', 'uhi').
 
-*;O*::
+*;Ot*::
 Set hint's url in commandline, open in a new tab (command
 'hints_url_tab', aliases: 'utabhints', 'uthi').
 
-*.o*::
+*.Ob*::
 Set hint\'s url in commandline, open in a background tab (command
 'hints_url_background', aliases: 'ubackhints').
 
