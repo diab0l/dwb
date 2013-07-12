@@ -248,6 +248,10 @@ parse_commands(char **list, int count)
             text = s->str;
             g_string_free(s, false);
         }
+        else 
+        {
+            return 137;
+        }
     }
     else if (STREQ(list[0], "clear_hooks"))
     {

@@ -231,6 +231,17 @@ main(int argc, char **argv)
     if (argc < 2)
         help(1);
 
+    if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
+    {
+        help(0);
+        return 0;
+    }
+    if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
+    {
+        version();
+        return 0;
+    }
+
     dpy = XOpenDisplay(NULL);
     if (dpy == NULL)
     {
@@ -242,18 +253,6 @@ main(int argc, char **argv)
 
     for (; pargc > 0 && **pargv == '-'; pargc--, pargv++)
     {
-        if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
-        {
-            XCloseDisplay(dpy);
-            help(0);
-            return 0;
-        }
-        if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
-        {
-            XCloseDisplay(dpy);
-            version();
-            return 0;
-        }
         if (STREQ("-l", *pargv) || STREQ("--list", *pargv))
         {
             get_wins(dpy, root, &all_wins, &n_wins);
