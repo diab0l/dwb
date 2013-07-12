@@ -151,7 +151,7 @@ parse_commands(char **list, int count)
                     dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.b ? "true" : "false");
                     break;
                 case CHAR : 
-                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p);
+                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p ? s->arg_local.p : "(none)");
                     break;
                 default : break;
             }
