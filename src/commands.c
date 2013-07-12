@@ -434,6 +434,64 @@ commands_focus_nth_view(KeyMap *km, Arg *arg)
     return STATUS_OK;
 }/*}}}*/
 
+static gboolean
+match_tab(GList *gl, GRegex *regex, GPatternSpec *pattern)
+{
+    const char *title = webkit_web_view_get_title(WEBVIEW(gl));
+    const char *uri = webkit_web_view_get_uri(WEBVIEW(gl));
+    if ((regex != NULL && (g_regex_match(regex, title, 0, NULL) || g_regex_match(regex, uri, 0, NULL)))
+            || (pattern != NULL && (g_pattern_match_string(pattern, uri) || g_pattern_match_string(pattern, title))))
+        return true;
+    return false;
+}
+DwbStatus
+commands_focus_matched(KeyMap *km, Arg *arg) 
+{
+    if (!dwb.state.views->next) 
+        return STATUS_OK;
+    GRegex *regex = NULL;
+    GPatternSpec *pattern_spec = NULL;
+    char *pattern = arg->p;
+
+    if (arg->p && *pattern == '/')
+    {
+        regex = g_regex_new(pattern + 1, G_REGEX_CASELESS, 0, NULL);
+        if (regex == NULL)
+            return STATUS_ERROR;
+
+    }
+    else 
+    {
+        char *whole_pattern = g_strdup_printf("*%s*", pattern);
+        pattern_spec = g_pattern_spec_new(whole_pattern);
+        g_free(whole_pattern);
+    }
+    for (GList *gl = dwb.state.fview->next; gl; gl=gl->next)
+    {
+        if (match_tab(gl, regex, pattern_spec))
+        {
+            dwb_focus_view(gl, km->map->n.first);
+            goto finish;
+        }
+
+    }
+    for (GList *gl = dwb.state.views; gl != dwb.state.fview->next; gl=gl->next)
+    {
+        if (match_tab(gl, regex, pattern_spec))
+        {
+            dwb_focus_view(gl, km->map->n.first);
+            goto finish;
+        }
+
+    }
+finish:
+    if (regex != NULL)
+        g_regex_unref(regex);
+    else if (pattern_spec != NULL)
+        g_pattern_spec_free(pattern_spec);
+    return STATUS_OK;
+}/*}}}*/
+
 /* commands_yank {{{*/
 DwbStatus
 commands_yank(KeyMap *km, Arg *arg) 

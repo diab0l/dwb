@@ -190,10 +190,14 @@ static KeyValue KEYS[] = {
   { "reload_quickmarks",        {   NULL,         0, 0 }, }, 
   { "print_preview",            {   NULL,         0, 0 }, }, 
   { "adblock_reload_rules",     {   NULL,         0, 0 }, }, 
+  { "tabgrep",            {   NULL,         0, 0 }, }, 
 };
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
+  { { "tabgrep",              "Focus a tab by pattern or regex",                    }, CP_COMMANDLINE | CP_NEEDS_ARG, 
+    (Func)commands_focus_matched,            "Missing command",                            ALWAYS_SM,     
+    { .p = NULL },                          EP_NONE,    { NULL }, },
   { { "tabdo",              "Execute a command in all tabs",                    }, CP_COMMANDLINE | CP_NEEDS_ARG, 
     (Func)commands_tabdo,            "Missing command",                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },

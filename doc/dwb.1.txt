@@ -852,6 +852,9 @@ COMMAND OVERVIEW
 |stop_loading            |st, stop        |Stop loading current page
 |tab_bookmarks           |tabmarks        |Show bookmarks, open in new tab
 |tabdo                   |                |Execute a command in all tabs
+|tabgrep                 |                |Focus a tab by pattern or regular
+                                           expression, regular expressions must
+                                           start with /
 |tab_hist_back           |tba, tabback    |Go back in a new tab
 |tab_hist_forward        |tfo, tabforward |Go forward in a new tab
 |tab_move                |tabm            |Move tab
