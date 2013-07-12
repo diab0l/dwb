@@ -337,19 +337,19 @@ static FunctionMap FMAP [] = {
     (Func)commands_change_mode,            NULL,                              POST_SM, 
     { .n = COMMAND_MODE, .b = false }, EP_NONE, { NULL }, },
   
-  { { "find_backward",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE, 
+  { { "find_backward",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE | CP_NEEDS_ARG, 
     (Func)commands_find,                NO_URL,                            NEVER_SM,     
     { .n = 0 }, EP_NONE, { "bfind", NULL }, },
   
-  { { "find_forward",          "Find forward ",                     }, CP_COMMANDLINE | CP_HAS_MODE, 
+  { { "find_forward",          "Find forward ",                     }, CP_COMMANDLINE | CP_HAS_MODE | CP_NEEDS_ARG, 
     (Func)commands_find,                NO_URL,                            NEVER_SM,     
     { .n = FIND_FORWARD }, EP_NONE, { "ffind",  NULL, }, },
 
-  { { "find_backward_ic",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE, 
+  { { "find_backward_ic",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE | CP_NEEDS_ARG, 
     (Func)commands_find,                NO_URL,                            NEVER_SM,     
     { .n = FIND_CASE_SENSITIVE }, EP_NONE, { "ibfind", NULL }, },
   
-  { { "find_forward_ic",          "Find forward ",                     }, CP_COMMANDLINE | CP_HAS_MODE, 
+  { { "find_forward_ic",          "Find forward ",                     }, CP_COMMANDLINE | CP_HAS_MODE | CP_NEEDS_ARG, 
     (Func)commands_find,                NO_URL,                            NEVER_SM,     
     { .n = FIND_FORWARD | FIND_CASE_SENSITIVE }, EP_NONE, { "iffind",  NULL, }, },
   

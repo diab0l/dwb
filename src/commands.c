@@ -216,7 +216,7 @@ commands_find(KeyMap *km, Arg *arg)
     else 
     {
         dwb.state.mode = FIND_MODE;
-       entry_focus();
+        entry_focus();
     }
 
     return STATUS_OK;
@@ -381,7 +381,6 @@ commands_open(KeyMap *km, Arg *arg)
     if (arg && arg->p && ! (arg->n & SET_URL)) 
     {
         dwb_load_uri(NULL, arg->p);
-        CLEAR_COMMAND_TEXT();
         return STATUS_OK;
     }
     else 

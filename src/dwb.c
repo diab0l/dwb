@@ -5017,7 +5017,11 @@ dwb_parse_command_line(const char *line)
         return ret;
 
     if (m->map->prop & CP_HAS_MODE)
+    {
+        if (m->map->prop & CP_NEEDS_ARG && has_arg)
+            CLEAR_COMMAND_TEXT();
         return STATUS_OK;
+    }
 
     if (!(m->map->prop & CP_DONT_CLEAN) || (m->map->prop & CP_NEEDS_ARG && has_arg) ) 
         dwb_change_mode(NORMAL_MODE, dwb.state.message_id == 0);
