@@ -201,7 +201,10 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", webkit_web_view_get_uri(WEBVIEW(l)));
+            {
+                const char *uri = VIEW(l)->status->deferred && VIEW(l)->status->deferred_uri ? VIEW(l)->status->deferred_uri : webkit_web_view_get_uri(WEBVIEW(l));
+                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", uri);
+            }
             text = s->str;
             g_string_free(s, false);
         }
