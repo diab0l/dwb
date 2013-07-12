@@ -145,11 +145,12 @@ CFLAGS += -Werror=format-security
 CFLAGS += -pipe
 CFLAGS += --ansi
 CFLAGS += -std=c99
-CFLAGS += -D_POSIX_SOURCE
+CFLAGS += -D_POSIX_C_SOURCE='200112L'
 CFLAGS += -O2
 CFLAGS += -g
 CFLAGS += -D_BSD_SOURCE
 CFLAGS += -D_NETBSD_SOURCE
+CFLAGS += -D__BSD_VISIBLE
 
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 
