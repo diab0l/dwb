@@ -3664,6 +3664,7 @@ dwb_clean_up()
     g_string_free(dwb.state.buffer, true);
     g_free(dwb.misc.hints);
     g_free(dwb.misc.hint_style);
+    g_free(dwb.state.last_command);
 
     dwb_free_list(dwb.fc.bookmarks, (void_func)dwb_navigation_free);
     /*  TODO sqlite */
@@ -4873,6 +4874,7 @@ dwb_init_vars(void)
     dwb.state.fullscreen = false;
     dwb.state.download_ref_count = 0;
     dwb.state.message_id = 0;
+    dwb.state.last_command = 0;
 
     dwb.state.bar_visible = BAR_VIS_TOP | BAR_VIS_STATUS;
 
@@ -4945,6 +4947,7 @@ dwb_parse_command_line(const char *line)
     gboolean found = false;
     gboolean has_arg = false;
     const char *argument = NULL;
+    char *orig_line = g_strdup(line);
 
     line = util_str_chug(line);
     bak = dwb_parse_nummod(line);
@@ -4989,15 +4992,24 @@ dwb_parse_command_line(const char *line)
                 m->map->func(&m, &m->map->arg);
             else 
                 ret = commands_simple_command(m, argument);
+            if (dwb.state.last_command)
+            {
+                g_free(dwb.state.last_command);
+            }
             
+            dwb.state.last_command = orig_line;
             break;
         }
+
     }
+    if (!found)
+        g_free(orig_line);
     g_strfreev(token);
     if (ret == STATUS_END)
         return ret;
 
     dwb_glist_prepend_unique(&dwb.fc.commands, g_strdup(line));
+    dwb.state.last_com_history = dwb.fc.commands;
     dwb.state.nummod = -1;
 
     /* Check for dwb.keymap is necessary for commands that quit dwb. */

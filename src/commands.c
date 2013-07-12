@@ -201,15 +201,24 @@ DwbStatus
 commands_find(KeyMap *km, Arg *arg) 
 { 
     View *v = CURRENT_VIEW();
-    dwb.state.mode = FIND_MODE;
     dwb.state.search_flags = arg->n;
 
     if (v->status->search_string) {
         g_free(v->status->search_string);
         v->status->search_string = NULL;
     }
+    if (arg->p)
+    {
+        v->status->search_string = g_strdup(arg->p);
+        dwb_glist_prepend_unique(&dwb.fc.searches, g_strdup(g_strdup(arg->p)));
+        dwb_search(NULL);
+    }
+    else 
+    {
+        dwb.state.mode = FIND_MODE;
+       entry_focus();
+    }
 
-    entry_focus();
     return STATUS_OK;
 }/*}}}*/
 
@@ -1142,4 +1151,14 @@ commands_adblock_reload_rules(KeyMap *km, Arg *arg)
     adblock_reload();
     dwb_set_normal_message(dwb.state.fview, true, "Adblock rules reloaded");
     return STATUS_OK;
+}
+DwbStatus
+commands_repeat(KeyMap *km, Arg *arg)
+{
+    if (dwb.state.last_command)
+    {
+        dwb_parse_command_line(dwb.state.last_command);
+        return STATUS_OK;
+    }
+    return STATUS_ERROR;
 }

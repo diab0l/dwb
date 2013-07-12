@@ -641,6 +641,7 @@ struct _State {
   gint last_tab;
   gboolean do_not_track;
   gboolean block_insecure_content;
+  gchar *last_command;
 };
 
 typedef enum _SettingsApply {

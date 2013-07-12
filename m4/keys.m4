@@ -79,6 +79,7 @@ html_input(entry_delete_word_forward, text, Delete word forward)
 html_input(entry_word_back, text, Move cursor back on word)
 html_input(entry_word_forward, text, Move cursor forward on word)
 html_input(download_set_execute, text, Toggle between spawning an application and download path )
+html_input(repeat, text, Repeat last commandline command)
 
 html_header(Scrolling)
 dnl

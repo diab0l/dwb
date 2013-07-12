@@ -191,10 +191,14 @@ static KeyValue KEYS[] = {
   { "print_preview",            {   NULL,         0, 0 }, }, 
   { "adblock_reload_rules",     {   NULL,         0, 0 }, }, 
   { "tabgrep",            {   NULL,         0, 0 }, }, 
+  { "repeat",            {   ".",         0, 0 }, }, 
 };
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
+  { { "repeat",              "Repeat the last commandline command",                    }, 0,
+    (Func)commands_repeat,            "Nothing to repeat",                            ALWAYS_SM,     
+    { .p = NULL },                          EP_NONE,    { NULL }, },
   { { "tabgrep",              "Focus a tab by pattern or regex",                    }, CP_COMMANDLINE | CP_NEEDS_ARG, 
     (Func)commands_focus_matched,            "Missing command",                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },

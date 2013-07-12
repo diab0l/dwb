@@ -140,6 +140,9 @@ Scroll [n] half pages up (command: 'scroll_halfpage_up', aliases: 'halfup').
 *:*::
 Enter Command mode.
 
+*.*::
+Repeat last command line command.
+
 *o*::
 Open new url in the focused tab, the argument $URI will be replaced by the
 current uri (command: 'open', aliases: 'o').
