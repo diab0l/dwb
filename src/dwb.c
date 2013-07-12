@@ -90,6 +90,7 @@ static DwbStatus dwb_set_accept_language(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_passthrough(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_javascript_api(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_block_insecure_content(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_enable_ipc(GList *gl, WebSettings *s);
 #if !_HAS_GTK3 
 static DwbStatus dwb_set_tab_orientation(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_tab_width(GList *gl, WebSettings *s);
@@ -228,6 +229,16 @@ dwb_set_block_insecure_content(GList *gl, WebSettings *s)
     }
     return STATUS_OK;
 }
+static DwbStatus
+dwb_set_enable_ipc(GList *gl, WebSettings *s)
+{
+    if (s->arg_local.b)
+        ipc_start(dwb.gui.window);
+    else 
+        ipc_end(dwb.gui.window);
+    return STATUS_OK;
+}
+
 #if !_HAS_GTK3
 static DwbStatus
 dwb_set_tab_orientation(GList *gl, WebSettings *s) 
@@ -4993,7 +5004,8 @@ dwb_init()
     dwb_init_style();
     dwb_init_gui();
     dwb_init_custom_keys(false);
-    ipc_start(dwb.gui.window);
+    if (GET_BOOL("enable-ipc"))
+        ipc_start(dwb.gui.window);
     domain_init();
     adblock_init();
     dwb_init_hints(NULL, NULL);

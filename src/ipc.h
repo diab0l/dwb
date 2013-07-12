@@ -32,6 +32,7 @@ enum {
 };
 
 void ipc_start(GtkWidget *);
+void ipc_end(GtkWidget *);
 void ipc_send_hook(char *hook, const char *format, ...);
 
 #define IPC_SEND_HOOK(hook, ...); do { \

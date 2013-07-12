@@ -27,20 +27,20 @@
 
 #define OPTNL(cond) ((cond) ? "" : "\n")
 
-static Atom s_atoms[6];
-static GdkAtom s_readatom;
-static Display *s_dpy;
-static Window s_win;
-
 enum {
     DWB_ATOM_READ = 0, 
     DWB_ATOM_WRITE,
-    DWB_ATOM_STATUS,
     DWB_ATOM_HOOK,
     DWB_ATOM_BIND,
     UTF8_STRING, 
+    DWB_ATOM_LAST,
 };
-guint id;
+
+static Atom s_atoms[DWB_ATOM_LAST];
+static GdkAtom s_readatom;
+static Display *s_dpy;
+static Window s_win;
+static gulong s_sig_property;
 
 static long 
 get_number(const char *text)
@@ -322,7 +322,6 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
 
         XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_READ]);
         dwbremote_set_status(s_dpy, s_win, status);
-        //XChangeProperty(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
 
         XFreeStringList(list);
 
@@ -348,6 +347,16 @@ ipc_send_hook(char *name, const char *format, ...)
         dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], name);
 }
 void 
+ipc_end(GtkWidget *widget)
+{
+    if (s_sig_property != 0)
+    {
+        g_signal_handler_disconnect(widget, s_sig_property);
+        XDeleteProperty(s_dpy, s_win, XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_STATUS, False));
+        s_sig_property = 0;
+    }
+}
+void 
 ipc_start(GtkWidget *widget)
 {
     dwb.state.ipc_hooks = 0;
@@ -364,12 +373,11 @@ ipc_start(GtkWidget *widget)
 
     s_atoms[DWB_ATOM_READ] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_READ, false);
     s_atoms[DWB_ATOM_WRITE] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_WRITE, false);
-    s_atoms[DWB_ATOM_STATUS] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_STATUS, false);
     s_atoms[DWB_ATOM_HOOK] = XInternAtom(s_dpy, DWB_ATOM_IPC_HOOK, false);
     s_atoms[DWB_ATOM_BIND] = XInternAtom(s_dpy, DWB_ATOM_IPC_BIND, false);
     s_atoms[UTF8_STRING] = XInternAtom(s_dpy, "UTF8_STRING", false);
 
     s_readatom = gdk_atom_intern(DWB_ATOM_IPC_SERVER_READ, false);
 
-    g_signal_connect(G_OBJECT(widget), "property-notify-event", G_CALLBACK(on_property_notify), NULL);
+    s_sig_property = g_signal_connect(G_OBJECT(widget), "property-notify-event", G_CALLBACK(on_property_notify), NULL);
 }

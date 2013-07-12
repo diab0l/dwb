@@ -34,7 +34,7 @@ dwbremote \- dwb remote control
 \fBdwbremote\fR [\fIOPTION\fR] <command> <arguments>
 .SH "DESCRIPTION"
 .sp
-\fBdwbremote\fR allows control to dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&.
+\fBdwbremote\fR allows control to dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&. To use dwbremote \fIenable\-ipc\fR must be enabled in the dwb instance to communicate with\&.
 .SH "OPTIONS"
 .sp
 Options are only required if the environment variable \fBDWB_WINID\fR is not set, in userscripts executed by dwb \fBDWB_WINID\fR will always be set\&. If multiple options are passed dwbremote will use the first matching window\&.
@@ -52,7 +52,7 @@ Send comands to window with id
 .PP
 \fB\-l \-\-list\fR
 .RS 4
-List all dwb window ids\&.
+List all dwb window ids with enabled ipc\&.
 .RE
 .PP
 \fB\-n \-name\fR \fIwm_name\fR

@@ -162,6 +162,7 @@ html_input(enable-default-context-menu, checkbox, Whether to enable the right cl
 html_input(enable-developer-extras, checkbox, Whether developer extensions should be enabled)
 html_input(enable-dom-paste, checkbox, Whether to enable DOM paste)
 html_input(enable-file-access-from-file-uris, checkbox, Whether file access from file uris is allowed)
+html_input(enable-ipc, checkbox, ``Whether enable inter process communication, required by dwbremote'')
 html_input(enable-html5-database, checkbox, Enable HTML5 client side SQL-database support)
 html_input(enable-html5-local-storage, checkbox, Enable HTML5 local storage)
 html_input(enable-offline-web-application-cache, checkbox, Enable HTML5 offline web application cache)
