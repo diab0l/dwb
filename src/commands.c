@@ -33,6 +33,7 @@
 #include "editor.h"
 #include "dom.h"
 #include "application.h"
+#include "ipc.h"
 
 /* commands.h {{{*/
 /* commands_simple_command(keyMap *km) {{{*/
@@ -48,6 +49,8 @@ commands_simple_command(KeyMap *km, const char *argument)
     {
         completion_clean_autocompletion();
     }
+    IPC_SEND_HOOK("execute", EXECUTE, "%s %s %d", km->map->n.first ? km->map->n.first : "none", 
+            argument ? argument : "none", dwb.state.nummod);
     /**
      * Emitted before a command is executed
      *

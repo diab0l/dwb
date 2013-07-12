@@ -38,6 +38,7 @@ enum {
     IPC_HOOK_CLOSE_TAB = 1<<4, 
     IPC_HOOK_NEW_TAB = 1<<5, 
     IPC_HOOK_FOCUS_TAB = 1<<6, 
+    IPC_HOOK_EXECUTE = 1<<7, 
 };
 
 int 

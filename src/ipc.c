@@ -19,7 +19,6 @@
 #include "dwb.h"
 #include "ipc.h"
 #include "soup.h"
-#include <dwbremote.h>
 #include <string.h>
 #include <stdlib.h>
 #include <gdk/gdkx.h>
@@ -69,6 +68,7 @@ get_hooks(char **list, int count)
         { IPC_HOOK_CLOSE_TAB, "close_tab" }, 
         { IPC_HOOK_NEW_TAB, "new_tab" }, 
         { IPC_HOOK_FOCUS_TAB, "focus_tab" }, 
+        { IPC_HOOK_EXECUTE, "execute" }, 
         { 0, 0 }
     };
     for (int i=0; hook_mapping[i].hook != 0; i++)

@@ -52,7 +52,6 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
-#include <dwbremote.h>
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"
@@ -1662,8 +1661,7 @@ dwb_focus_view(GList *gl, const char *event)
     static int running;
     if (gl != dwb.state.fview) 
     {
-        if (dwb.state.ipc_hooks & IPC_HOOK_FOCUS_TAB)
-            ipc_send_hook("focus_tab", "%d", g_list_position(dwb.state.views, gl) + 1);
+        IPC_SEND_HOOK("focus_tab", FOCUS_TAB, "%d", g_list_position(dwb.state.views, gl) + 1);
         if (EMIT_SCRIPT(TAB_FOCUS)) 
         {
             /**

@@ -94,6 +94,14 @@ COMMANDS
             Emitted when a tab is closed, return format: 'close_tab <n>'
             *n*::::
                 Number of tab that was closed
+        *execute* ;;
+            Emitted when a command is executed, return format: 'execute <command> <argument> <n>'
+            *command*::::
+                Command that is executed
+            *argument*::::
+                Argument if it is a commandline command with argument or 'none'
+            *n*::::
+                Numerical modifier or -1
         *focus_tab*;;
             Emitted when a tab gets focus, return format: 'focus_tab <n>'
             *n*::::

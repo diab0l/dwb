@@ -162,6 +162,28 @@ Number of tab that was closed
 .RE
 .RE
 .PP
+\fBexecute\fR
+.RS 4
+Emitted when a command is executed, return format:
+\fIexecute <command> <argument> <n>\fR
+.PP
+\fBcommand\fR
+.RS 4
+Command that is executed
+.RE
+.PP
+\fBargument\fR
+.RS 4
+Argument if it is a commandline command with argument or
+\fInone\fR
+.RE
+.PP
+\fBn\fR
+.RS 4
+Numerical modifier or \-1
+.RE
+.RE
+.PP
 \fBfocus_tab\fR
 .RS 4
 Emitted when a tab gets focus, return format:
