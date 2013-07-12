@@ -57,7 +57,7 @@ static int
 get_hooks(char **list, int count)
 {
     int hooks = 0;
-    const struct {
+    static const struct {
         int hook;
         const char *name;
     } hook_mapping[] = {
@@ -336,7 +336,7 @@ void
 ipc_send_hook(char *name, const char *format, ...)
 {
     va_list arg_list; 
-    char buffer[1024];
+    char buffer[4096];
     puts(name);
     if (format != NULL)
     {
