@@ -26,6 +26,8 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 
+#define OPTNL(cond) ((cond) ? "" : "\n")
+
 static Atom s_atoms[6];
 static GdkAtom s_readatom;
 static Display *s_dpy;
@@ -223,7 +225,7 @@ parse_commands(char **list, int count)
         {
             GString *s = g_string_new(NULL);
             for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s%s\n", l == dwb.state.views ? "" : "\n", dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
+                g_string_append_printf(s, "%s%s\n", OPTNL(l == dwb.state.views), dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
             text = s->str;
             g_string_free(s, false);
         }
@@ -231,6 +233,20 @@ parse_commands(char **list, int count)
         {
             dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE],
                     "%d", g_list_position(dwb.state.views, dwb.state.fview) + 1);
+        }
+        else if (STREQ(list[argc], "history"))
+        {
+            GString *s = g_string_new(NULL);
+            WebKitWebBackForwardList *bf_list = webkit_web_view_get_back_forward_list(WEBVIEW(l));
+            int blength = webkit_web_back_forward_list_get_back_length(bf_list);
+            int flength = webkit_web_back_forward_list_get_forward_length(bf_list);
+            for (int i=-blength; i<=flength; i++)
+            {
+                WebKitWebHistoryItem *item = webkit_web_back_forward_list_get_nth_item(bf_list, i);
+                g_string_append_printf(s, "%s%d %s", OPTNL(i == -blength), i, webkit_web_history_item_get_uri(item));
+            }
+            text = s->str;
+            g_string_free(s, false);
         }
     }
     else if (STREQ(list[0], "clear_hooks"))
