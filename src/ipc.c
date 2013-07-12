@@ -56,21 +56,24 @@ get_number(const char *text)
 static int 
 get_hooks(char **list, int count)
 {
+#define HOOK_MAP(hook) { IPC_HOOK_##hook, #hook }
     int hooks = 0;
     static const struct {
         int hook;
         const char *name;
     } hook_mapping[] = {
-        { IPC_HOOK_hook, "hook" }, 
-        { IPC_HOOK_navigation, "navigation" }, 
-        { IPC_HOOK_load_finished, "load_finished" }, 
-        { IPC_HOOK_load_committed, "load_committed" }, 
-        { IPC_HOOK_close_tab, "close_tab" }, 
-        { IPC_HOOK_new_tab, "new_tab" }, 
-        { IPC_HOOK_focus_tab, "focus_tab" }, 
-        { IPC_HOOK_execute, "execute" }, 
+        HOOK_MAP(hook), 
+        HOOK_MAP(navigation), 
+        HOOK_MAP(load_finished), 
+        HOOK_MAP(load_committed), 
+        HOOK_MAP(close_tab), 
+        HOOK_MAP(new_tab), 
+        HOOK_MAP(focus_tab), 
+        HOOK_MAP(execute), 
+        HOOK_MAP(change_mode),
         { 0, 0 }
     };
+#undef HOOK_MAP
     for (int i=0; hook_mapping[i].hook != 0; i++)
     {
         for (int j=0; j<count; j++)
@@ -132,31 +135,6 @@ parse_commands(char **list, int count)
     {
         text = dwb_prompt(false, list[1]);
     }
-    else if (STREQ(list[0], "setting"))
-    {
-        WebSettings *s = g_hash_table_lookup(dwb.settings, list[1]);
-        if (s == NULL) 
-            dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "not found");
-        else 
-        {
-            switch (s->type) 
-            {
-                case INTEGER : 
-                    dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%d", s->arg_local.i);
-                    break;
-                case DOUBLE : 
-                    dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%.2f", s->arg_local.d);
-                    break;
-                case BOOLEAN : 
-                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.b ? "true" : "false");
-                    break;
-                case CHAR : 
-                    dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p ? s->arg_local.p : "(none)");
-                    break;
-                default : break;
-            }
-        }
-    }
     else if (STREQ(list[0], "get") && count > 1)
     {
         GList *l = dwb.state.fview;
@@ -164,8 +142,9 @@ parse_commands(char **list, int count)
         int argc = 1;
         if (count == 3)
         {
-            if ((n = get_number(list[argc++])) != -1)
+            if ((n = get_number(list[argc])) != -1)
             {
+                argc++;
                 l = g_list_nth(dwb.state.views, n - 1);
                 if (l == NULL)
                 {
@@ -250,6 +229,35 @@ parse_commands(char **list, int count)
             }
             text = s->str;
             g_string_free(s, false);
+        }
+        else if (STREQ(list[argc], "profile"))
+        {
+            text = g_strdup(dwb.misc.profile);
+        }
+        else if (STREQ(list[argc], "setting") && count > 2)
+        {
+            WebSettings *s = g_hash_table_lookup(dwb.settings, list[argc+1]);
+            if (s == NULL) 
+                dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "not found");
+            else 
+            {
+                switch (s->type) 
+                {
+                    case INTEGER : 
+                        dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%d", s->arg_local.i);
+                        break;
+                    case DOUBLE : 
+                        dwbremote_set_formatted_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "%.2f", s->arg_local.d);
+                        break;
+                    case BOOLEAN : 
+                        dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.b ? "true" : "false");
+                        break;
+                    case CHAR : 
+                        dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], s->arg_local.p ? s->arg_local.p : "(none)");
+                        break;
+                    default : break;
+                }
+            }
         }
         else 
         {
@@ -337,7 +345,6 @@ ipc_send_hook(char *name, const char *format, ...)
 {
     va_list arg_list; 
     char buffer[4096];
-    puts(name);
     if (format != NULL)
     {
         va_start(arg_list, format);

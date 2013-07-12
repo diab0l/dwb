@@ -3224,33 +3224,41 @@ dwb_change_mode(Mode mode, ...)
     va_list vl;
     if (dwb.state.mode & AUTO_COMPLETE) 
         completion_clean_autocompletion();
-    if (EMIT_SCRIPT(CHANGE_MODE)) 
+    if (BASIC_MODES(dwb.state.mode) != BASIC_MODES(mode))
     {
-        /**
-         * Emitted before the mode changes
-         * @event  changeMode
-         * @memberOf signals
-         * @param {signals~onChangeMode} callback 
-         *      Callback function that will be called when the signal is emitted
-         *
-         * */
-        /**
-         * Callback called before the mode changes
-         * @callback signals~onChangeMode
-         *
-         * @param {WebKitWebView} new   
-         *      The webview that currently has focus
-         * @param {Modes}         mode
-         *      A {@link Enums and Flags|Mode} 
-         *
-         * @returns {Boolean} 
-         *      Return true to prevent changing mode
-         * */
+        IPC_SEND_HOOK(change_mode, "%s", 
+                BASIC_MODES(mode) == HINT_MODE ? "hint" : 
+                BASIC_MODES(mode) == CARET_MODE ? "caret" : 
+                BASIC_MODES(mode) == INSERT_MODE ? "insert" : 
+                BASIC_MODES(mode) == COMMAND_MODE ? "command" : "normal");
+        if (EMIT_SCRIPT(CHANGE_MODE)) 
+        {
+            /**
+             * Emitted before the mode changes
+             * @event  changeMode
+             * @memberOf signals
+             * @param {signals~onChangeMode} callback 
+             *      Callback function that will be called when the signal is emitted
+             *
+             * */
+            /**
+             * Callback called before the mode changes
+             * @callback signals~onChangeMode
+             *
+             * @param {WebKitWebView} new   
+             *      The webview that currently has focus
+             * @param {Modes}         mode
+             *      A {@link Enums and Flags|Mode} 
+             *
+             * @returns {Boolean} 
+             *      Return true to prevent changing mode
+             * */
 
-        char buffer[] = { BASIC_MODES(mode) + 48, 0 };
-        ScriptSignal sig = { .jsobj = (dwb.state.fview ? CURRENT_VIEW()->script_wv : NULL), SCRIPTS_SIG_META(buffer, CHANGE_MODE, 0) };
-        if (scripts_emit(&sig))
-            return STATUS_OK;
+            char buffer[] = { BASIC_MODES(mode) + 48, 0 };
+            ScriptSignal sig = { .jsobj = (dwb.state.fview ? CURRENT_VIEW()->script_wv : NULL), SCRIPTS_SIG_META(buffer, CHANGE_MODE, 0) };
+            if (scripts_emit(&sig))
+                return STATUS_OK;
+        }
     }
     switch(mode) 
     {

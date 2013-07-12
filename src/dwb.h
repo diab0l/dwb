@@ -372,7 +372,7 @@ typedef enum {
   FIND_MODE             = 0x100000,
   CARET_MODE            = 0x200000,
 } Mode;
-#define BASIC_MODES(mode) ( MAX( ( (mode) & (NORMAL_MODE | INSERT_MODE | COMMAND_MODE | HINT_MODE) ), NORMAL_MODE) )
+#define BASIC_MODES(mode) ( MAX( ( (mode) & (NORMAL_MODE | INSERT_MODE | COMMAND_MODE | HINT_MODE | CARET_MODE) ), NORMAL_MODE) )
 
 
 typedef enum {

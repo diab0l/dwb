@@ -81,6 +81,12 @@ COMMANDS
             Gets the host of the nth tab or current tab is n is omitted.
         *ntabs*::::
             Gets total number of tabs.
+        *profile*::::
+            Gets the profile name.
+        *setting <name>*::::
+            Gets a setting, only the current local settings from the instance
+            are received so they might differ from the settings in
+            $HOME/.config/dwb/settings, e.g. if they were changed with local_set.
         *[n] title*::::
             Gets the title of the nth tab or current tab is n is omitted.
         *[n] uri*::::
@@ -91,6 +97,11 @@ COMMANDS
 
     *Hooks*:::
 
+        *change_mode*;; 
+            Emitted when the mode changes, return format: 'change_mode <mode>'
+            *mode*:::: 
+                The new mode, can be one of 'normal', 'insert', 'hint', 'command'
+                or 'caret'
         *close_tab* ;;
             Emitted when a tab is closed, return format: 'close_tab <n>'
             *n*::::
@@ -147,10 +158,6 @@ COMMANDS
         
 *pwd_prompt* 'promptmessage'::
     Shows a password dialog. Note that using password prompt is not save.
-   
-    
-*setting* 'setting'::
-    Gets a setting.
 
 
 EXAMPLES
