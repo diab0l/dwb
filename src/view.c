@@ -672,7 +672,7 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     WebKitWebNavigationReason reason = webkit_web_navigation_action_get_reason(action);
     gint button = webkit_web_navigation_action_get_button(action);
 
-    IPC_SEND_HOOK("navigation", NAVIGATION, "%d %s %s", g_list_position(dwb.state.views, gl) + 1, 
+    IPC_SEND_HOOK(navigation, "%d %s %s", g_list_position(dwb.state.views, gl) + 1, 
                             frame == webkit_web_view_get_main_frame(web) ? "true" : "false", 
                             uri);
 
@@ -1157,7 +1157,7 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             {
                 plugins_disconnect(gl);
             }
-            IPC_SEND_HOOK("load_committed", LOAD_COMMITTED, "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
+            IPC_SEND_HOOK(load_committed, "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
             /**
              * Emitted when the load has just been commited, no data has been loaded
              * when this signal is emitted. This is the preferred signal for
@@ -1196,7 +1196,7 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
             if (dwb.state.auto_insert_mode) 
                 dwb_check_auto_insert(gl);
 
-            IPC_SEND_HOOK("load_finished", LOAD_FINISHED, "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
+            IPC_SEND_HOOK(load_finished, "%d %s", g_list_position(dwb.state.views, dwb.state.fview) + 1, uri);
             /**
              * Emitted when the site has completely loaded.
              *
@@ -1879,7 +1879,7 @@ view_remove(GList *gl)
     dwb_focus_view(new_fview, "close_tab");
     view_clean(gl);
 
-    IPC_SEND_HOOK("close_tab", CLOSE_TAB, "%d", g_list_position(dwb.state.views, gl) + 1);
+    IPC_SEND_HOOK(close_tab, "%d", g_list_position(dwb.state.views, gl) + 1);
 
     dwb_source_remove();
 
@@ -1992,7 +1992,7 @@ view_add(const char *uri, gboolean background)
 #endif
         }
     }
-    IPC_SEND_HOOK("new_tab", NEW_TAB, "%d %s", g_list_position(dwb.state.views, ret) + 1, uri ? uri : "");
+    IPC_SEND_HOOK(new_tab, "%d %s", g_list_position(dwb.state.views, ret) + 1, uri ? uri : "");
     if (EMIT_SCRIPT(CREATE_TAB)) 
     {
         /**

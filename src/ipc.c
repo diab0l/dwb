@@ -61,14 +61,14 @@ get_hooks(char **list, int count)
         int hook;
         const char *name;
     } hook_mapping[] = {
-        { IPC_HOOK_HOOK, "hook" }, 
-        { IPC_HOOK_NAVIGATION, "navigation" }, 
-        { IPC_HOOK_LOAD_FINISHED, "load_finished" }, 
-        { IPC_HOOK_LOAD_COMMITTED, "load_committed" }, 
-        { IPC_HOOK_CLOSE_TAB, "close_tab" }, 
-        { IPC_HOOK_NEW_TAB, "new_tab" }, 
-        { IPC_HOOK_FOCUS_TAB, "focus_tab" }, 
-        { IPC_HOOK_EXECUTE, "execute" }, 
+        { IPC_HOOK_hook, "hook" }, 
+        { IPC_HOOK_navigation, "navigation" }, 
+        { IPC_HOOK_load_finished, "load_finished" }, 
+        { IPC_HOOK_load_committed, "load_committed" }, 
+        { IPC_HOOK_close_tab, "close_tab" }, 
+        { IPC_HOOK_new_tab, "new_tab" }, 
+        { IPC_HOOK_focus_tab, "focus_tab" }, 
+        { IPC_HOOK_execute, "execute" }, 
         { 0, 0 }
     };
     for (int i=0; hook_mapping[i].hook != 0; i++)
@@ -251,13 +251,13 @@ parse_commands(char **list, int count)
     }
     else if (STREQ(list[0], "clear_hooks"))
     {
-        if (dwb.state.ipc_hooks & IPC_HOOK_HOOK)
+        if (dwb.state.ipc_hooks & IPC_HOOK_hook)
             send_hook_list("clear", &list[1], count-1);
         dwb.state.ipc_hooks &= ~get_hooks(&list[1], count-1);
     }
     else if (STREQ(list[0], "hook") || STREQ(list[0], "add_hooks"))
     {
-        if (dwb.state.ipc_hooks & IPC_HOOK_HOOK)
+        if (dwb.state.ipc_hooks & IPC_HOOK_hook)
             send_hook_list("add", &list[1], count-1);
         dwb.state.ipc_hooks |= get_hooks(&list[1], count-1);
     }
@@ -331,6 +331,7 @@ ipc_send_hook(char *name, const char *format, ...)
 {
     va_list arg_list; 
     char buffer[1024];
+    puts(name);
     if (format != NULL)
     {
         va_start(arg_list, format);

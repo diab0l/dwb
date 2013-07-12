@@ -23,7 +23,7 @@
 void ipc_start(GtkWidget *);
 void ipc_send_hook(char *hook, const char *format, ...);
 
-#define IPC_SEND_HOOK(name, hook, ...); do { \
-    if (dwb.state.ipc_hooks & IPC_HOOK_##hook) ipc_send_hook(name, __VA_ARGS__); \
+#define IPC_SEND_HOOK(hook, ...); do { \
+    if (dwb.state.ipc_hooks & IPC_HOOK_##hook) ipc_send_hook(#hook, __VA_ARGS__); \
     } while(0)
 #endif

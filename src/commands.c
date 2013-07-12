@@ -49,7 +49,7 @@ commands_simple_command(KeyMap *km, const char *argument)
     {
         completion_clean_autocompletion();
     }
-    IPC_SEND_HOOK("execute", EXECUTE, "%s %s %d", km->map->n.first ? km->map->n.first : "none", 
+    IPC_SEND_HOOK(execute, "%s %s %d", km->map->n.first ? km->map->n.first : "none", 
             argument ? argument : "none", dwb.state.nummod);
     /**
      * Emitted before a command is executed

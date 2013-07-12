@@ -31,14 +31,14 @@
 #define DWB_ATOM_IPC_SERVER_STATUS "__DWB_IPC_SERVER_STATUS"
 
 enum {
-    IPC_HOOK_HOOK = 1<<0, 
-    IPC_HOOK_NAVIGATION = 1<<1, 
-    IPC_HOOK_LOAD_FINISHED = 1<<2, 
-    IPC_HOOK_LOAD_COMMITTED = 1<<3, 
-    IPC_HOOK_CLOSE_TAB = 1<<4, 
-    IPC_HOOK_NEW_TAB = 1<<5, 
-    IPC_HOOK_FOCUS_TAB = 1<<6, 
-    IPC_HOOK_EXECUTE = 1<<7, 
+    IPC_HOOK_hook = 1<<0, 
+    IPC_HOOK_navigation = 1<<1, 
+    IPC_HOOK_load_finished = 1<<2, 
+    IPC_HOOK_load_committed = 1<<3, 
+    IPC_HOOK_close_tab = 1<<4, 
+    IPC_HOOK_new_tab = 1<<5, 
+    IPC_HOOK_focus_tab = 1<<6, 
+    IPC_HOOK_execute = 1<<7, 
 };
 
 int 
