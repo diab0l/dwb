@@ -39,14 +39,24 @@
 #define LICENSE "GNU General Public License, version 3 or later"
 #endif
 
+static Window *all_wins;
+static int opts;
+
 enum {
-    GET_ONCE = 0,
-    GET_MULTIPLE, 
+    OPT_SHOW_WID = 1<<0, 
+    OPT_SNOOP = 1<<1, 
 };
 
 static void 
+cleanup()
+{
+    if (all_wins != NULL)
+        free(all_wins);
+}
+static void 
 help(int ret)
 {
+    cleanup();
     printf( "USAGE: \n" 
             "   dwbremote [options] <command> <arguments>\n\n"
             "OPTIONS: \n"
@@ -123,26 +133,6 @@ cmp_winid(Display *dpy, Window win, void *data)
     return win == *(Window *)data;
 }
 
-static void 
-query_windows(Display *dpy, Window win, void *data, Window *winret, Bool (*cmp)(Display *, Window win, void *data))
-{
-    Window unused_win; 
-    Window *children; 
-    unsigned int n_children;
-
-    if (XQueryTree(dpy, win, &unused_win, &unused_win, &children, &n_children) == 0)
-        return;
-    for (unsigned int i=0; i<n_children; i++)
-    {
-        if (is_dwb_win(dpy, children[i]) && cmp(dpy, children[i], data))
-        {
-            *winret = children[i];
-            break;
-        }
-        else 
-            query_windows(dpy, children[i], data, winret, cmp);
-    }
-}
 static void * 
 xrealloc(void *ptr, size_t size)
 {
@@ -155,8 +145,23 @@ xrealloc(void *ptr, size_t size)
     return ret;
 }
 
+static Bool 
+append_win(Window win, Window **win_return, int *n_ret)
+{
+    for (int i=0; i<*n_ret; i++)
+    {
+        if ((*win_return)[i] == win)
+            return False;
+    }
+
+    *win_return = xrealloc(*win_return, (*n_ret + 1) * sizeof(Window));
+    (*win_return)[*n_ret] = win;
+    (*n_ret)++;
+    return True;
+}
+
 static void 
-get_wins(Display *dpy, Window win, Window **win_return, int *n_ret)
+get_wins(Display *dpy, Window win, Window **win_return, int *n_ret, void *data, Bool (*cmp)(Display *, Window win, void *data), Bool stop_query)
 {
     Window unused_win; 
     Window *children; 
@@ -166,18 +171,17 @@ get_wins(Display *dpy, Window win, Window **win_return, int *n_ret)
         return;
     for (unsigned int i=0; i<n_children; i++)
     {
-        if (is_dwb_win(dpy, children[i]))
+        if (is_dwb_win(dpy, children[i]) && (cmp == NULL || cmp(dpy, children[i], data)))
         {
-            *win_return = xrealloc(*win_return, (*n_ret + 1) * sizeof(Window));
-            (*win_return)[*n_ret] = children[i];
-            (*n_ret)++;
+            if (append_win(children[i], win_return, n_ret) && stop_query)
+                break;
         }
-        get_wins(dpy, children[i], win_return, n_ret);
+        get_wins(dpy, children[i], win_return, n_ret, data, cmp, stop_query);
     }
 }
 
 static Bool 
-consume_arg(const char *opt, const char *lopt, int *argc, char ***argv, Bool condition)
+consume_arg(const char *opt, const char *lopt, int *argc, char ***argv)
 {
     if (STREQ(**argv, opt) || STREQ(**argv, lopt)) 
     {
@@ -185,9 +189,7 @@ consume_arg(const char *opt, const char *lopt, int *argc, char ***argv, Bool con
         (*argc)--;
         if (*argc < 3)
             help(1);
-        if (!condition)
-            fprintf(stderr, "Ignoring option '%s %s'\n", lopt, **argv);
-        return condition;
+        return True;
     }
     return False;
 }
@@ -206,23 +208,116 @@ parse_number(char *str)
     return ret;
 }
 
+static void 
+send_command(Display *dpy, Window win, long event_mask, char **argv, int argc)
+{
+    dwbremote_set_property_list_by_name(dpy, win, DWB_ATOM_IPC_CLIENT_WRITE, argv, argc);
+    XSelectInput(dpy, win, event_mask);
+}
+static int 
+process_one(Display *dpy, Window win, Atom read_atom, char **argv, int argc)
+{
+    XEvent e;
+    XPropertyEvent *pe;
+    Atom atr;
+    int status;
+    char **list; 
+    int count;
+
+    send_command(dpy, win, PropertyChangeMask, argv, argc);
+    while(1)
+    {
+        XNextEvent(dpy, &e);
+        pe = &(e.xproperty);
+        if (pe->atom == read_atom && dwbremote_get_property(dpy, pe->window, read_atom, &list, &count))
+        {
+            if (count > 0)
+            {
+                if (opts & OPT_SHOW_WID)
+                    printf("%lu ", win);
+                printf("%s\n", list[0]);
+                XFreeStringList(list);
+            }
+            XDeleteProperty(dpy, pe->window, read_atom);
+        }
+        else if (pe->atom == XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False))
+        {
+            status = dwbremote_get_status(dpy, pe->window, &atr);
+            if (atr != None)
+                return status;
+            else 
+                return 2;
+        }
+    }
+}
+static void 
+process_multiple(Display *dpy, Atom read_atom, char **argv, int argc, Window *all_wins, int n_wins)
+{
+    XEvent e;
+    XPropertyEvent *pe;
+    char **list; 
+    int count;
+
+    while (1)
+    {
+        XNextEvent(dpy, &e);
+        if (e.type == DestroyNotify)
+        {
+            int non_zero = 0;;
+            Window win = ((XDestroyWindowEvent*)(&e.xdestroywindow))->window;
+            for (int i=0; i<n_wins; i++)
+            {
+                if (all_wins[i] == win)
+                    all_wins[i] = 0;
+                else if (all_wins[i] != 0)
+                    non_zero++;
+            }
+            if (non_zero == 1)
+                continue;
+            else 
+                break;
+
+        }
+        if (e.type != PropertyNotify)
+            continue;
+        pe = &(e.xproperty);
+        if (pe->atom == read_atom && dwbremote_get_property(dpy, pe->window, read_atom, &list, &count))
+        {
+            if (count > 0)
+            {
+                for (int i=argc; i>0; i--)
+                {
+                    if (!strcmp(list[0], argv[i-1]))
+                    {
+                        if (opts & OPT_SHOW_WID)
+                            printf("%lu ", pe->window);
+                        printf("%s", argv[i-1]);
+                        if (count > 1)
+                        {
+                            printf(" %s", list[1]);
+                        }
+                        putchar('\n');
+                    }
+                }
+                fflush(stdout);
+                XFreeStringList(list);
+            }
+            XDeleteProperty(dpy, pe->window, read_atom);
+        }
+    }
+}
+
+
 int 
 main(int argc, char **argv)
 {
     Display *dpy; 
     Window win = 0;
-    int type = GET_ONCE;
     int ret = 0;
-    Atom read_atom;
-    XEvent e;
-    XPropertyEvent *pe;
-    Atom atr; 
-    int status;
-    char **list; 
-    int count;
+    static Atom read_atom;
     Window root;
-    Window *all_wins = NULL;
     int n_wins = 0;
+    int get_multiple = 0;
 
     int pargc = argc - 1;
     char **pargv = argv + 1;
@@ -249,115 +344,77 @@ main(int argc, char **argv)
     {
         if (STREQ("-l", *pargv) || STREQ("--list", *pargv))
         {
-            get_wins(dpy, root, &all_wins, &n_wins);
+            get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
             for (int i=0; i<n_wins; i++)
                 printf("%lu\n", all_wins[i]);
-            free(all_wins);
-            XCloseDisplay(dpy);
+            goto finish;
             return 0;
         }
-        if (consume_arg("-i", "--id", &pargc, &pargv, win == 0))
+        if ((STREQ("-a", *pargv) || STREQ("--all", *pargv)) && pargc > 2)
+            get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
+        else if ((STREQ("-s", *pargv) || STREQ("--show-id", *pargv)) && pargc > 2)
+            opts |= OPT_SHOW_WID;
+        else if (consume_arg("-i", "--id", &pargc, &pargv))
         {
             unsigned long wid = parse_number(*pargv);
-            query_windows(dpy, root, (void *) &wid, &win, cmp_winid);
-            continue;
+            get_wins(dpy, root, &all_wins, &n_wins, (void *) &wid, cmp_winid, True);
         }
-        if (consume_arg("-p", "--pid", &pargc, &pargv, win == 0))
+        else if (consume_arg("-p", "--pid", &pargc, &pargv))
         {
             pid_t pid = (pid_t)parse_number(*pargv);
             if (pid != 0)
-                query_windows(dpy, root, (void *)&pid, &win, cmp_pid);
-            continue;
+                get_wins(dpy, root, &all_wins, &n_wins, (void *) &pid, cmp_pid, True);
         }
-        if (consume_arg("-c", "--class", &pargc, &pargv, win == 0))
+        else if (consume_arg("-c", "--class", &pargc, &pargv))
+            get_wins(dpy, root, &all_wins, &n_wins, (void *) *pargv, cmp_class, False);
+        else if (consume_arg("-n", "--name", &pargc, &pargv))
+            get_wins(dpy, root, &all_wins, &n_wins, (void *) *pargv, cmp_name, False);
+        else 
         {
-            query_windows(dpy, root, *pargv, &win, cmp_class);
-            continue;
+            fprintf(stderr, "Unknown option %s\n", *pargv);
+            help(1);
         }
-        if (consume_arg("-n", "--name", &pargc, &pargv, win == 0))
-        {
-            query_windows(dpy, root, *pargv, &win, cmp_name);
-            continue;
-        }
-        fprintf(stderr, "Unknown option %s\n", *pargv);
-        help(1);
     }
-    if (win == 0 && all_wins == NULL)
+    if (all_wins == NULL)
     {
         char *window_id = getenv("DWB_WINID");
         if (window_id != NULL)
             win = parse_number(window_id);
         if (win == 0)
         {
-            XCloseDisplay(dpy);
+            ret = 1;
             fprintf(stderr, "Failed to get window id\n");
-            return 1;
+            goto finish;
         }
+        append_win(win, &all_wins, &n_wins);
     }
 
     if (STREQ(*pargv, "hook"))
     {
-        type = GET_MULTIPLE;
+        get_multiple = 1;
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_HOOK, False);
     }
     else if (STREQ(*pargv, "bind"))
     {
-        type = GET_MULTIPLE;
+        get_multiple = 1;
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_BIND, False);
     }
     else 
         read_atom = XInternAtom(dpy, DWB_ATOM_IPC_CLIENT_READ, False);
 
-    dwbremote_set_property_list_by_name(dpy, win, DWB_ATOM_IPC_CLIENT_WRITE, pargv, pargc);
-    XSelectInput(dpy, win, PropertyChangeMask | StructureNotifyMask);
-
-    while (1)
+    if (get_multiple)
     {
-        XNextEvent(dpy, &e);
-        if (e.type == DestroyNotify)
-            break;
-        if (e.type != PropertyNotify)
-            continue;
-        pe = &(e.xproperty);
-        if (pe->atom == read_atom && dwbremote_get_property(dpy, win, read_atom, &list, &count))
-        {
-            if (count > 0)
-            {
-                if (type == GET_MULTIPLE)
-                {
-                    for (int i=pargc; i>0; i--)
-                    {
-                        if (!strcmp(list[0], pargv[i-1]))
-                        {
-                            printf("%s", pargv[i-1]);
-                            if (count > 1)
-                            {
-                                printf(" %s", list[1]);
-                            }
-                            putchar('\n');
-                        }
-                    }
-                    fflush(stdout);
-                }
-                else 
-                {
-                    printf("%s\n", list[0]);
-                }
-                XFreeStringList(list);
-            }
-            XDeleteProperty(dpy, win, read_atom);
-        }
-        if (type == GET_ONCE && pe->atom == XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False))
-        {
-            status = dwbremote_get_status(dpy, win, &atr);
-            if (atr != None)
-            {
-                ret = status;
-            }
-            break;
-        }
-
+        for (int i=0; i<n_wins; i++)
+            send_command(dpy, all_wins[i], PropertyChangeMask | StructureNotifyMask, pargv, pargc);
+        process_multiple(dpy, read_atom, pargv, pargc, all_wins, n_wins);
     }
+    else 
+    {
+        for (int i=0; i<n_wins; i++)
+            ret += process_one(dpy, all_wins[i], read_atom, pargv, pargc);
+    }
+finish: 
+    cleanup();
     XCloseDisplay(dpy);
     return ret;
 }

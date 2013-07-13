@@ -24,24 +24,31 @@ OPTIONS
 -------
 
 Options are only required if the environment variable *DWB_WINID* is not set, in
-userscripts executed by dwb *DWB_WINID* will always be set. If multiple options
-are passed dwbremote will use the first matching window.
+userscripts executed by dwb *DWB_WINID* will always be set. Passing more than
+one option sends the command to all matching windows. 
 
-*-c -class* 'wm_class'::
-    Search for window id by WM_CLASS, the commands are sent to the first match.
+*-a --all*::
+    Sends a command to all windows. 
 
-*-i -id* 'window_id'::
+*-c --class* 'wm_class'::
+    Search for window id by WM_CLASS. 
+
+*-i --id* 'window_id'::
     Send comands to window with id 'window_id', window ids in hexadecimal format
-    must start with 0x.
+    must start with 0x. 
 
 *-l --list*::
     List all dwb window ids with enabled ipc.
 
-*-n -name* 'wm_name'::
-    Search for window id by WM_NAME, the commands are sent to the first match.
+*-n --name* 'wm_name'::
+    Search for window id by WM_NAME.
 
-*-p -pid* 'pid':: 
+*-p --pid* 'pid':: 
     Search for window id by process id 'pid'.
+
+*-s --show-id* 'pid':: 
+    Print the window id in every response, the window id will be prepended to
+    the response. 
 
 COMMANDS
 --------
