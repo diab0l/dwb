@@ -46,7 +46,7 @@ one option sends the command to all matching windows.
 *-p --pid* 'pid':: 
     Search for window id by process id 'pid'.
 
-*-s --show-id* 'pid':: 
+*-s --show-id*:: 
     Print the window id in every response, the window id will be prepended to
     the response. 
 
