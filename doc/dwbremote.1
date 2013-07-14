@@ -2,12 +2,12 @@
 .\"     Title: dwbremote
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/13/2013
+.\"      Date: 07/15/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWBREMOTE" "1" "07/13/2013" "\ \&" "\ \&"
+.TH "DWBREMOTE" "1" "07/15/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -77,12 +77,28 @@ Print the window id in every response, the window id will be prepended to the re
 .RE
 .SH "COMMANDS"
 .PP
+\fBadd_hooks\fR [\fIhook\fR \&...]
+.RS 4
+Adds a list of hooks without actually connecting to the hook, see
+\fIhook\fR
+for a list of hooks and
+\fIclear_hooks\fR\&.
+.RE
+.PP
 \fBbind\fR \fIcommand:shortcut\fR [\fIcommand:shortcut\fR \&...]
 .RS 4
 Bind a shorcut or command, to bind only a commandline command without binding a shortcut
 \fIcommand:none\fR
 must be used, to bind only a shortcut without binding a commandline command
 \fInone:shortcut\fR\&.
+.RE
+.PP
+\fBclear_hooks\fR [\fIhook\fR \&...]
+.RS 4
+Removes a list of hooks so the will no longer be emitted\&. To reenable hooks
+\fIadd_hooks\fR
+can be sent\&. For a list of hooks see
+\fIhook\fR\&.
 .RE
 .PP
 \fBexecute\fR \fIcommand\fR
@@ -166,7 +182,7 @@ Gets the uri of the nth tab or current tab is n is omitted\&.
 .PP
 \fBhook\fR \fIhook\fR [\fIhook\fR \&...]
 .RS 4
-Add a list of hooks\&.
+Conntect to a list of hooks\&.
 .PP
 \fBHooks\fR
 .RS 4
@@ -315,8 +331,8 @@ Uri that will be loaded
 .PP
 \fBnew_tab\fR
 .RS 4
-Emitted when a tab gets focus, return format:
-\fIfocus_tab <n>\fR
+Emitted when new tab is created, return format:
+\fInew_tab <n>\fR
 .PP
 \fBn\fR
 .RS 4

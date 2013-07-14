@@ -52,10 +52,18 @@ one option sends the command to all matching windows.
 
 COMMANDS
 --------
+*add_hooks* ['hook' ...]::
+    Adds a list of hooks without actually connecting to the hook, see 'hook' for
+    a list of hooks and 'clear_hooks'.
+
 *bind* 'command:shortcut' ['command:shortcut' ...]::
     Bind a shorcut or command, to bind only a commandline command without
     binding a shortcut 'command:none' must be used, to bind only a
     shortcut without binding a commandline command 'none:shortcut'.
+
+*clear_hooks* ['hook' ...]::
+    Removes a list of hooks so the will no longer be emitted. To reenable hooks
+    'add_hooks' can be sent. For a list of hooks see 'hook'.
     
 *execute* 'command'::
     Executes a command, the command is parsed the same way as if executed from
@@ -100,7 +108,7 @@ COMMANDS
             Gets the uri of the nth tab or current tab is n is omitted.
 
 *hook* 'hook' ['hook' ...]::
-    Add a list of hooks.
+    Conntect to a list of hooks.
 
     *Hooks*:::
 
@@ -156,7 +164,7 @@ COMMANDS
             *uri*::::
                 Uri that will be loaded
         *new_tab*;;
-            Emitted when a tab gets focus, return format: 'focus_tab <n>'
+            Emitted when new tab is created, return format: 'new_tab <n>'
             *n*::::
                 Number of the new tab
 
