@@ -1,4 +1,3 @@
-ORIG_CFLAGS := $(CFLAGS)
 BASE_DIR=..
 
 REAL_NAME=dwbremote
@@ -9,7 +8,6 @@ include $(BASE_DIR)/version.mk
 
 
 CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -Os
-CFLAGS += $(ORIG_CFLAGS)
 CFLAGS += -DVERSION=\"$(VERSION)\"
 CFLAGS += -DNAME=\"$(NAME)\"
 CFLAGS += -DCOPYRIGHT=\"$(COPYRIGHT)\"
