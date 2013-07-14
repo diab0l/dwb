@@ -85,6 +85,51 @@ __archive() {
     esac)"  -- $cur ) )
 }
 
+__dwbremote_commands() {
+    local pprev=${COMP_WORDS[COMP_CWORD-2]}
+    case "$pprev" in 
+        -pid|-id|-class|-name)
+            printf "execute get prompt pwd_prompt settings hook bind";;
+        *)
+            printf "";;
+    esac
+}
+__dwbremote_arguments() {
+    local opts
+    local prev=${COMP_WORDS[COMP_CWORD-1]}
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    case "${prev}" in 
+        get) 
+            opts="uri title host domain all_titles all_domains all_hosts
+            all_uris ntabs current_tab" ;;
+        hook) 
+            opts="navigation load_finished hook load_committed" ;;
+        #execute)
+        #    opts=$(awk -F '=' 'BEGIN { a=0 } /\[\w+\]/ { a=a+1 } /^\s*$/ { next } a==1 { printf " "$1 }' $HOME/.config/dwb/keys)
+            #;;
+        *) 
+            opts="$(__dwbremote_commands)"
+    esac
+    COMPREPLY=( $( compgen -W "$opts" -- $cur ) )
+
+
+}
+
+_dwbremote()
+{
+    local cur prev opts
+    _init_completion || return 
+
+    opts="-id -pid -class -name"
+
+    case "${cur}" in
+        -*) COMPREPLY=( $( compgen -W "$opts" -- $cur ) )
+            return 0;;
+        *) __dwbremote_arguments
+            return 0;;
+    esac
+} && 
+complete -F _dwbremote dwbremote
 
 _dwb() {
     local cur prev opts lopts

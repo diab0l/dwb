@@ -1224,6 +1224,9 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL | SETTING_ONINIT,  CHAR, { .p = "automatic" }, (S_Func)dwb_set_javascript_api,   { 0 }, }, 
   { { "block-insecure-content",            "Whether to block http-requests on https-sites", },                                            
     SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_block_insecure_content,   { 0 }, }, 
+
+  { { "enable-ipc",            "Whether to enable inter process communication, required for dwbremote", },                                            
+    SETTING_GLOBAL,  BOOLEAN, { .b = true }, (S_Func)dwb_set_enable_ipc,   { 0 }, }, 
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

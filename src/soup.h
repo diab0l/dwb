@@ -41,5 +41,7 @@ const char * soup_get_header_from_request(WebKitNetworkRequest *, const char *);
 CookieStorePolicy dwb_soup_get_cookie_store_policy(const char *policy);
 void dwb_soup_clear_cookies(void);
 DwbStatus dwb_soup_set_cookie_expiration(const char *expiration_string);
+const char * dwb_soup_get_host(WebKitWebFrame *frame);
+const char * dwb_soup_get_domain(WebKitWebFrame *frame);
 
 #endif

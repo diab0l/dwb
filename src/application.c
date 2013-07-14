@@ -399,6 +399,7 @@ application_start(GApplication *app, char **argv)
         view_add(NULL, false);
         dwb_open_startpage(dwb.state.fview);
     }
+    dwb_init_auto_started_files();
 
     application_execute_args(argv);
     /*  Compute bar height */

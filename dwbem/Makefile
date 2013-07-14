@@ -5,9 +5,10 @@ TARGET=dwbem
 
 BASEDIR = ..
 
-CFLAGS += -I$(BASEDIR)/$(DWB_LIB_DIRS)
+CFLAGS += -I$(BASEDIR)/$(DWB_LIB_DIR_EXAR)
 
-OBJ = $(patsubst %.c, %.o, $(wildcard *.c)) $(BASEDIR)/$(OBJLIB)
+OBJ = $(patsubst %.c, %.o, $(wildcard *.c)) 
+OBJ += $(BASEDIR)/$(OBJEXAR)
 
 
 SYSTEM_EXTENSION_DIR=$(PREFIX)/share/dwb/extensions

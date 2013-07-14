@@ -1,7 +1,10 @@
 # See COPYING for copyright and license details
 
 REAL_NAME=dwb
-COPYRIGHT="© 2010-2013 Stefan Bolte"
+
+include $(dir $(lastword $(MAKEFILE_LIST)))version.mk
+
+COPYRIGHT="(C) 2010-2013 Stefan Bolte"
 LICENSE="GNU General Public License, version 3 or later"
 
 # dirs
@@ -21,7 +24,9 @@ TOOLDIR=tools
 EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
 
-DWB_LIB_DIRS = exar
+DWB_LIB_DIR_EXAR = exar
+DWB_LIB_DIR_RC = dwbremote
+DWB_LIB_DIRS = $(DWB_LIB_DIR_EXAR) $(DWB_LIB_DIR_RC)
 
 SUBDIRS=$(M4DIR) $(SRCDIR) $(DWBEMDIR) 
 SUBDIR_BUILD_FIRST=$(UTILDIR) $(DWB_LIB_DIRS)
@@ -29,13 +34,15 @@ SUBDIR_BUILD_FIRST=$(UTILDIR) $(DWB_LIB_DIRS)
 DWBEMDIR=dwbem
 EXTENSION_MANAGER=dwbem
 
+DWBRCDIR=dwbremote
+DWBRC=dwbremote
+
 DTARGET=$(TARGET)_d
-REAL_VERSION=$(BUILDDATE)
 # Version info
-GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short 2>/dev/null)
-VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
-NAME=$(shell if [ "$(GIT_VERSION)" ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
-BUILDDATE=`date +%Y.%m.%d`
+
+#GIT_VERSION=$(shell git log -1 --format="%cd %h" --date=short 2>/dev/null)
+#VERSION=$(shell if [ "$(GIT_VERSION)" ]; then echo "commit\ \"$(GIT_VERSION)\""; else echo "$(REAL_VERSION)"; fi)
+#NAME=$(shell if [ "$(GIT_VERSION)" ]; then echo "$(REAL_NAME)-git"; else echo "$(REAL_NAME)"; fi)
 
 # Targets
 TARGET = $(REAL_NAME)
@@ -195,7 +202,7 @@ CFLAGS += -DLIBJS_DIR=\"$(LIBJSDIR)\"
 
 # LDFLAGS
 LDFLAGS += $(shell pkg-config --libs $(LIBS))
-LDFLAGS += -lpthread -lm
+LDFLAGS += -lpthread -lm -lX11
 
 # Debug flags
 DCFLAGS = $(CFLAGS)
@@ -215,4 +222,6 @@ HDR = $(wildcard *.h)
 # Objects
 OBJ = $(patsubst %.c, %.o, $(wildcard *.c))
 DOBJ = $(patsubst %.c, %.do, $(wildcard *.c)) 
-OBJLIB = exar/exar.o
+OBJLIB = exar/exar.o dwbremote/dwbremote.o
+OBJEXAR = exar/exar.o 
+OBJRC = dwbremote/dwbremote.o 

@@ -87,6 +87,10 @@
 #define LENGTH(X)   (sizeof(X)/sizeof(X[0]))
 #define GLENGTH(X)  (sizeof(X)/g_array_get_element_size(X)) 
 
+#ifndef STREQ
+#define STREQ(x, y) (strcmp(x, y) == 0)
+#endif
+
 //#define CLEAN_STATE_WITH_SHIFT(X) (X->state & ~(GDK_LOCK_MASK) & ~(GDK_MOD2_MASK) &~(GDK_MOD3_MASK) & ~(GDK_MOD5_MASK) & ~(GDK_SUPER_MASK) & ~(GDK_HYPER_MASK) & ~(GDK_META_MASK))
 
 #define CLEAN_STATE_WITH_SHIFT(X) ((X)->state & (GDK_MOD1_MASK|GDK_MOD4_MASK|\
@@ -368,7 +372,7 @@ typedef enum {
   FIND_MODE             = 0x100000,
   CARET_MODE            = 0x200000,
 } Mode;
-#define BASIC_MODES(mode) ( MAX( ( (mode) & (NORMAL_MODE | INSERT_MODE | COMMAND_MODE | HINT_MODE) ), NORMAL_MODE) )
+#define BASIC_MODES(mode) ( MAX( ( (mode) & (NORMAL_MODE | INSERT_MODE | COMMAND_MODE | HINT_MODE | CARET_MODE) ), NORMAL_MODE) )
 
 
 typedef enum {
@@ -642,6 +646,8 @@ struct _State {
   gboolean do_not_track;
   gboolean block_insecure_content;
   gchar *last_command;
+
+  int ipc_hooks;
 };
 
 typedef enum _SettingsApply {
@@ -855,6 +861,7 @@ enum Files {
   FILES_PLUGINS_ALLOW,
   FILES_CACHEDIR,
   FILES_CUSTOM_KEYS,
+  FILES_AUTOSTART,
   FILES_LAST
 };
 // TODO implement plugins blocker, script blocker with File struct
@@ -1029,10 +1036,12 @@ void dwb_free_list(GList *list, void (*func)(void*));
 void dwb_init(void);
 void dwb_init_files(void);
 void dwb_init_settings(void);
+void dwb_init_auto_started_files(void);
 void dwb_reload_bookmarks(void);
 void dwb_reload_quickmarks(void);
 
 void dwb_limit_tabs(gint max);
+KeyMap * dwb_add_key(char *, char *, char *, Func, int, Arg *);
 #if 0
 void dwb_hide_tab(GList *gl);
 void dwb_show_tab(GList *gl);

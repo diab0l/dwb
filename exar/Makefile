@@ -29,6 +29,6 @@ cgdb:
 	cgdb exar
 
 clean: 
-	$(RM) -rf $(OBJ) $(TARGET)
+	$(RM) $(OBJ) $(TARGET)
 
 .PHONY: clean

@@ -5,13 +5,13 @@ BASEDIR=..
 include $(BASEDIR)/config.mk
 include config.mk
 
-CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIRS)
+CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_EXAR)
+CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_RC)
 
 DEPS=$(patsubst %.o, %.d, $(OBJ)) 
 
-OBJ += $(BASEDIR)/$(OBJLIB)
-
-DOBJ += $(BASEDIR)/exar/exar.do
+OBJ += $(BASEDIR)/$(OBJEXAR)
+OBJ += $(BASEDIR)/$(OBJRC)
 
 all: $(TARGET)
 
@@ -37,9 +37,9 @@ deps.d: %.c %.h
 	@echo "${CC} $<"
 	@$(CC) -c -o $@ $< $(DCFLAGS) 
 
-$(DTARGET): $(DOBJ) 
+$(DTARGET): $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o
 	@echo "$(CC) $@"
-	@$(CC) $(DOBJ) -o $(DTARGET) $(LDFLAGS) 
+	@$(CC) $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o -o $(DTARGET) $(LDFLAGS) 
 
 dependencies: $(DEPS)
 

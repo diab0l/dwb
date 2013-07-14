@@ -1349,6 +1349,11 @@ default value:
 Whether to show a favicon in the tab.
 default value: 'true'.
 
+*enable-ipc*::
+Whether to enable inter process communication with 'dwbremote(1)', default
+value: true. 
+default value: 'true'.
+
 *error-color*::
 The color for error-messages. Possible values: an rgb color-string,
 default value: '#ff0000'.
