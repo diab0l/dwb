@@ -328,7 +328,6 @@ main(int argc, char **argv)
             for (int i=0; i<n_wins; i++)
                 printf("%lu\n", all_wins[i]);
             goto finish;
-            return 0;
         }
         if ((STREQ("-a", *pargv) || STREQ("--all", *pargv)) && pargc > 2)
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
