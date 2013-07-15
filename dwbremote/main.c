@@ -120,18 +120,6 @@ cmp_winid(Display *dpy, Window win, void *data)
     return win == *(Window *)data;
 }
 
-static void * 
-xrealloc(void *ptr, size_t size)
-{
-    void *ret = realloc(ptr, size);
-    if (ret == NULL)
-    {
-        fprintf(stderr, "Cannot realloc %zu bytes!", size);
-        exit(1);
-    }
-    return ret;
-}
-
 static Bool 
 append_win(Window win, Window **win_return, int *n_ret)
 {
@@ -141,7 +129,12 @@ append_win(Window win, Window **win_return, int *n_ret)
             return False;
     }
 
-    *win_return = xrealloc(*win_return, (*n_ret + 1) * sizeof(Window));
+    *win_return = realloc(*win_return, (*n_ret + 1) * sizeof(Window));
+    if (*win_return == NULL)
+    {
+        fprintf(stderr, "Cannot realloc %zu bytes!", (*n_ret+1) * sizeof(Window));
+        exit(1);
+    }
     (*win_return)[*n_ret] = win;
     (*n_ret)++;
     return True;
