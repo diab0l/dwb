@@ -225,13 +225,15 @@ local_show_directory(GList *gl, const char *path, gboolean add_to_history)
         /*  other */
         perm[bits++] = st.st_mode & S_IROTH ? 'r' : '-';
         perm[bits++] = st.st_mode & S_IWOTH ? 'w' : '-';
+        #ifdef __gnu_linux__
         if (st.st_mode & S_ISVTX) 
         {
             perm[bits++] = st.st_mode & S_IXOTH ? 't' : 'T';
             strcpy(class, "dwb_local_sticky");
         }
         else
-            perm[bits++] = st.st_mode & S_IXOTH ? 'x' : '-';
+        #endif
+        perm[bits++] = st.st_mode & S_IXOTH ? 'x' : '-';
 
         perm[bits] = '\0';
 
