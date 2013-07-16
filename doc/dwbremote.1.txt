@@ -20,7 +20,7 @@ DESCRIPTION
 by setting its XProperties. Return values will be printed to stdout. To use
 dwbremote 'enable-ipc' must be enabled in the dwb instance to communicate with. 
 
-dwbremote tries to find windows depending on the options passed, if no options
+*dwbremote* tries to find windows depending on the options passed, if no options
 are used or no windows were found it will use the environment variable
 *DWB_WINID*, if it is not set it will use the last dwb window that had focus. In
 userscripts executed by dwb the environment variable *DWB_WINID* will always be

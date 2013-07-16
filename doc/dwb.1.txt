@@ -1749,4 +1749,4 @@ homepage:  http://portix.bitbucket.org/dwb/
 
 SEE ALSO
 --------
-*dwbem*(1) *dwb-js*(7)
+*dwbem*(1) *dwbremote*(1) *dwb-js*(7)
