@@ -121,15 +121,13 @@ parse_commands(char **list, int count)
     if (*list[0] == ':')
     {
         char *nlist[count + 1];
+
         nlist[0] = &(list[0][1]);
         for (int i=1; i<count; i++)
             nlist[i] = list[i];
         nlist[count] = NULL;
 
         IPC_EXECUTE(nlist);
-        //command = g_strjoinv(" ", nlist);
-        //status = dwb_parse_command_line(command);
-        //g_free(command);
     }
     else if (STREQ(list[0], "execute"))
     {
@@ -140,9 +138,6 @@ parse_commands(char **list, int count)
         nlist[count-1] = NULL;
 
         IPC_EXECUTE(nlist);
-        //command = g_strjoinv(" ", nlist);
-        //status = dwb_parse_command_line(command);
-        //g_free(command);
     }
     else if (STREQ(list[0], "prompt"))
     {
