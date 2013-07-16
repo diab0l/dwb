@@ -29,6 +29,8 @@
 #define DWB_ATOM_IPC_CLIENT_READ  DWB_ATOM_IPC_SERVER_WRITE
 #define DWB_ATOM_IPC_CLIENT_WRITE DWB_ATOM_IPC_SERVER_READ
 #define DWB_ATOM_IPC_SERVER_STATUS "__DWB_IPC_SERVER_STATUS"
+#define DWB_ATOM_IPC_FOCUS_ID "__DWB_IPC_FOCUS_ID"
+
 
 int 
 dwbremote_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count);
@@ -49,8 +51,12 @@ int
 dwbremote_set_formatted_property_value(Display *dpy, Window win, Atom atom, const char *format, ...);
 
 int 
-dwbremote_get_status(Display *dpy, Window win, Atom *atr);
+dwbremote_get_int_property(Display *dpy, Window win, Atom a, Atom *atr);
 
 int 
-dwbremote_set_status(Display *dpy, Window win, int status);
+dwbremote_set_int_property(Display *dpy, Window win, Atom atom, int status);
+
+int 
+dwbremote_get_last_focus_id(Display *dpy, Window win, Atom a, Window *win_ret);
+
 #endif

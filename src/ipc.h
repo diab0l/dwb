@@ -18,6 +18,7 @@
 
 #ifndef __DWB_IPC_H__
 #define __DWB_IPC_H__
+
 #include <dwbremote.h>
 
 enum {

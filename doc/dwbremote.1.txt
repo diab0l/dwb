@@ -37,7 +37,10 @@ one option sends the command to all matching windows.
     Send comands to window with id 'window_id', window ids in hexadecimal format
     must start with 0x. 
 
-*-l --list*::
+*-l --last*::
+    Send commands to last focused dwb window.
+
+*-L --list*::
     List all dwb window ids with enabled ipc.
 
 *-n --name* 'wm_name'::

@@ -22,6 +22,9 @@
 #include <unistd.h>
 #include <signal.h>
 #include <X11/Xatom.h>
+#ifndef MAX 
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#endif
 
 
 int 
@@ -83,14 +86,13 @@ dwbremote_set_formatted_property_value(Display *dpy, Window win, Atom atom, cons
 }
 
 int 
-dwbremote_get_status(Display *dpy, Window win, Atom *atr)
+dwbremote_get_int_property(Display *dpy, Window win, Atom a, Atom *atr)
 {
     int *status;
     int afr;
     unsigned long nr, bar; 
     XGetWindowProperty(dpy, win, 
-            XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), 
-            0L, 1, False, XA_INTEGER, 
+            a, 0L, 1, False, XA_INTEGER, 
             atr, &afr, &nr, &bar, (unsigned char **)&status);
     if (*atr != None)
     {
@@ -102,7 +104,36 @@ dwbremote_get_status(Display *dpy, Window win, Atom *atr)
     }
 }
 int 
-dwbremote_set_status(Display *dpy, Window win, int status)
+dwbremote_set_int_property(Display *dpy, Window win, Atom atom, int status)
 {
-    return XChangeProperty(dpy, win, XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
+    return XChangeProperty(dpy, win, atom, XA_INTEGER, 32, PropModeReplace, (unsigned char*)&status, 1);
+}
+
+int 
+dwbremote_get_last_focus_id(Display *dpy, Window win, Atom a, Window *win_ret)
+{
+    Window unused_win; 
+    Window *children; 
+    Atom atr;
+    int max = 0, old_max;
+    int ret = 0;
+    unsigned int n_children;
+    if (a == 0)
+        a = XInternAtom(dpy, DWB_ATOM_IPC_FOCUS_ID, False);
+
+    if (XQueryTree(dpy, win, &unused_win, &unused_win, &children, &n_children) == 0)
+        return 0;
+    for (unsigned int i=0; i<n_children; i++)
+    {
+        ret = dwbremote_get_int_property(dpy, children[i], a, &atr);
+        old_max = max;
+        if (atr != None)
+            max = MAX(ret, max);
+        else 
+            max = MAX(dwbremote_get_last_focus_id(dpy, children[i], a, win_ret), max);
+        if (old_max != max)
+            *win_ret = children[i];
+
+    }
+    return max;
 }

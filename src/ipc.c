@@ -18,6 +18,7 @@
 
 #include "dwb.h"
 #include "ipc.h"
+#include <dwbremote.h>
 #include "soup.h"
 #include <string.h>
 #include <stdlib.h>
@@ -32,6 +33,8 @@ enum {
     DWB_ATOM_WRITE,
     DWB_ATOM_HOOK,
     DWB_ATOM_BIND,
+    DWB_ATOM_STATUS,
+    DWB_ATOM_FOCUS_ID,
     UTF8_STRING, 
     DWB_ATOM_LAST,
 };
@@ -41,6 +44,8 @@ static GdkAtom s_readatom;
 static Display *s_dpy;
 static Window s_win;
 static gulong s_sig_property;
+static gulong s_sig_focus;
+static Window s_root; 
 
 static long 
 get_number(const char *text)
@@ -332,7 +337,7 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
         status = parse_commands(list, count);
 
         XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_READ]);
-        dwbremote_set_status(s_dpy, s_win, status);
+        dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], status);
 
         XFreeStringList(list);
 
@@ -340,6 +345,21 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
     }
     return false;
 }
+
+static gboolean 
+on_focus_in(GtkWidget *widget, GdkEvent *e, gpointer data)
+{
+    static int last_id = 0;
+    Window win;
+    int new_id = dwbremote_get_last_focus_id(s_dpy, s_root, s_atoms[DWB_ATOM_FOCUS_ID], &win);
+    if (new_id > last_id)
+    {
+        last_id = (++new_id);
+        dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_FOCUS_ID], new_id);
+    }
+    return false;
+}
+
 void 
 ipc_send_hook(char *name, const char *format, ...)
 {
@@ -362,8 +382,14 @@ ipc_end(GtkWidget *widget)
     if (s_sig_property != 0)
     {
         g_signal_handler_disconnect(widget, s_sig_property);
-        XDeleteProperty(s_dpy, s_win, XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_STATUS, False));
+        XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS]);
         s_sig_property = 0;
+    }
+    if (s_sig_focus != 0)
+    {
+        g_signal_handler_disconnect(widget, s_sig_focus);
+        XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_FOCUS_ID]);
+        s_sig_focus = 0;
     }
 }
 void 
@@ -374,20 +400,29 @@ ipc_start(GtkWidget *widget)
     GdkWindow *gdkwin = gtk_widget_get_window(widget);
 
     s_dpy = gdk_x11_get_default_xdisplay();
+    s_root = RootWindow(s_dpy, DefaultScreen(s_dpy));
     s_win = GDK_WINDOW_XID(gdkwin);
 
-    dwbremote_set_status(s_dpy, s_win, 0);
 
     GdkEventMask mask = gdk_window_get_events(gdkwin);
-    gdk_window_set_events(gdkwin, mask | GDK_PROPERTY_CHANGE_MASK);
+    gdk_window_set_events(gdkwin, mask | GDK_PROPERTY_CHANGE_MASK | GDK_FOCUS_CHANGE_MASK);
 
     s_atoms[DWB_ATOM_READ] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_READ, false);
     s_atoms[DWB_ATOM_WRITE] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_WRITE, false);
     s_atoms[DWB_ATOM_HOOK] = XInternAtom(s_dpy, DWB_ATOM_IPC_HOOK, false);
     s_atoms[DWB_ATOM_BIND] = XInternAtom(s_dpy, DWB_ATOM_IPC_BIND, false);
+    s_atoms[DWB_ATOM_STATUS] = XInternAtom(s_dpy, DWB_ATOM_IPC_SERVER_STATUS, false);
+    s_atoms[DWB_ATOM_FOCUS_ID] = XInternAtom(s_dpy, DWB_ATOM_IPC_FOCUS_ID, false);
     s_atoms[UTF8_STRING] = XInternAtom(s_dpy, "UTF8_STRING", false);
+
+    dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], 0);
+
+    Window win;
+    int new_id = dwbremote_get_last_focus_id(s_dpy, s_root, s_atoms[DWB_ATOM_FOCUS_ID], &win);
+    dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_FOCUS_ID], new_id + 1);
 
     s_readatom = gdk_atom_intern(DWB_ATOM_IPC_SERVER_READ, false);
 
     s_sig_property = g_signal_connect(G_OBJECT(widget), "property-notify-event", G_CALLBACK(on_property_notify), NULL);
+    s_sig_focus = g_signal_connect(G_OBJECT(widget), "focus-in-event", G_CALLBACK(on_focus_in), NULL);
 }

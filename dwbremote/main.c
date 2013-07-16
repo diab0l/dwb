@@ -71,7 +71,7 @@ static Bool
 is_dwb_win(Display *dpy, Window win)
 {
     Atom a;
-    dwbremote_get_status(dpy, win, &a);
+    dwbremote_get_int_property(dpy, win, XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), &a);
     return a != None;
 }
 
@@ -222,7 +222,7 @@ process_one(Display *dpy, Window win, Atom read_atom, char **argv, int argc)
         }
         else if (pe->atom == XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False))
         {
-            status = dwbremote_get_status(dpy, pe->window, &atr);
+            status = dwbremote_get_int_property(dpy, pe->window, XInternAtom(dpy, DWB_ATOM_IPC_SERVER_STATUS, False), &atr);
             if (atr != None)
                 return status;
             else 
@@ -322,7 +322,7 @@ main(int argc, char **argv)
 
     for (; pargc > 0 && **pargv == '-'; pargc--, pargv++)
     {
-        if (STREQ("-l", *pargv) || STREQ("--list", *pargv))
+        if (STREQ("-L", *pargv) || STREQ("--list", *pargv))
         {
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
             for (int i=0; i<n_wins; i++)
@@ -333,6 +333,13 @@ main(int argc, char **argv)
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
         else if ((STREQ("-s", *pargv) || STREQ("--show-id", *pargv)) && pargc > 2)
             opts |= OPT_SHOW_WID;
+        else if ((STREQ("-l", *pargv) || STREQ("--last", *pargv)) && pargc > 2)
+        {
+            Window win; 
+            dwbremote_get_last_focus_id(dpy, root, 0, &win);
+            if (win != 0)
+                append_win(win, &all_wins, &n_wins);
+        }
         else if (consume_arg("-i", "--id", &pargc, &pargv))
         {
             unsigned long wid = parse_number(*pargv);
