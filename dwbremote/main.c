@@ -322,7 +322,7 @@ main(int argc, char **argv)
 
     for (; pargc > 0 && **pargv == '-'; pargc--, pargv++)
     {
-        if (STREQ("-L", *pargv) || STREQ("--list", *pargv))
+        if (STREQ("-l", *pargv) || STREQ("--list", *pargv))
         {
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
             for (int i=0; i<n_wins; i++)
@@ -333,13 +333,6 @@ main(int argc, char **argv)
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
         else if ((STREQ("-s", *pargv) || STREQ("--show-id", *pargv)) && pargc > 2)
             opts |= OPT_SHOW_WID;
-        else if ((STREQ("-l", *pargv) || STREQ("--last", *pargv)) && pargc > 2)
-        {
-            Window win; 
-            dwbremote_get_last_focus_id(dpy, root, 0, &win);
-            if (win != 0)
-                append_win(win, &all_wins, &n_wins);
-        }
         else if (consume_arg("-i", "--id", &pargc, &pargv))
         {
             unsigned long wid = parse_number(*pargv);
@@ -366,6 +359,13 @@ main(int argc, char **argv)
         char *window_id = getenv("DWB_WINID");
         if (window_id != NULL)
             win = parse_number(window_id);
+        if (win != 0)
+            append_win(win, &all_wins, &n_wins);
+    }
+    if (all_wins == NULL)
+    {
+        Window win = 0; 
+        dwbremote_get_last_focus_id(dpy, root, XInternAtom(dpy, DWB_ATOM_IPC_FOCUS_ID, False), &win);
         if (win == 0)
         {
             ret = 1;

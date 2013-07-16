@@ -20,12 +20,15 @@ DESCRIPTION
 by setting its XProperties. Return values will be printed to stdout. To use
 dwbremote 'enable-ipc' must be enabled in the dwb instance to communicate with. 
 
+dwbremote tries to find windows depending on the options passed, if no options
+are used or no windows were found it will use the environment variable
+*DWB_WINID*, if it is not set it will use the last dwb window that had focus. In
+userscripts executed by dwb the environment variable *DWB_WINID* will always be
+set and will point to the window that executed the script. Passing more than one
+option sends the command to all matching windows. 
+
 OPTIONS
 -------
-
-Options are only required if the environment variable *DWB_WINID* is not set, in
-userscripts executed by dwb *DWB_WINID* will always be set. Passing more than
-one option sends the command to all matching windows. 
 
 *-a --all*::
     Sends a command to all windows. 
@@ -37,10 +40,7 @@ one option sends the command to all matching windows.
     Send comands to window with id 'window_id', window ids in hexadecimal format
     must start with 0x. 
 
-*-l --last*::
-    Send commands to last focused dwb window.
-
-*-L --list*::
+*-l --list*::
     List all dwb window ids with enabled ipc.
 
 *-n --name* 'wm_name'::

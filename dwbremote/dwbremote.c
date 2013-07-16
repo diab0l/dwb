@@ -118,8 +118,6 @@ dwbremote_get_last_focus_id(Display *dpy, Window win, Atom a, Window *win_ret)
     int max = 0, old_max;
     int ret = 0;
     unsigned int n_children;
-    if (a == 0)
-        a = XInternAtom(dpy, DWB_ATOM_IPC_FOCUS_ID, False);
 
     if (XQueryTree(dpy, win, &unused_win, &unused_win, &children, &n_children) == 0)
         return 0;
