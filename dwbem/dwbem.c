@@ -23,13 +23,21 @@
 #define _POSIX_SOURCE 
 #endif
 
+#if __FreeBSD__
+#include <sys/cdefs.h>
+#endif
+
+#if __gnu_linux__
+#include <features.h>
+#endif
+
+
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <features.h>
 #include <termios.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <sys/stat.h>
