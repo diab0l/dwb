@@ -2,12 +2,12 @@
 .\"     Title: dwbremote
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/16/2013
+.\"      Date: 07/17/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWBREMOTE" "1" "07/16/2013" "\ \&" "\ \&"
+.TH "DWBREMOTE" "1" "07/17/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -103,7 +103,12 @@ can be sent\&. For a list of hooks see
 .PP
 \fBexecute\fR \fIcommand\fR
 .RS 4
-Executes a command, the command is parsed the same way as if executed from commandline\&.
+Executes a command, the command is parsed the same way as if executed from commandline\&. A shorthand for execute is prepending
+\fI:\fR
+to the command, i\&.e\&.
+\fIdwbremote execute scroll_down\fR
+is equivalent to
+\fIdwbremote :scroll_down\fR
 .RE
 .PP
 \fBget\fR \fIargument\fR

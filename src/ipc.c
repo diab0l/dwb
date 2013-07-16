@@ -25,6 +25,7 @@
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#define IPC_EXECUTE(list) do { char *_ex_command = g_strjoinv(" ", list); dwb_parse_command_line(_ex_command); g_free(_ex_command); } while(0)
 
 #define OPTNL(cond) ((cond) ? "" : "\n")
 
@@ -115,22 +116,33 @@ parse_commands(char **list, int count)
 {
     int status = 0;
     char *text = NULL; 
-    if (count < 2)
-    {
+    if (count < 1 || (*list[0] != ':' && count < 2))
         return 37;
+    if (*list[0] == ':')
+    {
+        char *nlist[count + 1];
+        nlist[0] = &(list[0][1]);
+        for (int i=1; i<count; i++)
+            nlist[i] = list[i];
+        nlist[count] = NULL;
+
+        IPC_EXECUTE(nlist);
+        //command = g_strjoinv(" ", nlist);
+        //status = dwb_parse_command_line(command);
+        //g_free(command);
     }
-    if (STREQ(list[0], "execute"))
+    else if (STREQ(list[0], "execute"))
     {
         char *nlist[count];
-        char *command; 
 
         for (int i=0; i<count-1; i++)
             nlist[i] = list[i+1];
         nlist[count-1] = NULL;
 
-        command = g_strjoinv(" ", nlist);
-        status = dwb_parse_command_line(command);
-        g_free(command);
+        IPC_EXECUTE(nlist);
+        //command = g_strjoinv(" ", nlist);
+        //status = dwb_parse_command_line(command);
+        //g_free(command);
     }
     else if (STREQ(list[0], "prompt"))
     {

@@ -70,7 +70,8 @@ COMMANDS
     
 *execute* 'command'::
     Executes a command, the command is parsed the same way as if executed from
-    commandline.
+    commandline. A shorthand for execute is prepending ':' to the command, i.e. 
+    'dwbremote execute scroll_down' is equivalent to 'dwbremote :scroll_down'
 
 *get* 'argument'::
     Gets miscellaneous properties
