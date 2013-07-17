@@ -27,6 +27,9 @@
 
 static GList * completion_update_completion(GtkWidget *box, GList *comps, GList *active, int max, int back);
 static GList * completion_get_simple_completion(GList *gl);
+gboolean completion_display_hidden_forward(GList *active);
+gboolean completion_display_hidden_backward(GList *active);
+void completion_delete_active_completion(void);
 
 typedef gboolean (*Match_Func)(char*, const char*);
 static char *s_typed;
@@ -689,6 +692,72 @@ completion_complete(CompletionType type, int back)
     return ret;
 }/*}}}*/
 /*}}}*/
+
+gboolean
+completion_display_hidden_forward(GList *active) {
+  GList *hidden;
+  Completion *c;
+  for (hidden = active->next; hidden != NULL; hidden = hidden->next) {
+    c = hidden->data;
+    if (!gtk_widget_get_visible(c->event)) {
+      gtk_widget_show_all(c->event);
+      return true;
+    }
+  }
+  return false;
+}
+
+gboolean
+completion_display_hidden_backward(GList *active) {
+  GList *hidden;
+  Completion *c;
+  for (hidden = active->prev; hidden != NULL; hidden = hidden->prev) {
+    c = hidden->data;
+    if (!gtk_widget_get_visible(c->event)) {
+      gtk_widget_show_all(c->event);
+      return true;
+    }
+  }
+  return false;
+}
+
+void
+completion_delete_active_completion(void) {
+    if (dwb.comps.completions && dwb.comps.active_comp) {
+      GList *active = dwb.comps.active_comp, *new_active;
+      Completion *c;
+      GtkLabel *left, *middle;
+      
+      /* Determine completion type and how we should deal with it */ 
+      c = active->data;
+      middle = (GtkLabel *)c->mlabel;
+      left = (GtkLabel *)c->llabel;
+      if (!g_ascii_strcasecmp(middle->text, "History")) {
+        dwb_remove_history(left->text);      
+      } else if (!g_ascii_strcasecmp(middle->text, "Bookmark")) {
+        dwb_remove_bookmark(left->text);
+      } else { 
+        /* At this time we don't deal with any other completion types*/
+        return;
+      }
+
+      if ((new_active = active->next)) {
+        if(!completion_display_hidden_forward(new_active)) {
+          completion_display_hidden_backward(new_active);
+        }
+      } else if ((new_active = active->prev)) {
+        completion_display_hidden_backward(new_active);
+      }
+      if (new_active) {
+        completion_modify_completion_item(new_active->data, &dwb.color.active_c_fg, &dwb.color.active_c_bg, dwb.font.fd_active);      
+        completion_set_entry_text(new_active->data);     
+      }
+      gtk_widget_destroy(c->event);
+      dwb.comps.completions = g_list_remove(dwb.comps.completions, active->data);
+      dwb.comps.active_comp = new_active;
+    }
+}
+
 
 /* AUTOCOMPLETION {{{*/
 /*completion_eval_autocompletion{{{*/
