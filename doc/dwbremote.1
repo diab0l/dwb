@@ -366,7 +366,7 @@ Executing commands
 .RS 4
 .\}
 .nf
-    dwbremote \-pid 1234 execute tabopen google\&.de
+    dwbremote :tabopen example\&.com
     dwbremote \-pid 1234 execute 2close
 .fi
 .if n \{\
@@ -397,9 +397,9 @@ User/Password prompt
 .RS 4
 .\}
 .nf
-    username="$(dwbremote \-pid 3141 prompt Username:)"
+    username="$(dwbremote prompt Username:)"
     if [ "$username" ]; then
-        password="$(dwbremote \-pid 3141 pwd_prompt Password:)"
+        password="$(dwbremote pwd_prompt Password:)"
     fi
 .fi
 .if n \{\
