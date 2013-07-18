@@ -53,6 +53,7 @@ help(int ret)
             "   -l --list               List all dwb window ids\n"
             "   -n --name  <class>      Search for window id by WM_NAME <name>\n"
             "   -p --pid   <pid>        Send commands to instance with process id <pid>\n"
+            "   -s --show-id            Print the window in every response\n"
             "   -v --version            Print version information and exit\n");
     exit(ret);
 }
