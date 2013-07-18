@@ -16,7 +16,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-*dwbremote* allows control to dwb from command line. It communicates with dwb instances
+*dwbremote* allows to control dwb from command line. It communicates with dwb instances
 by setting its XProperties. Return values will be printed to stdout. To use
 dwbremote 'enable-ipc' must be enabled in the dwb instance to communicate with. 
 
