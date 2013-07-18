@@ -191,10 +191,11 @@ parse_commands(char **list, int count)
         else if (STREQ(list[argc], "all_uris"))
         {
             GString *s = g_string_new(NULL);
-            for (GList *l = dwb.state.views; l; l=l->next)
+            int i=1;
+            for (GList *l = dwb.state.views; l; l=l->next, i++)
             {
                 const char *uri = VIEW(l)->status->deferred && VIEW(l)->status->deferred_uri ? VIEW(l)->status->deferred_uri : webkit_web_view_get_uri(WEBVIEW(l));
-                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", uri);
+                g_string_append_printf(s, "%s%d %s", OPTNL(l == dwb.state.views), i, uri);
             }
             text = s->str;
             g_string_free(s, false);
@@ -202,24 +203,27 @@ parse_commands(char **list, int count)
         else if (STREQ(list[argc], "all_titles"))
         {
             GString *s = g_string_new(NULL);
-            for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s%s", l == dwb.state.views ? "" : "\n", webkit_web_view_get_title(WEBVIEW(l)));
+            int i=1;
+            for (GList *l = dwb.state.views; l; l=l->next, i++)
+                g_string_append_printf(s, "%s%d %s", OPTNL(l == dwb.state.views), i, webkit_web_view_get_title(WEBVIEW(l)));
             text = s->str;
             g_string_free(s, false);
         }
         else if (STREQ(list[argc], "all_hosts"))
         {
             GString *s = g_string_new(NULL);
-            for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s%s\n", l == dwb.state.views ? "" : "\n", dwb_soup_get_host(webkit_web_view_get_main_frame(WEBVIEW(l))));
+            int i=1;
+            for (GList *l = dwb.state.views; l; l=l->next, i++)
+                g_string_append_printf(s, "%s%d %s", OPTNL(l == dwb.state.views), i, dwb_soup_get_host(webkit_web_view_get_main_frame(WEBVIEW(l))));
             text = s->str;
             g_string_free(s, false);
         }
         else if (STREQ(list[argc], "all_domains"))
         {
             GString *s = g_string_new(NULL);
-            for (GList *l = dwb.state.views; l; l=l->next)
-                g_string_append_printf(s, "%s%s\n", OPTNL(l == dwb.state.views), dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
+            int i=1;
+            for (GList *l = dwb.state.views; l; l=l->next, i++)
+                g_string_append_printf(s, "%s%d %s", OPTNL(l == dwb.state.views), i, dwb_soup_get_domain(webkit_web_view_get_main_frame(WEBVIEW(l))));
             text = s->str;
             g_string_free(s, false);
         }
