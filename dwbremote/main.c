@@ -168,7 +168,7 @@ consume_arg(const char *opt, const char *lopt, int *argc, char ***argv)
     {
         (*argv)++; 
         (*argc)--;
-        if (*argc < 3)
+        if (*argc < 2)
             help(1);
         return True;
     }
