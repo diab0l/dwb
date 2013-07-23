@@ -1629,6 +1629,7 @@ view_create_web_view()
     for (int i=0; i<SIG_LAST; i++) 
         status->signals[i] = 0;
     v->status = status;
+    CLEAR_MARKS(v);
 
     v->web = webkit_web_view_new();
 

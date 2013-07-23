@@ -190,12 +190,20 @@ static KeyValue KEYS[] = {
   { "reload_quickmarks",        {   NULL,         0, 0 }, }, 
   { "print_preview",            {   NULL,         0, 0 }, }, 
   { "adblock_reload_rules",     {   NULL,         0, 0 }, }, 
-  { "tabgrep",            {   NULL,         0, 0 }, }, 
-  { "repeat",            {   ".",         0, 0 }, }, 
+  { "tabgrep",                   {   NULL,         0, 0 }, }, 
+  { "repeat",                   {   ".",         0, 0 }, }, 
+  { "mark",                     {   "`",          0, 0 } }, 
+  { "jump",                     {   "'",         0, 0 } }, 
 };
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
+  { { "mark",              "Mark",                    }, CP_HAS_MODE,
+    (Func)commands_mark,            NULL,                            NEVER_SM,     
+    { .n = MARK_GET },                          EP_NONE,    { NULL }, },
+  { { "jump",              "Jump to",                    }, CP_HAS_MODE,
+    (Func)commands_mark,            NULL,                            NEVER_SM,     
+    { .n = MARK_SET },                          EP_NONE,    { NULL }, },
   { { "repeat",              "Repeat the last commandline command",                    }, 0,
     (Func)commands_repeat,            "Nothing to repeat",                            ALWAYS_SM,     
     { .p = NULL },                          EP_NONE,    { NULL }, },
