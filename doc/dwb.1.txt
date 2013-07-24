@@ -674,6 +674,9 @@ Show next item in command history.
 *C-k*::
 Show previous item in command history.
 
+*C-d*::
+When completing delete the currently selected bookmark or history item. 
+
 *C-x*::
 When initalizing a download, C-x toggles between choosing a file path and
 choosing a spawning application.

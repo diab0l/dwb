@@ -68,6 +68,7 @@ html_header(Commandline)
 dnl
 html_input(command_mode, text, Enter command mode)
 html_input(entry_confirm, text, Alternative confirm shortcut)
+html_input(entry_delete_active, text, Delete selected bookmark or history item)
 html_input(entry_escape, text, Alternative escape shortcut)
 html_input(entry_history_back, text, Command history back)
 html_input(entry_history_forward, text, Command history forward)
@@ -83,6 +84,8 @@ html_input(repeat, text, Repeat last commandline command)
 
 html_header(Scrolling)
 dnl
+html_input(jump, text, Jump to marked position)
+html_input(mark, text, Mark current position in document)
 html_input(scroll_up, text, Scroll up)
 html_input(scroll_down, text, Scroll down)
 html_input(scroll_right, text, Scroll right)
