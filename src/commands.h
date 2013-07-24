@@ -99,5 +99,6 @@ DwbStatus commands_tabdo(KeyMap *, Arg *);
 DwbStatus commands_adblock_reload_rules(KeyMap *, Arg *);
 DwbStatus commands_focus_matched(KeyMap *, Arg *);
 DwbStatus commands_repeat(KeyMap *, Arg *);
+DwbStatus commands_mark(KeyMap *, Arg *);
 
 #endif

@@ -22,6 +22,7 @@ $(TARGET): $(SUBDIRS:%=%.subdir-make)
 	@$(MAKE) $(MFLAGS) -C $*
 
 clean:  $(SUBDIRS:%=%.subdir-clean) $(SUBDIR_BUILD_FIRST:%=%.subdir-cleanfirst) $(SUBDIR_BUILD_LIB:%=%.subdir-cleanlib)
+	-$(RM) -r sandbox
 
 %.subdir-clean %.subdir-cleanfirst %.subdir-cleanlib:
 	@$(MAKE) $(MFLAGS) clean -C $*
@@ -95,6 +96,13 @@ ifdef BASHCOMPLETION
 endif
 
 distclean: clean
+
+runsandbox: sandbox
+	./sandbox/bin/dwb
+
+sandbox: clean
+	make PREFIX=sandbox DESTDIR= install
+
 
 snapshot: 
 	@$(MAKE) dist DISTDIR=$(REAL_NAME)-$(BUILDDATE) 

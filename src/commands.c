@@ -1164,3 +1164,11 @@ commands_repeat(KeyMap *km, Arg *arg)
     }
     return STATUS_ERROR;
 }
+DwbStatus
+commands_mark(KeyMap *km, Arg *arg)
+{
+    dwb.state.mode = arg->n;
+    return STATUS_OK;
+}
+
+

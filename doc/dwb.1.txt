@@ -416,6 +416,12 @@ Rapid hint mode, each matching hint opens a new window. (command
 Toggle "view source" (command
 'view_source', aliases: 'source', 'so').
 
+*`[mark]*::
+Mark current position in document, valid marks are all printable ascii characters.
+
+*'[mark]*::
+Jump to marked position 'mark'.
+
 *CC*::
 Allow persistent cookie for the current website. The domain will be saved in
 'cookies.allow'.

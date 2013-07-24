@@ -182,6 +182,14 @@ GTimer *__timer;
 #define DEFAULT_WIDGET_PACKING "dtws"
 #define WIDGET_PACK_LENGTH 4
 
+#define MARK_FIRST_CHAR  '!'
+#define MARK_LAST_CHAR  '~'
+#define IS_MARK_KEY(X)   (X->keyval >= MARK_FIRST_CHAR && X->keyval <= MARK_LAST_CHAR)
+#define MARK_LENGTH (MARK_LAST_CHAR - MARK_FIRST_CHAR)
+#define MARK_TO_INDEX(X) (X->keyval - MARK_FIRST_CHAR)
+#define MARK_NOT_SET (-1)
+#define CLEAR_MARKS(V) do { for (int _i =0; _i<MARK_LENGTH; _i++) (V)->status->marks[_i] = MARK_NOT_SET; } while (0)
+
 /*}}}*/
 
 typedef enum _DwbStatus {
@@ -371,6 +379,8 @@ typedef enum {
   SETTINGS_MODE_LOCAL   = 0x080000,
   FIND_MODE             = 0x100000,
   CARET_MODE            = 0x200000,
+  MARK_GET              = 0x400000, 
+  MARK_SET              = 0x800000, 
 } Mode;
 #define BASIC_MODES(mode) ( MAX( ( (mode) & (NORMAL_MODE | INSERT_MODE | COMMAND_MODE | HINT_MODE | CARET_MODE) ), NORMAL_MODE) )
 
@@ -693,6 +703,7 @@ struct _ViewStatus {
   guint group;
   gboolean deferred;
   char *deferred_uri;
+  double marks[MARK_LENGTH];
 };
 struct _View {
   GtkWidget *web;
@@ -1042,6 +1053,7 @@ void dwb_reload_quickmarks(void);
 
 void dwb_limit_tabs(gint max);
 KeyMap * dwb_add_key(char *, char *, char *, Func, int, Arg *);
+void dwb_mark(GdkEventKey *e);
 #if 0
 void dwb_hide_tab(GList *gl);
 void dwb_show_tab(GList *gl);

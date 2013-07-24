@@ -1200,6 +1200,42 @@ dwb_paste_primary()
     else 
         gtk_clipboard_request_text(p_clip, (GtkClipboardTextReceivedFunc)dwb_paste_into_webview, dwb.state.fview);
 }
+void 
+dwb_mark(GdkEventKey *e)
+{
+    gboolean no_error = true;
+    if (e->is_modifier)
+        return;
+    if (IS_MARK_KEY(e))
+    {
+        View *v = CURRENT_VIEW();
+        
+        GtkAdjustment *adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(v->scroll));
+        int idx = MARK_TO_INDEX(e);
+
+        if (dwb.state.mode == MARK_GET)
+        {
+            v->status->marks[idx] = gtk_adjustment_get_value(adj);
+        }
+        else if (dwb.state.mode == MARK_SET)
+        {
+            if (v->status->marks[idx] != MARK_NOT_SET)
+                gtk_adjustment_set_value(adj, v->status->marks[idx]);
+            else 
+            {
+                dwb_set_error_message(dwb.state.fview, "Mark not set %c", e->keyval);
+                no_error = false;
+            }
+        }
+    }
+    else 
+    {
+        dwb_set_error_message(dwb.state.fview, "Invalid mark");
+        no_error = false;
+    }
+    dwb_change_mode(NORMAL_MODE, no_error);
+}
+
 
 /* dwb_scroll (Glist *gl, double step, ScrollDirection dir) {{{*/
 void 
@@ -1878,6 +1914,7 @@ dwb_clean_load_begin(GList *gl)
     if (gl == dwb.state.fview && (dwb.state.mode == INSERT_MODE || dwb.state.mode == FIND_MODE)) 
         dwb_change_mode(NORMAL_MODE, true);
 
+    CLEAR_MARKS(VIEW(gl));
     view_set_favicon(gl, false);
 }/*}}}*/
 

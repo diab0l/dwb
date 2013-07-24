@@ -219,6 +219,10 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         completion_autocomplete(dwb.keymap, e);
         ret = true;
     }
+    else if (dwb.state.mode == MARK_GET || dwb.state.mode == MARK_SET)
+    {
+        dwb_mark(e);
+    }
     else 
     {
         if (mode & AUTO_COMPLETE) 

@@ -16,7 +16,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-*dwbremote* allows control to dwb from command line. It communicates with dwb instances
+*dwbremote* allows to control dwb from command line. It communicates with dwb instances
 by setting its XProperties. Return values will be printed to stdout. To use
 dwbremote 'enable-ipc' must be enabled in the dwb instance to communicate with. 
 
@@ -184,7 +184,7 @@ EXAMPLES
     Executing commands::
     +
 ----
-    dwbremote -pid 1234 execute tabopen google.de
+    dwbremote :tabopen example.com
     dwbremote -pid 1234 execute 2close
 ----
 
@@ -198,9 +198,9 @@ EXAMPLES
     User/Password prompt::
     +
 ----
-    username="$(dwbremote -pid 3141 prompt Username:)"
+    username="$(dwbremote prompt Username:)"
     if [ "$username" ]; then 
-        password="$(dwbremote -pid 3141 pwd_prompt Password:)"
+        password="$(dwbremote pwd_prompt Password:)"
     fi
 ----
 
