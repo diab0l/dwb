@@ -1171,4 +1171,11 @@ commands_mark(KeyMap *km, Arg *arg)
     return STATUS_OK;
 }
 
+DwbStatus
+commands_entry_delete_active(KeyMap *km, Arg *arg)
+{
+    completion_delete_active_completion();
+    return STATUS_OK;
+}
+
 

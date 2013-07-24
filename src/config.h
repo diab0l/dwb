@@ -129,6 +129,7 @@ static KeyValue KEYS[] = {
   { "entry_history_back",       {   "k",          GDK_CONTROL_MASK, 0 }, }, 
   { "entry_escape",             {   "c",          GDK_CONTROL_MASK, 0 }, }, 
   { "entry_confirm",            {   "g",          GDK_CONTROL_MASK, 0 }, }, 
+  { "entry_delete_active",      {   "d",          GDK_CONTROL_MASK, 0 }, }, 
   { "download_set_execute",     {   "x",          GDK_CONTROL_MASK, 0 }, }, 
   { "complete_history",         {   "H",          GDK_CONTROL_MASK, 0 }, },  
   { "complete_bookmarks",       {   "B",          GDK_CONTROL_MASK, 0 }, },  
@@ -792,6 +793,10 @@ static FunctionMap FMAP [] = {
   
   { { "entry_confirm",  "Command line: Alternate return binding", },          CP_OVERRIDE_ENTRY,  
     (Func)commands_entry_confirm,        NULL,        ALWAYS_SM,  
+    { 0 }, EP_NONE, { NULL }, },
+
+  { { "entry_delete_active",  "Command line: Delete active completion item", },          CP_OVERRIDE_ENTRY,  
+    (Func)commands_entry_delete_active,        NULL,        ALWAYS_SM,  
     { 0 }, EP_NONE, { NULL }, },
   
   { { "download_set_execute",   "Downloads: toggle between spawning application/download path", }, CP_OVERRIDE_ENTRY, 

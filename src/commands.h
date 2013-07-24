@@ -100,5 +100,6 @@ DwbStatus commands_adblock_reload_rules(KeyMap *, Arg *);
 DwbStatus commands_focus_matched(KeyMap *, Arg *);
 DwbStatus commands_repeat(KeyMap *, Arg *);
 DwbStatus commands_mark(KeyMap *, Arg *);
+DwbStatus commands_entry_delete_active(KeyMap *km, Arg *arg);
 
 #endif

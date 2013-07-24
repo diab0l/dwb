@@ -124,10 +124,7 @@ callback_entry_key_press(GtkWidget* entry, GdkEventKey *e)
     {
         completion_complete(dwb_eval_completion_type(), e->state & GDK_SHIFT_MASK || e->keyval == GDK_KEY_Up);
         return true;
-    } else if (e->keyval == GDK_d && e->state == GDK_CONTROL_MASK) {
-        completion_delete_active_completion();
-        return true;
-    }
+    } 
 skip:
     if (dwb_eval_override_key(e, CP_OVERRIDE_ENTRY)) 
         ret = true;
