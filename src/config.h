@@ -199,10 +199,10 @@ static KeyValue KEYS[] = {
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
-  { { "mark",              "Mark",                    }, CP_HAS_MODE,
+  { { "mark",              "Mark",                    }, CP_HAS_MODE | CP_COMMANDLINE | CP_NEEDS_ARG,
     (Func)commands_mark,            NULL,                            NEVER_SM,     
     { .n = MARK_GET },                          EP_NONE,    { NULL }, },
-  { { "jump",              "Jump to",                    }, CP_HAS_MODE,
+  { { "jump",              "Jump to",                    }, CP_HAS_MODE | CP_COMMANDLINE | CP_NEEDS_ARG,
     (Func)commands_mark,            NULL,                            NEVER_SM,     
     { .n = MARK_SET },                          EP_NONE,    { NULL }, },
   { { "repeat",              "Repeat the last commandline command",                    }, 0,

@@ -805,11 +805,13 @@ COMMAND OVERVIEW
 |history_back            |ba, back        |Go back
 |history_forward         |fo, forward     |Go forward
 |insert_mode             |i, insert       |Insert mode
- local_set                                 Set a setting only for the running
+|jump                    |                |Jump to marked position
+|local_set               |                |Set a setting only for the running
                                            instance, don't save it to the
                                            configuration file
 |lock_domain             |dlock           |Lock tab to current domain
 |lock_uri                |ulock           |Lock tab to current uri
+|mark                    |                |Mark current position in document
 |new_tab                 |                |Open next navigation action in
                                            new tab
 |new_win                 |                |Open next navigation action in

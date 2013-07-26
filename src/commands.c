@@ -1167,7 +1167,10 @@ commands_repeat(KeyMap *km, Arg *arg)
 DwbStatus
 commands_mark(KeyMap *km, Arg *arg)
 {
-    dwb.state.mode = arg->n;
+    if (arg->p)
+        return dwb_eval_mark(*(char *)arg->p, arg->n);
+    else 
+        dwb.state.mode = arg->n;
     return STATUS_OK;
 }
 
