@@ -609,7 +609,7 @@ download_start(const char *path)
             webkit_download_set_destination_uri(dwb.state.download, fullpath);
             int n = g_list_length(s_downloads)+1;
 
-            DwbDownload *active = download_add_progress_label(dwb.state.fview, filename, n);
+            DwbDownload *active = download_add_progress_label(dwb.state.fview, g_uri_unescape_string(filename, NULL), n);
             active->action = dwb.state.dl_action;
             active->path = g_strdup(path);
             active->n = n;
