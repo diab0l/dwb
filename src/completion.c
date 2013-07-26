@@ -726,17 +726,22 @@ completion_delete_active_completion(void) {
     if (dwb.comps.completions && dwb.comps.active_comp) {
       GList *active = dwb.comps.active_comp, *new_active;
       Completion *c;
-      GtkLabel *left, *middle;
+      const char *left, *middle;
       
       /* Determine completion type and how we should deal with it */ 
       c = active->data;
-      middle = (GtkLabel *)c->mlabel;
-      left = (GtkLabel *)c->llabel;
-      if (!g_ascii_strcasecmp(middle->text, "History")) {
-        dwb_remove_history(left->text);      
-      } else if (!g_ascii_strcasecmp(middle->text, "Bookmark")) {
-        dwb_remove_bookmark(left->text);
-      } else { 
+      middle = gtk_label_get_text(GTK_LABEL(c->mlabel));
+      left = gtk_label_get_text(GTK_LABEL(c->llabel));
+      if (!g_ascii_strcasecmp(middle, "History")) 
+      {
+        dwb_remove_history(left);      
+      } 
+      else if (!g_ascii_strcasecmp(middle, "Bookmark")) 
+      {
+        dwb_remove_bookmark(left);
+      } 
+      else 
+      { 
         /* At this time we don't deal with any other completion types*/
         return;
       }
