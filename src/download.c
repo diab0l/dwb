@@ -452,7 +452,6 @@ download_start(const char *path)
     if (path == NULL) 
         path = GET_TEXT();
 
-    char escape_buffer[255];
     char *json = NULL;
     gboolean clean = true;
     char *fullpath = NULL;
@@ -464,7 +463,7 @@ download_start(const char *path)
     WebKitNetworkRequest *request = webkit_download_get_network_request(dwb.state.download);
     dwb.state.download = webkit_download_new(request);
 
-    filename = util_normalize_filename(escape_buffer, filename, sizeof(escape_buffer));
+    filename = g_uri_escape_string(filename, NULL, false);
 
     if (EMIT_SCRIPT(DOWNLOAD_START)) 
     {
