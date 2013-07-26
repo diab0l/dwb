@@ -1222,7 +1222,7 @@ dwb_eval_mark(guint val, gint mode)
             if (v->status->marks[idx] != MARK_NOT_SET)
             {
                 gtk_adjustment_set_value(adj, v->status->marks[idx]);
-                v->status->marks[MARK_TO_INDEX('\'')] = value;
+                DEFAULT_MARK = value;
             }
             else 
             {
@@ -1306,7 +1306,7 @@ dwb_scroll(GList *gl, double step, ScrollDirection dir)
     }
 
     if (dir == SCROLL_TOP || dir == SCROLL_BOTTOM)
-        VIEW(gl)->status->marks[MARK_TO_INDEX('\'')] = value;
+        DEFAULT_MARK = value;
 
     scroll = scroll < lower ? lower : scroll > upper ? upper : scroll;
     if (scroll == value) 
@@ -3377,6 +3377,9 @@ dwb_search(Arg *arg)
     gboolean ret = false;
     View *v = CURRENT_VIEW();
     gboolean forward = dwb.state.search_flags & FIND_FORWARD;
+
+    DEFAULT_MARK = gtk_adjustment_get_value(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(CURRENT_VIEW()->scroll)));
+
     if (arg) 
     {
         if (!arg->b) 

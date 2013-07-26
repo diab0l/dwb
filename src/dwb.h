@@ -187,6 +187,7 @@ GTimer *__timer;
 #define IS_MARK_CHAR(X)   ((X) >= MARK_FIRST_CHAR && (X) <= MARK_LAST_CHAR)
 #define MARK_LENGTH (MARK_LAST_CHAR - MARK_FIRST_CHAR)
 #define MARK_TO_INDEX(X) (X - MARK_FIRST_CHAR)
+#define DEFAULT_MARK (CURRENT_VIEW()->status->marks[MARK_TO_INDEX('\'')])
 #define MARK_NOT_SET (-1)
 #define CLEAR_MARKS(V) do { for (int _i =0; _i<MARK_LENGTH; _i++) (V)->status->marks[_i] = MARK_NOT_SET; } while (0)
 
