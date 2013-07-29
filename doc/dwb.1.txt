@@ -420,7 +420,9 @@ Toggle "view source" (command
 Mark current position in document, valid marks are all printable ascii characters.
 
 *'[mark]*::
-Jump to marked position 'mark'.
+Jump to marked position 'mark'. The default mark is *\'* that points to the last
+position when using 'scroll_top', 'scroll_bottom', 'jump', any of the find
+commands or if an anchor link was clicked. 
 
 *CC*::
 Allow persistent cookie for the current website. The domain will be saved in
