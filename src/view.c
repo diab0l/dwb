@@ -871,6 +871,10 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
             VIEW(gl)->js_base = NULL;
         }
     }
+    if (!ret && gl == dwb.state.fview)
+    {
+        DEFAULT_MARK = gtk_adjustment_get_value(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(VIEW(gl)->scroll)));
+    }
     return ret;
 }/*}}}*/
 
