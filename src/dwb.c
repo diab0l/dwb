@@ -52,6 +52,7 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
+#include "plugindb.h"
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"
@@ -4852,6 +4853,10 @@ dwb_init_files()
     dwb.files[FILES_CUSTOM_KEYS]   = util_resolve_symlink(dwb.files[FILES_CUSTOM_KEYS]);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
 
+    dwb.files[FILES_PLUGINDB]     = g_build_filename(profile_path, "plugindb",      NULL);
+    dwb.files[FILES_PLUGINDB]   = util_resolve_symlink(dwb.files[FILES_PLUGINDB]);
+    dwb_check_create(dwb.files[FILES_PLUGINDB]);
+
 #ifndef DISABLE_HSTS
     dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
     dwb.files[FILES_HSTS]   = util_resolve_symlink(dwb.files[FILES_HSTS]);
@@ -5066,6 +5071,7 @@ dwb_init()
     if (cache_model != NULL && !g_ascii_strcasecmp(cache_model, "documentviewer"))
         webkit_set_cache_model(WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
+    plugindb_init();
     dwb_init_key_map();
     dwb_init_style();
     dwb_init_gui();

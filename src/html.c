@@ -22,6 +22,7 @@
 #include "html.h"
 #include "util.h"
 #include "scripts.h"
+#include "plugindb.h"
 
 #define HTML_REMOVE_BUTTON "<div style='float:right;cursor:pointer;' navigation='%s %s' onclick='location.reload();'>&times</div>"
 typedef struct _HtmlTable HtmlTable;
@@ -46,6 +47,7 @@ DwbStatus html_settings(GList *, HtmlTable *);
 DwbStatus html_startpage(GList *, HtmlTable *);
 DwbStatus html_scripts(GList *, HtmlTable *);
 DwbStatus html_keys(GList *, HtmlTable *);
+DwbStatus html_plugins(GList *, HtmlTable *);
 
 
 static HtmlTable table[] = {
@@ -55,6 +57,7 @@ static HtmlTable table[] = {
     { "dwb:searchengines",    "Searchengines",  INFO_FILE,      0, html_searchengines,    },
     { "dwb:downloads",        "Downloads",      INFO_FILE,      0, html_downloads, },
     { "dwb:keys",             "Keys",           INFO_FILE,      0, html_keys },
+    { "dwb:plugins",          "Plugins",        INFO_FILE,           0, html_plugins },
     { "dwb:settings",         "Settings",       INFO_FILE,      0, html_settings },
     { "dwb:script",          "Scripts",        NULL,           0, html_scripts },
     { "dwb:startpage",         NULL,            NULL,           0, html_startpage },
@@ -110,6 +113,11 @@ html_remove_item_cb(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl)
             dwb_remove_download(attr);
         else if (!g_strcmp0(uri, "dwb:searchengines")) 
             dwb_remove_search_engine(attr);
+        else if (!g_strcmp0(uri, "dwb:plugins")) 
+        {
+            const char *checked = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "checked");
+            plugindb_set_enabled(attr, checked == NULL, true);
+        }
     }
     else if ( (attr = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "href")) != NULL) 
     {
@@ -440,6 +448,41 @@ html_keys(GList *gl, HtmlTable *table)
         g_free(path);
     }
     g_free(content);
+    return ret;
+}
+DwbStatus
+html_plugins(GList *gl, HtmlTable *table) 
+{
+    WebKitWebView *wv = WEBVIEW(gl);
+    DwbStatus ret = STATUS_ERROR;
+    GSList *plugins = plugindb_get_unique_plugin_list();
+    GString *buf = g_string_new(NULL);
+    for (GSList *l = plugins; l; l=l->next)
+    {
+        WebKitWebPlugin *plugin = l->data;
+        const gchar *name = webkit_web_plugin_get_name(plugin);
+        const gchar *description = webkit_web_plugin_get_description(plugin);
+        gboolean enabled = webkit_web_plugin_get_enabled(plugin);
+        g_string_append_printf(buf, "\n<tr class='dwb_table_row'>\n"
+                "<th class='dwb_table_headline' colspan='2'>%s</th></tr><tr>\n" 
+                "<td class='dwb_table_cell_full'>%s</td>\n"
+                "<td class='dwb_table_cell_right'>\n"
+                "<input navigation='%s' type='checkbox' %s onclick='location.reload()'></input>"
+                "</td></tr>\n", 
+                name, description, name, enabled ? "checked='checked'" : "");
+    }
+    if (plugins)
+    {
+        g_string_append(buf, "<tr><td colspan='2'>"
+                "<div class='footnote'>"
+                "These settings are applied globally and may override settings on <a style='font:inherit' href='dwb:settings'>dwb:settings</a></div>"
+                "</td></tr>");
+    }
+    plugindb_free_list(plugins);
+    if ( (ret = html_load_page(wv, table, buf->str)) == STATUS_OK) 
+        g_signal_connect(wv, "notify::load-status", G_CALLBACK(html_load_status_cb), gl); 
+
+    g_string_free(buf, true);
     return ret;
 }
 DwbStatus

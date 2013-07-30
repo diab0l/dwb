@@ -874,6 +874,7 @@ enum Files {
   FILES_CACHEDIR,
   FILES_CUSTOM_KEYS,
   FILES_AUTOSTART,
+  FILES_PLUGINDB,
   FILES_LAST
 };
 // TODO implement plugins blocker, script blocker with File struct
