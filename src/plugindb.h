@@ -19,10 +19,8 @@
 #ifndef __DWB_PLUGINDB_H__
 #define __DWB_PLUGINDB_H__
 
-#define plugindb_free_list(list) (g_slist_free_full(list, (GDestroyNotify)g_object_unref))
-
 GSList * 
-plugindb_get_unique_plugin_list(void);
+plugindb_get_plugin_list(void);
 
 void 
 plugindb_set_enabled(const char *name, gboolean enabled, gboolean write);

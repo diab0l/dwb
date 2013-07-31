@@ -29,60 +29,44 @@ cmp_plugin_name(WebKitWebPlugin *a, WebKitWebPlugin *b)
 }
 
 GSList *
-plugindb_get_unique_plugin_list()
+plugindb_get_plugin_list()
 {
-    GSList *ret = NULL;
     WebKitWebPluginDatabase *db = webkit_get_web_plugin_database();
     GSList *plugins = webkit_web_plugin_database_get_plugins(db);
 
-    for (GSList *l = plugins; l; l=l->next)
-    {
-        WebKitWebPlugin *plugin = l->data;
-        if (!g_slist_find_custom(ret, plugin, (GCompareFunc)cmp_plugin_name))
-        {
-            ret = g_slist_prepend(ret, g_object_ref(l->data));
-        }
-    }
-    if (ret)
-    {
-        ret = g_slist_sort(ret, (GCompareFunc)cmp_plugin_name);
-    }
+    plugins = g_slist_sort(plugins, (GCompareFunc)cmp_plugin_name);
 
-    webkit_web_plugin_database_plugins_list_free(plugins);
-    return ret;
+    return plugins;
 }
 
 void 
-plugindb_set_enabled(const char *name, gboolean enabled, gboolean write)
+plugindb_set_enabled(const char *path, gboolean enabled, gboolean write)
 {
     WebKitWebPluginDatabase *db = webkit_get_web_plugin_database();
     GSList *plugins = webkit_web_plugin_database_get_plugins(db);
     GString *buf = NULL; 
     if (write)
         buf = g_string_new(NULL);
-    GSList *disabled = NULL;
     for (GSList *l = plugins; l; l=l->next)
     {
-        const char *pname = webkit_web_plugin_get_name(l->data);
+        const char *ppath = webkit_web_plugin_get_path(l->data);
         gboolean currently_enabled = webkit_web_plugin_get_enabled(l->data);
-        if (!g_strcmp0(name, pname))
+        if (!g_strcmp0(path, ppath))
         {
             webkit_web_plugin_set_enabled(l->data, enabled);
             currently_enabled = enabled;
         }
-        if (write && !g_slist_find_custom(disabled, pname, (GCompareFunc)g_strcmp0))
+        if (write && !currently_enabled)
         {
-            disabled = g_slist_prepend(disabled, g_strdup(pname));
             if (!currently_enabled)
             {
-                g_string_append_printf(buf, "%s\n", pname);
+                g_string_append_printf(buf, "%s\n", ppath);
             }
         }
     }
     if (write)
     {
         util_set_file_content(dwb.files[FILES_PLUGINDB], buf->str);
-        g_slist_free_full(disabled, g_free);
         g_string_free(buf, true);
     }
     webkit_web_plugin_database_plugins_list_free(plugins);

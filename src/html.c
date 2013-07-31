@@ -455,21 +455,23 @@ html_plugins(GList *gl, HtmlTable *table)
 {
     WebKitWebView *wv = WEBVIEW(gl);
     DwbStatus ret = STATUS_ERROR;
-    GSList *plugins = plugindb_get_unique_plugin_list();
+    GSList *plugins = plugindb_get_plugin_list();
     GString *buf = g_string_new(NULL);
     for (GSList *l = plugins; l; l=l->next)
     {
         WebKitWebPlugin *plugin = l->data;
         const gchar *name = webkit_web_plugin_get_name(plugin);
+        const gchar *path = webkit_web_plugin_get_path(plugin);
         const gchar *description = webkit_web_plugin_get_description(plugin);
         gboolean enabled = webkit_web_plugin_get_enabled(plugin);
         g_string_append_printf(buf, "\n<tr class='dwb_table_row'>\n"
                 "<th class='dwb_table_headline' colspan='2'>%s</th></tr><tr>\n" 
-                "<td class='dwb_table_cell_full'>%s</td>\n"
+                "<td class='dwb_table_cell_left'>%s</td>\n"
+                "<td class='dwb_table_cell_middle'>%s</td>\n"
                 "<td class='dwb_table_cell_right'>\n"
                 "<input navigation='%s' type='checkbox' %s onclick='location.reload()'></input>"
                 "</td></tr>\n", 
-                name, description, name, enabled ? "checked='checked'" : "");
+                name, description, path, path, enabled ? "checked='checked'" : "");
     }
     if (plugins)
     {
@@ -478,7 +480,7 @@ html_plugins(GList *gl, HtmlTable *table)
                 "These settings are applied globally and may override settings on <a style='font:inherit' href='dwb:settings'>dwb:settings</a></div>"
                 "</td></tr>");
     }
-    plugindb_free_list(plugins);
+    webkit_web_plugin_database_plugins_list_free(plugins);
     if ( (ret = html_load_page(wv, table, buf->str)) == STATUS_OK) 
         g_signal_connect(wv, "notify::load-status", G_CALLBACK(html_load_status_cb), gl); 
 
