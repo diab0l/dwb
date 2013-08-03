@@ -567,7 +567,7 @@ dwb_set_auto_insert_mode(GList *l, WebSettings *s)
 static DwbStatus 
 dwb_set_tabbar_delay(GList *l, WebSettings *s) 
 {
-    dwb.misc.tabbar_delay = s->arg_local.i;
+    dwb.misc.tabbar_delay = s->arg_local.d;
     return STATUS_OK;
 }/*}}}*/
 /* dwb_set_tabbar_delay {{{*/
@@ -1770,7 +1770,7 @@ dwb_focus_view(GList *gl, const char *event)
             gtk_widget_show(dwb.gui.tabbox);
             if (running != 0) 
                 g_source_remove(running);
-            running = g_timeout_add(dwb.misc.tabbar_delay * 1000, (GSourceFunc)dwb_hide_tabbar, &running);
+            running = g_timeout_add((int)(dwb.misc.tabbar_delay * 1000), (GSourceFunc)dwb_hide_tabbar, &running);
         }
         if (
                 dwb.misc.max_tabs > 0 

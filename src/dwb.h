@@ -811,7 +811,7 @@ struct _Misc {
   GList *userscripts;
 
   int message_delay;
-  int tabbar_delay;
+  double tabbar_delay;
   int history_length;
 
   char *settings_border;
