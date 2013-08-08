@@ -1920,6 +1920,14 @@ dwb_eval_completion_type(void)
     }
 }/*}}}*/
 
+void
+dwb_clear_last_command()
+{
+    FREE0(dwb.state.last_command.arg);
+    dwb.state.last_command.nummod = -1; 
+    dwb.state.last_command.shortcut = NULL;
+}
+
 /* dwb_clean_load_begin {{{*/
 void 
 dwb_clean_load_begin(GList *gl) 
@@ -3750,7 +3758,7 @@ dwb_clean_up()
     g_string_free(dwb.state.buffer, true);
     g_free(dwb.misc.hints);
     g_free(dwb.misc.hint_style);
-    g_free(dwb.state.last_command);
+    dwb_clear_last_command();
 
     dwb_free_list(dwb.fc.bookmarks, (void_func)dwb_navigation_free);
     /*  TODO sqlite */
@@ -5027,7 +5035,9 @@ dwb_init_vars(void)
     dwb.state.fullscreen = false;
     dwb.state.download_ref_count = 0;
     dwb.state.message_id = 0;
-    dwb.state.last_command = 0;
+    dwb.state.last_command.arg = NULL;
+    dwb.state.last_command.nummod = -1;
+    dwb.state.last_command.shortcut = NULL;
 
     dwb.state.bar_visible = BAR_VIS_TOP | BAR_VIS_STATUS;
 
@@ -5145,15 +5155,14 @@ dwb_parse_command_line(const char *line)
                 argument = token[1];
             }
             if (gtk_widget_has_focus(dwb.gui.entry) && (m->map->prop & CP_OVERRIDE_ENTRY)) 
-                m->map->func(&m, &m->map->arg);
-            else 
-                ret = commands_simple_command(m, argument);
-            if (dwb.state.last_command)
             {
-                g_free(dwb.state.last_command);
+                m->map->func(&m, &m->map->arg);
             }
-            
-            dwb.state.last_command = orig_line;
+            else 
+            {
+                ret = commands_simple_command(m, argument);
+            }
+
             break;
         }
 

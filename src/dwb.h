@@ -656,7 +656,11 @@ struct _State {
   gint last_tab;
   gboolean do_not_track;
   gboolean block_insecure_content;
-  gchar *last_command;
+  struct {
+      int nummod; 
+      KeyMap *shortcut;
+      char *arg;
+  } last_command;
 
   int ipc_hooks;
 };
@@ -984,8 +988,11 @@ gboolean dwb_save_files(gboolean, int);
 CompletionType dwb_eval_completion_type(void);
 
 void dwb_append_navigation_with_argument(GList **, const char *, const char *);
+
 void dwb_clean_load_end(GList *);
 void dwb_clean_load_begin(GList *);
+void dwb_clear_last_command();
+
 void dwb_update_uri(GList *, gboolean);
 gboolean dwb_get_allowed(const char *, const char *);
 gboolean dwb_toggle_allowed(const char *, const char *, GList **);

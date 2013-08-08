@@ -83,6 +83,19 @@ commands_simple_command(KeyMap *km, const char *argument)
         ScriptSignal sig = { .jsobj = NULL, SCRIPTS_SIG_META(json, EXECUTE_COMMAND, 0) };
         SCRIPTS_EMIT_RETURN(sig, json, STATUS_OK);
     }
+    // Save last command for repeat
+    if (km->map->func != (Func) commands_repeat && km != dwb.state.last_command.shortcut)
+    {
+        dwb_clear_last_command();
+        dwb.state.last_command.shortcut = km;
+        dwb.state.last_command.nummod = dwb.state.nummod;
+        if (argument != NULL)
+            dwb.state.last_command.arg = g_strdup(argument);
+    }
+    else if (argument && !km->map->arg.ro)
+    {
+        arg->p = dwb.state.last_command.arg;
+    }
 
     ret = func(km, arg);
     switch (ret) 
@@ -1157,9 +1170,10 @@ commands_adblock_reload_rules(KeyMap *km, Arg *arg)
 DwbStatus
 commands_repeat(KeyMap *km, Arg *arg)
 {
-    if (dwb.state.last_command)
+    if (dwb.state.last_command.shortcut)
     {
-        dwb_parse_command_line(dwb.state.last_command);
+        dwb.state.nummod = dwb.state.last_command.nummod;
+        commands_simple_command(dwb.state.last_command.shortcut, dwb.state.last_command.arg);
         return STATUS_OK;
     }
     return STATUS_ERROR;
