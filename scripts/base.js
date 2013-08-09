@@ -248,13 +248,9 @@ Object.freeze((function () {
             p_mouseEvent(element, "mouseup");
         }
     };
-    var p_getActive = function () 
-    {
-        return globals.active;
-    };
     var p_setActive = function (element) 
     {
-        var active = p_getActive();
+        var active = globals.active;
         if (active) 
         {
             if (globals.markHints) 
@@ -728,7 +724,7 @@ Object.freeze((function () {
     };
     var p_submitSearchEngine = function (string) 
     {
-        var e = p_getActive().element;
+        var e = globals.active.element;
         e.value = string;
         if (e.form.submit instanceof Function) 
         {
@@ -833,7 +829,7 @@ Object.freeze((function () {
         },
         followActive : function (obj) 
         {
-            return p_evaluate(p_getActive().element, obj.type);
+            return p_evaluate(globals.active.element, obj.type);
         },
         focusNext : function () 
         {
