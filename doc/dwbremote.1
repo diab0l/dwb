@@ -2,12 +2,12 @@
 .\"     Title: dwbremote
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/18/2013
+.\"      Date: 08/03/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWBREMOTE" "1" "07/18/2013" "\ \&" "\ \&"
+.TH "DWBREMOTE" "1" "08/03/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -34,7 +34,7 @@ dwbremote \- dwb remote control
 \fBdwbremote\fR [\fIOPTION\fR] <command> <arguments>
 .SH "DESCRIPTION"
 .sp
-\fBdwbremote\fR allows to control dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&. To use dwbremote \fIenable\-ipc\fR must be enabled in the dwb instance to communicate with\&.
+\fBdwbremote\fR allows one to control dwb from command line\&. It communicates with dwb instances by setting its XProperties\&. Return values will be printed to stdout\&. To use dwbremote \fIenable\-ipc\fR must be enabled in the dwb instance to communicate with\&.
 .sp
 \fBdwbremote\fR tries to find windows depending on the options passed, if no options are used or no windows were found it will use the environment variable \fBDWB_WINID\fR, if it is not set it will use the last dwb window that had focus\&. In userscripts executed by dwb the environment variable \fBDWB_WINID\fR will always be set and will point to the window that executed the script\&. Passing more than one option sends the command to all matching windows\&.
 .SH "OPTIONS"
@@ -95,7 +95,7 @@ must be used, to bind only a shortcut without binding a commandline command
 .PP
 \fBclear_hooks\fR [\fIhook\fR \&...]
 .RS 4
-Removes a list of hooks so the will no longer be emitted\&. To reenable hooks
+Removes a list of hooks so the will no longer be emitted\&. To re\-enable hooks
 \fIadd_hooks\fR
 can be sent\&. For a list of hooks see
 \fIhook\fR\&.
@@ -120,22 +120,22 @@ Gets miscellaneous properties
 .PP
 \fBall_domains\fR
 .RS 4
-Gets newline seperated list of all domains\&.
+Gets newline separated list of all domains\&.
 .RE
 .PP
 \fBall_hosts\fR
 .RS 4
-Gets newline seperated list of all hosts\&.
+Gets newline separated list of all hosts\&.
 .RE
 .PP
 \fBall_titles\fR
 .RS 4
-Gets newline seperated list of all titles\&.
+Gets newline separated list of all titles\&.
 .RE
 .PP
 \fBall_uris\fR
 .RS 4
-Gets newline seperated list of all uris\&.
+Gets newline separated list of all uris\&.
 .RE
 .PP
 \fBcurrent_tab\fR
@@ -150,7 +150,7 @@ Gets the effective top level domain of the nth tab or current tab is n is omitte
 .PP
 \fB[n] history\fR
 .RS 4
-Gets the newline seperated history list of the nth tab or current tab if n is omitted\&. The first field is the history number, negative values indicate back history items, positive numbers indicate forward history items, 0 indicates the current uri\&.
+Gets the newline separated history list of the nth tab or current tab if n is omitted\&. The first field is the history number, negative values indicate back history items, positive numbers indicate forward history items, 0 indicates the current uri\&.
 .RE
 .PP
 \fB[n] host\fR
@@ -187,7 +187,7 @@ Gets the uri of the nth tab or current tab is n is omitted\&.
 .PP
 \fBhook\fR \fIhook\fR [\fIhook\fR \&...]
 .RS 4
-Conntect to a list of hooks\&.
+Connect to a list of hooks\&.
 .PP
 \fBHooks\fR
 .RS 4

@@ -25,9 +25,11 @@
 #include "dwbremote.h"
 #define STREQ(x, y) (strcmp((x), (y)) == 0)
 #define STRNEQ(x, y, n) (strncmp((x), (y), (n)) == 0)
+#define CHECK_REMAINING(argc, argv) (argc > 2 || (argc == 2 && *argv[1] == ':'))
+#define CHECK_ARG(arg, sopt, lopt) ((STREQ(sopt, arg) || STREQ(lopt, arg)))
+#define PARSE_ARG(argc, argv, sopt, lopt) (CHECK_ARG(*argv, sopt, lopt) && CHECK_REMAINING(argc, argv))
 
-static Window *all_wins;
-static int opts;
+static int s_opts;
 
 enum {
     OPT_SHOW_WID = 1<<0, 
@@ -35,18 +37,12 @@ enum {
 };
 
 static void 
-cleanup()
+help()
 {
-    if (all_wins != NULL)
-        free(all_wins);
-}
-static void 
-help(int ret)
-{
-    cleanup();
     printf( "USAGE: \n" 
-            "   dwbremote [options] <command> <arguments>\n\n"
+            "   dwbremote [options] <command> [arguments]\n\n"
             "OPTIONS: \n"
+            "   -a --all                Send command to all windows\n"
             "   -c --class <class>      Search for window id by WM_CLASS <class>\n"
             "   -i --id    <windowid>   Send commands to window with id <windowid>\n"
             "   -h --help               Show this help and exit\n"
@@ -55,7 +51,6 @@ help(int ret)
             "   -p --pid   <pid>        Send commands to instance with process id <pid>\n"
             "   -s --show-id            Print the window id in every response\n"
             "   -v --version            Print version information and exit\n");
-    exit(ret);
 }
 static void
 version() 
@@ -164,12 +159,10 @@ get_wins(Display *dpy, Window win, Window **win_return, int *n_ret, void *data, 
 static Bool 
 consume_arg(const char *opt, const char *lopt, int *argc, char ***argv)
 {
-    if (STREQ(**argv, opt) || STREQ(**argv, lopt)) 
+    if (CHECK_ARG(**argv, opt, lopt)) 
     {
         (*argv)++; 
         (*argc)--;
-        if (*argc < 2)
-            help(1);
         return True;
     }
     return False;
@@ -214,7 +207,7 @@ process_one(Display *dpy, Window win, Atom read_atom, char **argv, int argc)
         {
             if (count > 0)
             {
-                if (opts & OPT_SHOW_WID)
+                if (s_opts & OPT_SHOW_WID)
                     printf("%lu ", win);
                 printf("%s\n", list[0]);
                 XFreeStringList(list);
@@ -270,7 +263,7 @@ process_multiple(Display *dpy, Atom read_atom, char **argv, int argc, Window *al
                 {
                     if (!strcmp(list[0], argv[i-1]))
                     {
-                        if (opts & OPT_SHOW_WID)
+                        if (s_opts & OPT_SHOW_WID)
                             printf("%lu ", pe->window);
                         printf("%s", argv[i-1]);
                         if (count > 1)
@@ -299,16 +292,23 @@ main(int argc, char **argv)
     Window root;
     int n_wins = 0;
     int get_multiple = 0;
+    Window *all_wins = NULL;
 
     int pargc = argc - 1;
     char **pargv = argv + 1;
 
 
     if (argc < 2)
-        help(1);
+    {
+        help();
+        return 1;
+    }
 
     if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
+    {
         help(0);
+        return 0;
+    }
     if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
         version();
 
@@ -330,10 +330,10 @@ main(int argc, char **argv)
                 printf("%lu\n", all_wins[i]);
             goto finish;
         }
-        if ((STREQ("-a", *pargv) || STREQ("--all", *pargv)) && pargc > 2)
+        if (CHECK_ARG(*pargv, "-a", "--all"))
             get_wins(dpy, root, &all_wins, &n_wins, NULL, NULL, False);
-        else if ((STREQ("-s", *pargv) || STREQ("--show-id", *pargv)) && pargc > 2)
-            opts |= OPT_SHOW_WID;
+        else if (CHECK_ARG(*pargv, "-s", "--show-id"))
+            s_opts |= OPT_SHOW_WID;
         else if (consume_arg("-i", "--id", &pargc, &pargv))
         {
             unsigned long wid = parse_number(*pargv);
@@ -355,6 +355,11 @@ main(int argc, char **argv)
             help(1);
         }
     }
+    if (pargc < 2 && (pargc < 1 || *pargv[0] != ':'))
+    {
+        help();
+        goto finish;
+    }
     if (all_wins == NULL)
     {
         char *window_id = getenv("DWB_WINID");
@@ -369,7 +374,6 @@ main(int argc, char **argv)
         dwbremote_get_last_focus_id(dpy, root, XInternAtom(dpy, DWB_ATOM_IPC_FOCUS_ID, False), &win);
         if (win == 0)
         {
-            ret = 1;
             fprintf(stderr, "Failed to get window id\n");
             goto finish;
         }
@@ -401,7 +405,8 @@ main(int argc, char **argv)
             ret += process_one(dpy, all_wins[i], read_atom, pargv, pargc);
     }
 finish: 
-    cleanup();
+    if (all_wins != NULL)
+        free(all_wins);
     XCloseDisplay(dpy);
     return ret;
 }

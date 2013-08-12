@@ -184,9 +184,10 @@ GTimer *__timer;
 
 #define MARK_FIRST_CHAR  '!'
 #define MARK_LAST_CHAR  '~'
-#define IS_MARK_KEY(X)   (X->keyval >= MARK_FIRST_CHAR && X->keyval <= MARK_LAST_CHAR)
+#define IS_MARK_CHAR(X)   ((X) >= MARK_FIRST_CHAR && (X) <= MARK_LAST_CHAR)
 #define MARK_LENGTH (MARK_LAST_CHAR - MARK_FIRST_CHAR)
-#define MARK_TO_INDEX(X) (X->keyval - MARK_FIRST_CHAR)
+#define MARK_TO_INDEX(X) (X - MARK_FIRST_CHAR)
+#define DEFAULT_MARK (CURRENT_VIEW()->status->marks[MARK_TO_INDEX('\'')])
 #define MARK_NOT_SET (-1)
 #define CLEAR_MARKS(V) do { for (int _i =0; _i<MARK_LENGTH; _i++) (V)->status->marks[_i] = MARK_NOT_SET; } while (0)
 
@@ -655,7 +656,11 @@ struct _State {
   gint last_tab;
   gboolean do_not_track;
   gboolean block_insecure_content;
-  gchar *last_command;
+  struct {
+      int nummod; 
+      KeyMap *shortcut;
+      char *arg;
+  } last_command;
 
   int ipc_hooks;
 };
@@ -810,7 +815,7 @@ struct _Misc {
   GList *userscripts;
 
   int message_delay;
-  int tabbar_delay;
+  double tabbar_delay;
   int history_length;
 
   char *settings_border;
@@ -873,6 +878,7 @@ enum Files {
   FILES_CACHEDIR,
   FILES_CUSTOM_KEYS,
   FILES_AUTOSTART,
+  FILES_PLUGINDB,
   FILES_LAST
 };
 // TODO implement plugins blocker, script blocker with File struct
@@ -982,8 +988,11 @@ gboolean dwb_save_files(gboolean, int);
 CompletionType dwb_eval_completion_type(void);
 
 void dwb_append_navigation_with_argument(GList **, const char *, const char *);
+
 void dwb_clean_load_end(GList *);
 void dwb_clean_load_begin(GList *);
+void dwb_clear_last_command();
+
 void dwb_update_uri(GList *, gboolean);
 gboolean dwb_get_allowed(const char *, const char *);
 gboolean dwb_toggle_allowed(const char *, const char *, GList **);
@@ -1054,6 +1063,7 @@ void dwb_reload_quickmarks(void);
 void dwb_limit_tabs(gint max);
 KeyMap * dwb_add_key(char *, char *, char *, Func, int, Arg *);
 void dwb_mark(GdkEventKey *e);
+DwbStatus dwb_eval_mark(guint val, gint mode);
 #if 0
 void dwb_hide_tab(GList *gl);
 void dwb_show_tab(GList *gl);

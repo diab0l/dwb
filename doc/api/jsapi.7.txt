@@ -32,7 +32,7 @@ or with
 All native javascript methods can be used in scripts, however there are
 limitations:  
 
-* The execution context of userscripts is completely seperated from the web
+* The execution context of userscripts is completely separated from the web
 execution context. Due to security concerns it is not possible to communicate
 with the web execution context, it is only possible to inject scripts into the
 web context.
@@ -157,7 +157,7 @@ that module will reference an empty object afterwards, optional.
 Load modules defined with provide.
 
 _names_;; An array of module names or null to get all modules, a module name can
-also contain a path, the path must be seperated with a *!* from the module name,
+also contain a path, the path must be separated with a *!* from the module name,
 see also MODULES for details.
 _callback_;; A callback function that is called after initialization of all
 scripts and modules. The parameters of the callback function correspond to the
@@ -335,7 +335,7 @@ is needed, optional
 _stderr(String)_;; Callback function for stderr, any strings returned from the
 callback are passed to stdin of the process, pass +null+ if stderr is not needed
 and environment variables should be set, optional
-_environ_;; Object that can be used to add environment variables to the childs
+_environ_;; Object that can be used to add environment variables to the children
 environment, optional.
 _returns_;; A deferred, it will be resolved if the child exits
 normally, it will be rejected if the child process exits abnormally, the first
@@ -348,8 +348,8 @@ parameter of the reject function will be the status code of the child process.
 Executes a shell command synchronously using the default search path
 
 _command_;; The command to execute
-_environment_;; Object that can be used to add environment variables to the childs
-environment, optional.
+_environment_;; Object that can be used to add environment variables to the
+children environment, optional.
 _returns_;; An object that contains stdout, stderr and status.
 ****
 
@@ -1265,17 +1265,17 @@ are emitted on the signals object itself, for example "signals.keyPress =
 function() { ... };" would connect to the keyPress signal but it is strongly
 discouraged to use this pattern since it will only allow to connect one callback
 to a certain signal. To handle signals Signal-objects can be used, it manages
-signals, allows to connect to more than one signal and also allows to easily
-disconnect/reconnect to signals.
+signals, allows one to connect to more than one signal and also allows one to
+easily disconnect/reconnect to signals.
 
 There is just one convenient pattern that allows setting callbacks directly on
 signals: if the signal name starts with "on" dwb will internally create a new
 Signal and connect to it with the given callback function, i.e. using
-signals.onResource = function () {...} allows to connect more than one callback
-to the "resource"-event, however it doesn't give you as much control as creating
-a Signal. When connected with this pattern it is not possible to disconnect from
-the signal with signals.onResource = null;, instead Signal.disconnect must be
-used.
+signals.onResource = function () {...} allows one to connect more than one
+callback to the "resource"-event, however it doesn't give you as much control as
+creating a Signal. When connected with this pattern it is not possible to
+disconnect from the signal with signals.onResource = null;, instead
+Signal.disconnect must be used.
 
 
 === Emitted signals ===
@@ -1502,7 +1502,7 @@ _json_;; Same as keyPress
 new Signal("loadCommitted", function(webview));
 ----
 
-Emitted when the load has just commited, no data has been loaded when this
+Emitted when the load has just committed, no data has been loaded when this
 signal is emitted. This is the preferred signal for injected scripts that do not
 manipulate the DOM.
 
@@ -2205,7 +2205,7 @@ _notify_;; Whether to notify about blocked request, default *false*
 
 ==== unique_tabs
 
-Extension that allows to remove duplicate tabs or avoids duplicate tabs
+Extension that allows one to remove duplicate tabs or avoids duplicate tabs
 automatically.
 
 *Configuration options*::

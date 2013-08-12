@@ -16,9 +16,10 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-*dwbremote* allows to control dwb from command line. It communicates with dwb instances
-by setting its XProperties. Return values will be printed to stdout. To use
-dwbremote 'enable-ipc' must be enabled in the dwb instance to communicate with. 
+*dwbremote* allows one to control dwb from command line. It communicates with
+dwb instances by setting its XProperties. Return values will be printed to
+stdout. To use dwbremote 'enable-ipc' must be enabled in the dwb instance to
+communicate with. 
 
 *dwbremote* tries to find windows depending on the options passed, if no options
 are used or no windows were found it will use the environment variable
@@ -65,7 +66,7 @@ COMMANDS
     shortcut without binding a commandline command 'none:shortcut'.
 
 *clear_hooks* ['hook' ...]::
-    Removes a list of hooks so the will no longer be emitted. To reenable hooks
+    Removes a list of hooks so the will no longer be emitted. To re-enable hooks
     'add_hooks' can be sent. For a list of hooks see 'hook'.
     
 *execute* 'command'::
@@ -78,13 +79,13 @@ COMMANDS
 
     *Arguments*:::
         *all_domains*::::
-            Gets newline seperated list of all domains.
+            Gets newline separated list of all domains.
         *all_hosts*::::
-            Gets newline seperated list of all hosts.
+            Gets newline separated list of all hosts.
         *all_titles*::::
-            Gets newline seperated list of all titles.
+            Gets newline separated list of all titles.
         *all_uris*::::
-            Gets newline seperated list of all uris.
+            Gets newline separated list of all uris.
         *current_tab*::::
             Gets number of the current tab, starting at 1.
         *[n] domain*::::
@@ -92,7 +93,7 @@ COMMANDS
             n is omitted, e.g. for www.example.co.uk it will return
             example.co.uk.
         *[n] history*::::
-            Gets the newline seperated history list of the nth tab or current tab if
+            Gets the newline separated history list of the nth tab or current tab if
             n is omitted. The first field is the history number, negative values
             indicate back history items, positive numbers indicate forward
             history items, 0 indicates the current uri. 
@@ -112,7 +113,7 @@ COMMANDS
             Gets the uri of the nth tab or current tab is n is omitted.
 
 *hook* 'hook' ['hook' ...]::
-    Conntect to a list of hooks.
+    Connect to a list of hooks.
 
     *Hooks*:::
 

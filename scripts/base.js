@@ -226,53 +226,31 @@ Object.freeze((function () {
         };
     };
 
-    var p_mouseEvent = function (e, ev, bubble) 
+    var p_mouseEvent = function (e, ev) 
     {
         if (e.ownerDocument != document) 
             e.focus();
 
-        var mouseEvent = e.ownerDocument.createEvent("MouseEvent");
-        mouseEvent.initMouseEvent(ev, bubble, true, e.ownerDocument.defaultView, 0, 0, 0, 0, 0, false, false, false, false, 
+        var mouseEvent = e.ownerDocument.createEvent("MouseEvents");
+        mouseEvent.initMouseEvent(ev, true, true, e.ownerDocument.defaultView, 0, 0, 0, 0, 0, false, false, false, false, 
             globals.newTab & OpenMode.OPEN_NEW_VIEW ? 1 : 0, null);
         e.dispatchEvent(mouseEvent);
     };
     var p_clickElement = function (element, ev) 
     {
-        var clicked = false;
         if (arguments.length == 2) 
-            p_mouseEvent(element, ev, !globals.newTab);
+            p_mouseEvent(element, ev);
         else 
         {
-            if (element.hasAttribute("onclick")) 
-            {
-                p_mouseEvent(element, "click", !globals.newTab);
-                clicked = true;
-            }
-            if (element.hasAttribute("onmousedown")) 
-            {
-                p_mouseEvent(element, "mousedown", !globals.newTab);
-                clicked = true;
-            }
-            if (element.hasAttribute("onmouseover")) 
-            {
-                p_mouseEvent(element, "mousedown", !globals.newTab);
-                clicked = true;
-            }
-            if (!clicked) 
-            {
-                p_mouseEvent(element, "click", !globals.newTab);
-                p_mouseEvent(element, "mousedown", !globals.newTab);
-                p_mouseEvent(element, "mouseover", !globals.newTab);
-            }
+            p_mouseEvent(element, "mousedown");
+            p_mouseEvent(element, "mouseover");
+            p_mouseEvent(element, "click");
+            p_mouseEvent(element, "mouseup");
         }
-    };
-    var p_getActive = function () 
-    {
-        return globals.active;
     };
     var p_setActive = function (element) 
     {
-        var active = p_getActive();
+        var active = globals.active;
         if (active) 
         {
             if (globals.markHints) 
@@ -666,7 +644,7 @@ Object.freeze((function () {
         }
         else 
         {
-            if (tagname == "a" || e.hasAttribute("onclick")) 
+            if (e.hasAttribute("onclick")) 
                 p_clickElement(e, "click");
             else if (e.hasAttribute("onmousedown")) 
                 p_clickElement(e, "mousedown");
@@ -746,7 +724,7 @@ Object.freeze((function () {
     };
     var p_submitSearchEngine = function (string) 
     {
-        var e = p_getActive().element;
+        var e = globals.active.element;
         e.value = string;
         if (e.form.submit instanceof Function) 
         {
@@ -851,7 +829,7 @@ Object.freeze((function () {
         },
         followActive : function (obj) 
         {
-            return p_evaluate(p_getActive().element, obj.type);
+            return p_evaluate(globals.active.element, obj.type);
         },
         focusNext : function () 
         {

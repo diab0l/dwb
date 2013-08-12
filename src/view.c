@@ -268,8 +268,13 @@ view_button_press_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
     if (context & WEBKIT_HIT_TEST_RESULT_CONTEXT_EDITABLE) 
     {
         dwb_change_mode(INSERT_MODE);
+        goto clean;
     }
-    else if (e->state & GDK_CONTROL_MASK && e->button == 1) 
+    else if (dwb.state.mode & INSERT_MODE)
+    {
+        dwb_change_mode(NORMAL_MODE, true);
+    }
+    if (e->state & GDK_CONTROL_MASK && e->button == 1) 
     {
         WebKitDOMDocument *doc = webkit_web_view_get_dom_document(web);
         WebKitDOMRange *range = webkit_dom_document_caret_range_from_point(doc, e->x, e->y);
@@ -865,6 +870,10 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
             JSValueUnprotect(JS_CONTEXT_REF(gl), VIEW(gl)->js_base);
             VIEW(gl)->js_base = NULL;
         }
+    }
+    if (!ret && gl == dwb.state.fview)
+    {
+        DEFAULT_MARK = gtk_adjustment_get_value(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(VIEW(gl)->scroll)));
     }
     return ret;
 }/*}}}*/

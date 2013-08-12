@@ -52,6 +52,7 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
+#include "plugindb.h"
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"
@@ -566,7 +567,7 @@ dwb_set_auto_insert_mode(GList *l, WebSettings *s)
 static DwbStatus 
 dwb_set_tabbar_delay(GList *l, WebSettings *s) 
 {
-    dwb.misc.tabbar_delay = s->arg_local.i;
+    dwb.misc.tabbar_delay = s->arg_local.d;
     return STATUS_OK;
 }/*}}}*/
 /* dwb_set_tabbar_delay {{{*/
@@ -1200,40 +1201,53 @@ dwb_paste_primary()
     else 
         gtk_clipboard_request_text(p_clip, (GtkClipboardTextReceivedFunc)dwb_paste_into_webview, dwb.state.fview);
 }
-void 
-dwb_mark(GdkEventKey *e)
+
+DwbStatus 
+dwb_eval_mark(guint val, gint mode)
 {
-    gboolean no_error = true;
-    if (e->is_modifier)
-        return;
-    if (IS_MARK_KEY(e))
+    DwbStatus ret = STATUS_OK;
+    if (IS_MARK_CHAR(val))
     {
         View *v = CURRENT_VIEW();
         
         GtkAdjustment *adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(v->scroll));
-        int idx = MARK_TO_INDEX(e);
+        int idx = MARK_TO_INDEX(val);
+        double value = gtk_adjustment_get_value(adj);
 
-        if (dwb.state.mode == MARK_GET)
+        if (mode == MARK_GET)
         {
-            v->status->marks[idx] = gtk_adjustment_get_value(adj);
+            v->status->marks[idx] = value;
         }
-        else if (dwb.state.mode == MARK_SET)
+        else if (mode == MARK_SET)
         {
             if (v->status->marks[idx] != MARK_NOT_SET)
+            {
                 gtk_adjustment_set_value(adj, v->status->marks[idx]);
+                DEFAULT_MARK = value;
+            }
             else 
             {
-                dwb_set_error_message(dwb.state.fview, "Mark not set %c", e->keyval);
-                no_error = false;
+                dwb_set_error_message(dwb.state.fview, "Mark not set %c", val);
+                ret = STATUS_ERROR;
             }
         }
     }
     else 
     {
         dwb_set_error_message(dwb.state.fview, "Invalid mark");
-        no_error = false;
+        ret = STATUS_ERROR;
     }
-    dwb_change_mode(NORMAL_MODE, no_error);
+    return ret;
+}
+void 
+dwb_mark(GdkEventKey *e)
+{
+    if (e->is_modifier)
+        return;
+
+    DwbStatus ret = dwb_eval_mark(e->keyval, dwb.state.mode);
+
+    dwb_change_mode(NORMAL_MODE, ret == STATUS_OK);
 }
 
 
@@ -1291,6 +1305,9 @@ dwb_scroll(GList *gl, double step, ScrollDirection dir)
                                break;
         default:               scroll = value + sign * inc * NUMMOD; break;
     }
+
+    if (dir == SCROLL_TOP || dir == SCROLL_BOTTOM)
+        DEFAULT_MARK = value;
 
     scroll = scroll < lower ? lower : scroll > upper ? upper : scroll;
     if (scroll == value) 
@@ -1753,7 +1770,7 @@ dwb_focus_view(GList *gl, const char *event)
             gtk_widget_show(dwb.gui.tabbox);
             if (running != 0) 
                 g_source_remove(running);
-            running = g_timeout_add(dwb.misc.tabbar_delay * 1000, (GSourceFunc)dwb_hide_tabbar, &running);
+            running = g_timeout_add((int)(dwb.misc.tabbar_delay * 1000), (GSourceFunc)dwb_hide_tabbar, &running);
         }
         if (
                 dwb.misc.max_tabs > 0 
@@ -1902,6 +1919,14 @@ dwb_eval_completion_type(void)
         default:                    return COMP_NONE;
     }
 }/*}}}*/
+
+void
+dwb_clear_last_command()
+{
+    FREE0(dwb.state.last_command.arg);
+    dwb.state.last_command.nummod = -1; 
+    dwb.state.last_command.shortcut = NULL;
+}
 
 /* dwb_clean_load_begin {{{*/
 void 
@@ -3361,6 +3386,9 @@ dwb_search(Arg *arg)
     gboolean ret = false;
     View *v = CURRENT_VIEW();
     gboolean forward = dwb.state.search_flags & FIND_FORWARD;
+
+    DEFAULT_MARK = gtk_adjustment_get_value(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(CURRENT_VIEW()->scroll)));
+
     if (arg) 
     {
         if (!arg->b) 
@@ -3730,7 +3758,7 @@ dwb_clean_up()
     g_string_free(dwb.state.buffer, true);
     g_free(dwb.misc.hints);
     g_free(dwb.misc.hint_style);
-    g_free(dwb.state.last_command);
+    dwb_clear_last_command();
 
     dwb_free_list(dwb.fc.bookmarks, (void_func)dwb_navigation_free);
     /*  TODO sqlite */
@@ -4833,6 +4861,10 @@ dwb_init_files()
     dwb.files[FILES_CUSTOM_KEYS]   = util_resolve_symlink(dwb.files[FILES_CUSTOM_KEYS]);
     dwb_check_create(dwb.files[FILES_CUSTOM_KEYS]);
 
+    dwb.files[FILES_PLUGINDB]     = g_build_filename(profile_path, "plugindb",      NULL);
+    dwb.files[FILES_PLUGINDB]   = util_resolve_symlink(dwb.files[FILES_PLUGINDB]);
+    dwb_check_create(dwb.files[FILES_PLUGINDB]);
+
 #ifndef DISABLE_HSTS
     dwb.files[FILES_HSTS]            = g_build_filename(profile_path, "hsts",             NULL);
     dwb.files[FILES_HSTS]   = util_resolve_symlink(dwb.files[FILES_HSTS]);
@@ -5003,7 +5035,9 @@ dwb_init_vars(void)
     dwb.state.fullscreen = false;
     dwb.state.download_ref_count = 0;
     dwb.state.message_id = 0;
-    dwb.state.last_command = 0;
+    dwb.state.last_command.arg = NULL;
+    dwb.state.last_command.nummod = -1;
+    dwb.state.last_command.shortcut = NULL;
 
     dwb.state.bar_visible = BAR_VIS_TOP | BAR_VIS_STATUS;
 
@@ -5047,6 +5081,7 @@ dwb_init()
     if (cache_model != NULL && !g_ascii_strcasecmp(cache_model, "documentviewer"))
         webkit_set_cache_model(WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 
+    plugindb_init();
     dwb_init_key_map();
     dwb_init_style();
     dwb_init_gui();
@@ -5120,15 +5155,14 @@ dwb_parse_command_line(const char *line)
                 argument = token[1];
             }
             if (gtk_widget_has_focus(dwb.gui.entry) && (m->map->prop & CP_OVERRIDE_ENTRY)) 
-                m->map->func(&m, &m->map->arg);
-            else 
-                ret = commands_simple_command(m, argument);
-            if (dwb.state.last_command)
             {
-                g_free(dwb.state.last_command);
+                m->map->func(&m, &m->map->arg);
             }
-            
-            dwb.state.last_command = orig_line;
+            else 
+            {
+                ret = commands_simple_command(m, argument);
+            }
+
             break;
         }
 

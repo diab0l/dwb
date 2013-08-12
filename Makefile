@@ -95,6 +95,9 @@ ifdef BASHCOMPLETION
 	unlink $(DESTDIR)$(BASHCOMPLETION)/dwbem
 endif
 
+doc: $(wildcard $(DOCDIR)/*.txt)
+	@$(MAKE) -C $(DOCDIR)
+
 distclean: clean
 
 runsandbox: sandbox

@@ -199,10 +199,10 @@ static KeyValue KEYS[] = {
 
 /* FUNCTION_MAP{{{*/
 static FunctionMap FMAP [] = {
-  { { "mark",              "Mark",                    }, CP_HAS_MODE,
+  { { "mark",              "Mark",                    }, CP_HAS_MODE | CP_COMMANDLINE | CP_NEEDS_ARG,
     (Func)commands_mark,            NULL,                            NEVER_SM,     
     { .n = MARK_GET },                          EP_NONE,    { NULL }, },
-  { { "jump",              "Jump to",                    }, CP_HAS_MODE,
+  { { "jump",              "Jump to",                    }, CP_HAS_MODE | CP_COMMANDLINE | CP_NEEDS_ARG,
     (Func)commands_mark,            NULL,                            NEVER_SM,     
     { .n = MARK_SET },                          EP_NONE,    { NULL }, },
   { { "repeat",              "Repeat the last commandline command",                    }, 0,
@@ -1196,7 +1196,7 @@ static WebSettings DWB_SETTINGS[] = {
   { { "auto-insert-mode",                         "Whether go automatically in insert mode if input or textarea has focus", },                   
     SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_auto_insert_mode,   { 0 }, }, 
   { { "tabbar-visible",                         "Number of seconds the tabbar is shown when switching tabs", },                   
-    SETTING_GLOBAL | SETTING_ONINIT,  INTEGER, { .i = 2 }, (S_Func)dwb_set_tabbar_delay,   { 0 }, }, 
+    SETTING_GLOBAL | SETTING_ONINIT,  DOUBLE, { .d = 2 }, (S_Func)dwb_set_tabbar_delay,   { 0 }, }, 
   { { "new-tab-position-policy",                         "Number of seconds the tabbar is shown when switching tabs", },                   
     SETTING_GLOBAL | SETTING_ONINIT,  CHAR, { .p = "right", .n = CLOSE_TAB_POSITION_MASK, .i = 0 }, (S_Func)dwb_set_new_tab_position_policy,   { 0 }, }, 
   { { "close-tab-focus-policy",                         "Number of seconds the tabbar is shown when switching tabs", },                   

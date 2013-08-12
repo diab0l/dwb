@@ -4,7 +4,7 @@ BASEDIR=../..
 
 include $(BASEDIR)/config.mk
 
-all: web man webman
+all: man webman
 
 man: dwb-js.7
 
