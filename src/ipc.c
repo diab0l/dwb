@@ -18,6 +18,7 @@
 
 #include "dwb.h"
 #include "ipc.h"
+#include "session.h"
 #include <dwbremote.h>
 #include "soup.h"
 #include <string.h>
@@ -249,6 +250,10 @@ parse_commands(char **list, int count)
         else if (STREQ(list[argc], "profile"))
         {
             text = g_strdup(dwb.misc.profile);
+        }
+        else if (STREQ(list[argc], "session"))
+        {
+            text = g_strdup(session_get_name());
         }
         else if (STREQ(list[argc], "setting") && count > 2)
         {

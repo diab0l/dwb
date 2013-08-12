@@ -103,6 +103,8 @@ COMMANDS
             Gets total number of tabs.
         *profile*::::
             Gets the profile name.
+        *session*::::
+            Gets the name of the session.
         *setting <name>*::::
             Gets a setting, only the current local settings from the instance
             are received so they might differ from the settings in
