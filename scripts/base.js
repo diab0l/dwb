@@ -644,7 +644,7 @@ Object.freeze((function () {
         }
         else 
         {
-            if (e.hasAttribute("onclick")) 
+            if (tagname == "a" || e.hasAttribute("onclick"))
                 p_clickElement(e, "click");
             else if (e.hasAttribute("onmousedown")) 
                 p_clickElement(e, "mousedown");
