@@ -452,7 +452,6 @@ download_start(const char *path)
     if (path == NULL) 
         path = GET_TEXT();
 
-    char escape_buffer[255];
     char *json = NULL;
     gboolean clean = true;
     char *fullpath = NULL;
@@ -464,7 +463,7 @@ download_start(const char *path)
     WebKitNetworkRequest *request = webkit_download_get_network_request(dwb.state.download);
     dwb.state.download = webkit_download_new(request);
 
-    filename = util_normalize_filename(escape_buffer, filename, sizeof(escape_buffer));
+    filename = g_uri_escape_string(filename, NULL, false);
 
     if (EMIT_SCRIPT(DOWNLOAD_START)) 
     {
@@ -610,7 +609,7 @@ download_start(const char *path)
             webkit_download_set_destination_uri(dwb.state.download, fullpath);
             int n = g_list_length(s_downloads)+1;
 
-            DwbDownload *active = download_add_progress_label(dwb.state.fview, filename, n);
+            DwbDownload *active = download_add_progress_label(dwb.state.fview, g_uri_unescape_string(filename, NULL), n);
             active->action = dwb.state.dl_action;
             active->path = g_strdup(path);
             active->n = n;
