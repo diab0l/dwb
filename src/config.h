@@ -825,7 +825,7 @@ static FunctionMap FMAP [] = {
   
   { { "buffers",                          "Buffer", },        CP_COMMANDLINE | CP_HAS_MODE,
     (Func)commands_complete_type,            "Only one buffer",     NEVER_SM,     
-    { .n = COMP_BUFFER }, EP_NONE, { "bu", NULL }, },
+    { .n = COMP_BUFFER }, EP_NONE, { "bu", "ls", NULL }, },
   
 
   { { "proxy",                 "Toggle proxy",                    },        CP_COMMANDLINE,     

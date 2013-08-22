@@ -385,27 +385,6 @@ util_expand_home(char *buffer, const char *filename, size_t length)
         strncpy(buffer, filename, length);
     return buffer;
 }
-
-char * 
-util_normalize_filename(char *buffer, const char *filename, size_t length) 
-{
-    char *tmp = buffer;
-    for (size_t i=0; *filename != 0 && i<length-1; i++, filename++, buffer++) 
-    {
-        switch (*filename) 
-        {
-            case '/':
-            case '#':
-                *buffer = '_';
-                break;
-            default : 
-                *buffer = *filename;
-                break;
-        }
-    }
-    *buffer = 0;
-    return tmp;
-}
 /* util_set_file_content(const char *filename, const char *content) {{{*/
 gboolean
 util_set_file_content(const char *filename, const char *content) 
