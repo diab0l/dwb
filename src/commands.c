@@ -91,7 +91,13 @@ commands_simple_command(KeyMap *km)
         dwb.state.last_command.nummod = NUMMOD;
         if (arg->p != NULL)
         {
-            dwb.state.last_command.arg = g_strdup(arg->p);
+            if (arg->ro)
+            {
+                dwb.state.last_command.arg = arg->p;
+            }
+            else 
+                dwb.state.last_command.arg = g_strdup(arg->p);
+            dwb.state.last_command.ro = arg->ro;
         }
     }
 

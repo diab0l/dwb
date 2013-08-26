@@ -660,6 +660,7 @@ struct _State {
       int nummod; 
       KeyMap *shortcut;
       char *arg;
+      gboolean ro;
   } last_command;
 
   int ipc_hooks;

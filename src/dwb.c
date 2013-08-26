@@ -1923,7 +1923,9 @@ dwb_eval_completion_type(void)
 void
 dwb_clear_last_command()
 {
-    FREE0(dwb.state.last_command.arg);
+    if (!dwb.state.last_command.ro)
+        g_free(dwb.state.last_command.arg);
+    dwb.state.last_command.arg = NULL;
     dwb.state.last_command.nummod = -1; 
     dwb.state.last_command.shortcut = NULL;
 }
