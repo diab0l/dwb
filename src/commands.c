@@ -38,7 +38,7 @@
 /* commands.h {{{*/
 /* commands_simple_command(keyMap *km) {{{*/
 DwbStatus 
-commands_simple_command(KeyMap *km, const char *argument) 
+commands_simple_command(KeyMap *km) 
 {
     int ret;
     gboolean (*func)(void *, void *) = km->map->func;
@@ -50,7 +50,7 @@ commands_simple_command(KeyMap *km, const char *argument)
         completion_clean_autocompletion();
     }
     IPC_SEND_HOOK(execute, "%s %s %d", km->map->n.first ? km->map->n.first : "none", 
-            argument ? argument : "none", dwb.state.nummod);
+            arg->p ? arg->p : "none", dwb.state.nummod);
     /**
      * Emitted before a command is executed
      *
@@ -77,7 +77,7 @@ commands_simple_command(KeyMap *km, const char *argument)
     {
         char *json = util_create_json(3,
                 CHAR, "command", km->map->n.first, 
-                CHAR, "argument", argument, 
+                CHAR, "argument", arg->p, 
                 INTEGER, "nummod", dwb.state.nummod);
 
         ScriptSignal sig = { .jsobj = NULL, SCRIPTS_SIG_META(json, EXECUTE_COMMAND, 0) };
@@ -88,13 +88,11 @@ commands_simple_command(KeyMap *km, const char *argument)
     {
         dwb_clear_last_command();
         dwb.state.last_command.shortcut = km;
-        dwb.state.last_command.nummod = dwb.state.nummod;
-        if (argument != NULL)
-            dwb.state.last_command.arg = g_strdup(argument);
-    }
-    else if (argument && !km->map->arg.ro)
-    {
-        arg->p = dwb.state.last_command.arg;
+        dwb.state.last_command.nummod = NUMMOD;
+        if (arg->p != NULL)
+        {
+            dwb.state.last_command.arg = g_strdup(arg->p);
+        }
     }
 
     ret = func(km, arg);
@@ -1172,8 +1170,10 @@ commands_repeat(KeyMap *km, Arg *arg)
 {
     if (dwb.state.last_command.shortcut)
     {
-        dwb.state.nummod = dwb.state.last_command.nummod;
-        commands_simple_command(dwb.state.last_command.shortcut, dwb.state.last_command.arg);
+        dwb.state.nummod = dwb.state.last_command.nummod * NUMMOD;
+        if (!dwb.state.last_command.shortcut->map->arg.ro)
+            dwb.state.last_command.shortcut->map->arg.p = dwb.state.last_command.arg;
+        commands_simple_command(dwb.state.last_command.shortcut);
         return STATUS_OK;
     }
     return STATUS_ERROR;

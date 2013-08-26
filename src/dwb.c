@@ -3090,7 +3090,7 @@ dwb_eval_key(GdkEventKey *e)
                 KeyMap *km = l->data;
                 if (IS_NUMMOD(km->mod)) {
                     //if ((km->mod & DWB_NUMMOD_MASK) && (km->mod & ~DWB_NUMMOD_MASK) == mod_mask) {
-                    commands_simple_command(km, NULL);
+                    commands_simple_command(km);
                     break;
                 }
             }
@@ -3159,7 +3159,7 @@ dwb_eval_key(GdkEventKey *e)
 
     if (tmp && dwb.state.buffer->len == longest) 
     {
-        commands_simple_command(tmp, NULL);
+        commands_simple_command(tmp);
         ret = true;
     }
     else if (e->state & GDK_CONTROL_MASK || !isprint) 
@@ -5112,7 +5112,6 @@ dwb_parse_command_line(const char *line)
     KeyMap *m = NULL;
     gboolean found = false;
     gboolean has_arg = false;
-    const char *argument = NULL;
     char *orig_line = g_strdup(line);
 
     line = util_str_chug(line);
@@ -5152,7 +5151,6 @@ dwb_parse_command_line(const char *line)
             {
                 g_strstrip(token[1]);
                 m->map->arg.p = token[1];
-                argument = token[1];
             }
             if (gtk_widget_has_focus(dwb.gui.entry) && (m->map->prop & CP_OVERRIDE_ENTRY)) 
             {
@@ -5160,7 +5158,7 @@ dwb_parse_command_line(const char *line)
             }
             else 
             {
-                ret = commands_simple_command(m, argument);
+                ret = commands_simple_command(m);
             }
 
             break;

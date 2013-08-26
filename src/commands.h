@@ -20,7 +20,7 @@
 #define __DWB_COMMANDS_H__
 
 
-DwbStatus commands_simple_command(KeyMap *km, const char *);
+DwbStatus commands_simple_command(KeyMap *km);
 DwbStatus commands_add_view(KeyMap *, Arg *);
 DwbStatus commands_add_search_field(KeyMap *, Arg *);
 DwbStatus commands_allow_cookie(KeyMap *, Arg *);
