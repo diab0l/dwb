@@ -3423,6 +3423,34 @@ io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
 }/*}}}*/
 
 /**
+ * Shows a confirmation prompt
+ *
+ * @name confirm 
+ * @memberOf io
+ * @function 
+ *
+ * @param {String} prompt The prompt message
+ *
+ * @returns {Boolean}
+ *      True if <i>y</i> was pressed, false if <i>n</i> or escape was pressed
+ * */
+static JSValueRef 
+io_confirm(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *prompt = NULL;
+    gboolean result = false;
+    
+    if (argc > 0)
+        prompt = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
+
+    entry_hide();
+
+    result = dwb_confirm(dwb.state.fview, prompt ? prompt : "");
+    g_free(prompt);
+    return JSValueMakeBoolean(ctx, result);
+}
+
+/**
  * Read from a file 
  *
  * @name read 
@@ -5220,6 +5248,7 @@ create_global_object()
     JSStaticFunction io_functions[] = { 
         { "print",     io_print,            kJSDefaultAttributes },
         { "prompt",    io_prompt,           kJSDefaultAttributes },
+        { "confirm",   io_confirm,          kJSDefaultAttributes },
         { "read",      io_read,             kJSDefaultAttributes },
         { "write",     io_write,            kJSDefaultAttributes },
         { "dirNames",  io_dir_names,        kJSDefaultAttributes },
