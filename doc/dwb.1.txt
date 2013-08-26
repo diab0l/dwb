@@ -332,7 +332,7 @@ Move current tab [n] positions right.
 
 *gt*::
 Show all open tabs. (command
-'buffers', aliases: 'bu').
+'buffers', aliases: 'bu', 'ls').
 
 *[n]C-P*::
 Protect tab [n]. Closing this tab must be confirmed (command
@@ -761,7 +761,7 @@ COMMAND OVERVIEW
                                            temporarily
 |bookmark                |bma, bmark      |Bookmark current page
 |bookmarks               |bmas, bmarks    |Show bookmarks
-|buffers                 |bu              |Show all open tabs
+|buffers                 |bu, ls          |Show all open tabs
 |cancel_download         |                |Cancel a download
 |clear_tab               |clear           |Clear tab
 |close_tab               |close           |Close tab
