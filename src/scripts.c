@@ -42,7 +42,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.1
+#define API_VERSION 1.2
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -1232,6 +1232,20 @@ wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, J
     return make_object(ctx, G_OBJECT(webkit_web_view_get_back_forward_list(wv)));
 }
 
+JSObjectRef 
+suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception)
+{
+    JSObjectRef o = JSObjectMake(ctx, NULL, NULL);
+    js_set_object_property(ctx, o, "scheme", uri->scheme, exception);
+    js_set_object_property(ctx, o, "user", uri->user, exception);
+    js_set_object_property(ctx, o, "password", uri->password, exception);
+    js_set_object_property(ctx, o, "host", uri->host, exception);
+    js_set_object_number_property(ctx, o, "port", uri->port, exception);
+    js_set_object_property(ctx, o, "path", uri->path, exception);
+    js_set_object_property(ctx, o, "query", uri->query, exception);
+    js_set_object_property(ctx, o, "fragment", uri->fragment, exception);
+    return o;
+}
 
 /*}}}*/
 
@@ -1308,17 +1322,7 @@ get_soup_uri(JSContextRef ctx, JSObjectRef object, SoupURI * (*func)(SoupMessage
     SoupURI *uri = func(msg);
     if (uri == NULL)
         return NIL;
-
-    JSObjectRef o = JSObjectMake(ctx, NULL, NULL);
-    js_set_object_property(ctx, o, "scheme", uri->scheme, exception);
-    js_set_object_property(ctx, o, "user", uri->user, exception);
-    js_set_object_property(ctx, o, "password", uri->password, exception);
-    js_set_object_property(ctx, o, "host", uri->host, exception);
-    js_set_object_number_property(ctx, o, "port", uri->port, exception);
-    js_set_object_property(ctx, o, "path", uri->path, exception);
-    js_set_object_property(ctx, o, "query", uri->query, exception);
-    js_set_object_property(ctx, o, "fragment", uri->fragment, exception);
-    return o;
+    return suri_to_object(ctx, uri, exception);
 }
 
 /* message_get_uri {{{*/
@@ -2335,6 +2339,40 @@ net_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, si
     g_free(host);
     return ret;
 }/*}}}*//*}}}*/
+
+/**
+ * Parses an uri to a SoupURI object
+ *
+ * @name parseUri 
+ * @memberOf net
+ * @function
+ *
+ * @param {String} uri The uri to test
+ *
+ * @returns {SoupURI} 
+ *      A parsed uri or null if the uri isn't valid according to RFC 3986.
+ *
+ * */
+static JSValueRef 
+net_parse_uri(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NIL;
+    if (argc > 0)
+    {
+        char *uri = js_value_to_char(ctx, argv[0], -1, NULL);
+        if (uri != NULL)
+        {
+            SoupURI *suri = soup_uri_new(uri);
+            if (suri != NULL)
+            {
+                ret = suri_to_object(ctx, suri, exc);
+                soup_uri_free(suri);
+            }
+            g_free(uri);
+        }
+    }
+    return ret;
+}
 /**
  * Callback that will be called when <i>Return</i> was pressed after {@link util.tabComplete} was invoked.
  *
@@ -5214,6 +5252,7 @@ create_global_object()
         { "sendRequest",      net_send_request,         kJSDefaultAttributes },
         { "sendRequestSync",  net_send_request_sync,         kJSDefaultAttributes },
         { "domainFromHost",   net_domain_from_host,         kJSDefaultAttributes },
+        { "parseUri",         net_parse_uri,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("net", net_functions, NULL);
