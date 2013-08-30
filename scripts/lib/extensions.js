@@ -302,6 +302,13 @@
               {
                   plugin._name = name;
 
+                  if (plugin.apiVersion && plugin.apiVersion > version)
+                  {
+                      extensions.error(name, "Required API-Version: \033[1m" + plugin.apiVersion + 
+                                       "\033[0m, API-Version found: \033[1m" + version + "\033[0m");
+                      return;
+                  }
+
                   if (plugin.defaultConfig) 
                       util.mixin(extConfig, plugin.defaultConfig);
 
