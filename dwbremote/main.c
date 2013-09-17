@@ -353,6 +353,7 @@ main(int argc, char **argv)
         {
             fprintf(stderr, "Unknown option %s\n", *pargv);
             help(1);
+            goto finish;
         }
     }
     if (pargc < 2 && (pargc < 1 || *pargv[0] != ':'))
