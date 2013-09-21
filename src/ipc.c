@@ -148,6 +148,12 @@ parse_commands(char **list, int count)
     {
         text = dwb_prompt(false, list[1]);
     }
+    else if (STREQ(list[0], "confirm"))
+    {
+        gboolean confirm = dwb_confirm(dwb.state.fview, list[1]);
+        CLEAR_COMMAND_TEXT();
+        text = g_strdup(confirm ? "true" : "false");
+    }
     else if (STREQ(list[0], "get") && count > 1)
     {
         GList *l = dwb.state.fview;

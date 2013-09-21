@@ -68,6 +68,10 @@ COMMANDS
 *clear_hooks* ['hook' ...]::
     Removes a list of hooks so the will no longer be emitted. To re-enable hooks
     'add_hooks' can be sent. For a list of hooks see 'hook'.
+
+*confirm* ['prompt message']::
+    Shows a confirmation prompt. Returns 'true' if 'y' was pressed and false if
+    'n' or 'Escape' was pressed.
     
 *execute* 'command'::
     Executes a command, the command is parsed the same way as if executed from

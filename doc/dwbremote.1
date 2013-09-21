@@ -2,12 +2,12 @@
 .\"     Title: dwbremote
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/12/2013
+.\"      Date: 09/21/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWBREMOTE" "1" "08/12/2013" "\ \&" "\ \&"
+.TH "DWBREMOTE" "1" "09/21/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -99,6 +99,19 @@ Removes a list of hooks so the will no longer be emitted\&. To re\-enable hooks
 \fIadd_hooks\fR
 can be sent\&. For a list of hooks see
 \fIhook\fR\&.
+.RE
+.PP
+\fBconfirm\fR [\fIprompt message\fR]
+.RS 4
+Shows a confirmation prompt\&. Returns
+\fItrue\fR
+if
+\fIy\fR
+was pressed and false if
+\fIn\fR
+or
+\fIEscape\fR
+was pressed\&.
 .RE
 .PP
 \fBexecute\fR \fIcommand\fR
