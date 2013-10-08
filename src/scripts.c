@@ -1760,10 +1760,15 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
             return NIL;
         switch (s->type) 
         {
-            case INTEGER : return JSValueMakeNumber(ctx, s->arg_local.i);
-            case DOUBLE : return JSValueMakeNumber(ctx, s->arg_local.d);
-            case BOOLEAN : return JSValueMakeBoolean(ctx, s->arg_local.b);
-            case CHAR : return js_char_to_value(ctx, s->arg_local.p);
+            case INTEGER : 
+                return JSValueMakeNumber(ctx, s->arg_local.i);
+            case DOUBLE : 
+                return JSValueMakeNumber(ctx, s->arg_local.d);
+            case BOOLEAN : 
+                return JSValueMakeBoolean(ctx, s->arg_local.b);
+            case CHAR : 
+            case COLOR_CHAR : 
+                return js_char_to_value(ctx, s->arg_local.p);
             default : return NIL;
         }
     }
@@ -2341,15 +2346,15 @@ net_domain_from_host(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, si
 }/*}}}*//*}}}*/
 
 /**
- * Parses an uri to a SoupURI object
+ * Parses an uri to a {@link SoupUri} object
  *
  * @name parseUri 
  * @memberOf net
  * @function
  *
- * @param {String} uri The uri to test
+ * @param {String} uri The uri to parse
  *
- * @returns {SoupURI} 
+ * @returns {@link SoupUri} 
  *      A parsed uri or null if the uri isn't valid according to RFC 3986.
  *
  * */
