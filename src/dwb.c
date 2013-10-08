@@ -1721,6 +1721,10 @@ gboolean
 dwb_focus_view(GList *gl, const char *event) 
 {
     g_return_val_if_fail(gl != NULL, true);
+    if (entry_snooping())
+    {
+        return false;
+    }
 
     static int running;
     if (gl != dwb.state.fview) 

@@ -565,10 +565,16 @@ entry_authenticate(GtkWidget *entry, GdkEventKey *e, Auth *a)
 static void 
 on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean retry, gpointer userdata)
 {
+    char buffer[256];
+
     Auth *a = auth_new(session, msg, auth);
     soup_session_pause_message(session, msg);
     entry_snoop(G_CALLBACK(entry_authenticate), a);
-    dwb_set_status_bar_text(dwb.gui.lstatus, "Username:", &dwb.color.active_fg, dwb.font.fd_active, false);
+
+    SoupURI *uri = soup_message_get_uri(msg);
+    snprintf(buffer, sizeof(buffer), "Username for %s:", uri->host ? uri->host : "[unknown]");
+
+    dwb_set_status_bar_text(dwb.gui.lstatus, buffer, &dwb.color.active_fg, dwb.font.fd_active, false);
 }
 #endif
 
