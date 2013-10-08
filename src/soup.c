@@ -572,7 +572,7 @@ on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean
     entry_snoop(G_CALLBACK(entry_authenticate), a);
 
     SoupURI *uri = soup_message_get_uri(msg);
-    snprintf(buffer, sizeof(buffer), "Username for %s:", uri->host ? uri->host : "[unknown]");
+    snprintf(buffer, sizeof(buffer), "Username for %s:", uri && uri->host ? uri->host : "[unknown]");
 
     dwb_set_status_bar_text(dwb.gui.lstatus, buffer, &dwb.color.active_fg, dwb.font.fd_active, false);
 }
