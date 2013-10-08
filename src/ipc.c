@@ -265,7 +265,7 @@ parse_commands(char **list, int count)
         {
             WebSettings *s = g_hash_table_lookup(dwb.settings, list[argc+1]);
             if (s == NULL) 
-                dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "not found");
+                dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_WRITE], "(not found)");
             else 
             {
                 switch (s->type) 
