@@ -47,6 +47,7 @@ void js_set_object_property(JSContextRef ctx, JSObjectRef arg, const char *name,
 void js_set_object_number_property(JSContextRef ctx, JSObjectRef arg, const char *name, gdouble value, JSValueRef *exc);
 char * js_get_string_property(JSContextRef ctx, JSObjectRef arg, const char *name);
 double  js_get_double_property(JSContextRef ctx, JSObjectRef arg, const char *name);
+double  js_val_get_double_property(JSContextRef ctx, JSValueRef arg, const char *name, JSValueRef *exc);
 JSObjectRef js_create_object(WebKitWebFrame *, const char *);
 char * js_call_as_function(WebKitWebFrame *, JSObjectRef, const char *string, const char *args, JSType, char **char_ret);
 JSValueRef js_char_to_value(JSContextRef ctx, const char *text);

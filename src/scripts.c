@@ -69,7 +69,8 @@
 #define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) == 0)
 #define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
 #define IS_KEY_EVENT(X) (((int)(X)) == GDK_KEY_PRESS || ((int)(X)) == GDK_KEY_RELEASE)
-#define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE)
+#define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE \
+                            || ((int)(X)) == GDK_2BUTTON_PRESS || ((int)(X)) == GDK_3BUTTON_PRESS)
 
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
@@ -2699,48 +2700,96 @@ sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
     return ret;
 }
 /** 
- * Dispatches a keyboard event
+ * Dispatches a keyboard or button event
  *
  * @name dispatchEvent
  * @memberOf util
  * @function 
  * 
  * @param {Object} event 
- * @param {Modifier} modifier Modifier state bitmask
- * @param {Keyval} keyval The key that was pressed
+ *      Event details, see {@link signals~onButtonPress|buttonPress}, 
+ *      {@link signals~onButtonRelease|buttonRelease}, 
+ *      {@link signals~onKeyPress|keyPress} or 
+ *      {@link signals~onKeyRelease|keyRelease} 
+ *      for details.
+ * @param {Number} event.type
+ *      Type of the event, can be either buttonpress (4), doubleclick (5),
+ *      tripleclick (6), buttonrelease (7), keypress (8) or keyrelease
+ *      (9).
  *
- * @returns {Boolean} Whether the key was dispatched
+ * @returns {Boolean} Whether the event was dispatched
  * */
 static JSValueRef 
 sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     gboolean result = false;
-    if (argc < 3)
+    if (argc < 1)
         return JSValueMakeBoolean(ctx, false);
-    double type = JSValueToNumber(ctx, argv[0], exc); 
-    if (isnan(type) || (!(IS_KEY_EVENT(type))))
+    double type = js_val_get_double_property(ctx, argv[0], "type", exc);
+    if (isnan(type) || (!(IS_KEY_EVENT(type)) && !(IS_BUTTON_EVENT(type))))
         return JSValueMakeBoolean(ctx, false);
 
-
-    double state = JSValueToNumber(ctx, argv[1], exc);
+    double state = js_val_get_double_property(ctx, argv[0], "state", exc);
     if (isnan(state))
-        goto error_out;
+        state = 0;
+    GdkEvent *event = gdk_event_new(type);
     if (IS_KEY_EVENT(type)) 
     {
-        double keyval = JSValueToNumber(ctx, argv[2], exc);
+        double keyval = js_val_get_double_property(ctx, argv[0], "keyval", exc);
         if (isnan(keyval))
             goto error_out;
-        GdkEventKey e = {
-            .type = type,
-            .window = gtk_widget_get_window(dwb.gui.window),
-            .keyval = keyval,
-            .state = state,
-        };
-        gdk_event_put((GdkEvent*)&e);
+        event->key.window = g_object_ref(gtk_widget_get_window(dwb.gui.window));
+        event->key.keyval = keyval;
+        event->key.state = state;
+        GdkKeymapKey *key; 
+        gint n;
+        if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyval, &key, &n))
+        {
+            event->key.hardware_keycode = key[0].keycode;
+            g_free(key);
+        }
+        gtk_main_do_event(event);
         result = true;
     }
-    // TODO button event
+    else if (IS_BUTTON_EVENT(type))
+    {
+        double button = js_val_get_double_property(ctx, argv[0], "button", exc);
+        if (isnan(button))
+            goto error_out;
+
+        event->button.button = button;
+        event->button.window = g_object_ref(gtk_widget_get_window(VIEW(dwb.state.fview)->web));
+        event->button.state = state;
+
+        double x = js_val_get_double_property(ctx, argv[0], "x", exc);
+        event->button.x = isnan(x) ? 0 : x;
+
+        double y = js_val_get_double_property(ctx, argv[0], "y", exc);
+        event->button.y = isnan(y) ? 0 : y;
+        
+        double x_root = js_val_get_double_property(ctx, argv[0], "xRoot", exc);
+        double y_root = js_val_get_double_property(ctx, argv[0], "yRoot", exc);
+        if (isnan(x_root)  || isnan(y_root))
+        {
+            GdkDisplay *dpy = gdk_display_open(NULL);
+            int cx, cy;
+            gdk_display_get_pointer(dpy, NULL, &cx, &cy, NULL);
+            if (isnan(x_root))
+                x_root = cx;
+            if (isnan(y_root))
+                y_root = cy;
+            gdk_display_close(dpy);
+        }
+        event->button.x_root = x_root;
+        event->button.y_root = y_root;
+
+        double time = js_val_get_double_property(ctx, argv[0], "time", exc);
+        event->button.time = isnan(time) ? 0 : time;
+        gtk_main_do_event(event);
+        result = true;
+    }
 error_out:
+    gdk_event_free(event);
     return JSValueMakeBoolean(ctx, result);
 }
 static GdkAtom 

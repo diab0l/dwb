@@ -114,12 +114,23 @@ js_get_double_property(JSContextRef ctx, JSObjectRef arg, const char *name)
     JSValueRef val = JSObjectGetProperty(ctx, arg, buffer, &exc);
     JSStringRelease(buffer);
     if (exc != NULL || !JSValueIsNumber(ctx, val) )
-        return 0;
+        return NAN;
     ret = JSValueToNumber(ctx, val, &exc);
     if (exc != NULL)
-        return 0;
+        return NAN;
     return ret;
 }/*}}}*/
+double 
+js_val_get_double_property(JSContextRef ctx, JSValueRef val, const char *name, JSValueRef *exc)
+{
+    JSObjectRef o = JSValueToObject(ctx, val, exc);
+    if (o != NULL)
+    {
+        return js_get_double_property(ctx, o, name);
+    }
+    return NAN;
+
+}
 
 /* js_string_to_char 
  * Converts a JSStringRef, return a newly allocated char.
