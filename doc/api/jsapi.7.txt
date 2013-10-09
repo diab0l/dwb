@@ -174,6 +174,23 @@ _func_ or _name_;; Either the function or the optional name passed to bind.
 _returns_;; true if the function was unbound
 ****
 
+==== Object xinclude(String path)
+****
+
+Include scripts from an archive.
+
+Same as include but this function can only be called from scripts inside an
+archive, so this is mostly useful in extensions. However it is possible to
+include scripts from an archive calling the internal function *_xinclude* which
+takes two parameters, the path of the archive and the path of the included file
+in the archive. All scripts inside an archive share an object *exports* which
+can be used to share data between scripts in an archive, all exports objects
+have a readonly property id which is unique to all archives, it can be used
+together with require/provide to define unique module names.
+
+_path_;; Path of the file in the archive
+_returns_;; The object returned from the included file
+****
 
 == GLOBAL OBJECTS ==
 
@@ -203,6 +220,15 @@ _data.searchEngines_;; Searchengines
 
 === io ===
 The io object implements methods for input and output. 
+
+==== void io.confirm(String prompt)
+****
+
+Shows a confirmation prompt.
+
+_prompt_;; The prompt message
+_returns_;; True if *y* was pressed, false if *n* or Escape was pressed
+****
 
 ==== void io.debug([Object detail])
 ****
@@ -386,6 +412,37 @@ _hostname_;; a hostname
 _returns_;; the base domain 
 ****
 
+==== Boolean net.domainMatch(String domain, String pattern)
+****
+
+Checks if two domain match, also checking for .tld which matches all top level
+domains.
+
+_domain_;; A domain name
+_pattern_;; The domain pattern to check
+_returns_;; True if the host matches
+****
+
+==== Boolean net.hostMatch(String host, String pattern)
+****
+
+Checks if two hosts match, also checking for .tld which matches all top level
+domains.
+
+_domain_;; A host name
+_pattern_;; The host pattern to check
+_returns_;; True if the host matches
+****
+
+==== SoupURI net.parseUri(String uri)
+****
+
+Parses an uri to a SoupURI object, see also 'SOUPURI'.
+
+_domain_;; The uri to parse
+_returns_;; A parsed uri or *null* if the uri isn't valid according to RFC 3986.
+****
+
 ==== void net.sendRequest(String uri, Function callback, [String method], [Object data])
 ****
 
@@ -429,7 +486,7 @@ _func_;; Function to execute
 _returns_;; An id that can be passed to timerStop
 ****
 
-==== Number timer.stop(Number id)
+==== Boolean timer.stop(Number id)
 ****
 
 Stops a timer started by timerStart
@@ -1255,6 +1312,21 @@ gui.statusBox.packStart(label, false, false, 0);
 label.label = "foobar";
 label.visible = true;
 ------
+
+== SOUPURI ==
+
+Represenst a SoupURI object.
+
+=== Properties
+
+_fragment (String, read)_;; The fragment part of the uri.
+_host (String, read)_;; The host of the uri.
+_password (String, read)_;; The password of the uri.
+_path (String, read)_;; The path of the uri.
+_port (String, read)_;; The port of the uri.
+_query (String, read)_;; The query part of the uri.
+_scheme (String, read)_;; The scheme of the uri.
+_user (String, read)_;; The user part of the uri.
 
 == SOUPHEADERS ==
 

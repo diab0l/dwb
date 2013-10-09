@@ -335,6 +335,29 @@ Either the function or the optional name passed to bind\&.
 true if the function was unbound
 .RE
 .RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBObject xinclude(String path)\fR
+.RS 4
+.sp
+Include scripts from an archive\&.
+.sp
+Same as include but this function can only be called from scripts inside an archive, so this is mostly useful in extensions\&. However it is possible to include scripts from an archive calling the internal function \fB_xinclude\fR which takes two parameters, the path of the archive and the path of the included file in the archive\&. All scripts inside an archive share an object \fBexports\fR which can be used to share data between scripts in an archive, all exports objects have a readonly property id which is unique to all archives, it can be used together with require/provide to define unique module names\&.
+.PP
+\fIpath\fR
+.RS 4
+Path of the file in the archive
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The object returned from the included file
+.RE
+.RE
 .SH "GLOBAL OBJECTS"
 .SS "data"
 .sp
@@ -424,6 +447,31 @@ Searchengines
 .SS "io"
 .sp
 The io object implements methods for input and output\&.
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid io.confirm(String prompt)\fR
+.RS 4
+.sp
+Shows a confirmation prompt\&.
+.PP
+\fIprompt\fR
+.RS 4
+The prompt message
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+True if
+\fBy\fR
+was pressed, false if
+\fBn\fR
+or Escape was pressed
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -834,6 +882,81 @@ the base domain
 .nr an-break-flag 1
 .br
 .ps +1
+\fBBoolean net.domainMatch(String domain, String pattern)\fR
+.RS 4
+.sp
+Checks if two domain match, also checking for \&.tld which matches all top level domains\&.
+.PP
+\fIdomain\fR
+.RS 4
+A domain name
+.RE
+.PP
+\fIpattern\fR
+.RS 4
+The domain pattern to check
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+True if the host matches
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBBoolean net.hostMatch(String host, String pattern)\fR
+.RS 4
+.sp
+Checks if two hosts match, also checking for \&.tld which matches all top level domains\&.
+.PP
+\fIdomain\fR
+.RS 4
+A host name
+.RE
+.PP
+\fIpattern\fR
+.RS 4
+The host pattern to check
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+True if the host matches
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSoupURI net.parseUri(String uri)\fR
+.RS 4
+.sp
+Parses an uri to a SoupURI object, see also \fISOUPURI\fR\&.
+.PP
+\fIdomain\fR
+.RS 4
+The uri to parse
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+A parsed uri or
+\fBnull\fR
+if the uri isn\(cqt valid according to RFC 3986\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBvoid net.sendRequest(String uri, Function callback, [String method], [Object data])\fR
 .RS 4
 .sp
@@ -935,7 +1058,7 @@ An id that can be passed to timerStop
 .nr an-break-flag 1
 .br
 .ps +1
-\fBNumber timer.stop(Number id)\fR
+\fBBoolean timer.stop(Number id)\fR
 .RS 4
 .sp
 Stops a timer started by timerStart
@@ -2458,6 +2581,50 @@ label\&.visible = true;
 .if n \{\
 .RE
 .\}
+.RE
+.SH "SOUPURI"
+.sp
+Represenst a SoupURI object\&.
+.SS "Properties"
+.PP
+\fIfragment (String, read)\fR
+.RS 4
+The fragment part of the uri\&.
+.RE
+.PP
+\fIhost (String, read)\fR
+.RS 4
+The host of the uri\&.
+.RE
+.PP
+\fIpassword (String, read)\fR
+.RS 4
+The password of the uri\&.
+.RE
+.PP
+\fIpath (String, read)\fR
+.RS 4
+The path of the uri\&.
+.RE
+.PP
+\fIport (String, read)\fR
+.RS 4
+The port of the uri\&.
+.RE
+.PP
+\fIquery (String, read)\fR
+.RS 4
+The query part of the uri\&.
+.RE
+.PP
+\fIscheme (String, read)\fR
+.RS 4
+The scheme of the uri\&.
+.RE
+.PP
+\fIuser (String, read)\fR
+.RS 4
+The user part of the uri\&.
 .RE
 .SH "SOUPHEADERS"
 .sp
