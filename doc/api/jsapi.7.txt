@@ -1256,6 +1256,73 @@ label.label = "foobar";
 label.visible = true;
 ------
 
+== SOUPHEADERS ==
+
+Represents a header, to modify a request header the "resource" Signal can be
+used. The requestheaders can be accessed via WebKitNetWorkRequests.
+
+
+=== Methods ===
+
+
+==== void SoupHeaders.append(String name, Strina value)
+****
+
+Appends a value to a header.
+
+_name_:: Name of the header
+_value_:: Value of the header
+****
+
+==== void SoupHeaders.clear()
+****
+
+Removes all headers.
+****
+
+==== String SoupHeaders.getList(String name)
+****
+
+Gets a comma seperated header list.
+
+_name_:: Name of the header list
+_returns_:: The header list or *null*.
+****
+
+==== String SoupHeaders.getOne(String name)
+****
+
+Gets a header.
+
+_name_:: Name of the header
+_returns_:: The header or *null*.
+****
+
+==== void SoupHeaders.remove(String name)
+****
+
+Removes a header.
+
+_name_:: Name of the header
+****
+
+==== void SoupHeaders.replace(String name, String value)
+****
+
+Replaces a header.
+
+_name_:: Name of the header
+_value_:: New value of the header
+****
+
+==== Example 
+
+----
+Signal.connect("resource", function(wv, frame, request) {
+    request.message.requestHeaders.remove("referer");
+});
+----
+
 
 == SIGNALS ==
 

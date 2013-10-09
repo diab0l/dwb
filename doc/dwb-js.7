@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/03/2013
+.\"      Date: 10/09/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "08/03/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "10/09/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -2454,6 +2454,144 @@ var label = new GtkWidget("GtkLabel");
 gui\&.statusBox\&.packStart(label, false, false, 0);
 label\&.label = "foobar";
 label\&.visible = true;
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.SH "SOUPHEADERS"
+.sp
+Represents a header, to modify a request header the "resource" Signal can be used\&. The requestheaders can be accessed via WebKitNetWorkRequests\&.
+.SS "Methods"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid SoupHeaders.append(String name, Strina value)\fR
+.RS 4
+.sp
+Appends a value to a header\&.
+.PP
+\fIname\fR
+.RS 4
+Name of the header
+.RE
+.PP
+\fIvalue\fR
+.RS 4
+Value of the header
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid SoupHeaders.clear()\fR
+.RS 4
+.sp
+Removes all headers\&.
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString SoupHeaders.getList(String name)\fR
+.RS 4
+.sp
+Gets a comma seperated header list\&.
+.PP
+\fIname\fR
+.RS 4
+Name of the header list
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The header list or
+\fBnull\fR\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString SoupHeaders.getOne(String name)\fR
+.RS 4
+.sp
+Gets a header\&.
+.PP
+\fIname\fR
+.RS 4
+Name of the header
+.RE
+.PP
+\fIreturns\fR
+.RS 4
+The header or
+\fBnull\fR\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid SoupHeaders.remove(String name)\fR
+.RS 4
+.sp
+Removes a header\&.
+.PP
+\fIname\fR
+.RS 4
+Name of the header
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid SoupHeaders.replace(String name, String value)\fR
+.RS 4
+.sp
+Replaces a header\&.
+.PP
+\fIname\fR
+.RS 4
+Name of the header
+.RE
+.PP
+\fIvalue\fR
+.RS 4
+New value of the header
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBExample\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Signal\&.connect("resource", function(wv, frame, request) {
+    request\&.message\&.requestHeaders\&.remove("referer");
+});
 .fi
 .if n \{\
 .RE
