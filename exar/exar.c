@@ -71,6 +71,7 @@ struct exar_header_s {
 static size_t s_offset;
 static FILE *s_out;
 static unsigned char s_verbose = 0;
+static const char *s_out_path;
 
 static void *
 xcalloc(size_t nmemb, size_t size)
@@ -369,9 +370,22 @@ ftw_pack(const char *fpath, const struct stat *st, int tf)
     char flag;
     const char *stripped = &fpath[s_offset];
 
+    if (!strcmp(stripped, s_out_path))
+    {
+        LOG(3, "Skipping output file %s\n", s_out_path);
+        return 0;
+    }
     LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
     if (S_ISDIR(st->st_mode))
+    {
+        if (!strcmp(fpath, "."))
+        {
+            s_offset = 2;
+            LOG(3, "Skipping directory .\n");
+            return 0;
+        }
         flag = DIR_FLAG;
+    }
     else if (S_ISREG(st->st_mode))
     {
         flag = FILE_FLAG;
@@ -420,6 +434,7 @@ pack (const char *archive, const char *path, const char *mode)
         perror(archive);
         return EE_ERROR;
     }
+    s_out_path = archive;
 
     ret = ftw(path, ftw_pack, MAX_FILE_HANDLES);
 
@@ -430,7 +445,7 @@ pack (const char *archive, const char *path, const char *mode)
 }
 
 int 
-exar_pack(const char *path)
+exar_pack(const char *path, const char *outpath)
 {
     assert(path != NULL);
 
@@ -439,7 +454,14 @@ exar_pack(const char *path)
 
     s_offset = get_offset(archive, sizeof(archive), path, &i);
 
-    strncpy(&archive[i], "." EXTENSION, sizeof(archive) - i);
+    if (outpath != NULL)
+    {
+        strncpy(archive, outpath, sizeof(archive));
+    }
+    else 
+    {
+        strncpy(&archive[i], "." EXTENSION, sizeof(archive) - i);
+    }
 
     return pack(archive, path, "w");
 }

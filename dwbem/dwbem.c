@@ -1185,7 +1185,8 @@ exar_help(int ret)
            "                        to stdout, the archive is not modified, the file path \n"
            "                        is the relative file path of the file in the archive.\n"
            "    l[v] archive        List archive content\n"
-           "    p[v] path           Pack file or directory 'path'.\n"
+           "    p[v] path [outname] Pack file or directory 'path'. If <outname> is \n"
+           "                        omitted the default output name is <path>.exar.\n"
            "    s[v] archive file   Search for a file and write the content to stdout, the \n" 
            "                        archive is not modified, the filename is the basename\n" 
            "                        plus suffix of the file in the archive, all directory\n"
@@ -1274,7 +1275,7 @@ parse_exar_options(char **argv)
     else if (EXAR_CHECK_FLAG(flag, l))
         exar_info(argv[1]);
     else if (EXAR_CHECK_FLAG(flag, p))
-        exar_pack(argv[1]);
+        exar_pack(argv[1], argv[2]);
     else if (EXAR_CHECK_FLAG(flag, s) && argc > 2)
         exar_xextract(argv[1], argv[2], exar_search_extract);
     else if (EXAR_CHECK_FLAG(flag, u))

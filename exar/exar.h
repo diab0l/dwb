@@ -54,7 +54,7 @@ enum {
  * @returns 0 on success and -1 on error
  * */
 int 
-exar_pack(const char *path);
+exar_pack(const char *path, const char *outpath);
 
 /*
  * Appends a file or directory to the archive

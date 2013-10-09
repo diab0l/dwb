@@ -139,7 +139,7 @@ main (int argc, char **argv)
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_A) && argc > 3)
         exar_append(argv[2], argv[3]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_P))
-        exar_pack(argv[2]);
+        exar_pack(argv[2], argv[3]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_L))
         exar_info(argv[2]);
     else if (EXAR_CHECK_FLAG(flag, EXAR_FLAG_D) && argc > 3)

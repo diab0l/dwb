@@ -6,6 +6,7 @@
  * about the extension and <b>//&lt;DEFAULT_CONFIG ... //&gt;DEFAULT_CONFIG</b> that
  * will be used by dwbem to find the default configuration
  * Every extension must also return an object that can have up to four properties.
+ * 
  *
  *
  * @namespace 
@@ -14,6 +15,8 @@
  * @static 
  *
 
+ * @property {Number} [apiVersion]
+ *      The minimum apiversion required for the extension
  * @property {Object} [defaultConfig]
  *      The default configuration, will be passed to extensions.getConfig
  * @property {extensions~onEnd} end 
