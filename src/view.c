@@ -1039,7 +1039,6 @@ view_progress_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 static void
 view_popup_activate_cb(GtkMenuItem *menu, GList *gl) 
 {
-    GtkAction *a = NULL;
     const char *name;
     /* 
      * context-menu-action-2000       open link
@@ -1053,6 +1052,10 @@ view_popup_activate_cb(GtkMenuItem *menu, GList *gl)
      * 
      * */
 
+#if _HAS_GTK3
+    // FIXME
+#else
+    GtkAction *a = NULL;
     a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(menu));
     if (a == NULL) 
         return;
@@ -1062,6 +1065,7 @@ view_popup_activate_cb(GtkMenuItem *menu, GList *gl)
         GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_PRIMARY);
         gtk_clipboard_set_text(clipboard, VIEW(gl)->status->hover_uri, -1);
     }
+#endif
 }/*}}}*/
 
 void on_destroy(GtkWidget *item)
@@ -1309,7 +1313,11 @@ view_load_error_cb(WebKitWebView *web, WebKitWebFrame *frame, char *uri, GError 
     if (g_str_has_suffix(tmp, "/")) 
         tmp[strlen(tmp)-1] = '\0';
 
+#if _HAS_GTK3
+    char *icon = dwb_get_stock_item_base64_encoded("dialog-error");
+#else
     char *icon = dwb_get_stock_item_base64_encoded(GTK_STOCK_DIALOG_ERROR);
+#endif
     if ((search = dwb_get_searchengine(tmp)) != NULL)  
         site = g_strdup_printf(content, icon != NULL ? icon : "", uri, weberror->message, "visible", search);
     else 
