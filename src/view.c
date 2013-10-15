@@ -1039,7 +1039,6 @@ view_progress_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 static void
 view_popup_activate_cb(GtkMenuItem *menu, GList *gl) 
 {
-    const char *name;
     /* 
      * context-menu-action-2000       open link
      * context-menu-action-1          open link in window
@@ -1055,6 +1054,7 @@ view_popup_activate_cb(GtkMenuItem *menu, GList *gl)
 #if _HAS_GTK3
     // FIXME
 #else
+    const char *name;
     GtkAction *a = NULL;
     a = gtk_activatable_get_related_action(GTK_ACTIVATABLE(menu));
     if (a == NULL) 
@@ -1720,7 +1720,11 @@ view_create_web_view()
     g_free(style);
     webkit_dom_element_set_attribute(v->hover.anchor, "style", "text-decoration:none;color:inherit;", NULL);
     webkit_dom_node_append_child(WEBKIT_DOM_NODE(v->hover.element), WEBKIT_DOM_NODE(v->hover.anchor), NULL);
+#if WEBKIT_CHECK_VERSION(2, 2, 0)
+    webkit_dom_element_set_id(v->hover.element, "dwb_hover_element");
+#else 
     webkit_dom_html_element_set_id(WEBKIT_DOM_HTML_ELEMENT(v->hover.element), "dwb_hover_element");
+#endif
 
     v->status_element = webkit_dom_document_create_element(doc, "div", NULL);
     style = g_strdup_printf(

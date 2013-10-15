@@ -4634,7 +4634,9 @@ dwb_init_gui()
     dwb.gui.entry = gtk_entry_new();
 
     gtk_entry_set_has_frame(GTK_ENTRY(dwb.gui.entry), false);
+#if ! _HAS_GTK3
     gtk_entry_set_inner_border(GTK_ENTRY(dwb.gui.entry), false);
+#endif
 
 #if _HAS_GTK3 
     dwb.gui.bottombox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -4955,7 +4957,7 @@ dwb_get_stock_item_base64_encoded(const char *name)
     GdkPixbuf *pb;
     char *ret = NULL;
 #if _HAS_GTK3
-    pb = gtk_widget_render_icon_pixbuf(dwb.gui.window, name, -1);
+    pb = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(), name, dwb.misc.bar_height, 0, NULL);
 #else 
     pb = gtk_widget_render_icon(dwb.gui.window, name, -1, NULL);
 #endif
