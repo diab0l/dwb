@@ -5449,7 +5449,7 @@ create_global_object()
     JSClassRelease(class);
 
     class = create_class("Signal", NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "Signal", NULL);
+    create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "Signal", NULL);
     JSClassRelease(class);
 
     /**
