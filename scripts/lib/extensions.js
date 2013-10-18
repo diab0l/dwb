@@ -18,7 +18,7 @@
  * @property {Number} [apiVersion]
  *      The minimum apiversion required for the extension
  * @property {Object} [defaultConfig]
- *      The default configuration, will be passed to extensions.getConfig
+ *      The default configuration, will be passed to util.mixin
  * @property {extensions~onEnd} end 
  *      A function that will be called when the extension is unloaded, can be
  *      used to disconnect from signals/unbind shortcuts, ...
@@ -210,19 +210,6 @@
               io.print("\033[1mDWB EXTENSION: \033[0mextension \033[1m" + name + "\033[0m: " + message, "stderr");
           }
       },
-      /**
-       * @name getConfig
-       * @memberOf extensions
-       * @deprecated use {@link util.mixin}
-       * @function
-       * */
-      "getConfig" : 
-      {
-          value : function(c, dc) 
-          {
-              return _deprecated("extensions.getConfig", "util.mixin", arguments);
-          }
-      }, 
       /**
        * Loads an extension, the default path for an extension is 
        * <i>{@link data.userDataDir}/extensions/name_of_extension</i> or 

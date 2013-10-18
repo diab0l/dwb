@@ -116,19 +116,6 @@
                 return self;
             }
         }, 
-        /**
-         * @name domainFromHost
-         * @memberOf util
-         * @function
-         * @deprecated use {@link net.domainFromHost} 
-         * */
-        "domainFromHost" : 
-        {
-            value : function() 
-            {
-                return _deprecated("util.domainFromHost", "net.domainFromHost", arguments);
-            }
-        },
         /** 
          * Encodes a UTF8 string
          * @name encodeUTF8

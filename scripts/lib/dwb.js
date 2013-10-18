@@ -233,18 +233,6 @@
             }
         },
         /** 
-         * @name replace 
-         * @function
-         * @deprecated use {@link provide}
-         * */
-        "replace" : 
-        {
-            value : function() 
-            {
-                return _deprecated("replace", "provide", arguments);
-            }
-        },
-        /** 
          * Load modules asynchronously
          * @name require 
          * @function
@@ -278,90 +266,6 @@
                     _callbacks.push({callback : callback, names : names});
                 else 
                     _applyRequired(names, callback);
-            }
-        },
-        /**
-         * @name timerStart
-         * @function
-         * @deprecated use {@link timer.start} 
-         * */
-        "timerStart" :
-        {
-            value : function() 
-            {
-                return _deprecated("timerStart", "timer.start", arguments);
-            }
-        },
-        /**
-         * @name timerStop
-         * @function
-         * @deprecated use {@link timer.stop} 
-         * */
-        "timerStop" :
-        {
-            value : function() 
-            {
-                return _deprecated("timerStop", "timer.stop", arguments);
-            }
-        },
-        /**
-         * @name tabComplete
-         * @function
-         * @deprecated use {@link util.tabComplete} 
-         * */
-        "tabComplete" :
-        {
-            value : function() 
-            {
-                return _deprecated("tabComplete", "util.tabComplete", arguments);
-            }
-        },
-        /**
-         * @name domainFromHost
-         * @function
-         * @deprecated use {@link net.domainFromHost} 
-         * */
-        "domainFromHost" :
-        {
-            value : function() 
-            {
-                return _deprecated("domainFromHost", "net.domainFromHost", arguments);
-            }
-        },
-        /**
-         * @name checksum
-         * @function
-         * @deprecated use {@link util.checksum} 
-         * */
-        "checksum" :
-        {
-            value : function() 
-            {
-                return _deprecated("checksum", "util.checksum", arguments);
-            }
-        },
-        /**
-         * @name sendRequest
-         * @function
-         * @deprecated use {@link net.sendRequest} 
-         * */
-        "sendRequest" :
-        {
-            value : function() 
-            {
-                return _deprecated("sendRequest", "net.sendRequest", arguments);
-            }
-        },
-        /**
-         * @name sendRequestSync
-         * @function
-         * @deprecated use {@link net.sendRequestSync} 
-         * */
-        "sendRequestSync" :
-        {
-            value : function() 
-            {
-                return _deprecated("sendRequestSync", "net.sendRequestSync", arguments);
             }
         },
         "_deprecated" : 
