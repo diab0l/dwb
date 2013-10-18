@@ -1540,7 +1540,7 @@ static void
 unbind_free_keymap(JSContextRef ctx, GList *l)
 {
     KeyMap *m = l->data;
-    JSValueUnprotect(ctx, m->map->arg.p);
+    JSValueUnprotect(ctx, m->map->arg.js);
     g_free(m->map->n.first);
     g_free(m->map->n.second);
     g_free(m->map);
@@ -1588,7 +1588,7 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
             if (m->map->prop & CP_SCRIPT) 
                 dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
         }
-        unbind_free_keymap(ctx, l->data);
+        unbind_free_keymap(ctx, l);
         return JSValueMakeBoolean(ctx, true);
     }
     return JSValueMakeBoolean(ctx, false);
