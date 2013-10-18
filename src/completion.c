@@ -288,7 +288,6 @@ completion_clean_completion(gboolean set_text)
     s_command_len = 0;
 
     FREE0(s_typed);
-
     if (dwb.state.mode & COMPLETE_BUFFER) 
     {
         s_last_buf = 0;
@@ -298,6 +297,13 @@ completion_clean_completion(gboolean set_text)
     }
     else 
         dwb.state.mode &= ~(COMPLETION_MODE|COMPLETE_PATH);
+
+    if (dwb.state.script_comp_readonly)
+    {
+        dwb_change_mode(NORMAL_MODE, true);
+        dwb.state.script_comp_readonly = false;
+    }
+
 }/*}}}*/
 
 /* completion_show_completion(int back) {{{*/
