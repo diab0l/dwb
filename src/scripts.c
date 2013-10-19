@@ -5654,7 +5654,7 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(ctx, "SoupMessage", s_message_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(ctx, "SoupMessage", s_message_class, NULL, NULL);
 
 
     /**
@@ -5681,7 +5681,7 @@ create_global_object()
     cd.parentClass = s_gobject_class;
     s_history_class = JSClassCreate(&cd);
 
-    s_constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(ctx, "WebKitWebBackForwardList", s_history_class, NULL, NULL);
+    s_constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(ctx, "WebKitWebBackForwardList", s_history_class, NULL, NULL);
 
     /**
      * Constructs a new Deferred
