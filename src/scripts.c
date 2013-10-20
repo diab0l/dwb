@@ -3114,6 +3114,21 @@ system_get_pid(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     return JSValueMakeNumber(ctx, getpid());
 }
 
+static void
+shutdown_channel(GIOChannel *channel, JSObjectRef callback)
+{
+    int fd = g_io_channel_unix_get_fd(channel);
+    g_io_channel_shutdown(channel, true, NULL);
+    g_io_channel_unref(channel);
+    close(fd);
+    if (TRY_CONTEXT_LOCK)
+    {
+        if (s_global_context != NULL)
+            JSValueUnprotect(s_global_context, callback);
+        CONTEXT_UNLOCK;
+    }
+}
+
 /* spawn_output {{{*/
 static gboolean
 spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback) 
@@ -3123,31 +3138,33 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
     gsize length;
     if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
     {
-        g_io_channel_unref(channel);
-        if (TRY_CONTEXT_LOCK)
-        {
-            if (s_global_context != NULL)
-                JSValueUnprotect(s_global_context, callback);
-            CONTEXT_UNLOCK;
-        }
+        shutdown_channel(channel, callback);
         return false;
     }
     else 
     {
-        if (g_io_channel_read_to_end(channel, &content, &length, NULL) == G_IO_STATUS_NORMAL && content != NULL)
+        int status = g_io_channel_read_to_end(channel, &content, &length, NULL);
+        if (status == G_IO_STATUS_AGAIN)
+            return true;
+        else if (status == G_IO_STATUS_EOF)
+            shutdown_channel(channel, callback);
+        else if (status == G_IO_STATUS_NORMAL)
         {
-            if (TRY_CONTEXT_LOCK)
+            if (content != NULL)
             {
-                if (s_global_context != NULL)
+                if (TRY_CONTEXT_LOCK)
                 {
-                    JSValueRef arg = js_char_to_value(s_global_context, content);
-                    if (arg != NULL)
+                    if (s_global_context != NULL)
                     {
-                        JSValueRef argv[] = { arg };
-                        call_as_function_debug(s_global_context, callback, callback, 1, argv);
+                        JSValueRef arg = js_char_to_value(s_global_context, content);
+                        if (arg != NULL)
+                        {
+                            JSValueRef argv[] = { arg };
+                            call_as_function_debug(s_global_context, callback, callback, 1, argv);
+                        }
                     }
+                    CONTEXT_UNLOCK;
                 }
-                CONTEXT_UNLOCK;
             }
         }
     }
@@ -3245,8 +3262,6 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
 {
     int fail = 0;
 
-    if (!TRY_CONTEXT_LOCK)
-        return;
 
     if (WIFEXITED(status) != 0) 
         fail = WEXITSTATUS(status);
@@ -3254,7 +3269,10 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
         fail = WTERMSIG(status);
     else if (WIFSTOPPED(status)) 
         fail = WSTOPSIG(status);
+    g_spawn_close_pid(pid);
 
+    if (!TRY_CONTEXT_LOCK)
+        return;
     if (s_global_context != NULL)
     {
         if (fail == 0)
