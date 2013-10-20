@@ -98,7 +98,7 @@
   var _registered = {};
   var _configLoaded = false;
 
-  var getPlugin = function(name, filename) 
+  function _getPlugin(name, filename) 
   {
       if (system.fileTest(filename, FileTest.exists)) 
           return include(filename);
@@ -106,7 +106,7 @@
           return include(filename + ".exar");
       return null;
   };
-  var getStack = function(offset) 
+  function _getStack(offset) 
   {
       if (arguments.length === 0) 
           offset = 0;
@@ -121,7 +121,7 @@
           return "STACK: [" + stack.slice(offset+1).join("] [")+"]";
       }
   };
-  var _unload = function (name, removeConfig) 
+  function _unload(name, removeConfig) 
   {
       if (_registered[name] !== undefined) 
       {
@@ -188,7 +188,7 @@
                           message + "\nSTACK: [" + a.stack.match(/[^\n]+/g).join("] [") + "]", "stderr");
               }
               else {
-                  io.print("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m: " + a + "\n" + getStack(1), "stderr");
+                  io.print("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m: " + a + "\n" + _getStack(1), "stderr");
               }
           }
       },
@@ -230,9 +230,7 @@
               if (_registered[name] !== undefined) 
                   extensions.error(name, "Already loaded.");
 
-              var boldname = "\033[1m" + name + "\033[0m";
-
-              var config, dataBase, pluginPath, plugin = null, key, filename;
+              var config, plugin = null, key, filename;
               var extConfig = null;
 
               /* Get default config if the config hasn't been read yet */
@@ -272,11 +270,11 @@
               if (data.userDataDir) 
               {
                   filename = data.userDataDir + "/extensions/" + name;
-                  plugin = getPlugin(name, data.userDataDir + "/extensions/" + name);
+                  plugin = _getPlugin(name, data.userDataDir + "/extensions/" + name);
               }
               if (plugin === null) 
               {
-                  plugin = getPlugin(name, data.systemDataDir + "/extensions/" + name);
+                  plugin = _getPlugin(name, data.systemDataDir + "/extensions/" + name);
                   if (plugin === null) 
                   {
                       extensions.error(name, "Couldn't find extension.");
