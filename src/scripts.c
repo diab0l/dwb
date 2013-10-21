@@ -1487,6 +1487,60 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
     }
     return NIL;
 }/*}}}*/
+
+/**
+ * Loads a string in a frame or a webview
+ *
+ * @name loadString
+ * @memberOf WebKitWebFrame.prototype
+ * @function 
+ *
+ * @param {String} content
+ *      The string to load
+ * @param {String} [mimeType]
+ *      The MIME-type, if omitted or null <i>text/html</i> is assumed.
+ * @param {Number} [encoding]
+ *      The character encoding, if omitted or null <i>UTF-8</i> is assumed.
+ * @param {Boolean} [baseUri]
+ *      The base uri, if present it must either use the uri-scheme <i>dwb-chrome:</i>
+ *      or <i>file:</i>, otherwise the request will be ignored. 
+ * */
+static JSValueRef 
+frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *content = NULL, 
+         *mime_type = NULL, 
+         *encoding = NULL, 
+         *base_uri = NULL;
+
+    if (argc < 0)
+        return UNDEFINED;
+    WebKitWebFrame *frame = JSObjectGetPrivate(this);
+    if (frame != NULL) 
+    {
+        content = js_value_to_char(ctx, argv[0], -1, exc);
+        if (content == NULL)
+            return UNDEFINED;
+        if (argc > 1)
+        {
+            mime_type = js_value_to_char(ctx, argv[1], -1, exc);
+            if (argc > 2)
+            {
+                encoding = js_value_to_char(ctx, argv[2], -1, exc);
+                if (argc > 3)
+                {
+                    base_uri = js_value_to_char(ctx, argv[3], -1, exc);
+                }
+            }
+        }
+        webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
+        g_free(content);
+        g_free(mime_type);
+        g_free(encoding);
+        g_free(base_uri);
+    }
+    return UNDEFINED;
+}
 /*}}}*/
 
 /* GLOBAL {{{*/
@@ -5573,6 +5627,7 @@ create_global_object()
      * @augments GObject
      * @class GtkWidget that shows webcontent
      * @borrows WebKitWebFrame#inject as prototype.inject
+     * @borrows WebKitWebFrame#loadString as prototype.loadString
      * */
     JSStaticFunction wv_functions[] = { 
         { "loadUri",         wv_load_uri,             kJSDefaultAttributes },
@@ -5629,6 +5684,7 @@ create_global_object()
      * */
     JSStaticFunction frame_functions[] = { 
         { "inject",          frame_inject,             kJSDefaultAttributes },
+        { "loadString",      frame_load_string,        kJSDefaultAttributes }, 
         { 0, 0, 0 }, 
     };
     JSStaticValue frame_values[] = {

@@ -468,6 +468,15 @@
         }
     });
     
+    Object.defineProperties(WebKitWebView.prototype, {
+            loadString : 
+            {
+                value : function()
+                {
+                    this.mainFrame.loadString.apply(this.mainFrame, arguments);
+                }
+            }
+    });
     Object.defineProperties(GObject.prototype, {
             /** 
              * Connects to a property change notification

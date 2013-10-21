@@ -718,7 +718,9 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     }
 
     if (!g_str_has_prefix(uri, "http:") && !g_str_has_prefix(uri, "https:") &&
-            !g_str_has_prefix(uri, "about:") && !g_str_has_prefix(uri, "dwb:") &&
+            !g_str_has_prefix(uri, "about:") && 
+            !g_str_has_prefix(uri, "dwb:") &&
+            !g_str_has_prefix(uri, "dwb-chrome:") &&
             !g_str_has_prefix(uri, "file:")) 
     {
         if (dwb_scheme_handler(gl, request) == STATUS_OK)  
