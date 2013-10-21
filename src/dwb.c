@@ -4552,6 +4552,18 @@ dwb_pack(const char *layout, gboolean rebuild)
     gtk_widget_set_visible(dwb.gui.bottombox, dwb.state.bar_visible & BAR_VIS_STATUS);
     if ((dwb.state.views && dwb.state.views->next) || dwb.misc.show_single_tab)
         gtk_widget_set_visible(dwb.gui.tabbox, dwb.state.bar_visible & BAR_VIS_TOP);
+    if (rebuild) 
+    {
+        g_object_unref(dwb.gui.downloadbar);
+#if _HAS_GTK3
+        g_object_unref(dwb.gui.mainbox);
+#else
+        g_object_unref(dwb.gui.tabwrapperbox);
+#endif
+        g_object_unref(dwb.gui.tabbox);
+        g_object_unref(dwb.gui.statusbox);
+        g_object_unref(dwb.gui.bottombox);
+    }
     return ret;
 }
 
