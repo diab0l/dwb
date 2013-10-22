@@ -42,7 +42,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.2
+#define API_VERSION 1.3
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -190,7 +190,6 @@ static GSList *s_timers = NULL;
 static GPtrArray *s_gobject_signals = NULL;
 static gboolean s_debugging = false;
 static GHashTable *s_exports = NULL;
-
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -1504,6 +1503,8 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
  * @param {Boolean} [baseUri]
  *      The base uri, if present it must either use the uri-scheme <i>dwb-chrome:</i>
  *      or <i>file:</i>, otherwise the request will be ignored. 
+ *
+ * @since 1.3
  * */
 static JSValueRef 
 frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2533,6 +2534,113 @@ error_out:
     g_free(label);
     g_list_free(dwb.state.script_completion);
     dwb.state.script_completion = NULL;
+    return UNDEFINED;
+}
+/**
+ * Callback that will be called when <i>Return</i> or <i>Escape</i> was pressed after {@link util.pathComplete} was invoked.
+ *
+ * @callback util~onPathComplete 
+ *
+ * @param {String} path The path or <i>null</i> if <i>Escape</i> was pressed.
+ *
+ * @since 1.3
+ * */
+gboolean 
+path_completion_callback(GtkEntry *entry, GdkEventKey *e, JSObjectRef callback)
+{
+    gboolean evaluate = false, clear = false;
+    if (e->keyval == GDK_KEY_Escape)
+    {
+        clear = true;
+        goto finish;
+    }
+    else if (IS_RETURN_KEY(e))
+    {
+        evaluate = clear = true;
+        goto finish;
+    }
+    else if (DWB_TAB_KEY(e))
+    {
+        completion_complete_path(e->state & GDK_SHIFT_MASK);
+        return true;
+    }
+    else if (dwb_eval_override_key(e, CP_OVERRIDE_ENTRY))
+        return true;
+finish: 
+    completion_clean_path_completion();
+    if (clear)
+    {
+        JSValueRef argv[1];
+        if (!TRY_CONTEXT_LOCK)
+            goto out;
+        if (s_global_context != NULL)
+        {
+            if (evaluate)
+            {
+                const char *text = GET_TEXT();
+                argv[0] = js_char_to_value(s_global_context, text);
+            }
+            else 
+                argv[0] = NIL;
+            call_as_function_debug(s_global_context, callback, callback, 1, argv);
+            JSValueUnprotect(s_global_context, callback);
+        }
+        CONTEXT_UNLOCK;
+        entry_snoop_end(G_CALLBACK(path_completion_callback), callback);
+    }
+out:
+    return false;
+}
+/** 
+ * Initializes filename completion.
+ * @name pathComplete
+ * @memberOf util
+ * @function
+ * 
+ * @param {util~onPathComplete} callback 
+ *       Callback function called when a path was chosen or escape was pressed
+ * @param {String} [label]
+ *      The command line label
+ * @param {String} [initialPath]
+ *      The initial path, defaults to the current working directory
+ *
+ * @since 1.3
+ * */
+static JSValueRef 
+sutil_path_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *status_text = NULL, 
+         *initial_path = NULL;
+    if (argc == 0)
+        return UNDEFINED;
+
+    JSObjectRef callback = js_value_to_function(ctx, argv[0], exc);
+    if (callback == NULL)
+        return UNDEFINED;
+
+    JSValueProtect(ctx, callback);
+
+    if (argc > 1)
+    {
+        status_text = js_value_to_char(ctx, argv[1], -1, exc);
+        if (status_text != NULL)
+        {
+            dwb_set_status_bar_text(dwb.gui.lstatus, status_text, NULL, NULL, true);
+        }
+        if (argc > 2)
+        {
+            initial_path = js_value_to_char(ctx, argv[2], -1, exc);
+        }
+    }
+    if (initial_path == NULL)
+    {
+        initial_path = g_get_current_dir();
+    }
+    entry_snoop(G_CALLBACK(path_completion_callback), callback);
+    entry_set_text(initial_path ? initial_path : "/");
+
+    g_free(status_text);
+    g_free(initial_path);
     return UNDEFINED;
 }
 /**
@@ -5538,6 +5646,7 @@ create_global_object()
         { "getBody",          sutil_get_body,         kJSDefaultAttributes },
         { "dispatchEvent",    sutil_dispatch_event,         kJSDefaultAttributes },
         { "tabComplete",      sutil_tab_complete,         kJSDefaultAttributes },
+        { "pathComplete",     sutil_path_complete,    kJSDefaultAttributes },
         { "checksum",         sutil_checksum,         kJSDefaultAttributes },
         { "changeMode",       sutil_change_mode,      kJSDefaultAttributes }, 
         { "_base64Encode",    sutil_base64_encode,    kJSDefaultAttributes },
