@@ -105,6 +105,11 @@ typedef struct DeferredPriv_s
     JSObjectRef resolve;
     JSObjectRef next;
 } DeferredPriv;
+typedef struct PathCallback_s 
+{
+    JSObjectRef callback; 
+    gboolean dir_only;
+} PathCallback;
 
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
@@ -401,6 +406,27 @@ deferred_new(JSContextRef ctx)
     JSValueProtect(ctx, ret);
 
     return ret;
+}
+static PathCallback * 
+path_callback_new(JSContextRef ctx, JSObjectRef object, gboolean dir_only)
+{
+    g_return_val_if_fail(object != NULL, NULL);
+    PathCallback *pc = g_malloc(sizeof(PathCallback));
+    pc->callback = object;
+    JSValueProtect(ctx, object);
+    pc->dir_only = dir_only;
+    return pc;
+}
+static void
+path_callback_free(PathCallback *pc)
+{
+    if (pc != NULL && TRY_CONTEXT_LOCK)
+    {
+        if (s_global_context != NULL)
+            JSValueUnprotect(s_global_context, pc->callback);
+        CONTEXT_UNLOCK;
+        g_free(pc);
+    }
 }
 /** 
  * Registers functions for the done and fail chain
@@ -1514,7 +1540,7 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
          *encoding = NULL, 
          *base_uri = NULL;
 
-    if (argc < 0)
+    if (argc == 0)
         return UNDEFINED;
     WebKitWebFrame *frame = JSObjectGetPrivate(this);
     if (frame != NULL) 
@@ -2546,7 +2572,7 @@ error_out:
  * @since 1.3
  * */
 gboolean 
-path_completion_callback(GtkEntry *entry, GdkEventKey *e, JSObjectRef callback)
+path_completion_callback(GtkEntry *entry, GdkEventKey *e, PathCallback *pc)
 {
     gboolean evaluate = false, clear = false;
     if (e->keyval == GDK_KEY_Escape)
@@ -2561,7 +2587,7 @@ path_completion_callback(GtkEntry *entry, GdkEventKey *e, JSObjectRef callback)
     }
     else if (DWB_TAB_KEY(e))
     {
-        completion_complete_path(e->state & GDK_SHIFT_MASK);
+        completion_complete_path(e->state & GDK_SHIFT_MASK, pc->dir_only);
         return true;
     }
     else if (dwb_eval_override_key(e, CP_OVERRIDE_ENTRY))
@@ -2571,24 +2597,29 @@ finish:
     if (clear)
     {
         JSValueRef argv[1];
-        if (!TRY_CONTEXT_LOCK)
-            goto out;
-        if (s_global_context != NULL)
+        if (TRY_CONTEXT_LOCK)
         {
-            if (evaluate)
+            if (s_global_context != NULL)
             {
-                const char *text = GET_TEXT();
-                argv[0] = js_char_to_value(s_global_context, text);
+                if (evaluate)
+                {
+                    const char *text = GET_TEXT();
+                    argv[0] = js_char_to_value(s_global_context, text);
+                }
+                else 
+                    argv[0] = NIL;
+
+                call_as_function_debug(s_global_context, pc->callback, pc->callback, 1, argv);
             }
             else 
-                argv[0] = NIL;
-            call_as_function_debug(s_global_context, callback, callback, 1, argv);
-            JSValueUnprotect(s_global_context, callback);
+            {
+                g_free(pc);
+            }
+            CONTEXT_UNLOCK;
         }
-        CONTEXT_UNLOCK;
-        entry_snoop_end(G_CALLBACK(path_completion_callback), callback);
+        entry_snoop_end(G_CALLBACK(path_completion_callback), pc);
+        path_callback_free(pc);
     }
-out:
     return false;
 }
 /** 
@@ -2603,6 +2634,8 @@ out:
  *      The command line label
  * @param {String} [initialPath]
  *      The initial path, defaults to the current working directory
+ * @param {Boolean} [dirOnly]
+ *      Whether to complete only directories, default false.
  *
  * @since 1.3
  * */
@@ -2611,14 +2644,14 @@ sutil_path_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
 {
     char *status_text = NULL, 
          *initial_path = NULL;
+    gboolean dir_only = false;
+
     if (argc == 0)
         return UNDEFINED;
 
     JSObjectRef callback = js_value_to_function(ctx, argv[0], exc);
     if (callback == NULL)
         return UNDEFINED;
-
-    JSValueProtect(ctx, callback);
 
     if (argc > 1)
     {
@@ -2627,16 +2660,22 @@ sutil_path_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, siz
         {
             dwb_set_status_bar_text(dwb.gui.lstatus, status_text, NULL, NULL, true);
         }
-        if (argc > 2)
-        {
-            initial_path = js_value_to_char(ctx, argv[2], -1, exc);
-        }
     }
+    if (argc > 2)
+        initial_path = js_value_to_char(ctx, argv[2], -1, exc);
+
+    if (argc > 3)
+    {
+        dir_only = JSValueToBoolean(ctx, argv[3]);
+    }
+    
+    PathCallback *pc = path_callback_new(ctx, callback, dir_only);
+
     if (initial_path == NULL)
     {
         initial_path = g_get_current_dir();
     }
-    entry_snoop(G_CALLBACK(path_completion_callback), callback);
+    entry_snoop(G_CALLBACK(path_completion_callback), pc);
     entry_set_text(initial_path ? initial_path : "/");
 
     g_free(status_text);

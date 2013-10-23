@@ -108,7 +108,7 @@ callback_entry_key_press(GtkWidget* entry, GdkEventKey *e)
     {
         if (DWB_TAB_KEY(e)) 
         {
-            completion_complete_path(e->state & GDK_SHIFT_MASK);
+            completion_complete_path(e->state & GDK_SHIFT_MASK, true);
             return true;
         }
         else 

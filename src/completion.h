@@ -44,6 +44,6 @@ void completion_eval_buffer_completion(void);
 void completion_buffer_key_press(GdkEventKey *);
 
 DwbStatus completion_complete(CompletionType, int);
-void completion_complete_path(int back);
+void completion_complete_path(int back, gboolean);
 void completion_delete_active_completion(void);
 #endif

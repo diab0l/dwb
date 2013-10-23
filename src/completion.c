@@ -469,7 +469,7 @@ completion_path(void)
 {
     if (! (dwb.state.mode & DOWNLOAD_GET_PATH) )
         dwb.state.mode = COMPLETE_PATH;
-    completion_complete_path(false);
+    completion_complete_path(false, true);
 }/*}}}*/
 
 /* completion_get_quickmarks {{{*/
@@ -917,51 +917,51 @@ completion_get_binaries(GList *list, char *text)
 }/* }}} */
 
 static GList *
-completion_get_path(GList *list, char *text) 
+completion_get_path(GList *list, char *text, gboolean dir_only) 
 {
     GDir *dir;
     char d_tmp[PATH_MAX];
     const char *filename;
     char path[PATH_MAX+1];
-    char *store;
+    char *store = NULL;
     char *newpath;
     gboolean prefix;
+    gboolean is_dir = false;
+    char *d_current = NULL;
+    char *d_name = NULL, *b_name = NULL;
 
     if ( ( prefix = g_str_has_prefix(text, "file://")) ) 
         text += 7;
 
     g_strlcpy(d_tmp, text, PATH_MAX - 1);
-    char *d_name = dirname(d_tmp);
-    char *b_name = util_basename(text);
-    char *d_current = g_get_current_dir();
+
+    d_name = dirname(d_tmp);
+    b_name = util_basename(text);
+    d_current = g_get_current_dir();
+
     if (! *text ) 
     {
         if (prefix) 
             list = g_list_prepend(list, g_strconcat("file://", d_current, "/", NULL));
         else
             list = g_list_prepend(list, g_strconcat(d_current, "/", NULL));
-        g_free(d_current);
-        return list;
+        goto finish;
     }
-    else 
-        g_free(d_current);
 
-    if (!g_strcmp0(d_name, ".")) {
-        completion_complete(0, 0);
-        return NULL;
-    }
     if (g_file_test(text, G_FILE_TEST_IS_DIR)) 
     {
         g_strlcpy(path, text, BUFFER_LENGTH - 1);
         char path_last = path[strlen(path) - 1];
         if (path_last != '/' && path_last != '.') {
             if (prefix) 
-                return g_list_prepend(list, g_strconcat("file://", path, "/", NULL));
+                list = g_list_prepend(list, g_strconcat("file://", path, "/", NULL));
             else 
-                return g_list_prepend(list, g_strconcat(path, "/", NULL));
+                list = g_list_prepend(list, g_strconcat(path, "/", NULL));
+            goto finish;
         }
     }
-    else if (g_file_test(d_name, G_FILE_TEST_IS_DIR)) {
+    else if (g_file_test(d_name, G_FILE_TEST_IS_DIR)) 
+    {
         g_strlcpy(path, d_name, BUFFER_LENGTH - 1);
     }
     if ( (dir = g_dir_open(path, 'r', NULL)) ) 
@@ -971,29 +971,34 @@ completion_get_path(GList *list, char *text)
             if ( ( !b_name && filename[0] != '.') || (b_name && g_str_has_prefix(filename, b_name))) 
             {
                 newpath = g_build_filename(path, filename, NULL);
+                is_dir = g_file_test(newpath, G_FILE_TEST_IS_DIR);
 
-                if (prefix) 
-                    store = g_strconcat("file://", newpath, "/" , NULL);
-                else 
-                    store = g_strconcat(newpath, "/" , NULL);
-
-                if (g_file_test(newpath, G_FILE_TEST_IS_DIR)) 
+                if (is_dir)
+                {
+                    if (prefix) 
+                        store = g_strconcat("file://", newpath, "/" , NULL);
+                    else 
+                        store = g_strconcat(newpath, "/" , NULL);
                     list = g_list_prepend(list, store);
+                    g_free(newpath);
+                }
+                else if (!dir_only)
+                    list = g_list_prepend(list, newpath);
                 else 
-                    g_free(store);
-                
-                g_free(newpath);
+                    g_free(newpath);
             }
         }
         g_dir_close(dir);
     }
+finish: 
+    g_free(d_current);
     return list;
 }/*}}}*/
 
 
 /* completion_init_path_completion {{{*/
 static void
-completion_init_path_completion(int back) 
+completion_init_path_completion(int back, gboolean dir_only) 
 { 
     char *text = gtk_editable_get_chars(GTK_EDITABLE(dwb.gui.entry), 0, -1);
     char expanded[PATH_MAX];
@@ -1008,7 +1013,7 @@ completion_init_path_completion(int back)
     }
     else  
     {
-        dwb.comps.path_completion = completion_get_path(dwb.comps.path_completion, text);
+        dwb.comps.path_completion = completion_get_path(dwb.comps.path_completion, text, dir_only);
         dwb.comps.path_completion = g_list_sort(dwb.comps.path_completion, (GCompareFunc)g_strcmp0);
     }
     if (g_list_length(dwb.comps.path_completion) == 1) 
@@ -1027,10 +1032,10 @@ completion_init_path_completion(int back)
 
 /* completion_complete_download{{{*/
 void
-completion_complete_path(int back) 
+completion_complete_path(int back, gboolean dir_only) 
 {
     if (! dwb.comps.path_completion ) 
-        completion_init_path_completion(0);
+        completion_init_path_completion(0, dir_only);
     else if (back) 
     {
         if (dwb.comps.path_completion && dwb.comps.active_path && !(dwb.comps.active_path = dwb.comps.active_path->prev) ) 
