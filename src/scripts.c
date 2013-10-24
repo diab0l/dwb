@@ -104,6 +104,7 @@ typedef struct DeferredPriv_s
     JSObjectRef reject;
     JSObjectRef resolve;
     JSObjectRef next;
+    gboolean is_resolved;
 } DeferredPriv;
 typedef struct PathCallback_s 
 {
@@ -404,6 +405,7 @@ deferred_new(JSContextRef ctx)
 
     JSObjectRef ret = JSObjectMake(ctx, s_deferred_class, priv);
     JSValueProtect(ctx, ret);
+    priv->is_resolved = false;
 
     return ret;
 }
@@ -517,11 +519,13 @@ deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
     JSValueRef ret = NULL;
 
     DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL)
+    if (priv == NULL || priv->is_resolved)
         return UNDEFINED;
 
     if (priv->resolve) 
         ret = JSObjectCallAsFunction(ctx, priv->resolve, this, argc, argv, exc);
+
+    priv->is_resolved = true;
 
     JSObjectRef next = priv->next;
     deferred_destroy(ctx, this, priv);
@@ -562,11 +566,13 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
     JSValueRef ret = NULL;
 
     DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL)
+    if (priv == NULL || priv->is_resolved)
         return UNDEFINED;
 
     if (priv->reject) 
         ret = JSObjectCallAsFunction(ctx, priv->reject, this, argc, argv, exc);
+
+    priv->is_resolved = true;
 
     JSObjectRef next = priv->next;
     deferred_destroy(ctx, this, priv);
@@ -591,6 +597,24 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
     }
     return UNDEFINED;
 }/*}}}*/
+/** 
+ * Wether this Deferred was resolved or rejected.
+ *
+ * @name isResolved
+ * @memberOf Deferred.prototype
+ * @type Boolean
+ * @readonly
+ * */
+
+static JSValueRef 
+deferred_is_resolved(JSContextRef ctx, JSObjectRef this, JSStringRef js_name, JSValueRef* exception) 
+{
+    gboolean resolved = true;
+    DeferredPriv *priv = JSObjectGetPrivate(this);
+    if (priv != NULL)
+        resolved = priv->is_resolved;
+    return JSValueMakeBoolean(ctx, resolved);
+}
 
 void
 sigdata_append(gulong sigid, GObject *instance)
@@ -2393,7 +2417,7 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc
 /*}}}*/
 
 /* UTIL {{{*/
-/* util_domain_from_host {{{*/
+/* net_domain_from_host {{{*/
 /**
  * Gets the base domain name from a hostname where the base domain name is the
  * effective second level domain name, e.g. for www.example.com it will be
@@ -5952,9 +5976,14 @@ create_global_object()
         { "reject",           deferred_reject,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
+    JSStaticValue deferred_values[] = {
+        { "isResolved",     deferred_is_resolved, NULL, kJSDefaultAttributes }, 
+        { 0, 0, 0, 0 }, 
+    };
     cd = kJSClassDefinitionEmpty;
     cd.className = "Deferred"; 
     cd.staticFunctions = deferred_functions;
+    cd.staticValues = deferred_values;
     s_deferred_class = JSClassCreate(&cd);
     s_constructors[CONSTRUCTOR_DEFERRED] = create_constructor(ctx, "Deferred", s_deferred_class, deferred_constructor_cb, NULL);
 
