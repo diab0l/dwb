@@ -589,10 +589,10 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
             if (ret && !JSValueIsUndefined(ctx, ret))
             {
                 JSValueRef args[] = { ret };
-                deferred_resolve(ctx, f, next, 1, args, exc);
+                deferred_reject(ctx, f, next, 1, args, exc);
             }
             else 
-                deferred_resolve(ctx, f, next, argc, argv, exc);
+                deferred_reject(ctx, f, next, argc, argv, exc);
         }
     }
     return UNDEFINED;
