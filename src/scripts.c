@@ -3370,7 +3370,9 @@ spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback)
     {
         int status = g_io_channel_read_to_end(channel, &content, &length, NULL);
         if (status == G_IO_STATUS_AGAIN)
+        {
             return true;
+        }
         else if (status == G_IO_STATUS_EOF)
             shutdown_channel(channel, callback);
         else if (status == G_IO_STATUS_NORMAL)
@@ -3526,17 +3528,20 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  * }, null, { foo : "bar"});
  *
  * @param {String} command The command to execute
- * @param {Function} [stdout] A callback function that is called when a line from
+ * @param {Function|String} [stdout] A callback function that is called when a line from
  *                            stdout was read, if the function returns a
  *                            string the string is passed to stdin of the
  *                            spawned process, pass <i>null</i> if only stderr
  *                            is needed or only environment variables should be
- *                            set
- * @param {Function} [stderr] A callback function that is called when a line from
+ *                            set. If this argument is the string <b>close</b>
+ *                            stdout is closed in the childs process.
+ * @param {Function|String} [stderr] A callback function that is called when a line from
  *                            stderr was read, if the function returns a
  *                            string the string is passed to stdin of the
  *                            spawned process, pass <i>null</i> if stderr is not
  *                            needed and environment variables should be set
+ *                            If this argument is the string <b>close</b>
+ *                            stderr is closed in the childs process.
  * @param {String}  [stdin] String that will be piped to stdin, a newline will
  *                          be appended to the string.
  * @param {Object}   [environ] Object that can be used to add environment
@@ -3559,6 +3564,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     JSObjectRef oc = NULL, ec = NULL;
     GPid pid;
     char *pipe_stdin = NULL;
+    gint spawn_options = G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD;
 
 
     if (argc == 0) 
@@ -3575,11 +3581,21 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         goto error_out;
 
     if (argc > 1) 
-        oc = js_value_to_function(ctx, argv[1], NULL);
+    {
+        if (js_string_equals(ctx, argv[1], "close"))
+            spawn_options |= G_SPAWN_STDOUT_TO_DEV_NULL;
+        else 
+            oc = js_value_to_function(ctx, argv[1], NULL);
+    }
     
     if (argc > 2) 
-        ec = js_value_to_function(ctx, argv[2], NULL);
-    
+    {
+        if (js_string_equals(ctx, argv[2], "close"))
+            spawn_options |= G_SPAWN_STDERR_TO_DEV_NULL;
+        else 
+            ec = js_value_to_function(ctx, argv[2], NULL);
+    }
+
     if (argc > 3)
         pipe_stdin = js_value_to_char(ctx, argv[3], -1, exc);
 
@@ -3587,7 +3603,7 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         envp = get_environment(ctx, argv[4], exc);
 
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
-            !g_spawn_async_with_pipes(NULL, srgv, envp, G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, 
+            !g_spawn_async_with_pipes(NULL, srgv, envp, spawn_options,
                 NULL, NULL, &pid,  
                 //NULL,
                 pipe_stdin != NULL ? &infd : NULL,
@@ -4021,10 +4037,8 @@ io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
     FILE *stream = stdout;
     if (argc >= 2) 
     {
-        JSStringRef js_string = JSValueToStringCopy(ctx, argv[1], exc);
-        if (JSStringIsEqualToUTF8CString(js_string, "stderr")) 
+        if (js_string_equals(ctx, argv[1], "stderr"))
             stream = stderr;
-        JSStringRelease(js_string);
     }
 
     char *out = NULL;

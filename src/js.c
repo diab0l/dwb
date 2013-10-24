@@ -41,6 +41,21 @@ js_set_property(JSContextRef ctx, JSObjectRef arg, const char *name, JSValueRef 
     JSObjectSetProperty(ctx, arg, js_key, prop, attributes, exc);
     JSStringRelease(js_key);
 }
+gboolean 
+js_string_equals(JSContextRef ctx, JSValueRef val, const char *cmp)
+{
+    gboolean result = false;
+    if (JSValueIsString(ctx, val))
+    {
+        JSStringRef js_string = JSValueToStringCopy(ctx, val, NULL);
+        if (js_string != NULL)
+        {
+            result = JSStringIsEqualToUTF8CString(js_string, cmp);
+            JSStringRelease(js_string);
+        }
+    }
+    return result;
+}
 void 
 js_set_object_property(JSContextRef ctx, JSObjectRef arg, const char *name, const char *value, JSValueRef *exc) 
 {

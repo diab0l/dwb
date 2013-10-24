@@ -68,6 +68,8 @@ void js_array_iterator_finish(js_array_iterator *iter);
 void js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSObjectRef object);
 JSValueRef js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname, char **name, JSValueRef *exc);
 void js_property_iterator_finish(js_property_iterator *iter);
+gboolean js_string_equals(JSContextRef, JSValueRef, const char *);
+
 
 #define  JS_STRING_MAX 1024
 
