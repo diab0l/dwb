@@ -22,6 +22,10 @@
 char *
 dom_node_get_attribute(WebKitDOMNode *node, const char *attribute)
 {
+#if WEBKIT_CHECK_VERSION(2, 2, 0)
+    g_return_val_if_fail(WEBKIT_DOM_IS_ELEMENT(node), NULL);
+    return webkit_dom_element_get_attribute(WEBKIT_DOM_ELEMENT(node), attribute);
+#else
     g_return_val_if_fail(WEBKIT_DOM_IS_NODE(node), NULL);
     if (webkit_dom_node_has_attributes(node))
     {
@@ -31,6 +35,7 @@ dom_node_get_attribute(WebKitDOMNode *node, const char *attribute)
             return webkit_dom_node_get_node_value(attr);
     }
     return NULL;
+#endif
 }
 static WebKitDOMDOMWindow * 
 dom_node_get_default_view(WebKitDOMNode *node)
