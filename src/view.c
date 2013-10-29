@@ -34,6 +34,7 @@
 #include "scripts.h"
 #include "dom.h"
 #include "ipc.h"
+#include "entry.h"
 
 static void view_ssl_state(GList *);
 static unsigned long s_click_time;
@@ -205,6 +206,8 @@ view_button_press_cb(WebKitWebView *web, GdkEventButton *e, GList *gl)
 {
     gboolean ret = false;
     WebKitHitTestResultContext context;
+    if (entry_snooping())
+        return true;
 
     WebKitHitTestResult *result = webkit_web_view_get_hit_test_result(web, e);
     g_object_get(result, "context", &context, NULL);
