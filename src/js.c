@@ -59,8 +59,15 @@ js_string_equals(JSContextRef ctx, JSValueRef val, const char *cmp)
 void 
 js_set_object_property(JSContextRef ctx, JSObjectRef arg, const char *name, const char *value, JSValueRef *exc) 
 {
+    g_return_if_fail(name != NULL);
+
     JSStringRef js_key = JSStringCreateWithUTF8CString(name);
-    JSValueRef js_value = js_char_to_value(ctx, value);
+    JSValueRef js_value;
+    if (value != NULL)
+        js_value = js_char_to_value(ctx, value);
+    else 
+        js_value = JSValueMakeNull(ctx);
+        
     JSObjectSetProperty(ctx, arg, js_key, js_value, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly, exc);
     JSStringRelease(js_key);
 }

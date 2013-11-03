@@ -31,6 +31,8 @@
 #include <glib.h>
 #include <cairo.h>
 #include <exar.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include "dwb.h"
 #include "scripts.h" 
 #include "session.h" 
@@ -72,6 +74,8 @@
 #define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE \
                             || ((int)(X)) == GDK_2BUTTON_PRESS || ((int)(X)) == GDK_3BUTTON_PRESS)
 
+#define SERVER_DO_SHUTDOWN(server) do { soup_server_disconnect(server); g_object_unref(server); } while(0)
+
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 typedef struct Sigmap_s {
@@ -111,6 +115,26 @@ typedef struct PathCallback_s
     JSObjectRef callback; 
     gboolean dir_only;
 } PathCallback;
+
+typedef struct SpawnData_s {
+    GIOChannel *channel;
+    JSObjectRef callback;
+    JSObjectRef deferred;
+    int status; 
+    gboolean is_stdout;
+    int finished;
+} SpawnData;
+#define SPAWN_FINISHED 0x1
+#define SPAWN_CLOSED 0x2
+
+#define SPAWN_DATA_INIT(_data, _channel, _callback, _deferred, _is_stdout) do { \
+    _data->channel = _channel; \
+    _data->callback = _callback; \
+    _data->deferred = _deferred; \
+    _data->is_stdout = _is_stdout; \
+    _data->status = 0; \
+    _data->finished = 0; } while (0)
+
 
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
@@ -158,6 +182,7 @@ enum {
     CONSTRUCTOR_DEFERRED,
     CONSTRUCTOR_HIDDEN_WEB_VIEW,
     CONSTRUCTOR_SOUP_HEADERS,
+    CONSTRUCTOR_SERVER,
     CONSTRUCTOR_LAST,
 };
 enum {
@@ -169,6 +194,7 @@ static void callback(CallbackData *c);
 static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception);
 static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
+static void object_destroy_cb(JSObjectRef o);
 
 /* Static variables */
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
@@ -185,7 +211,8 @@ static JSClassRef s_gobject_class,
                   s_message_class, 
                   s_deferred_class, 
                   s_history_class,
-                  s_soup_header_class;
+                  s_soup_header_class, 
+                  s_soup_server_class;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
@@ -196,6 +223,7 @@ static GSList *s_timers = NULL;
 static GPtrArray *s_gobject_signals = NULL;
 static gboolean s_debugging = false;
 static GHashTable *s_exports = NULL;
+static GSList *s_servers = NULL;
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -994,6 +1022,146 @@ wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
 }/*}}}*/
 #if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
 
+cairo_surface_t *
+wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSValueRef *argv, JSValueRef *exc)
+{
+    cairo_surface_t *sf, *scaled_surface = NULL; 
+    cairo_t *cr;
+    int w, h; 
+    gboolean keep_aspect = false;
+    double aspect, new_width, new_height, width, height;
+    double sw, sh;
+
+    if (argc > 1)
+    {
+        width = JSValueToNumber(ctx, argv[0], exc);
+        height = JSValueToNumber(ctx, argv[1], exc);
+        if (!isnan(width) && !isnan(height)) 
+        {
+            if (argc > 2 && JSValueIsBoolean(ctx, argv[2])) 
+                keep_aspect = JSValueToBoolean(ctx, argv[2]);
+
+            if (keep_aspect && (width <= 0 || height <= 0))
+                return NULL;
+
+            sf = webkit_web_view_get_snapshot(wv);
+            w = cairo_image_surface_get_width(sf);
+            h = cairo_image_surface_get_height(sf);
+
+            aspect = (double)w/h;
+            new_width = width;
+            new_height = height;
+
+            if (width <= 0 || keep_aspect)
+                new_width = height * aspect;
+            if ((width > 0 && height <= 0) || keep_aspect)
+                new_height = width / aspect;
+            if (keep_aspect) 
+            {
+                if (new_width > width) 
+                {
+                    new_width = width;
+                    new_height = new_width / aspect;
+                }
+                else if (new_height > height) 
+                {
+                    new_height = height;
+                    new_width = new_height * aspect;
+                }
+            }
+
+            if (width <= 0 || height <= 0)
+                sw = sh = MIN(width / w, height / h);
+            else 
+            {
+                sw = width / w;
+                sh = height / h;
+            }
+
+            scaled_surface = cairo_surface_create_similar_image(sf, CAIRO_FORMAT_RGB24, new_width, new_height);
+            cr = cairo_create(scaled_surface);
+
+            cairo_save(cr);
+            cairo_scale(cr, sw, sh);
+
+            cairo_set_source_surface(cr, sf, 0, 0);
+            cairo_paint(cr);
+            cairo_restore(cr);
+
+            cairo_destroy(cr);
+            cairo_surface_destroy(sf);
+        }
+    }
+    else 
+    {
+        scaled_surface = webkit_web_view_get_snapshot(wv);
+    }
+    return scaled_surface;
+}
+
+cairo_status_t 
+write_png64(GString *buffer, const unsigned char *data, unsigned int length)
+{
+    char *base64 = g_base64_encode(data, length);
+    if (base64 != NULL)
+    {
+        g_string_append(buffer, base64);
+        g_free(base64);
+        return CAIRO_STATUS_SUCCESS;
+    }
+    return CAIRO_STATUS_WRITE_ERROR;
+}
+/** 
+ * Renders a webview to a base64 encoded png
+ *
+ * @name toPng64
+ * @memberOf WebKitWebView.prototype
+ * @function 
+ * @type String
+ * @requires webkitgtk >= 1.10
+ * @example
+ * var png = tabs.current.toPng64(250, 250, true); 
+ * tabs.current.inject(function() {
+ *     var img = document.createElement("img");
+ *     img.src = "data:image/png;base64," + arguments[0];
+ *     document.body.appendChild(img);
+ * }, png);
+ *
+ *
+ * @param {Number} width
+ *      The width of the png, if width is < 0 and height is > 0 the image will have the same aspect ratio as the original webview, optional.
+ * @param {Number} height
+ *      The height of the png, if height is < 0 and width is > 0 the image will have the same aspect ratio as the original webview, optional, mandatory if width is set.
+ * @param {Boolean} keepAspect
+ *      Whether to keep the ascpect ratio, if set to true the new image will have the same aspect ratio as the original webview, width and height are taken as maximum sizes and must both be > 0, optional.
+ *
+ * @returns A base64 encoded png-String
+ *
+ * */
+static JSValueRef 
+wv_to_png64(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    WebKitWebView *wv;
+    cairo_status_t status = -1;
+    cairo_surface_t *scaled_surface;
+    JSValueRef result = NIL;
+
+    wv = JSObjectGetPrivate(this);
+    g_return_val_if_fail(wv != NULL, NIL);
+
+    scaled_surface = wv_to_surface(ctx, wv, argc, argv, exc);
+    if (scaled_surface != NULL)
+    {
+        GString *s = g_string_new(NULL);
+        status = cairo_surface_write_to_png_stream(scaled_surface, (cairo_write_func_t)write_png64, s);
+        cairo_surface_destroy(scaled_surface);
+
+        if (status == CAIRO_STATUS_SUCCESS)
+            result = js_char_to_value(ctx, s->str);
+        g_string_free(s, true);
+    }
+    return result;
+}
 /** 
  * Renders a webview to a png file
  *
@@ -1020,86 +1188,22 @@ wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
 {
     WebKitWebView *wv;
     cairo_status_t status = -1;
-    cairo_surface_t *sf;
+    cairo_surface_t *scaled_surface;
     char *filename;
     if (argc < 1 || (wv = JSObjectGetPrivate(this)) == NULL || (JSValueIsNull(ctx, argv[0])) || (filename = js_value_to_char(ctx, argv[0], -1, NULL)) == NULL) 
     {
         return JSValueMakeNumber(ctx, status);
     }
-    if (argc > 2) 
+    scaled_surface = wv_to_surface(ctx, wv, argc-1, argc > 1 ? argv + 1 : NULL, exc);
+    if (scaled_surface != NULL)
     {
-        gboolean keep_aspect = false;
-        double width = JSValueToNumber(ctx, argv[1], exc);
-        double height = JSValueToNumber(ctx, argv[2], exc);
-        if (!isnan(width) && !isnan(height)) 
-        {
-            sf = webkit_web_view_get_snapshot(wv);
-
-            if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
-                keep_aspect = JSValueToBoolean(ctx, argv[3]);
-            if (keep_aspect && (width <= 0 || height <= 0))
-                return JSValueMakeNumber(ctx, status);
-
-
-            int w = cairo_image_surface_get_width(sf);
-            int h = cairo_image_surface_get_height(sf);
-
-            double aspect = (double)w/h;
-            double new_width = width;
-            double new_height = height;
-
-            if (width <= 0 || keep_aspect)
-                new_width = height * aspect;
-            if ((width > 0 && height <= 0) || keep_aspect)
-                new_height = width / aspect;
-            if (keep_aspect) 
-            {
-                if (new_width > width) 
-                {
-                    new_width = width;
-                    new_height = new_width / aspect;
-                }
-                else if (new_height > height) 
-                {
-                    new_height = height;
-                    new_width = new_height * aspect;
-                }
-            }
-
-            double sw, sh;
-            if (width <= 0 || height <= 0)
-                sw = sh = MIN(width / w, height / h);
-            else 
-            {
-                sw = width / w;
-                sh = height / h;
-            }
-
-            cairo_surface_t *scaled_surface = cairo_surface_create_similar_image(sf, CAIRO_FORMAT_RGB24, new_width, new_height);
-            cairo_t *cr = cairo_create(scaled_surface);
-
-            cairo_save(cr);
-            cairo_scale(cr, sw, sh);
-
-            cairo_set_source_surface(cr, sf, 0, 0);
-            cairo_paint(cr);
-            cairo_restore(cr);
-
-            cairo_destroy(cr);
-
-            status = cairo_surface_write_to_png(scaled_surface, filename);
-            cairo_surface_destroy(scaled_surface);
-        }
-        else 
-            return JSValueMakeNumber(ctx, status);
+        status = cairo_surface_write_to_png(scaled_surface, filename);
+        cairo_surface_destroy(scaled_surface);
     }
     else 
     {
-        sf = webkit_web_view_get_snapshot(wv);
-        status = cairo_surface_write_to_png(sf, filename);
+        return JSValueMakeNumber(ctx, -1);
     }
-    cairo_surface_destroy(sf);
-
     return JSValueMakeNumber(ctx, status);
 }
 #endif
@@ -1444,6 +1548,41 @@ message_get_response_headers(JSContextRef ctx, JSObjectRef object, JSStringRef j
     }
     return NIL;
 }/*}}}*/
+// TODO: Documentation
+static JSValueRef 
+message_set_status(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc == 0)
+        return UNDEFINED;
+    double status = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(status))
+    {
+        SoupMessage *msg = JSObjectGetPrivate(this);
+        g_return_val_if_fail(msg != NULL, UNDEFINED);
+        soup_message_set_status(msg, (int)status);
+    }
+    return UNDEFINED;
+}
+// TODO: Documentation
+static JSValueRef 
+message_set_response(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc == 0)
+        return UNDEFINED;
+    char *content_type = NULL;
+    char *response = js_value_to_char(ctx, argv[0], -1, exc);
+    if (response != NULL)
+    {
+        SoupMessage *msg = JSObjectGetPrivate(this);
+        g_return_val_if_fail(msg != NULL, UNDEFINED);
+        if (argc > 1)
+            content_type = js_value_to_char(ctx, argv[1], -1, exc);
+
+        soup_message_set_response(msg, content_type ? content_type : "text/html", SOUP_MEMORY_TAKE, response, strlen(response));
+        g_free(content_type);
+    }
+    return UNDEFINED;
+}
 /* FRAMES {{{*/
 /* frame_get_domain {{{*/
 /** 
@@ -3339,63 +3478,71 @@ system_get_pid(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     return JSValueMakeNumber(ctx, getpid());
 }
 
-static void
-shutdown_channel(GIOChannel *channel, JSObjectRef callback)
-{
-    int fd = g_io_channel_unix_get_fd(channel);
-    g_io_channel_shutdown(channel, true, NULL);
-    g_io_channel_unref(channel);
-    close(fd);
-    if (TRY_CONTEXT_LOCK)
-    {
-        if (s_global_context != NULL)
-            JSValueUnprotect(s_global_context, callback);
-        CONTEXT_UNLOCK;
-    }
-}
-
 /* spawn_output {{{*/
 static gboolean
-spawn_output(GIOChannel *channel, GIOCondition condition, JSObjectRef callback) 
+spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data) 
 {
     char *content = NULL; 
-    gboolean result = false;
+    gboolean result = true;
     gsize length;
+    int fd, status;
+    gboolean is_stdout = data->is_stdout;
+
     if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
     {
-        shutdown_channel(channel, callback);
-        return false;
+        if (data->finished & SPAWN_FINISHED)
+        {
+            if (TRY_CONTEXT_LOCK)
+            {
+                if (s_global_context != NULL)
+                {
+                    JSValueRef argv[] = { JSValueMakeNumber(s_global_context, data->status) };
+                    if (data->status != 0)
+                        deferred_reject(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
+                    else if (condition == G_IO_HUP && is_stdout)
+                        deferred_resolve(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
+                    JSValueUnprotect(s_global_context, data->callback);
+                }
+                CONTEXT_UNLOCK;
+            }
+            g_free(data);
+        }
+        else 
+        {
+            data->finished |= SPAWN_CLOSED;
+            fd = g_io_channel_unix_get_fd(channel);
+            g_io_channel_shutdown(channel, true, NULL);
+            g_io_channel_unref(channel);
+            data->channel = NULL;
+            close(fd);
+        }
+        result = false;
     }
     else 
     {
-        int status = g_io_channel_read_to_end(channel, &content, &length, NULL);
-        if (status == G_IO_STATUS_AGAIN)
+        status = g_io_channel_read_line(channel, &content, &length, NULL, NULL);
+        if (status == G_IO_STATUS_AGAIN || status == G_IO_STATUS_EOF)
         {
-            return true;
+            result = true;
         }
-        else if (status == G_IO_STATUS_EOF)
-            shutdown_channel(channel, callback);
         else if (status == G_IO_STATUS_NORMAL)
         {
-            if (content != NULL)
+            if (content != NULL && TRY_CONTEXT_LOCK)
             {
-                if (TRY_CONTEXT_LOCK)
+                if (s_global_context != NULL)
                 {
-                    if (s_global_context != NULL)
+                    JSValueRef arg = js_char_to_value(s_global_context, content);
+                    if (arg != NULL)
                     {
-                        JSValueRef arg = js_char_to_value(s_global_context, content);
-                        if (arg != NULL)
-                        {
-                            JSValueRef argv[] = { arg };
-                            call_as_function_debug(s_global_context, callback, callback, 1, argv);
-                        }
+                        JSValueRef argv[] = { arg };
+                        call_as_function_debug(s_global_context, data->callback, data->callback, 1, argv);
                     }
-                    CONTEXT_UNLOCK;
                 }
+                CONTEXT_UNLOCK;
             }
         }
+        g_free(content);
     }
-    g_free(content);
     return result;
 }/*}}}*/
 
@@ -3485,10 +3632,22 @@ system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
 }/*}}}*/
 
 void 
-watch_spawn(GPid pid, gint status, JSObjectRef deferred)
+spawn_finish_data(SpawnData *data, int status)
+{
+    if (data != NULL)
+    {
+        data->finished |= SPAWN_FINISHED;
+        data->status = status;
+        if (data->channel != NULL)
+            g_io_channel_flush(data->channel, NULL);
+        if (data->finished & SPAWN_CLOSED)
+            g_free(data);
+    }
+}
+void 
+watch_spawn(GPid pid, gint status, SpawnData **data)
 {
     int fail = 0;
-
 
     if (WIFEXITED(status) != 0) 
         fail = WEXITSTATUS(status);
@@ -3498,19 +3657,10 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
         fail = WSTOPSIG(status);
     g_spawn_close_pid(pid);
 
-    if (!TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL)
-    {
-        if (fail == 0)
-            deferred_resolve(s_global_context, NULL, deferred, 0, NULL, NULL);
-        else 
-        {
-            JSValueRef args[] = { JSValueMakeNumber(s_global_context, fail)  };
-            deferred_reject(s_global_context, NULL, deferred, 1, args, NULL);
-        }
-    }
-    CONTEXT_UNLOCK;
+    spawn_finish_data(data[0], fail);
+    spawn_finish_data(data[1], fail);
+
+    g_free(data);
 }
 
 /* system_spawn {{{*/
@@ -3521,36 +3671,65 @@ watch_spawn(GPid pid, gint status, JSObjectRef deferred)
  * @memberOf system
  * @function 
  * @example 
- * system.spawn("foo" function (stdin) { 
- *   io.print(stdin);
- * }, function(stderr) {
- *   io.print(stderr, "stderr");
- * }, null, { foo : "bar"});
+ * // Simple spawning without using stdout/stderr
+ * system.spawn("foo");
+ * // Using stdout/stderr
+ * system.spawn("foo", {
+ *      onFinished : function(result) {
+ *          io.print("Process terminated with status " + result.status);
+ *          io.print("Stdout is :" + result.stdout);
+ *          io.print("Stderr is :" + result.stderr);
+ *      }
+ * });
+ * // Equivalently using the deferred
+ * system.spawn("foo").always(function(result) {
+ *      io.print("Process terminated with status " + result.status);
+ *      io.print("Stdout is :" + result.stdout);
+ *      io.print("Stderr is :" + result.stderr);
+ * });
+ * // Only use stdout if the process terminates successfully
+ * system.spawn("foo").done(function(result) {
+ *     io.print(result.stdout);
+ * });
+ * // Only use stderr if the process terminates with an error
+ * system.spawn("foo").fail(function(result) {
+ *     io.print(result.stderr);
+ * });
+ * // Using environment variables
+ * system.spawn("sh -c \"echo $foo\"", {
+ *      environment : { foo : "bar" }
+ * }).then(function(result) { 
+ *      io.print(result.stdout); 
+ * });
+ *
  *
  * @param {String} command The command to execute
- * @param {Function|String} [stdout] A callback function that is called when a line from
- *                            stdout was read, if the function returns a
- *                            string the string is passed to stdin of the
- *                            spawned process, pass <i>null</i> if only stderr
- *                            is needed or only environment variables should be
- *                            set. If this argument is the string <b>close</b>
- *                            stdout is closed in the childs process.
- * @param {Function|String} [stderr] A callback function that is called when a line from
- *                            stderr was read, if the function returns a
- *                            string the string is passed to stdin of the
- *                            spawned process, pass <i>null</i> if stderr is not
- *                            needed and environment variables should be set
- *                            If this argument is the string <b>close</b>
- *                            stderr is closed in the childs process.
- * @param {String}  [stdin] String that will be piped to stdin, a newline will
- *                          be appended to the string.
- * @param {Object}   [environ] Object that can be used to add environment
- *                             variables to the childs environment
+ * @param {Object} [options] Options
+ * @param {Function} [options.onStdout] 
+ *     A callback function that is called when a line from
+ *     stdout was read. The function takes one parameter, the line that has been read.
+ *     To get the complete stdout use either <i>onFinished</i> or the
+ *     Deferred returned from <i>system.spawn</i>.
+ * @param {Function} [options.onStderr] 
+ *     A callback function that is called when a line from
+ *     stderr was read. The function takes one parameter, the line that has been read. 
+ *     To get the complete stderr use either <i>onFinished</i> or the
+ *     Deferred returned from <i>system.spawn</i>.
+ * @param {Function} [options.onFinished] 
+ *     A callback that will be called when the child process has terminated. The
+ *     callback takes on argument, an object that contains stdout, stderr and
+ *     status, i.e. the return code of the child process.
+ * @param {String} [options.stdin] 
+ *     String that will be piped to stdin of the child process. 
+ * @param {Object} [options.environment] 
+ *     Hash of environment variables that will be set in the childs environment
+ *
  *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
- *      rejected if the child process exits abnormally, the first parameter of
- *      the reject function will be the status code of the child process.  
+ *      rejected if the child process exits abnormally. The argument passed to
+ *      resolve and reject is an Object containing stdout, stderr and status,
+ *      i.e. the return code of the child process.
  * */
 static JSValueRef 
 system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -3560,8 +3739,9 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     char **srgv = NULL, *cmdline = NULL;
     char **envp = NULL;
     int srgc;
-    GIOChannel *out_channel, *err_channel;
+    GIOChannel *out_channel = NULL, *err_channel = NULL;
     JSObjectRef oc = NULL, ec = NULL;
+    SpawnData *out_data = NULL, *err_data = NULL;
     GPid pid;
     char *pipe_stdin = NULL;
     gint spawn_options = G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD;
@@ -3581,20 +3761,10 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         goto error_out;
 
     if (argc > 1) 
-    {
-        if (js_string_equals(ctx, argv[1], "close"))
-            spawn_options |= G_SPAWN_STDOUT_TO_DEV_NULL;
-        else 
-            oc = js_value_to_function(ctx, argv[1], NULL);
-    }
+        oc = js_value_to_function(ctx, argv[1], NULL);
     
     if (argc > 2) 
-    {
-        if (js_string_equals(ctx, argv[2], "close"))
-            spawn_options |= G_SPAWN_STDERR_TO_DEV_NULL;
-        else 
-            ec = js_value_to_function(ctx, argv[2], NULL);
-    }
+        ec = js_value_to_function(ctx, argv[2], NULL);
 
     if (argc > 3)
         pipe_stdin = js_value_to_char(ctx, argv[3], -1, exc);
@@ -3614,20 +3784,32 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         goto error_out;
     }
 
+    JSObjectRef deferred = deferred_new(s_global_context);
+
+
+
     if (oc != NULL) 
     {
         out_channel = g_io_channel_unix_new(outfd);
+
+        out_data = g_malloc(sizeof(SpawnData));
+        SPAWN_DATA_INIT(out_data, out_channel, oc, deferred, true);
+
         JSValueProtect(ctx, oc);
         g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, oc);
+        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, out_data);
         g_io_channel_set_close_on_unref(out_channel, true);
     }
     if (ec != NULL) 
     {
         err_channel = g_io_channel_unix_new(errfd);
+
+        err_data = g_malloc(sizeof(SpawnData));
+        SPAWN_DATA_INIT(err_data, err_channel, ec, deferred, false);
+
         JSValueProtect(ctx, ec);
         g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, ec);
+        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err_data);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
     if (pipe_stdin != NULL && infd != -1)
@@ -3637,9 +3819,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
     if (infd != -1)
         close(infd);
-    JSObjectRef deferred = deferred_new(s_global_context);
 
-    g_child_watch_add(pid, (GChildWatchFunc)watch_spawn, deferred);
+    SpawnData **data = g_malloc_n(2, sizeof(SpawnData*));
+    data[0] = out_data;
+    data[1] = err_data;
+    g_child_watch_add(pid, (GChildWatchFunc)watch_spawn, data);
     ret = deferred;
 
 error_out:
@@ -4685,7 +4869,128 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
     return UNDEFINED;
 }/*}}}*/
 /*}}}*/
+// TODO: Documentation
+void 
+server_handler_cb(SoupServer *server, SoupMessage *message, const char *path, GHashTable *query, SoupClientContext *ctx, JSObjectRef callback)
+{
+    JSValueRef argv[3];
+    GHashTableIter iter;
+    gpointer key = NULL, value = NULL;
 
+    if (!TRY_CONTEXT_LOCK)
+        return;
+    if (s_global_context != NULL)
+    {
+
+        argv[0] = make_object_for_class(s_global_context, s_message_class, G_OBJECT(message), true);
+        argv[1] = js_char_to_value(s_global_context, path);
+
+        if (query != NULL)
+        {
+            JSObjectRef js_query = JSObjectMake(s_global_context, NULL, NULL);
+            g_hash_table_iter_init(&iter, query);
+            while (g_hash_table_iter_next(&iter, &key, &value) && key != NULL)
+                js_set_object_property(s_global_context, js_query, key, value, NULL);
+            argv[2] = js_query;
+        }
+        else 
+            argv[2] = NIL;
+
+        call_as_function_debug(s_global_context, callback, 
+                make_object_for_class(s_global_context, s_soup_server_class, G_OBJECT(server), true), 
+                3, argv);
+    }
+    CONTEXT_UNLOCK;
+}
+static JSValueRef 
+server_handler(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 2)
+        return UNDEFINED;
+    SoupServer *server = JSObjectGetPrivate(this);
+    if (server == NULL)
+        return UNDEFINED;
+    char *path = js_value_to_char(ctx, argv[0], 2048, exc);
+
+    JSObjectRef callback = js_value_to_function(ctx, argv[1], exc);
+    if (callback != NULL)
+    {
+        JSValueProtect(ctx, callback);
+        soup_server_add_handler(server, path, (SoupServerCallback)server_handler_cb, callback, (GDestroyNotify)object_destroy_cb);
+    }
+
+    g_free(path);
+    return UNDEFINED;
+}
+// TODO: Documentation
+static JSValueRef 
+server_run(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    SoupServer *server = JSObjectGetPrivate(this);
+    if (server != NULL)
+        soup_server_run_async(server);
+    return UNDEFINED;
+}
+// TODO: Documentation
+static JSValueRef 
+server_stop(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    SoupServer *server = JSObjectGetPrivate(this);
+    if (server != NULL)
+        soup_server_quit(server);
+    return UNDEFINED;
+}
+// TODO: Documentation
+static JSValueRef 
+server_shutdown(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    SoupServer *server = JSObjectGetPrivate(this);
+    if (server != NULL)
+    {
+        GSList *l = g_slist_find(s_servers, server);
+        s_servers = g_slist_delete_link(s_servers, l); 
+        JSObjectSetPrivate(this, NULL);
+        SERVER_DO_SHUTDOWN(server);
+    }
+    return UNDEFINED;
+}
+// TODO: Documentation
+static JSObjectRef 
+server_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    if (argc > 0 && JSValueIsNumber(ctx, argv[0]))
+    {
+        double port = JSValueToNumber(ctx, argv[0], exception);
+        struct sockaddr_in address;
+        int sock_fd, success;
+
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY;
+        address.sin_port = htons((int) port);
+
+        sock_fd =  socket(AF_INET, SOCK_STREAM, 0);
+        if (sock_fd == -1)
+        {
+            js_make_exception(ctx, exception, "Server: cannot create socket!", (int)port);
+            return JSObjectMake(ctx, NULL, NULL);
+        }
+        success = bind(sock_fd, (struct sockaddr *)&address, sizeof(address));
+        close(sock_fd);
+        if (success == 0)
+        {
+            SoupServer *server = soup_server_new("port", (int)port, NULL);
+            s_servers = g_slist_prepend(s_servers, server);
+            return make_object_for_class(ctx, s_soup_server_class, G_OBJECT(server), true);
+        }
+        else 
+        {
+            js_make_exception(ctx, exception, "Server: Port %d is already bound!", (int)port);
+            return JSObjectMake(ctx, NULL, NULL);
+        }
+
+    }
+    return JSValueToObject(ctx, NIL, exception);
+}
 /* gui {{{*/
 /** 
  * The main window
@@ -5823,6 +6128,7 @@ create_global_object()
         { "inject",          wv_inject,             kJSDefaultAttributes },
 #if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
         { "toPng",           wv_to_png,             kJSDefaultAttributes },
+        { "toPng64",         wv_to_png64,             kJSDefaultAttributes },
 #endif
         { 0, 0, 0 }, 
     };
@@ -5907,9 +6213,14 @@ create_global_object()
         { "responseHeaders",     message_get_response_headers, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
+    JSStaticFunction message_functions[] = {
+        { "setStatus",       message_set_status, kJSDefaultAttributes }, 
+        { "setResponse",     message_set_response, kJSDefaultAttributes }, 
+        { 0, 0, 0 }, 
+    };
 
     cd.className = "SoupMessage";
-    cd.staticFunctions = default_functions;
+    cd.staticFunctions = message_functions;
     cd.staticValues = message_values;
     cd.parentClass = s_gobject_class;
     s_message_class = JSClassCreate(&cd);
@@ -6121,6 +6432,20 @@ create_global_object()
     s_download_class = JSClassCreate(&cd);
 
     s_constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(ctx, "WebKitDownload", s_download_class, download_constructor_cb, NULL);
+
+    JSStaticFunction server_functions[] = { 
+        { "addHandler",          server_handler,        kJSDefaultAttributes },
+        { "run",                 server_run,            kJSDefaultAttributes },
+        { "stop",                server_stop,           kJSDefaultAttributes },
+        { "shutdown",            server_shutdown,           kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.staticFunctions = server_functions;
+    cd.parentClass = s_gobject_class;
+    s_soup_server_class = JSClassCreate(&cd);
+
+    s_constructors[CONSTRUCTOR_SERVER] = create_constructor(ctx, "Server", s_soup_server_class, server_constructor_cb, NULL);
 
     /** 
      * Represents a SoupMessage header
@@ -6471,6 +6796,12 @@ scripts_end()
         for (GSList *timer = s_timers; timer; timer=timer->next)
             g_source_remove(GPOINTER_TO_INT(timer->data));
 
+        for (GSList *server = s_servers; server; server=server->next)
+        {
+            soup_server_disconnect(server->data);
+        }
+        g_slist_free(s_servers);
+
         JSValueUnprotect(s_global_context, s_array_contructor);
         JSValueUnprotect(s_global_context, UNDEFINED);
         JSValueUnprotect(s_global_context, NIL);
@@ -6486,6 +6817,7 @@ scripts_end()
         JSClassRelease(s_message_class);
         JSClassRelease(s_history_class);
         JSClassRelease(s_soup_header_class);
+        JSClassRelease(s_soup_server_class);
         JSGlobalContextRelease(s_global_context);
         s_global_context = NULL;
     }

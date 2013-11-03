@@ -3,22 +3,58 @@
         "spawn" : 
         {
             value : (function() {
-                return function(command, onStdout, onStderr, stdin, environ) {
-                    var stdout = null, stderr = null;
-                    var d = new Deferred();
+                return function(command, detail) {
+                    detail = detail || {};
+                    var onStdout = detail.onStdout, 
+                        onStderr = detail.onStderr, 
+                        d = new Deferred();
+                    var result = {
+                        stdout : "", 
+                        stderr : "", 
+                        status : 0
+                    };
+                    if (typeof detail === "function")
+                    {
+                        io.print("\033[31;1mDWB DEPRECATION:\033[0m Using system.spawn(command, onStdout, onStderr); is deprecated!");
+                        onStdout = arguments[1];
+                        onStderr = arguments[2];
+                        detail.stdin = arguments[3];
+                        detail.environment = arguments[4];
+                    }
+                       
                     system._spawn(command, 
-                        onStdout === "close" ? "close" : 
                         function(response) {
-                            stdout = onStdout ? (onStdout.call(onStdout, response) || response) : response;
-                        },  
-                        onStderr === "close" ? "close" : 
-                        function(response) {
-                            stderr = onStderr ? (onStderr.call(onStderr, response) || response) : response;
+                            result.stdout += response;
+                            if (onStdout)
+                            {
+                                onStdout(response);
+                            }
                         }, 
-                        stdin, environ).then(
-                            function() { return d.resolve(stdout); }, 
-                            function(status) { return d.reject({ status : status, stderr : stderr }, stderr); }
-                        );
+                        function(response) {
+                            result.stderr += response;
+                            if (onStderr)
+                            {
+                                onStderr(response);
+                            }
+
+                    }, detail.stdin, detail.environment).then(function(status) {
+                                result.status = status;
+                                if (detail.onFinished)
+                                {
+                                    detail.onFinished(result);
+                                }
+                                d.resolve(result);
+                            }, 
+                            function(status) {
+                                result.status = status;
+                                if (detail.onFinished)
+                                {
+                                    detail.onFinished(result);
+                                }
+                                d.reject(result);
+                            }
+
+                    );
                     return d;
                 };
             })()
