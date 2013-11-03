@@ -976,3 +976,23 @@ util_keyfile_do(char *path, KeyFileAction action, const void *data)
     g_key_file_free(kf);
     return result;
 }
+char *
+util_strescape_char(char *string, char invalid, char esc_char)
+{
+    if (strchr(string, invalid) != NULL)
+    {
+        GString *buffer = g_string_new(NULL);
+        const char *tmp = string;
+        while (*tmp)
+        {
+            if (*tmp == invalid)
+                g_string_append_c(buffer, esc_char);
+            g_string_append_c(buffer, *tmp);
+            tmp++;
+        }
+        g_free(string);
+        string = buffer->str;
+        g_string_free(buffer, false);
+    }
+    return string;
+}

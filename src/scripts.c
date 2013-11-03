@@ -4041,6 +4041,7 @@ error_out:
  *
  * @param {String} message The message
  * */
+
 static JSValueRef 
 io_notify(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -4050,6 +4051,7 @@ io_notify(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
     char *message = js_value_to_char(ctx, argv[0], -1, exc);
     if (message != NULL) 
     {
+        message = util_strescape_char(message, '%', '%');
         dwb_set_normal_message(dwb.state.fview, true, message);
         g_free(message);
     }
@@ -4075,6 +4077,7 @@ io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
     char *message = js_value_to_char(ctx, argv[0], -1, exc);
     if (message != NULL) 
     {
+        message = util_strescape_char(message, '%', '%');
         dwb_set_error_message(dwb.state.fview, message);
         g_free(message);
     }
