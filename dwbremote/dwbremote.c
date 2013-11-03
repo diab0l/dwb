@@ -26,7 +26,6 @@
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
-
 int 
 dwbremote_get_property(Display *dpy, Window win, Atom atom, char ***list, int *count)
 {
@@ -112,26 +111,32 @@ dwbremote_set_int_property(Display *dpy, Window win, Atom atom, int status)
 int 
 dwbremote_get_last_focus_id(Display *dpy, Window win, Atom a, Window *win_ret)
 {
-    Window unused_win; 
-    Window *children; 
+    Window *children = NULL; 
     Atom atr;
-    int max = 0, old_max;
+    int max = 0, old_max = -1;
     int ret = 0;
     unsigned int n_children;
+    Window root, parent;
 
-    if (XQueryTree(dpy, win, &unused_win, &unused_win, &children, &n_children) == 0)
-        return 0;
+    if (XQueryTree(dpy, win, &root, &parent, &children, &n_children) == 0)
+        goto error_out;
+
     for (unsigned int i=0; i<n_children; i++)
     {
         ret = dwbremote_get_int_property(dpy, children[i], a, &atr);
         old_max = max;
         if (atr != None)
+        {
             max = MAX(ret, max);
+            if (max > old_max)
+                *win_ret = children[i];
+        }
         else 
             max = MAX(dwbremote_get_last_focus_id(dpy, children[i], a, win_ret), max);
-        if (old_max != max)
-            *win_ret = children[i];
 
     }
+error_out:
+    if (children != NULL)
+        XFree((char *)children);
     return max;
 }

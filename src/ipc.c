@@ -368,13 +368,24 @@ on_property_notify(GtkWidget *widget, GdkEventProperty *e, gpointer data)
     }
     return false;
 }
+static int 
+xerror_handler(Display *dpy, XErrorEvent *event)
+{
+    return 0;
+}
 
 static gboolean 
-on_focus_in(GtkWidget *widget, GdkEvent *e, gpointer data)
+on_focus_in(GtkWidget *widget, GdkEventFocus *e, gpointer data)
 {
     static int last_id = 0;
     Window win;
+    // Dirty: If focus-in-event is a result of a destroyed window XQueryTree will also
+    // return the already destroyed window (strangely the destroy event is
+    // emitted after the focus event) which results in a BadWindow Error.
+    // We ignore the error, otherwise gtk3 will crash.
+    XSetErrorHandler(xerror_handler);
     int new_id = dwbremote_get_last_focus_id(s_dpy, s_root, s_atoms[DWB_ATOM_FOCUS_ID], &win);
+    XSetErrorHandler(NULL);
     if (new_id > last_id)
     {
         last_id = (++new_id);
@@ -425,7 +436,6 @@ ipc_start(GtkWidget *widget)
     s_dpy = gdk_x11_get_default_xdisplay();
     s_root = RootWindow(s_dpy, DefaultScreen(s_dpy));
     s_win = GDK_WINDOW_XID(gdkwin);
-
 
     GdkEventMask mask = gdk_window_get_events(gdkwin);
     gdk_window_set_events(gdkwin, mask | GDK_PROPERTY_CHANGE_MASK | GDK_FOCUS_CHANGE_MASK);
