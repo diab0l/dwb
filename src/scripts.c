@@ -3463,7 +3463,7 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 }/*}}}*/
 
 /** 
- * Get a environment variable
+ * Gets the process if of the dwb instance
  * 
  * @name getPid 
  * @memberOf system
@@ -3696,7 +3696,7 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  *     io.print(result.stderr);
  * });
  * // Using environment variables
- * system.spawn("sh -c \"echo $foo\"", {
+ * system.spawn('sh -c "echo $foo"', {
  *      environment : { foo : "bar" }
  * }).then(function(result) { 
  *      io.print(result.stdout); 
@@ -3704,7 +3704,7 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  *
  *
  * @param {String} command The command to execute
- * @param {Object} [options] Options
+ * @param {Object} [options] 
  * @param {Function} [options.onStdout] 
  *     A callback function that is called when a line from
  *     stdout was read. The function takes one parameter, the line that has been read.
@@ -3717,7 +3717,7 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  *     Deferred returned from <i>system.spawn</i>.
  * @param {Function} [options.onFinished] 
  *     A callback that will be called when the child process has terminated. The
- *     callback takes on argument, an object that contains stdout, stderr and
+ *     callback takes one argument, an object that contains stdout, stderr and
  *     status, i.e. the return code of the child process.
  * @param {String} [options.stdin] 
  *     String that will be piped to stdin of the child process. 

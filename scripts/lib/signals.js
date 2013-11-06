@@ -289,6 +289,33 @@
                     return new Signal(name, callback).connect();
                 }
             },
+            /** 
+             * Connects to a signal once. After the signal has been emitted once
+             * the callback function will not be called any longer. 
+             *
+             * @name once
+             * @memberOf Signal
+             * @function
+             *
+             * @param {String} name 
+             *      The signal to connect to
+             * @param {Function} callback 
+             *      Callback that will be called when the signal is emitted.
+             *
+             * @returns {Signal}
+             *      A new Signal, calling {@link connect} on the returned signal
+             *      will only connect once again. 
+             * */
+            "once" : 
+            {
+                value : function(name, callback) 
+                {
+                    return new Signal(name, function() {
+                        callback.apply(this, arguments);
+                        this.disconnect();
+                    }).connect();
+                }
+            },
             /**
              * Disconnects from an event.              
              * @name disconnect

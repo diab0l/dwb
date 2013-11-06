@@ -13,15 +13,6 @@
                         stderr : "", 
                         status : 0
                     };
-                    if (typeof detail === "function")
-                    {
-                        io.print("\033[31;1mDWB DEPRECATION:\033[0m Using system.spawn(command, onStdout, onStderr); is deprecated!");
-                        onStdout = arguments[1];
-                        onStderr = arguments[2];
-                        detail.stdin = arguments[3];
-                        detail.environment = arguments[4];
-                    }
-                       
                     system._spawn(command, 
                         function(response) {
                             result.stdout += response;
