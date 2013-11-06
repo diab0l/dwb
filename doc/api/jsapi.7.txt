@@ -62,7 +62,7 @@ _shortcut_;; A shortcut shortcut, will be parsed the same way as if set in
 dwb:keys
 _callback_;; Callback function that will be called when the shortcut is pressed
 _name_;; A name that identifies the function on command line, optional
-_returns_;; true if the function was bound successfully
+*returns*;; true if the function was bound successfully
 ****
 
 ==== Boolean execute(String command)
@@ -72,7 +72,7 @@ Executes a dwb command
 
 _command_;; a dwb command to execute, will be parsed the same way as if executed
 from commandline
-_returns_;; true if execution was successful
+*returns*;; true if execution was successful
 **** 
 
 ==== Boolean exit()
@@ -91,7 +91,7 @@ true is passed as second parameter.
 
 _path_;; Path to a file to include
 _global_;; Whether to include the script into the global scope, optional
-_returns_;; The return value of the included file
+*returns*;; The return value of the included file
 ****
 
 NOTE: Scripts included with include are either visible in the global scope or
@@ -171,7 +171,7 @@ contains all modules, see also MODULES for examples.
 Unbind a shortcut that was previously bound with bind
 
 _func_ or _name_;; Either the function or the optional name passed to bind.
-_returns_;; true if the function was unbound
+*returns*;; true if the function was unbound
 ****
 
 ==== Object xinclude(String path)
@@ -189,7 +189,7 @@ have a readonly property id which is unique to all archives, it can be used
 together with require/provide to define unique module names.
 
 _path_;; Path of the file in the archive
-_returns_;; The object returned from the included file
+*returns*;; The object returned from the included file
 ****
 
 == GLOBAL OBJECTS ==
@@ -227,7 +227,7 @@ The io object implements methods for input and output.
 Shows a confirmation prompt.
 
 _prompt_;; The prompt message
-_returns_;; True if *y* was pressed, false if *n* or Escape was pressed
+*returns*;; True if *y* was pressed, false if *n* or Escape was pressed
 ****
 
 ==== void io.debug([Object detail])
@@ -247,7 +247,7 @@ _detail.arguments_;; Arguments, optional
 Get directory entries.
 
 _path_;; A path to a directory
-_returns_;; An array with the directory names
+*returns*;; An array with the directory names
 ****
 
 ==== void io.error(String text)
@@ -283,7 +283,7 @@ Gets user input synchronously.
 _text_;; The message for the prompt
 _visible_;; Whether the chars should be visible, pass false for a password
 prompt, default true, optional
-_returns_;; The text that was entered or null
+*returns*;; The text that was entered or null
 ****
 
 
@@ -293,7 +293,7 @@ _returns_;; The text that was entered or null
 Read from a file.
 
 _path_;; Path to a file that should be read
-_returns_;; A string with the file content
+*returns*;; A string with the file content
 ****
 
 ==== Boolean io.write(String path, String mode, String text)
@@ -305,7 +305,7 @@ _path_;; Path to a file to write to
 _mode_;; Either "a" to append to the file, or "w" to strip the file or
 create a new file.
 _text_;; The text that should be written to the file
-_returns_;; true if writing was successful
+*returns*;; true if writing was successful
 ****
 
 === system ===
@@ -319,7 +319,7 @@ Checks for FileTest flags on a file.
 
 _path_;; Path to a file to check
 _flags_;; The flags to test
-_returns_;; true if any of the test on the flags is true
+*returns*;; true if any of the test on the flags is true
 ****
 
 ==== String system.getEnv(String name) 
@@ -328,7 +328,7 @@ _returns_;; true if any of the test on the flags is true
 Get a system environment variable
 
 _name_;; Name of the variable
-_returns_;; The variable or null if the variable wasn't found
+*returns*;; The variable or null if the variable wasn't found
 ****
 
 ==== Number system.getPid() 
@@ -336,7 +336,7 @@ _returns_;; The variable or null if the variable wasn't found
 
 Get the current process id of the instance.
 
-_returns_;; The process id. 
+*returns*;; The process id. 
 ****
 
 ==== Boolean system.mkdir(String path, Number mode)
@@ -346,26 +346,34 @@ Creates a directory and all parent directories.
 
 _path_;; Path to create
 _mode_;; The permissions the directory will get
-_returns_;; true if creation was successful or directory already existed 
+*returns*;; true if creation was successful or directory already existed 
 ****
 
-==== Deferred system.spawn(String command, [Function stdout], [Function stderr], [Object environ])
+==== Deferred system.spawn(String command, [Object options])
 ****
 
 Executes a shell command using the default search path
 
 _command_;; The command to execute
-_stdout(String)_;; Callback function for stdin, any strings returned from the
-callback are passed to stdin of the spawned process, pass +null+ if only stderr
-is needed, optional 
-_stderr(String)_;; Callback function for stderr, any strings returned from the
-callback are passed to stdin of the process, pass +null+ if stderr is not needed
-and environment variables should be set, optional
-_environ_;; Object that can be used to add environment variables to the children
-environment, optional.
-_returns_;; A deferred, it will be resolved if the child exits
-normally, it will be rejected if the child process exits abnormally, the first
-parameter of the reject function will be the status code of the child process. 
+_options_;; Options
+_options.onStdout_;; A callback function that is called when a line from stdout
+was read. The function takes one parameter, the line that has been read. To get
+the complete stdout use either onFinished or the Deferred returned from
+system.spawn.
+_options.onStderr_;; A callback function that is called when a line from stderr
+was read. The function takes one parameter, the line that has been read. To get
+the complete stderr use either onFinished or the Deferred returned from
+system.spawn.
+_options.onFinished_;; A callback that will be called when the child process has
+terminated. The callback takes one argument, an object that contains stdout,
+stderr and status, i.e. the return code of the child process.
+_options.stdin_;; String that will be piped to stdin of the child process.
+_options.environment_;; Hash of environment variables that will be set in the childs environment
+*returns*;; A deferred, it will be resolved if the child exits normally, it will
+be rejected if the child process exits abnormally. The argument passed to
+resolve and reject is an Object containing stdout, stderr and status, i.e. the
+return code of the child process.
+
 ****
 
 ==== Object system.spawnSync(String command, [Object environment])
@@ -376,7 +384,7 @@ Executes a shell command synchronously using the default search path
 _command_;; The command to execute
 _environment_;; Object that can be used to add environment variables to the
 children environment, optional.
-_returns_;; An object that contains stdout, stderr and status.
+*returns*;; An object that contains stdout, stderr and status.
 ****
 
 === tabs ===
@@ -394,7 +402,7 @@ _tabs.number (Number, read)_;; Number of the currently focused tab
 Gets the webview object of the nth tab
 
 _n_;; Number of the tab
-_returns_;; The corresponding webview
+*returns*;; The corresponding webview
 ****
 
 === net ===
@@ -409,7 +417,7 @@ effective second level domain name, e.g. for www.example.com it will be
 example.com, for www.example.co.uk it will be example.co.uk.
 
 _hostname_;; a hostname
-_returns_;; the base domain 
+*returns*;; the base domain 
 ****
 
 ==== Boolean net.domainMatch(String domain, String pattern)
@@ -420,7 +428,7 @@ domains.
 
 _domain_;; A domain name
 _pattern_;; The domain pattern to check
-_returns_;; True if the host matches
+*returns*;; True if the host matches
 ****
 
 ==== Boolean net.hostMatch(String host, String pattern)
@@ -431,7 +439,7 @@ domains.
 
 _domain_;; A host name
 _pattern_;; The host pattern to check
-_returns_;; True if the host matches
+*returns*;; True if the host matches
 ****
 
 ==== SoupURI net.parseUri(String uri)
@@ -440,7 +448,7 @@ _returns_;; True if the host matches
 Parses an uri to a SoupURI object, see also 'SOUPURI'.
 
 _domain_;; The uri to parse
-_returns_;; A parsed uri or *null* if the uri isn't valid according to RFC 3986.
+*returns*;; A parsed uri or *null* if the uri isn't valid according to RFC 3986.
 ****
 
 ==== void net.sendRequest(String uri, Function callback, [String method], [Object data])
@@ -456,7 +464,7 @@ _method_;; The http request method, default GET, optional.
 _data_;; Data to sent if method is POST
 _data.contentType_;; The content type
 _data.data_;; The data to sent
-_returns_;; True if the request was sent.
+*returns*;; True if the request was sent.
 ****
 
 ==== Object net.sendRequestSync(String uri, [String method])
@@ -466,7 +474,7 @@ Sends a http-request synchronously.
 
 _uri_;; The uri the request will be sent to.
 _method_;; The http request method, default GET, optional.
-_returns_;; Object that contains the response body, the response headers and
+*returns*;; Object that contains the response body, the response headers and
 the http status code of
 the request. 
 ****
@@ -483,7 +491,7 @@ timerStop is called on the id returned from this function
 
 _interval_;; Interval in milliseconds
 _func_;; Function to execute
-_returns_;; An id that can be passed to timerStop
+*returns*;; An id that can be passed to timerStop
 ****
 
 ==== Boolean timer.stop(Number id)
@@ -492,13 +500,33 @@ _returns_;; An id that can be passed to timerStop
 Stops a timer started by timerStart
 
 _id_;; The id returned from timerStart
-_returns_;; true if the timer was stopped
+*returns*;; true if the timer was stopped
 ****
 
 
 === util ===
 
 The util object implements helper methods.
+
+==== String util.base64Decode(String text)
+****
+
+Decodes a base64-encoded string to a string.
+
+
+_text_;; The string to decode
+*returns*;; The decoded string
+****
+
+==== String util.base64Encode(String text)
+
+****
+
+Encodes a string to base64.
+
+_text_;; The string to encode
+*returns*;; A base64-representation of the string
+****
 
 ==== String util.camelize(String text)
 
@@ -507,7 +535,7 @@ The util object implements helper methods.
 Converts a non-camelcase string to a camelcase string.
 
 _text_;; A non-camelcase string
-_returns_;; The a camelcase string
+*returns*;; The a camelcase string
 ****
 
 ****
@@ -516,7 +544,7 @@ Computes a checksum for given data.
 
 _shortcut_;; The to compute the checksum for.
 _type_;; The type of the checksum, optional, defaults to ChecksumType.sha256
-_returns_;; The checksum
+*returns*;; The checksum
 ****
 
 
@@ -527,7 +555,7 @@ Gets the body of a function, useful for scripts that will be injected into
 sites. 
 
 _func_;; A function 
-_returns_;; The body of the function as a string
+*returns*;; The body of the function as a string
 ****
 
 ==== String util.dispatchEvent(Number event, Modifier modifier, Number keyval) 
@@ -538,7 +566,7 @@ Dispatches a keyboard event.
 _event_;; A GdkEventType 
 _modifier_;; A Modifier
 _keyval_;; A keyval as listed in gdkkeysyms.h
-_returns_;; True if the event was dispatched
+*returns*;; True if the event was dispatched
 ****
 
 ==== Number util.getMode()
@@ -546,7 +574,7 @@ _returns_;; True if the event was dispatched
 
 Gets the the current mode.
 
-_returns_;; The mode, see Modes for possible modes.
+*returns*;; The mode, see Modes for possible modes.
 ****
 
 ==== String util.getSelection()
@@ -554,7 +582,7 @@ _returns_;; The mode, see Modes for possible modes.
 
 Get selected text from the focused webview.
 
-_returns_;; The selection or null if no text was selected.
+*returns*;; The selection or null if no text was selected.
 ****
 
 ==== String util.markupEscape(String text)
@@ -563,7 +591,7 @@ _returns_;; The selection or null if no text was selected.
 Escapes text for usage with pango markup.
 
 _text_;; A text to escape
-_returns_;; The escaped text or 'null';
+*returns*;; The escaped text or 'null';
 ****
 
 ==== String util.mixin(Object self, Object ...)
@@ -575,7 +603,7 @@ already defined.
 
 _self_;; An object
 _Object..._;; Variable number of objects to mix in.
-_returns_;; self or a new object if self is null or undefined
+*returns*;; self or a new object if self is null or undefined
 ****
 
 ==== void util.tabComplete(String label, Array items, Function callback, [Boolean readonly])
@@ -592,6 +620,19 @@ from the url bar.
 _readonly_;; Whether the items are readonly, default false, optional.
 ****
 
+
+==== void util.pathComplete(Function callback, [String label], [String initialPath], [Boolean dirOnly])
+****
+
+Initializes filename completion.
+
+_callback_;; Callback function called when a path was chosen or escape was pressed
+_label_;; The command line label
+_initialPath_;; The initial path, defaults to the current working directory
+_dirOnly_;; Whether to complete only directories, default false.
+****
+
+
 ==== void util.uncamelize(String text)
 ****
 
@@ -599,7 +640,7 @@ Converts camel-case string for usage with GObject properties to a non-camel-case
 String
 
 _text_;; The text to uncamlize
-_returns_;; The uncamelized string
+*returns*;; The uncamelized string
 ****
 
 
@@ -624,7 +665,7 @@ _this_;; The object forEach is called on
 This method is basically the same as Array.indexOf but without type checking.
 
 _object_;; The object to search for
-_returns_;; The index in the array or -1 if the Object wasn't found.
+*returns*;; The index in the array or -1 if the Object wasn't found.
 ****
 
 ==== Number Array.fastLastIndexOf(Object object)
@@ -633,7 +674,7 @@ _returns_;; The index in the array or -1 if the Object wasn't found.
 This method is basically the same as Array.lastIndexOf but without type checking.
 
 _object_;; The object to search for
-_returns_;; The index in the array or -1 if the Object wasn't found.
+*returns*;; The index in the array or -1 if the Object wasn't found.
 ****
 
 ==== void Function.debug([Object scope])
@@ -643,7 +684,7 @@ A wrapper method for debugging callbacks, especially useful if it is combined
 with script. 
 
 _scope_;; *script* or *this*, optional
-_returns_;; A new function that calls script.debug on errors.
+*returns*;; A new function that calls script.debug on errors.
 ****
 
 === clipboard ===
@@ -657,7 +698,7 @@ _selection_;; The Selection to get
 _callback_;; If a callback function is used the clipboard will be fetched
 asynchronously, the first parameter will be the content of the clipboard, else
 it will be fetched synchronously
-_returns_;; If no callback was provided it returns the text content of the
+*returns*;; If no callback was provided it returns the text content of the
 clipboard.
 ****
 
@@ -705,7 +746,10 @@ If a asynchronous operation fails the deferred should be rejected and
 the fail callback chain of the deferred is called. 
 
 
-Deferreds implement the following methods: 
+Deferreds implement the following properties and methods: 
+
+_Deferred.isFulFilled (Boolean, read)_;; Whether this deferred is resolved or
+rejected.
 
 ==== void Deferred.always(Function callback)
 ****
@@ -715,7 +759,7 @@ Registers a function for then done and fail chain.
 _callback_;; A callback function that will be called when the Deferred is
 resolved or rejected. If the function returns a deferred the original deferred will be replaced with
 the new deferred.
-_returns_;; A new deferred that can be used to chain callbacks. 
+*returns*;; A new deferred that can be used to chain callbacks. 
 ****
 
 ==== void Deferred.done(Function callback)
@@ -726,7 +770,7 @@ Registers a function for the done-chain.
 _callback_;; A callback function that will be called when the Deferred is
 resolved. If the function returns a deferred the original deferred will be replaced with
 the new deferred.
-_returns_;; A new deferred that can be used to chain callbacks. 
+*returns*;; A new deferred that can be used to chain callbacks. 
 ****
 
 ==== Deferred Deferred.fail(Function callback)
@@ -737,7 +781,7 @@ Registers a function for the fail-chain.
 _callback_;; A callback function that will be called when the deferred is
 rejected. If the function returns a deferred the original deferred will be replaced with
 the new deferred.
-_returns_;; A new deferred that can be used to chain callbacks. 
+*returns*;; A new deferred that can be used to chain callbacks. 
 ****
 
 ==== Deferred Deferred.reject(arguments)
@@ -767,7 +811,7 @@ the new deferred.
 _onfail_;; A callback function that will be called when the deferred is
 rejected. If the function returns a deferred the original deferred will be replaced with
 the new deferred.
-_returns_;; A new deferred that can be used to chain callbacks. 
+*returns*;; A new deferred that can be used to chain callbacks. 
 ****
 
 Deferred also implements a static method: 
@@ -783,7 +827,7 @@ and value is the first parameter of the callback.
 _value_;; A Deferred or a value.
 _ondone_;; Callback function.
 _onfail_;; Callback function.
-_returns_;; The value.
+*returns*;; The value.
 ****
 
 Simple usage of a deferred:
@@ -933,7 +977,7 @@ _pattern_;; The pattern to match against.
 Matches against a string
 
 _string_;; The string to match against.
-_returns_;; True if the string matches the Glob.
+*returns*;; True if the string matches the Glob.
 ****
 
 ==== String Glob.toString()
@@ -941,7 +985,7 @@ _returns_;; True if the string matches the Glob.
 
 Converts a Glob to string.
 
-_returns_;; A string represantation of the Glob.
+*returns*;; A string represantation of the Glob.
 ****
 
 === settings ===
@@ -1012,7 +1056,7 @@ _name_;; The signal name to connect to.
 _callback_;; Callback function that will be called when the signal is emitted.
 _after_;; Whether to install the handler after the default handler, default
 false.
-_returns_;; The signal id of the signal.
+*returns*;; The signal id of the signal.
 ****
 
 ==== Number object.connectBlocked(String name, Function callback, [Boolean after]) 
@@ -1026,7 +1070,7 @@ _name_;; The signal name to connect to.
 _callback_;; Callback function that will be called when the signal is emitted.
 _after_;; Whether to install the handler after the default handler, default
 false.
-_returns_;; The signal id of the signal.
+*returns*;; The signal id of the signal.
 ****
 
 ==== Boolean object.disconnect(Number id) 
@@ -1035,7 +1079,7 @@ _returns_;; The signal id of the signal.
 Disconnect from a gobject-signal.
 
 _id_;; The signal id obtained from connect
-_returns_;; true if the signal was disconnected
+*returns*;; true if the signal was disconnected
 ****
 
 ==== Number object.notify(String name, Function callback, [Boolean after]) 
@@ -1048,7 +1092,7 @@ _name_;; The property name to connect to, the name can also be in camelcase.
 _callback_;; Callback function that will be called when the property changes.
 _after_;; Whether to install the handler after the default handler, default
 after.
-_returns_;; The signal id of the signal.
+*returns*;; The signal id of the signal.
 ****
 
 ==== Number object.notifyBlocked(String name, Function callback, [Boolean after]) 
@@ -1061,7 +1105,7 @@ _name_;; The property name to connect to, the name can also be in camelcase.
 _callback_;; Callback function that will be called when the property changes.
 _after_;; Whether to install the handler after the default handler, default
 after.
-_returns_;; The signal id of the signal.
+*returns*;; The signal id of the signal.
 ****
 
 ==== void object.unblockSignal(Number signalid)
@@ -1106,7 +1150,7 @@ _line_;; Starting line number, useful for debugging. If linenumber is
 greater than 0 error messages will be printed to stderr, optional.
 _global_;; true to inject it into the global scope, false to encapsulate it
 in a function, optional
-_returns_;; The return value of the script. If the script is injected globally
+*returns*;; The return value of the script. If the script is injected globally
 inject always returns null. The return value is always converted to a string.
 To return objects call JSON.parse on the return value. 
 
@@ -1136,7 +1180,7 @@ Loads an uri in a webview.
 _uri_;; The uri to load
 _callback_;; A callback function that will be called when the load status
 changes, return true to stop the emission, optional
-_returns_;; true if the uri is loaded
+*returns*;; true if the uri is loaded
 ****
 
 ==== void wv.reload(void) 
@@ -1167,7 +1211,7 @@ if width is set.
 _keepAspect_;; Whether to keep the aspect ratio, if set to true the new
 image will have the same aspect ratio as the original webview, width and
 height are taken as maximum sizes and must both be > 0, optional.
-_returns_;; A cairo_status_t (0 on success) or -1 if an error occured.
+*returns*;; A cairo_status_t (0 on success) or -1 if an error occured.
 ****
 
 
@@ -1230,7 +1274,7 @@ _historylist.forwardLength_;; Number of items that succeed the current item
 Gets a WebKitWebHistoryItem. 
 
 _position_;; The position of the item where 0 corresponds to the current item.
-_returns_;; A WebKitWebHistoryItem.
+*returns*;; A WebKitWebHistoryItem.
 ****
 
 == Gtk Widgets ==
@@ -1358,7 +1402,7 @@ Removes all headers.
 Gets a comma seperated header list.
 
 _name_:: Name of the header list
-_returns_:: The header list or *null*.
+*returns*:: The header list or *null*.
 ****
 
 ==== String SoupHeaders.getOne(String name)
@@ -1367,7 +1411,7 @@ _returns_:: The header list or *null*.
 Gets a header.
 
 _name_:: Name of the header
-_returns_:: The header or *null*.
+*returns*:: The header or *null*.
 ****
 
 ==== void SoupHeaders.remove(String name)
@@ -1805,7 +1849,7 @@ Connects the signal to the event
 
 _callback_;; Callback function that is invoked when the signal is emitted,
 optional but mandatory if no callback was given during signal construction.
-_returns_;; self
+*returns*;; self
 ****
 
 ==== disconnect([Function callback])
@@ -1813,7 +1857,7 @@ _returns_;; self
 
 Disconnects the signal from the event
 
-_returns_;; self
+*returns*;; self
 ****
 
 ==== toggle()
@@ -1821,7 +1865,7 @@ _returns_;; self
 
 Toggles a signal, if it is connected it will be disconnected an vice versa.
 
-_returns_;; true if the signal was connected, false otherwise
+*returns*;; true if the signal was connected, false otherwise
 ****
 
 === Static methods
@@ -1864,7 +1908,7 @@ matching callback will be disconnected, to disconnect all matching callbacks
 call use Signal.disconnectAll
 
 _object_;; The event name
-_returns_;; the disconnected signal
+*returns*;; the disconnected signal
 ****
 
 ==== Signal.disconnectAll(Function callback)
@@ -1873,7 +1917,7 @@ _returns_;; the disconnected signal
 Disconnect from all signals with matching callback function
 
 _callback_;; A callback function
-_returns_;; An array of signal that were disconnected
+*returns*;; An array of signal that were disconnected
 ****
 
 ==== Signal.emit(String name, ...)
@@ -1885,10 +1929,20 @@ Emits a signal, can be used to implement custom signals.
 _name_;; The name of the event
 _..._;; Variable number of arguments passed to the callback function of
 Signal.connect.
-_returns_;; The overall return value of all callback function, if one callback
+*returns*;; The overall return value of all callback function, if one callback
 function returns true the overall return value will be true
 ****
 
+==== Signal.once(String name, Function callback)
+****
+
+Connects to an event once
+
+_signals_;; The event name
+_callback_;; Callback function to connect to.
+*returns*;; The Signal that was connected. Calling connect() on the returned
+signal will connect the Signal only once again. 
+****
 
 == ENUM OBJECTS ==
 Enum objects are objects that have only readonly properties, mapping
@@ -2097,7 +2151,7 @@ an Error, this method will also print the corresponding source of the error.
 
 Generates a unique id.
 
-_returns_;; A unique id.
+*returns*;; A unique id.
 ****
 
 ==== void script.getPrivate(Object object, String key)
@@ -2107,7 +2161,7 @@ Gets a private property of an object previously set with *script.setPrivate*
 
 _object_;; The object on which the value was set.
 _key_;; The property name
-_returns_;; The private value
+*returns*;; The private value
 ****
 
 ==== void script.setPrivate(Object object, String key, String value)
@@ -2462,7 +2516,7 @@ Loads an extension
 _name_;; Name of the extension
 _config_;; The config for the script, if omitted the config is read from
 $XDG_CONFIG_HOME/dwb/extensionrc, optional
-_returns_;;  True if the extension was loaded
+*returns*;;  True if the extension was loaded
 ****
 
 ==== Boolean extensions.toggle(String name, [Object config]) 
@@ -2472,7 +2526,7 @@ Toggles an extension
 _name_;; Name of the extension
 _config_;; The config for the extension.
 optional
-_returns_;;  True if the extension was loaded, false if it was unloaded.
+*returns*;;  True if the extension was loaded, false if it was unloaded.
 ****
 
 ==== Boolean extensions.unload(String name) 
@@ -2480,7 +2534,7 @@ _returns_;;  True if the extension was loaded, false if it was unloaded.
 Unloads an extension
 
 _name_;; Name of the extension
-_returns_;;  True if the extension was unloaded
+*returns*;;  True if the extension was unloaded
 ****
 
 ==== void extensions.error(String name, String message|Error e, [String message]) 

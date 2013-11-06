@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 10/09/2013
+.\"      Date: 11/06/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "10/09/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "11/06/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -122,7 +122,7 @@ Callback function that will be called when the shortcut is pressed
 A name that identifies the function on command line, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the function was bound successfully
 .RE
@@ -143,7 +143,7 @@ Executes a dwb command
 a dwb command to execute, will be parsed the same way as if executed from commandline
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if execution was successful
 .RE
@@ -180,7 +180,7 @@ Path to a file to include
 Whether to include the script into the global scope, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The return value of the included file
 .RE
@@ -330,7 +330,7 @@ Unbind a shortcut that was previously bound with bind
 Either the function or the optional name passed to bind\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the function was unbound
 .RE
@@ -353,7 +353,7 @@ Same as include but this function can only be called from scripts inside an arch
 Path of the file in the archive
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The object returned from the included file
 .RE
@@ -463,7 +463,7 @@ Shows a confirmation prompt\&.
 The prompt message
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if
 \fBy\fR
@@ -519,7 +519,7 @@ Get directory entries\&.
 A path to a directory
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 An array with the directory names
 .RE
@@ -598,7 +598,7 @@ The message for the prompt
 Whether the chars should be visible, pass false for a password prompt, default true, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The text that was entered or null
 .RE
@@ -619,7 +619,7 @@ Read from a file\&.
 Path to a file that should be read
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A string with the file content
 .RE
@@ -650,7 +650,7 @@ Either "a" to append to the file, or "w" to strip the file or create a new file\
 The text that should be written to the file
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if writing was successful
 .RE
@@ -679,7 +679,7 @@ Path to a file to check
 The flags to test
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if any of the test on the flags is true
 .RE
@@ -700,7 +700,7 @@ Get a system environment variable
 Name of the variable
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The variable or null if the variable wasn\(cqt found
 .RE
@@ -716,7 +716,7 @@ The variable or null if the variable wasn\(cqt found
 .sp
 Get the current process id of the instance\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The process id\&.
 .RE
@@ -742,7 +742,7 @@ Path to create
 The permissions the directory will get
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if creation was successful or directory already existed
 .RE
@@ -753,7 +753,7 @@ true if creation was successful or directory already existed
 .nr an-break-flag 1
 .br
 .ps +1
-\fBDeferred system.spawn(String command, [Function stdout], [Function stderr], [Object environ])\fR
+\fBDeferred system.spawn(String command, [Object options])\fR
 .RS 4
 .sp
 Executes a shell command using the default search path
@@ -763,28 +763,39 @@ Executes a shell command using the default search path
 The command to execute
 .RE
 .PP
-\fIstdout(String)\fR
+\fIoptions\fR
 .RS 4
-Callback function for stdin, any strings returned from the callback are passed to stdin of the spawned process, pass
-null
-if only stderr is needed, optional
+Options
 .RE
 .PP
-\fIstderr(String)\fR
+\fIoptions\&.onStdout\fR
 .RS 4
-Callback function for stderr, any strings returned from the callback are passed to stdin of the process, pass
-null
-if stderr is not needed and environment variables should be set, optional
+A callback function that is called when a line from stdout was read\&. The function takes one parameter, the line that has been read\&. To get the complete stdout use either onFinished or the Deferred returned from system\&.spawn\&.
 .RE
 .PP
-\fIenviron\fR
+\fIoptions\&.onStderr\fR
 .RS 4
-Object that can be used to add environment variables to the children environment, optional\&.
+A callback function that is called when a line from stderr was read\&. The function takes one parameter, the line that has been read\&. To get the complete stderr use either onFinished or the Deferred returned from system\&.spawn\&.
 .RE
 .PP
-\fIreturns\fR
+\fIoptions\&.onFinished\fR
 .RS 4
-A deferred, it will be resolved if the child exits normally, it will be rejected if the child process exits abnormally, the first parameter of the reject function will be the status code of the child process\&.
+A callback that will be called when the child process has terminated\&. The callback takes one argument, an object that contains stdout, stderr and status, i\&.e\&. the return code of the child process\&.
+.RE
+.PP
+\fIoptions\&.stdin\fR
+.RS 4
+String that will be piped to stdin of the child process\&.
+.RE
+.PP
+\fIoptions\&.environment\fR
+.RS 4
+Hash of environment variables that will be set in the childs environment
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+A deferred, it will be resolved if the child exits normally, it will be rejected if the child process exits abnormally\&. The argument passed to resolve and reject is an Object containing stdout, stderr and status, i\&.e\&. the return code of the child process\&.
 .RE
 .RE
 .sp
@@ -808,7 +819,7 @@ The command to execute
 Object that can be used to add environment variables to the children environment, optional\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 An object that contains stdout, stderr and status\&.
 .RE
@@ -847,7 +858,7 @@ Gets the webview object of the nth tab
 Number of the tab
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The corresponding webview
 .RE
@@ -871,7 +882,7 @@ Gets the base domain name from a hostname where the base domain name is the effe
 a hostname
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 the base domain
 .RE
@@ -897,7 +908,7 @@ A domain name
 The domain pattern to check
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the host matches
 .RE
@@ -923,7 +934,7 @@ A host name
 The host pattern to check
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the host matches
 .RE
@@ -944,7 +955,7 @@ Parses an uri to a SoupURI object, see also \fISOUPURI\fR\&.
 The uri to parse
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A parsed uri or
 \fBnull\fR
@@ -992,7 +1003,7 @@ The content type
 The data to sent
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the request was sent\&.
 .RE
@@ -1018,7 +1029,7 @@ The uri the request will be sent to\&.
 The http request method, default GET, optional\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 Object that contains the response body, the response headers and the http status code of the request\&.
 .RE
@@ -1047,7 +1058,7 @@ Interval in milliseconds
 Function to execute
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 An id that can be passed to timerStop
 .RE
@@ -1068,7 +1079,7 @@ Stops a timer started by timerStart
 The id returned from timerStart
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the timer was stopped
 .RE
@@ -1076,6 +1087,48 @@ true if the timer was stopped
 .SS "util"
 .sp
 The util object implements helper methods\&.
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.base64Decode(String text)\fR
+.RS 4
+.sp
+Decodes a base64\-encoded string to a string\&.
+.PP
+\fItext\fR
+.RS 4
+The string to decode
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+The decoded string
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.base64Encode(String text)\fR
+.RS 4
+.sp
+Encodes a string to base64\&.
+.PP
+\fItext\fR
+.RS 4
+The string to encode
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+A base64\-representation of the string
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -1092,7 +1145,7 @@ Converts a non\-camelcase string to a camelcase string\&.
 A non\-camelcase string
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The a camelcase string
 .RE
@@ -1109,7 +1162,7 @@ The to compute the checksum for\&.
 The type of the checksum, optional, defaults to ChecksumType\&.sha256
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The checksum
 .RE
@@ -1130,7 +1183,7 @@ Gets the body of a function, useful for scripts that will be injected into sites
 A function
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The body of the function as a string
 .RE
@@ -1161,7 +1214,7 @@ A Modifier
 A keyval as listed in gdkkeysyms\&.h
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the event was dispatched
 .RE
@@ -1177,7 +1230,7 @@ True if the event was dispatched
 .sp
 Gets the the current mode\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The mode, see Modes for possible modes\&.
 .RE
@@ -1193,7 +1246,7 @@ The mode, see Modes for possible modes\&.
 .sp
 Get selected text from the focused webview\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The selection or null if no text was selected\&.
 .RE
@@ -1214,7 +1267,7 @@ Escapes text for usage with pango markup\&.
 A text to escape
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The escaped text or
 \fInull\fR;
@@ -1241,7 +1294,7 @@ An object
 Variable number of objects to mix in\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 self or a new object if self is null or undefined
 .RE
@@ -1283,6 +1336,37 @@ Whether the items are readonly, default false, optional\&.
 .nr an-break-flag 1
 .br
 .ps +1
+\fBvoid util.pathComplete(Function callback, [String label], [String initialPath], [Boolean dirOnly])\fR
+.RS 4
+.sp
+Initializes filename completion\&.
+.PP
+\fIcallback\fR
+.RS 4
+Callback function called when a path was chosen or escape was pressed
+.RE
+.PP
+\fIlabel\fR
+.RS 4
+The command line label
+.RE
+.PP
+\fIinitialPath\fR
+.RS 4
+The initial path, defaults to the current working directory
+.RE
+.PP
+\fIdirOnly\fR
+.RS 4
+Whether to complete only directories, default false\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBvoid util.uncamelize(String text)\fR
 .RS 4
 .sp
@@ -1293,7 +1377,7 @@ Converts camel\-case string for usage with GObject properties to a non\-camel\-c
 The text to uncamlize
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The uncamelized string
 .RE
@@ -1347,7 +1431,7 @@ This method is basically the same as Array\&.indexOf but without type checking\&
 The object to search for
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The index in the array or \-1 if the Object wasn\(cqt found\&.
 .RE
@@ -1368,7 +1452,7 @@ This method is basically the same as Array\&.lastIndexOf but without type checki
 The object to search for
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The index in the array or \-1 if the Object wasn\(cqt found\&.
 .RE
@@ -1391,7 +1475,7 @@ or
 \fBthis\fR, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A new function that calls script\&.debug on errors\&.
 .RE
@@ -1418,7 +1502,7 @@ The Selection to get
 If a callback function is used the clipboard will be fetched asynchronously, the first parameter will be the content of the clipboard, else it will be fetched synchronously
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 If no callback was provided it returns the text content of the clipboard\&.
 .RE
@@ -1516,7 +1600,12 @@ Label used for status information, fourth child of
 .sp
 Deferred objects can be used to manage asynchronous operations\&. It can trigger a callback function when an asynchrounous operation has finished, and allows chaining of callbacks\&. Deferred basically has 2 callback chains, a \fIdone\fR\-chain and a \fIfail\fR\-chain\&. If a asynchronous operation is successful the deferred should be resolved and the done callback chain of the deferred is called\&. If a asynchronous operation fails the deferred should be rejected and the fail callback chain of the deferred is called\&.
 .sp
-Deferreds implement the following methods:
+Deferreds implement the following properties and methods:
+.PP
+\fIDeferred\&.isFulFilled (Boolean, read)\fR
+.RS 4
+Whether this deferred is resolved or rejected\&.
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -1533,7 +1622,7 @@ Registers a function for then done and fail chain\&.
 A callback function that will be called when the Deferred is resolved or rejected\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A new deferred that can be used to chain callbacks\&.
 .RE
@@ -1554,7 +1643,7 @@ Registers a function for the done\-chain\&.
 A callback function that will be called when the Deferred is resolved\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A new deferred that can be used to chain callbacks\&.
 .RE
@@ -1575,7 +1664,7 @@ Registers a function for the fail\-chain\&.
 A callback function that will be called when the deferred is rejected\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A new deferred that can be used to chain callbacks\&.
 .RE
@@ -1637,7 +1726,7 @@ A callback function that will be called when the deferred is resolved\&. If the 
 A callback function that will be called when the deferred is rejected\&. If the function returns a deferred the original deferred will be replaced with the new deferred\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A new deferred that can be used to chain callbacks\&.
 .RE
@@ -1670,7 +1759,7 @@ Callback function\&.
 Callback function\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The value\&.
 .RE
@@ -1860,7 +1949,7 @@ Matches against a string
 The string to match against\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the string matches the Glob\&.
 .RE
@@ -1876,7 +1965,7 @@ True if the string matches the Glob\&.
 .sp
 Converts a Glob to string\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A string represantation of the Glob\&.
 .RE
@@ -1970,7 +2059,7 @@ Callback function that will be called when the signal is emitted\&.
 Whether to install the handler after the default handler, default false\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The signal id of the signal\&.
 .RE
@@ -2001,7 +2090,7 @@ Callback function that will be called when the signal is emitted\&.
 Whether to install the handler after the default handler, default false\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The signal id of the signal\&.
 .RE
@@ -2022,7 +2111,7 @@ Disconnect from a gobject\-signal\&.
 The signal id obtained from connect
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the signal was disconnected
 .RE
@@ -2053,7 +2142,7 @@ Callback function that will be called when the property changes\&.
 Whether to install the handler after the default handler, default after\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The signal id of the signal\&.
 .RE
@@ -2084,7 +2173,7 @@ Callback function that will be called when the property changes\&.
 Whether to install the handler after the default handler, default after\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The signal id of the signal\&.
 .RE
@@ -2198,7 +2287,7 @@ Starting line number, useful for debugging\&. If linenumber is greater than 0 er
 true to inject it into the global scope, false to encapsulate it in a function, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The return value of the script\&. If the script is injected globally inject always returns null\&. The return value is always converted to a string\&. To return objects call JSON\&.parse on the return value\&.
 .RE
@@ -2256,7 +2345,7 @@ The uri to load
 A callback function that will be called when the load status changes, return true to stop the emission, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the uri is loaded
 .RE
@@ -2314,7 +2403,7 @@ The height of the png, if height is < 0 and width is > 0 the image will have the
 Whether to keep the aspect ratio, if set to true the new image will have the same aspect ratio as the original webview, width and height are taken as maximum sizes and must both be > 0, optional\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A cairo_status_t (0 on success) or \-1 if an error occured\&.
 .RE
@@ -2418,7 +2507,7 @@ Gets a WebKitWebHistoryItem\&.
 The position of the item where 0 corresponds to the current item\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A WebKitWebHistoryItem\&.
 .RE
@@ -2678,7 +2767,7 @@ Gets a comma seperated header list\&.
 Name of the header list
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The header list or
 \fBnull\fR\&.
@@ -2700,7 +2789,7 @@ Gets a header\&.
 Name of the header
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The header or
 \fBnull\fR\&.
@@ -3755,7 +3844,7 @@ Connects the signal to the event
 Callback function that is invoked when the signal is emitted, optional but mandatory if no callback was given during signal construction\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 self
 .RE
@@ -3771,7 +3860,7 @@ self
 .sp
 Disconnects the signal from the event
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 self
 .RE
@@ -3787,7 +3876,7 @@ self
 .sp
 Toggles a signal, if it is connected it will be disconnected an vice versa\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 true if the signal was connected, false otherwise
 .RE
@@ -3872,7 +3961,7 @@ Either a Signal or the callback of a signal If a callback is passed to this func
 The event name
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 the disconnected signal
 .RE
@@ -3893,7 +3982,7 @@ Disconnect from all signals with matching callback function
 A callback function
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 An array of signal that were disconnected
 .RE
@@ -3919,9 +4008,35 @@ The name of the event
 Variable number of arguments passed to the callback function of Signal\&.connect\&.
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The overall return value of all callback function, if one callback function returns true the overall return value will be true
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBSignal.once(String name, Function callback)\fR
+.RS 4
+.sp
+Connects to an event once
+.PP
+\fIsignals\fR
+.RS 4
+The event name
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+Callback function to connect to\&.
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+The Signal that was connected\&. Calling connect() on the returned signal will connect the Signal only once again\&.
 .RE
 .RE
 .SH "ENUM OBJECTS"
@@ -4169,7 +4284,7 @@ Same as io\&.debug but also prints additional information, e\&.g\&. if the objec
 .sp
 Generates a unique id\&.
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 A unique id\&.
 .RE
@@ -4195,7 +4310,7 @@ The object on which the value was set\&.
 The property name
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 The private value
 .RE
@@ -4766,7 +4881,7 @@ Name of the extension
 The config for the script, if omitted the config is read from $XDG_CONFIG_HOME/dwb/extensionrc, optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the extension was loaded
 .RE
@@ -4792,7 +4907,7 @@ Name of the extension
 The config for the extension\&. optional
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the extension was loaded, false if it was unloaded\&.
 .RE
@@ -4813,7 +4928,7 @@ Unloads an extension
 Name of the extension
 .RE
 .PP
-\fIreturns\fR
+\fBreturns\fR
 .RS 4
 True if the extension was unloaded
 .RE
