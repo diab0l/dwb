@@ -132,6 +132,19 @@ COMMANDS
             Emitted when a tab is closed, return format: 'close_tab <n>'
             *n*::::
                 Number of tab that was closed
+        *document_finished* ;;
+            Emitted when the DOM document load has been finished for a frame,
+            return format: 'document_finished <n> <mainframe>'
+            *n*::::
+                Number of the tab 
+            *mainframe*::::
+                'true' if it is the DOM document of the mainframe has been
+                finshed loading, 'false' if the DOM document of a subframe has
+                been finshed.
+        *download_finished* ;;
+            Emitted when a download has been finished, return format: 'download_finished <destination_uri>'
+            *destination_uri*::::
+                The destination uri of the download, e.g. file:///tmp/download.pdf
         *execute* ;;
             Emitted when a command is executed, return format: 'execute <command> <argument> <n>'
             *command*::::

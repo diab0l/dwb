@@ -78,6 +78,8 @@ get_hooks(char **list, int count)
         HOOK_MAP(focus_tab), 
         HOOK_MAP(execute), 
         HOOK_MAP(change_mode),
+        HOOK_MAP(download_finished),
+        HOOK_MAP(document_finished),
         { 0, 0 }
     };
 #undef HOOK_MAP

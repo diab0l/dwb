@@ -31,6 +31,8 @@ enum {
     IPC_HOOK_focus_tab = 1<<6, 
     IPC_HOOK_execute = 1<<7, 
     IPC_HOOK_change_mode = 1<<8, 
+    IPC_HOOK_download_finished = 1<<9, 
+    IPC_HOOK_document_finished = 1<<10, 
 };
 
 void ipc_start(GtkWidget *);

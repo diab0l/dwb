@@ -150,6 +150,8 @@ view_document_finished(WebKitWebView *wv, WebKitWebFrame *frame, GList *gl)
         ScriptSignal signal = { SCRIPTS_WV(gl), { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, DOCUMENT_LOADED, 1) };
         scripts_emit(&signal);
     }
+    IPC_SEND_HOOK(document_finished, "%d %s", g_list_position(dwb.state.views, gl) + 1, 
+            webkit_web_view_get_main_frame(wv) ? "true" : "false");
 }
 #endif
 
@@ -1073,10 +1075,6 @@ view_popup_activate_cb(GtkMenuItem *menu, GList *gl)
 #endif
 }/*}}}*/
 
-void on_destroy(GtkWidget *item)
-{
-    puts("destroy");
-}
 /* view_populate_popup_cb {{{*/
 static void 
 view_populate_popup_cb(WebKitWebView *web, GtkWidget *menu, GList *gl) 

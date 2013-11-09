@@ -22,6 +22,7 @@
 #include "util.h"
 #include "soup.h"
 #include "scripts.h"
+#include "ipc.h"
 
 typedef struct _DwbDownload {
     GtkWidget *event;
@@ -338,6 +339,7 @@ download_status_cb(WebKitDownload *download, GParamSpec *p, DwbDownloadStatus *d
             switch (status) 
             {
                 case WEBKIT_DOWNLOAD_STATUS_FINISHED: 
+                    IPC_SEND_HOOK(download_finished, "%s", webkit_download_get_destination_uri(download));
                     download_finished(label);
                     break;
                 case WEBKIT_DOWNLOAD_STATUS_CANCELLED: 
