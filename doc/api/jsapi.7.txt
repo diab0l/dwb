@@ -2317,10 +2317,9 @@ _keepFormdata_;;  If useGPG is enabled and this value is set to true the
 
 ==== perdomainsettings
 
-An extension that can be used for per-domain-settings. Valid settings are
-the properties of WebKitWebSettings but in camelcase, see 
-http://webkitgtk.org/reference/webkitgtk/unstable/WebKitWebSettings.html
-for details. 
+An extension that can be used for setting some settings on a domain basis. 
+Valid settings are the properties of WebKitWebSettings but in camelcase, see 
+the webkitgtk documentation for details.
 
 *Configuration options*::
 
