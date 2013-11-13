@@ -7,7 +7,7 @@ LICENSE="GNU General Public License, version 3 or later"
 include $(BASE_DIR)/version.mk
 
 
-CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -Os
+CFLAGS += -Wall -pedantic -Werror -Wextra -std=c99 -Os
 CFLAGS += -DVERSION=\"$(VERSION)\"
 CFLAGS += -DNAME=\"$(NAME)\"
 CFLAGS += -DCOPYRIGHT=\"$(COPYRIGHT)\"
