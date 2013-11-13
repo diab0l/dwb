@@ -2,11 +2,21 @@
 
 BASEDIR=..
 
+REAL_NAME=dwb
+COPYRIGHT="(C) 2010-2013 Stefan Bolte"
+LICENSE="GNU General Public License, version 3 or later"
+
 include $(BASEDIR)/config.mk
 include config.mk
 
 CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_EXAR)
 CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_RC)
+
+CFLAGS += -DNAME=\"$(NAME)\" 
+CFLAGS += -DVERSION=\"$(VERSION)\" 
+CFLAGS += -DCOPYRIGHT=\"$(COPYRIGHT)\"
+CFLAGS += -DLICENSE=\"$(LICENSE)\"
+CFLAGS += -DREAL_NAME=\"$(REAL_NAME)\"
 
 DEPS=$(patsubst %.o, %.d, $(OBJ)) 
 
