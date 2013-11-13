@@ -306,7 +306,7 @@ main(int argc, char **argv)
 
     if (STREQ("-h", *pargv) || STREQ("--help", *pargv))
     {
-        help(0);
+        help();
         return 0;
     }
     if (STREQ("-v", *pargv) || STREQ("--version", *pargv))
@@ -352,7 +352,7 @@ main(int argc, char **argv)
         else 
         {
             fprintf(stderr, "Unknown option %s\n", *pargv);
-            help(1);
+            help();
             goto finish;
         }
     }

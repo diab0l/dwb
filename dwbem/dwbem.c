@@ -1310,7 +1310,7 @@ main(int argc, char **argv)
     char **o_edit = NULL;
     char *o_proxy = NULL;
     char **o_archive_options = NULL;
-    gboolean o_archive = NULL;
+    gboolean o_archive = false;
     gboolean o_noconfig = false;
     gboolean o_update = false;
     gboolean o_list_installed = false;
