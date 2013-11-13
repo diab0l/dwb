@@ -2493,16 +2493,6 @@ timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc,
     return JSValueMakeBoolean(ctx, false);
 }/*}}}*/
 
-void 
-timer_stopped_cb(JSObjectRef func)
-{
-    if (!TRY_CONTEXT_LOCK)
-        return;
-
-    if (s_global_context != NULL)
-        JSValueUnprotect(s_global_context, func);
-    CONTEXT_UNLOCK;
-}
 /**
  * Calls a function reqeatedly or after a timeout, similar to window.setInterval
  * or window.setTimeout that are available in the webcontext.
@@ -2549,7 +2539,7 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc
 
     JSValueProtect(ctx, func);
 
-    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)timer_stopped_cb);
+    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)scripts_unprotect);
     s_timers = g_slist_prepend(s_timers, GINT_TO_POINTER(ret));
     return JSValueMakeNumber(ctx, ret);
 }/*}}}*/
@@ -6721,9 +6711,10 @@ scripts_execute_one(const char *script)
 void
 scripts_unprotect(JSObjectRef obj) 
 {
-    if (!TRY_CONTEXT_LOCK)
+
+    if (obj == NULL || !TRY_CONTEXT_LOCK)
         return;
-    if (s_global_context != NULL && obj != NULL) 
+    if (s_global_context != NULL) 
         JSValueUnprotect(s_global_context, obj);
     CONTEXT_UNLOCK;
 }

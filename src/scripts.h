@@ -72,7 +72,6 @@ void scripts_end(void);
 void scripts_init_script(const char *, const char *);
 void scripts_init_archive(const char *, const char *);
 gboolean scripts_init(gboolean);
-void scripts_reinit();
 void scripts_unprotect(JSObjectRef);
 DwbStatus scripts_eval_key(KeyMap *m, Arg *arg);
 gboolean scripts_execute_one(const char *script);
