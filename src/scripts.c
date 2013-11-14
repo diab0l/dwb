@@ -746,7 +746,7 @@ static SSignal *
 ssignal_new()
 {
     SSignal *sig = g_malloc(sizeof(SSignal)); 
-    sig->query = NULL;
+    sig->query = g_malloc(sizeof(GSignalQuery));
     sig->func = NULL;
     sig->object = NULL;
     return sig;
@@ -5400,9 +5400,9 @@ notify_callback(GObject *o, GParamSpec *param, SSignal *sig)
         return;
     if (s_global_context != NULL)
     {
-        g_signal_handler_block(o, sig->id);
+        g_signal_handlers_block_by_func(o, G_CALLBACK(notify_callback), sig);
         call_as_function_debug(s_global_context, sig->func, make_object(s_global_context, o), 0, NULL);
-        g_signal_handler_unblock(o, sig->id);
+        g_signal_handlers_unblock_by_func(o, G_CALLBACK(notify_callback), sig);
     }
     CONTEXT_UNLOCK;
 }
@@ -5457,9 +5457,12 @@ gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
         JSValueProtect(ctx, func);
         SSignal *sig = ssignal_new();
         sig->func = func;
-        sig->id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), sig, (GClosureNotify)on_disconnect_object, flags);
-        if (sig->id > 0)
+        id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), sig, (GClosureNotify)on_disconnect_object, flags);
+        if (id > 0)
+        {
+            sig->id = id;
             sigdata_append(sig->id, o); 
+        }
         else 
             ssignal_free(sig);
     }

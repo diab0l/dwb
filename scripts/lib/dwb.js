@@ -270,15 +270,15 @@
         },
         "_deprecated" : 
         {
-            value : function(on, nn, args) 
+            value : function(on, nn, args, attachScope) 
             {
                 var i, l, ns, ctx;
                 io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
                 ns = nn.split(".");
-                ctx = this;
+                ctx = attachScope || this;
                 for (i=0, l=ns.length; i<l-1; i++)
                     ctx = ctx[ns[i]];
-                return ctx[ns[l-1]].apply(this, args);
+                return ctx[ns[l-1]].apply(ctx, args);
             }
         },
         "_initNewContext" : 
@@ -539,6 +539,7 @@
              * @memberOf GObject.prototype
              * @name notifyBlocked
              * @function
+             * @deprecated
              *
              * @param {String} name     
              *      The property name, can also be in camelcase.
@@ -558,9 +559,9 @@
              * */
             "notifyBlocked" : 
             {
-                value : function(name, callback, after) 
+                value : function() 
                 {
-                    return this.connectBlocked.call(this, "notify::" + util.uncamelize(name), callback, after || false);
+                    return _deprecated("notifyBlocked", "notify", arguments, this);
                 }
             }
     });
