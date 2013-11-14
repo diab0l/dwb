@@ -272,13 +272,13 @@
         {
             value : function(on, nn, args, attachScope) 
             {
-                var i, l, ns, ctx;
+                var i, l, ns, ctx, actx;
                 io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
                 ns = nn.split(".");
-                ctx = attachScope || this;
+                ctx = actx = attachScope || this;
                 for (i=0, l=ns.length; i<l-1; i++)
                     ctx = ctx[ns[i]];
-                return ctx[ns[l-1]].apply(ctx, args);
+                return ctx[ns[l-1]].apply(actx, args);
             }
         },
         "_initNewContext" : 
