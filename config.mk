@@ -142,9 +142,6 @@ LOCAL_FILE=local.html
 #Base javascript script
 BASE_SCRIPT=base.js
 
-# VARIOUS FILES
-PLUGIN_FILE=pluginblocker.asc
-
 # CFLAGS
 CFLAGS := $(CFLAGS)
 CFLAGS += -Wall 
@@ -183,7 +180,6 @@ M4FLAGS += -DWITH_GTK3=1
 endif
 
 #defines
-CFLAGS += -DPLUGIN_FILE=\"$(PLUGIN_FILE)\"
 CFLAGS += -DINFO_FILE=\"$(INFO_FILE)\"
 CFLAGS += -DSETTINGS_FILE=\"$(SETTINGS_FILE)\"
 CFLAGS += -DHEAD_FILE=\"$(HEAD_FILE)\"

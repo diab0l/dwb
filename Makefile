@@ -104,7 +104,7 @@ runsandbox: sandbox
 	./sandbox/bin/dwb
 
 sandbox: clean
-	make PREFIX=sandbox DESTDIR= install
+	make PREFIX=$(CURDIR)/sandbox DESTDIR= install
 
 
 snapshot: 
