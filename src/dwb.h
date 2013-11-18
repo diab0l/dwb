@@ -1042,6 +1042,7 @@ void dwb_init_custom_keys(gboolean);
 void dwb_update_tabs(void);
 void dwb_check_auto_insert(GList *);
 void dwb_version();
+void dwb_version_libs();
 DwbStatus dwb_pack(const char *layout, gboolean rebuild);
 void dwb_init_signals(void);
 void dwb_init_vars(void);

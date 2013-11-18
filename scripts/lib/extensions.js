@@ -5,7 +5,7 @@
  * <b>/*&lt;INFO ... INFO&gt;*<span><span>/</b> that will be used by dwbem to find information
  * about the extension and <b>//&lt;DEFAULT_CONFIG ... //&gt;DEFAULT_CONFIG</b> that
  * will be used by dwbem to find the default configuration
- * Every extension must also return an object that can have up to four properties.
+ * Every extension must also return an object that can have up to five properties.
  * 
  *
  *

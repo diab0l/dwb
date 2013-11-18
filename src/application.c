@@ -38,6 +38,7 @@ static gboolean s_opt_list_sessions = false;
 static gboolean s_opt_single = false;
 static gboolean s_opt_override_restore = false;
 static gboolean s_opt_version = false;
+static gboolean s_opt_version_full = false;
 static gboolean s_opt_force = false;
 static gboolean s_opt_fallback = false;
 static gboolean s_opt_enable_scripts = false;
@@ -58,6 +59,7 @@ static GOptionEntry options[] = {
     { "profile", 'p', 0, G_OPTION_ARG_STRING, &dwb.misc.profile, "Load configuration for 'profile'", "profile" },
     { "execute", 'x', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_exe, "Execute commands", NULL},
     { "version", 'v', 0, G_OPTION_ARG_NONE, &s_opt_version, "Show version information and exit", NULL},
+    { "version-full", 'V', 0, G_OPTION_ARG_NONE, &s_opt_version_full, "Show detailed version information and exit", NULL},
     { "enable-scripts", 'S', 0, G_OPTION_ARG_NONE, &s_opt_enable_scripts, "Enable javascript api", NULL},
     { "delete-profile", 'd', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_delete_profile, "Deletes a profile", NULL},
     { "set-as-default", 0, G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, &application_parse_option, "Sets dwb as default browser", NULL},
@@ -193,6 +195,12 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     if (s_opt_list_sessions) 
     {
         session_list();
+        return true;
+    }
+    if (s_opt_version_full)
+    {
+        dwb_version();
+        dwb_version_libs();
         return true;
     }
     if (s_opt_version) 

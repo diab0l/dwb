@@ -85,27 +85,27 @@ Block requests from thirdparty domains permanently or just for a session, whitel
 INFO>*/
 
 var defaultConfig = {
-    //<DEFAULT_CONFIG
-    // path to a whitelist 
-    whiteList : data.configDir + "/" + data.profile + "/requestpolicy.json",
+//<DEFAULT_CONFIG
+// path to a whitelist 
+whiteList : data.configDir + "/" + data.profile + "/requestpolicy.json",
 
-    // shortcut to block/allow requests
-    shortcut : "erp",
+// shortcut to block/allow requests
+shortcut : "erp",
 
-    // shortcut to unblock requests from current site that are blocked on all
-    // sites
-    unblockCurrent : "erC",
+// shortcut to unblock requests from current site that are blocked on all
+// sites
+unblockCurrent : "erC",
 
-    // shortcut to unblock requests that are blocked on all sites
-    unblockAll : "erA",
+// shortcut to unblock requests that are blocked on all sites
+unblockAll : "erA",
 
-    // reload current site after blocking / unblocking a request
-    autoreload : false, 
+// reload current site after blocking / unblocking a request
+autoreload : false, 
 
-    // notify about blocked requests
-    notify : false
+// notify about blocked requests
+notify : false
 
-    //>DEFAULT_CONFIG
+//>DEFAULT_CONFIG
 };
 var config = {};
 
@@ -394,7 +394,7 @@ function navigationCB(wv, frame)
         o.domains = [];
         o.blocked = 0;
     }
-    }
+}
 
 function loadFinishedCB(wv) 
 {
