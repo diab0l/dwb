@@ -47,7 +47,7 @@ domain_get_cookie_domains(WebKitWebView *wv)
 
     const char *host = soup_uri_get_host(uri);
     char *base_host = g_strconcat(".", host, NULL);
-    const char *base_domain = domain_get_base_for_host(base_host);
+    const char *base_domain = domain_get_base_for_host(base_host+1);
 
     char *cur = base_host;
     char *nextdot;
