@@ -80,6 +80,9 @@ extensions, e.g. *dwb --set-as-default "extension html htm"*.
 *-v, --version*::
   Show version information and exit.
 
+*-V, --version-full*::
+  Show full version information, including library versions, and exit.
+
 [[MODES]]
 MODES
 -----
