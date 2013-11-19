@@ -82,7 +82,7 @@
         "assert", "count", "debug", "error", "group", "groupCollapsed", 
         "groupEnd", "info", "log", "time", "timeEnd", "warn" 
     ];
-    for (i = methods.length; i>=0; --i)
+    for (i = methods.length-1; i>=0; --i)
     {
         method = methods[i];
         o[method] = { value : execute.bind(null, method) };
