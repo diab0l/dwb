@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 11/10/2013
+.\"      Date: 11/19/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "11/10/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "11/19/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -795,7 +795,7 @@ Hash of environment variables that will be set in the childs environment
 .PP
 \fBreturns\fR
 .RS 4
-A deferred, it will be resolved if the child exits normally, it will be rejected if the child process exits abnormally\&. The argument passed to resolve and reject is an Object containing stdout, stderr and status, i\&.e\&. the return code of the child process\&.
+A deferred, it will be resolved if the child process exits normally, it will be rejected if the child process exits abnormally\&. The argument passed to resolve and reject is an object containing stdout, stderr and status, i\&.e\&. the return code of the child process\&.
 .RE
 .RE
 .sp
@@ -3823,7 +3823,7 @@ Whether the signal is connected
 Unique id of the signal
 .RE
 .PP
-\fIname (Number, read)\fR
+\fIname (String, read)\fR
 .RS 4
 Name of the event
 .RE
@@ -5090,4 +5090,3 @@ return {
 .SH "SEE ALSO"
 .sp
 \fBdwb\fR(1) \fBdwbem\fR(1)
-

@@ -369,9 +369,9 @@ terminated. The callback takes one argument, an object that contains stdout,
 stderr and status, i.e. the return code of the child process.
 _options.stdin_;; String that will be piped to stdin of the child process.
 _options.environment_;; Hash of environment variables that will be set in the childs environment
-*returns*;; A deferred, it will be resolved if the child exits normally, it will
+*returns*;; A deferred, it will be resolved if the child process exits normally, it will
 be rejected if the child process exits abnormally. The argument passed to
-resolve and reject is an Object containing stdout, stderr and status, i.e. the
+resolve and reject is an object containing stdout, stderr and status, i.e. the
 return code of the child process.
 
 ****
@@ -1838,7 +1838,7 @@ signal is emitted, the context of the signal will be the signal itself (i.e.
 this refers to the connected Signal).
 _connected (Boolean, read)_;; Whether the signal is connected
 _id (Number, read)_;; Unique id of the signal
-_name (Number, read)_;; Name of the event
+_name (String, read)_;; Name of the event
 
 === Methods
 
