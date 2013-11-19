@@ -1008,7 +1008,7 @@ commands_tab_move(KeyMap *km, Arg *arg)
     gtk_box_reorder_child(GTK_BOX(dwb.gui.mainbox), CURRENT_VIEW()->scroll, newpos);
 #else 
     gtk_box_reorder_child(GTK_BOX(dwb.gui.tabcontainer), CURRENT_VIEW()->tabevent, l-(newpos+1));
-    gtk_box_reorder_child(GTK_BOX(dwb.gui.tabwrapperbox), CURRENT_VIEW()->scroll, newpos);
+    gtk_box_reorder_child(GTK_BOX(dwb.gui.mainbox), CURRENT_VIEW()->scroll, newpos);
 #endif
 
     dwb.state.views = g_list_remove_link(dwb.state.views, dwb.state.fview);
