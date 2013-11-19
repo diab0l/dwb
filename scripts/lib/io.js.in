@@ -1,3 +1,4 @@
+// See COPYING for copyright and license details
 (function () {
     var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
     var prefixFile        = "\n==> DEBUG [FILE]       : ";

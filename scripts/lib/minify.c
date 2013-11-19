@@ -1,7 +1,8 @@
+/* See COPYING for copyright and license details */
 #include <stdio.h>
 #include <string.h>
 
-// remove multiline comments
+/* Removes API comments */
 
 int main(int argc, char **argv) {
     char line[1024];

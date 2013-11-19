@@ -1,3 +1,4 @@
+# See COPYING for copyright and license details
 all: $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
 
 %.js: %.js.in minify
@@ -5,7 +6,7 @@ all: $(patsubst %.js.in, %.js, $(wildcard *.js.in))
 	@./minify $< $@
 
 minify: minify.c
-	$(CC) $< -o $@
+	$(CC) $< -o $@ $(CFLAGS) $(CPPFLAGS)
 
 clean:  
 	$(RM) $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 

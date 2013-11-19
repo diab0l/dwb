@@ -1,3 +1,4 @@
+// See COPYING for copyright and license details
 (function() {
     var tldEnd = new RegExp("\\.tld$");
     Object.defineProperties(net, {

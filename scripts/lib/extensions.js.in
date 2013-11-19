@@ -1,3 +1,4 @@
+// See COPYING for copyright and license details
 /**
  * Handles extensions. If scripts should be managed by <b>dwbem</b> they must
  * be implemented as an extension. In contrast to regular scripts extensions can

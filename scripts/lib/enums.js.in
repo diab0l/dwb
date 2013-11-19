@@ -1,3 +1,4 @@
+// See COPYING for copyright and license details
 /** 
  * All enums and flags are global, the type <i>Enum</i> just
  * means that it is a number, the type <i>Flag</i> means that it is a number
