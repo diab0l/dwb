@@ -59,7 +59,7 @@ install-data: all
 	install -m 644 $(JSDIR)/$(BASE_SCRIPT) $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(JSDIR)/$(BASE_SCRIPT)
 	@# Libjs
 	install -d $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(LIBJSDIR)
-	for file in $(LIBJSDIR)/*; do \
+	for file in $(LIBJSDIR)/*.js; do \
 		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 	done
 	@#Extensions
