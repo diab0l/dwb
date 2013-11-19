@@ -6055,9 +6055,7 @@ create_global_object()
 
     /**
      * Wrapped namespace for the console in the webcontext, will print
-     * messages to the webinspector console. The only difference to the
-     * original webinspector console is that all functions only take one
-     * argument.  
+     * messages to the webinspector console. 
      *
      * @namespace 
      *      Wraps the webinspector console functions

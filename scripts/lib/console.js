@@ -73,8 +73,8 @@
      * */
     function execute(f, arg)
     {
-        tabs.current.inject("var a=JSON.parse(arguments[0]);console." + f + "(a);", 
-            JSON.stringify(arg));
+        tabs.current.inject("console." + f + ".apply(console, JSON.parse(arguments[0]));", 
+            JSON.stringify(Array.prototype.slice.call(arguments, 1)));
     }
     var i, method;
     var o = {};
