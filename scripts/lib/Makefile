@@ -6,7 +6,7 @@ all: $(patsubst %.js.in, %.js, $(wildcard *.js.in))
 	@./minify $< $@
 
 minify: minify.c
-	$(CC) $< -o $@ $(CFLAGS) $(CPPFLAGS)
+	$(CC) $< -o $@
 
 clean:  
 	$(RM) $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
