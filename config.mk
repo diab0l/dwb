@@ -28,7 +28,7 @@ DWB_LIB_DIR_EXAR = exar
 DWB_LIB_DIR_RC = dwbremote
 DWB_LIB_DIRS = $(DWB_LIB_DIR_EXAR) $(DWB_LIB_DIR_RC)
 
-SUBDIRS=$(M4DIR) $(SRCDIR) $(DWBEMDIR) 
+SUBDIRS=$(M4DIR) $(SRCDIR) $(DWBEMDIR) $(LIBJSDIR)
 SUBDIR_BUILD_FIRST=$(UTILDIR) $(DWB_LIB_DIRS)
 
 DWBEMDIR=dwbem
@@ -202,7 +202,7 @@ DCFLAGS += -O0
 DCFLAGS += -Wextra -Wno-unused-parameter
 
 # Makeflags
-MFLAGS= --no-print-directory
+MFLAGS= 
 
 #Input 
 SOURCE = $(wildcard *.c) 

@@ -441,9 +441,11 @@
                 };
             })() 
         },
-        // Called after all scripts have been loaded and executed
-        // Immediately deleted from the global object, so it is not callable
-        // from other scripts
+        /* 
+        * Called after all scripts have been loaded and executed
+        * Immediately deleted from the global object, so it is not callable
+        * from other scripts 
+        * */
         "_initAfter" : 
         { 
             value : function() 
@@ -461,7 +463,6 @@
         {
             value : function(contexts) 
             {
-                //_contexts = contexts;
                 Object.freeze(this);
             },
             configurable : true

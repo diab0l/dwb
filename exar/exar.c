@@ -469,7 +469,7 @@ int
 exar_append(const char *archive, const char *path)
 {
     assert(path != NULL);
-    char stripped[EXAR_NAME_MAX];
+    char stripped[EXAR_NAME_MAX] = {0};
 
     s_offset = get_offset(stripped, sizeof(stripped), path, 0);
 
