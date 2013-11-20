@@ -620,7 +620,7 @@ Object.freeze((function () {
         }
         else if ((tagname && (tagname == "input" || tagname == "textarea"))) 
         {
-            if (type == "radio" || type == "checkbox") 
+            if (elementType == "radio" || elementType == "checkbox") 
             {
                 e.focus();
                 p_clickElement(e, "click");
