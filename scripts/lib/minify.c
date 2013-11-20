@@ -6,18 +6,24 @@
 
 int main(int argc, char **argv) {
     char line[1024];
-    int comment = 0;
-    int ret = 1;
-    FILE *fin, *fout;
     const char *cur;
+    FILE *fin = NULL, *fout = NULL;
+    int comment = 0;
+    int ret = 0;
+
     if (argc < 3)
         return 1;
+
     fin = fopen(argv[1], "r");
     if (fin == NULL)
         return 1;
+
     fout = fopen(argv[2], "w");
     if (fout == NULL)
+    {
+        ret = 1;
         goto error_out;
+    }
     
     while (fgets(line, sizeof line, fin))
     {
@@ -35,7 +41,6 @@ int main(int argc, char **argv) {
         }
         fprintf(fout, "%s", line);
     }
-    ret = 0;
 
 error_out:
     if (fin != NULL)
