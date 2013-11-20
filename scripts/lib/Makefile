@@ -1,5 +1,7 @@
 # See COPYING for copyright and license details
-all: $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
+TARGETS := $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
+
+all: $(TARGETS)
 
 %.js: %.js.in minify
 	@echo gen $@ 
@@ -9,7 +11,7 @@ minify: minify.c
 	$(CC) $< -o $@
 
 clean:  
-	$(RM) $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
+	$(RM) $(TARGETS)
 	$(RM) minify
 
 .PHONY: clean
