@@ -70,6 +70,9 @@ set for all succeding mimetypes, e.g. *dwb --set-as-default "mimetype text/html"
 if the first argument is 'extension' it will be set for all succeeding filename
 extensions, e.g. *dwb --set-as-default "extension html htm"*.
 
+*-t, --temp-profile*::
+Create a temporary profile, will be deleted when dwb is closed
+
 *-x, --execute*='commands'::
   Execute a list of dwb commands separated by ';;', see
   <<CUSTOM_COMMANDS,'CUSTOM COMMANDS'>>

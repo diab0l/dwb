@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "dwb.h"
 #include "view.h"
 #include "session.h"
@@ -45,6 +46,7 @@ static gboolean s_opt_enable_scripts = false;
 static gchar **s_opt_delete_profile = NULL;
 static gchar *s_opt_restore = NULL;
 static gchar **s_opt_exe = NULL;
+static gchar **s_opt_temp_profile = false;
 static gchar **s_scripts;
 static GIOChannel *s_fallback_channel;
 static GOptionEntry options[] = {
@@ -57,6 +59,7 @@ static GOptionEntry options[] = {
     { "restore", 'r', G_OPTION_FLAG_OPTIONAL_ARG, G_OPTION_ARG_CALLBACK, &application_parse_option, "Restore session with name 'sessionname' or default if name is omitted", "sessionname"},
     { "override-restore", 'R', 0, G_OPTION_ARG_NONE, &s_opt_override_restore, "Don't restore last session even if 'save-session' is set", NULL},
     { "profile", 'p', 0, G_OPTION_ARG_STRING, &dwb.misc.profile, "Load configuration for 'profile'", "profile" },
+    { "temp-profile", 't', 0, G_OPTION_ARG_NONE, &s_opt_temp_profile, "Use a fresh temporary profile", NULL },
     { "execute", 'x', 0, G_OPTION_ARG_STRING_ARRAY, &s_opt_exe, "Execute commands", NULL},
     { "version", 'v', 0, G_OPTION_ARG_NONE, &s_opt_version, "Show version information and exit", NULL},
     { "version-full", 'V', 0, G_OPTION_ARG_NONE, &s_opt_version_full, "Show detailed version information and exit", NULL},
@@ -191,6 +194,10 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
             }
         }
         return true;
+    }
+    if (s_opt_temp_profile)
+    {
+        dwb.misc.profile = g_strdup_printf("%"PRId64, g_get_monotonic_time());
     }
     if (s_opt_list_sessions) 
     {
@@ -519,6 +526,10 @@ application_stop(void)
     {
         g_io_channel_shutdown(s_fallback_channel, true, NULL);
         g_io_channel_unref(s_fallback_channel);
+    }
+    if (s_opt_temp_profile)
+    {
+        dwb_delete_profile(dwb.misc.profile);
     }
     g_application_release(G_APPLICATION(s_app));
 }/*}}}*/
