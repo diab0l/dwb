@@ -5266,7 +5266,11 @@ dwb_version_libs()
 {
     fprintf(stderr, "       GTK+ : %d.%d.%d\n",  GTK_MAJOR_VERSION, GTK_MINOR_VERSION, GTK_MICRO_VERSION);
     fprintf(stderr, " WebKitGTK+ : %d.%d.%d\n",  WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION);
+#ifdef SOUP_MAJOR_VERSION
     fprintf(stderr, "    LibSoup : %d.%d.%d\n",  SOUP_MAJOR_VERSION, SOUP_MINOR_VERSION, SOUP_MICRO_VERSION);
+#else
+    fprintf(stderr, "    LibSoup : <2.42\n");
+#endif
     fprintf(stderr, "      cairo : %d.%d.%d\n",  CAIRO_VERSION_MAJOR, CAIRO_VERSION_MINOR, CAIRO_VERSION_MICRO);
 }
 /* MAIN {{{*/
