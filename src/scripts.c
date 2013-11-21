@@ -44,7 +44,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.3
+#define API_VERSION 1.4
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )

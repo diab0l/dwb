@@ -68,6 +68,7 @@
          *
          * @name hint
          * @function
+         * @since 1.4
          *
          * @param {String} shortcut 
          *      A shortcut to start the hint mode

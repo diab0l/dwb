@@ -2190,6 +2190,8 @@ dwb_evaluate_hints(const char *buffer)
      * Emitted when a hint will be followed
      * @event  followHint
      * @memberOf signals
+     * @since 1.4
+     *
      * @param {signals~onFollowHint} callback 
      *      Callback function that will be called when the signal is emitted
      *
@@ -2208,6 +2210,8 @@ dwb_evaluate_hints(const char *buffer)
      *
      * @returns {Boolean} 
      *      Return true to prevent following the hint
+     *
+     * @since 1.4
      * */
     if (EMIT_SCRIPT(FOLLOW))
     {
