@@ -61,6 +61,33 @@
         }
     };
     Object.defineProperties(this, { 
+        /** 
+         * Adds a custom hintmode, similar to {@link bind} but executes the
+         * function before the hint will be followed
+         *
+         * @name hint
+         * @function
+         *
+         * @param {String} shortcut 
+         *      A shortcut to start the hint mode
+         * @param {Function} callback 
+         *      The callback function, that will be called before the hint is
+         *      followed, see {@link signals~onFollowHint}
+         * @param {String} command 
+         *      The command to start the hint mode
+         * */
+        "hint" : { 
+            value : function(shortcut, callback, command) {
+                bind(shortcut, function() {
+                    Signal.once("followHint", function(wv, resource) {
+                        if (resource == "abort")
+                            return true;
+                        return callback(wv, resource);
+                    });
+                    execute("hints");
+                });
+            }
+        },
         "Glob" : 
         { 
             value : (function() {

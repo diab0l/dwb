@@ -8,6 +8,7 @@ Object.freeze((function () {
         return this == this.toLowerCase(); 
     };
     var globals = {
+        actionElement : null,
         active : null,
         matchHint : -1,
         escapeChar : "\\",
@@ -592,15 +593,44 @@ Object.freeze((function () {
         globals.lastInput = null;
         globals.positions = [];
         globals.matchHint = -1;
+        globals.actionElement = null;
         if (globals.notify && globals.notify.parentNode)
         {
             globals.notify.parentNode.removeChild(globals.notify);
         }
     };
+    var p_action = function(action)
+    {
+        var e = globals.actionElement;
+        if (!e)
+            return;
+        switch (action)
+        {
+            case "clickFocus" : 
+                e.focus();
+                p_clickElement(e, "click");
+                break;
+            case "focus" : 
+                e.focus();
+                break;
+            case "all" : 
+                p_clickElement(e);
+                break;
+            case "none" : 
+                break;
+            default : 
+                p_clickElement(e, action);
+            break;
+                
+        }
+        p_clear();
+    }
     var p_evaluate = function (e, type) 
     {
+        globals.actionElement = e;
         var ret = null;
         var elementType = null;
+        var resource = "unknown";
         if (e.type) 
         {
             elementType = e.type.toLowerCase();
@@ -610,51 +640,61 @@ Object.freeze((function () {
         {
             e.target = null;
         }
+        if (e.hasAttribute("src"))
+        {
+            resource = e.src;
+        }
+        else if (e.hasAttribute("href"))
+        {
+            resource = e.href;
+        }
         if (type == HintTypes.HINT_T_IMAGES)
         {
-            ret = e.src;
+            ret = "none|none";
         }
         else if (type == HintTypes.HINT_T_URL)
         {
-            ret = e.hasAttribute("href") ? e.href : e.src;
+            ret = "none|none"
         }
         else if ((tagname && (tagname == "input" || tagname == "textarea"))) 
         {
             if (elementType == "radio" || elementType == "checkbox") 
             {
-                e.focus();
-                p_clickElement(e, "click");
-                ret = ret || "_dwb_check_";
+                ret = "_dwb_check_|clickFocus|";
+                resource = elementType;
             }
             else if (elementType && (elementType == "submit" || elementType == "reset" || elementType  == "button")) 
             {
                 p_clickElement(e, "click");
-                ret = ret || "_dwb_click_";
+                ret = "_dwb_click_|click";
+                resource = elementType;
             }
             else 
             {
-                e.focus();
-                ret = ret || "_dwb_input_";
+                ret = "_dwb_input_|focus";
+                resource = tagname;
             }
         }
         else if (e.hasAttribute("role")) 
         {
-            p_clickElement(e);
-            ret = ret || "_dwb_click_";
+            ret = "_dwb_click_|all";
+            resource = "role";
         }
         else 
         {
+            ret = "_dwb_click_";
             if (tagname == "a" || e.hasAttribute("onclick"))
-                p_clickElement(e, "click");
+                ret += "|click";
             else if (e.hasAttribute("onmousedown")) 
-                p_clickElement(e, "mousedown");
+                ret += "|mousedown";
             else if (e.hasAttribute("onmouseover")) 
-                p_clickElement(e, "mouseover");
-            else 
+                ret += "|mouseover";
+            else {
+                ret += "|all";
                 p_clickElement(e);
-            ret = ret || "_dwb_click_";
+            }
         }
-        p_clear();
+        ret += "|" + resource;
         return ret;
     };
     var p_focusNext = function()  
@@ -860,6 +900,10 @@ Object.freeze((function () {
             var st=document.createElement('style');
             document.head.appendChild(st);
             document.styleSheets[document.styleSheets.length-1].insertRule(rule, 0);
+        },
+        follow : function(action)
+        {
+            p_action(action);
         },
         init : function (obj) 
         {

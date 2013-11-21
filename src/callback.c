@@ -195,7 +195,13 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
         return visual_caret(e);
     else if (e->keyval == GDK_KEY_Escape) 
     {
-        if (dwb.state.mode & COMPLETION_MODE) 
+        if (dwb.state.mode & HINT_MODE && EMIT_SCRIPT(FOLLOW))
+        {
+            ScriptSignal sig = { .jsobj = CURRENT_VIEW()->script_wv, SCRIPTS_SIG_META("\"abort\"", FOLLOW, 0) };
+            if (!scripts_emit(&sig))
+                dwb_change_mode(NORMAL_MODE, true);
+        }
+        else if (dwb.state.mode & COMPLETION_MODE) 
             completion_clean_completion(true);
         else 
             dwb_change_mode(NORMAL_MODE, true);

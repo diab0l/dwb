@@ -78,10 +78,6 @@
 
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
-typedef struct Sigmap_s {
-    int sig;
-    const char *name;
-} Sigmap;
 typedef struct SigData_s {
     gulong id; 
     GObject *instance;
@@ -139,7 +135,10 @@ typedef struct SpawnData_s {
 //static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
-static Sigmap s_sigmap[] = {
+static const struct {
+    int sig;
+    const char *name;
+} s_sigmap[] = {
     { SCRIPTS_SIG_NAVIGATION, "navigation" },
     { SCRIPTS_SIG_LOAD_STATUS, "loadStatus" },
     { SCRIPTS_SIG_MIME_TYPE, "mimeType" },
@@ -168,6 +167,7 @@ static Sigmap s_sigmap[] = {
     { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
     { SCRIPTS_SIG_ERROR,    "error" },
     { SCRIPTS_SIG_SCROLL,    "scroll" },
+    { SCRIPTS_SIG_FOLLOW,    "followHint" },
     { 0, NULL },
 };
 

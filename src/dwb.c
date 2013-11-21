@@ -2179,17 +2179,62 @@ DwbStatus
 dwb_evaluate_hints(const char *buffer) 
 {
     DwbStatus ret = STATUS_OK;
+    char **token = g_strsplit(buffer, "|", 3);
 
-    if (!g_strcmp0(buffer, "undefined")) 
-        return ret;
-    else if (!g_strcmp0("_dwb_no_hints_", buffer)) 
+    if (g_strv_length(token) != 3)
+        return STATUS_ERROR;
+
+    char *event = token[0];
+    char *action = token[1];
+    char *resource = token[2];
+
+    /**
+     * Emitted when a hint will be followed
+     * @event  followHint
+     * @memberOf signals
+     * @param {signals~onFollowHint} callback 
+     *      Callback function that will be called when the signal is emitted
+     *
+     * */
+    /**
+     * Callback called before a hint will be followed
+     * @callback signals~onFollowHint
+     *
+     * @param {WebKitWebView} wv   
+     *      The webview that currently has focus
+     * @param {String} resource
+     *      The resource of the hint, can be a url, <i>input</i>,
+     *      <i>textarea</i>,
+     *      <i>radio</i>, <i>checkbox</i>, <i>submit</i>, <i>reset</i>,
+     *      <i>button</i>, <i>role</i>, <i>unknown</i> or <i>abort</i> if Escape was pressed.
+     *
+     * @returns {Boolean} 
+     *      Return true to prevent following the hint
+     * */
+    if (EMIT_SCRIPT(FOLLOW))
+    {
+        char *target = g_strdup_printf("\"%s\"", resource);
+        ScriptSignal sig = { .jsobj = CURRENT_VIEW()->script_wv, SCRIPTS_SIG_META(target, FOLLOW, 0) };
+        gboolean ignore = scripts_emit(&sig);
+        g_free(target);
+        if (ignore)
+        {
+            dwb_change_mode(NORMAL_MODE, true);
+            goto finish;
+        }
+    }
+    js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, "follow", action, kJSTypeString, NULL);
+
+    if (!g_strcmp0(event, "undefined")) 
+        goto finish;
+    else if (!g_strcmp0("_dwb_no_hints_", event)) 
         ret = STATUS_ERROR;
-    else if (!g_strcmp0(buffer, "_dwb_input_")) 
+    else if (!g_strcmp0(event, "_dwb_input_")) 
     {
         dwb_change_mode(INSERT_MODE);
         ret = STATUS_END;
     }
-    else if  (!g_strcmp0(buffer, "_dwb_click_") && HINT_NOT_RAPID ) 
+    else if  (!g_strcmp0(event, "_dwb_click_") && HINT_NOT_RAPID ) 
     {
         int timeout = GET_INT("hints-key-lock");
         if (timeout > 0) 
@@ -2203,7 +2248,7 @@ dwb_evaluate_hints(const char *buffer)
             ret = STATUS_END;
         }
     }
-    else  if (!g_strcmp0(buffer, "_dwb_check_")) 
+    else  if (!g_strcmp0(event, "_dwb_check_")) 
     {
         dwb_change_mode(NORMAL_MODE, true);
         ret = STATUS_END;
@@ -2216,28 +2261,28 @@ dwb_evaluate_hints(const char *buffer)
         switch (dwb.state.hint_type) 
         {
             case HINT_T_ALL:     break;
-            case HINT_T_IMAGES : dwb_load_uri(NULL, buffer); 
+            case HINT_T_IMAGES : dwb_load_uri(NULL, resource); 
                                  dwb_change_mode(NORMAL_MODE, true);
                                  break;
             case HINT_T_URL    : a = util_arg_new();
                                  a->n = dwb.state.nv | SET_URL;
-                                 a->p = (char *)buffer;
+                                 a->p = resource;
                                  commands_open(NULL, a);
                                  break;
             case HINT_T_CLIPBOARD : dwb_change_mode(NORMAL_MODE, true);
-                                    ret = dwb_set_clipboard(buffer, GDK_NONE);
+                                    ret = dwb_set_clipboard(resource, GDK_NONE);
                                     break;
             case HINT_T_PRIMARY   : dwb_change_mode(NORMAL_MODE, true);
-                                    ret = dwb_set_clipboard(buffer, GDK_SELECTION_PRIMARY);
+                                    ret = dwb_set_clipboard(resource, GDK_SELECTION_PRIMARY);
                                     break;
             case HINT_T_RAPID     : a = util_arg_new();
-                                    view_add((char *) buffer, true);
+                                    view_add(resource, true);
                                     a->n = OPEN_NORMAL;
                                     a->i = HINT_T_RAPID;
                                     dwb_show_hints(a);
                                     break;
             case HINT_T_RAPID_NW     : a = util_arg_new();
-                                       dwb_new_window((char*)buffer);
+                                       dwb_new_window(resource);
                                        a->n = OPEN_NORMAL;;
                                        a->i = HINT_T_RAPID_NW;
                                        dwb_show_hints(a);
@@ -2246,6 +2291,8 @@ dwb_evaluate_hints(const char *buffer)
         }
         g_free(a);
     }
+finish: 
+    g_strfreev(token);
     return ret;
 }/*}}}*/
 

@@ -265,7 +265,6 @@ util_quickmark_compare_uri(Quickmark *a, const char *uri)
 int
 util_keymap_sort_first(KeyMap *a, KeyMap *b) 
 {
-    
     return g_strcmp0(a->map->n.first, b->map->n.first);
 }/*}}}*/
 /* util_keymap_sort_second(KeyMap *, KeyMap *) {{{*/

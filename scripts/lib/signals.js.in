@@ -312,8 +312,9 @@
                 value : function(name, callback) 
                 {
                     return new Signal(name, function() {
-                        callback.apply(this, arguments);
+                        var ret = callback.apply(this, arguments);
                         this.disconnect();
+                        return ret;
                     }).connect();
                 }
             },
