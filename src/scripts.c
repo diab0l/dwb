@@ -1839,7 +1839,8 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
 }/*}}}*/
 /* global_bind {{{*/
 /** 
- * Bind a function to a shortcut or commandline command
+ * Bind a function to a shortcut or commandline command, use {@link unbind} to remove
+ * the command
  * @name bind 
  * @function
  *

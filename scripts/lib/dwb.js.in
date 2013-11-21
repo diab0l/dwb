@@ -63,7 +63,8 @@
     Object.defineProperties(this, { 
         /** 
          * Adds a custom hintmode, similar to {@link bind} but executes the
-         * function before the hint will be followed
+         * function before the hint will be followed, use {@link unbind} to
+         * remove the hintmode
          *
          * @name hint
          * @function
