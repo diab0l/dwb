@@ -73,7 +73,9 @@
          *      A shortcut to start the hint mode
          * @param {Function} callback 
          *      The callback function, that will be called before the hint is
-         *      followed, see {@link signals~onFollowHint}
+         *      followed, see {@link signals~onFollowHint}. To handle the hint
+         *      and prevent dwb from following the hint the callback must
+         *      return true. The callback won't be called if escape was pressed.
          * @param {String} command 
          *      The command to start the hint mode
          * */
@@ -81,7 +83,7 @@
             value : function(shortcut, callback, command) {
                 bind(shortcut, function() {
                     Signal.once("followHint", function(wv, resource) {
-                        if (resource == "abort")
+                        if (resource == "@abort")
                             return true;
                         return callback(wv, resource);
                     });
