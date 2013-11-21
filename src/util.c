@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include "dwb.h"
 #include "util.h"
+#define STRCMP_CHECK_NULL(a, b) do { if (a == NULL && b == NULL) return 0; else if (a == NULL) return 1; else if (b == NULL) return -1; } while(0)
 
 /* util_string_replace(const char *haystack, const char *needle, const char  *replace)      return: char * (alloc){{{*/
 
@@ -229,34 +230,42 @@ util_arg_to_char(Arg *arg, DwbType type)
 int
 util_navigation_compare_first(Navigation *a, Navigation *b) 
 {
+    STRCMP_CHECK_NULL(a, b);
     return (g_strcmp0(a->first, b->first));
 }/*}}}*/
 /* util_navigation_compare_uri {{{*/
 int
 util_navigation_compare_uri(Navigation *a, const char *uri) 
 {
+    if (a == NULL)
+        return uri != NULL;
     return (g_strcmp0(a->first, uri));
 }/*}}}*/
 /* util_navigation_sort_first {{{*/
 int
 util_navigation_compare_second(Navigation *a, Navigation *b) 
 {
+    STRCMP_CHECK_NULL(a, b);
     return (g_strcmp0(a->second, b->second));
 }/*}}}*/
 int 
 util_quickmark_compare(Quickmark *a, Quickmark *b) 
 {
+    STRCMP_CHECK_NULL(a, b);
     return g_strcmp0(a->key, b->key);
 }
 int 
 util_quickmark_compare_uri(Quickmark *a, const char *uri) 
 {
+    if (a == NULL)
+        return uri != NULL;
     return g_strcmp0(a->nav->first, uri);
 }
 /* util_keymap_sort_first(KeyMap *, KeyMap *) {{{*/
 int
 util_keymap_sort_first(KeyMap *a, KeyMap *b) 
 {
+    
     return g_strcmp0(a->map->n.first, b->map->n.first);
 }/*}}}*/
 /* util_keymap_sort_second(KeyMap *, KeyMap *) {{{*/
