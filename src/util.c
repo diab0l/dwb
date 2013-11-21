@@ -1004,3 +1004,13 @@ util_strescape_char(char *string, char invalid, char esc_char)
     }
     return string;
 }
+void *
+sec_memset(void *data, char c, size_t s)
+{
+    volatile char *v = data;
+    while (s--)
+        *v++ = c;
+    return data;
+}
+
+

@@ -106,6 +106,7 @@ int util_modulo(int, int);
 char *util_resolve_symlink(char *path);
 gboolean util_keyfile_do(char *path, KeyFileAction action, const void *data);
 char * util_strescape_char(char *string, char invalid, char esc_char);
+void * sec_memset(void *, char c, size_t s);
 
 
 #endif
