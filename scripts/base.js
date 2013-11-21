@@ -661,24 +661,24 @@ Object.freeze((function () {
             if (elementType == "radio" || elementType == "checkbox") 
             {
                 ret = "_dwb_check_|clickFocus|";
-                resource = elementType;
+                resource = "@" + elementType;
             }
             else if (elementType && (elementType == "submit" || elementType == "reset" || elementType  == "button")) 
             {
                 p_clickElement(e, "click");
                 ret = "_dwb_click_|click";
-                resource = elementType;
+                resource = "@" + elementType;
             }
             else 
             {
                 ret = "_dwb_input_|focus";
-                resource = tagname;
+                resource = "@" + tagname;
             }
         }
         else if (e.hasAttribute("role")) 
         {
             ret = "_dwb_click_|all";
-            resource = "role";
+            resource = "@role";
         }
         else 
         {

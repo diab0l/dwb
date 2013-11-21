@@ -2203,10 +2203,10 @@ dwb_evaluate_hints(const char *buffer)
      * @param {WebKitWebView} wv   
      *      The webview that currently has focus
      * @param {String} resource
-     *      The resource of the hint, can be a url, <i>input</i>,
-     *      <i>textarea</i>,
-     *      <i>radio</i>, <i>checkbox</i>, <i>submit</i>, <i>reset</i>,
-     *      <i>button</i>, <i>role</i>, <i>unknown</i> or <i>abort</i> if Escape was pressed.
+     *      The resource of the hint, can be a url, <i>@input</i>,
+     *      <i>@textarea</i>,
+     *      <i>@radio</i>, <i>@checkbox</i>, <i>@submit</i>, <i>@reset</i>,
+     *      <i>@button</i>, <i>@role</i>, <i>@unknown</i> or <i>@abort</i> if Escape was pressed.
      *
      * @returns {Boolean} 
      *      Return true to prevent following the hint

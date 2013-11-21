@@ -197,7 +197,7 @@ callback_key_press(GtkWidget *w, GdkEventKey *e)
     {
         if (dwb.state.mode & HINT_MODE && EMIT_SCRIPT(FOLLOW))
         {
-            ScriptSignal sig = { .jsobj = CURRENT_VIEW()->script_wv, SCRIPTS_SIG_META("\"abort\"", FOLLOW, 0) };
+            ScriptSignal sig = { .jsobj = CURRENT_VIEW()->script_wv, SCRIPTS_SIG_META("\"@abort\"", FOLLOW, 0) };
             if (!scripts_emit(&sig))
                 dwb_change_mode(NORMAL_MODE, true);
         }
