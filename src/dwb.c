@@ -130,12 +130,10 @@ typedef struct _UserScriptEnv {
 } UserScripEnv;
 
 
-typedef struct HintMap {
+static const struct {
     int type;
     int arg;
-} _HintMap;
-
-struct HintMap hint_map[] = {
+} hint_map[] = {
     { HINT_T_ALL,   HINT_T_ALL }, 
     { HINT_T_LINKS, HINT_T_LINKS }, 
     { HINT_T_IMAGES, HINT_T_IMAGES }, 
