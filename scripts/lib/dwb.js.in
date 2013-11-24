@@ -79,16 +79,25 @@
          *      return true. The callback won't be called if escape was pressed.
          * @param {String} command 
          *      The command to start the hint mode
+         * @param {String} [selector] 
+         *      A css selector passed to querySelectorAll
          * */
         "hint" : { 
-            value : function(shortcut, callback, command) {
+            value : function(shortcut, callback, command, selector) {
                 bind(shortcut, function() {
                     Signal.once("followHint", function(wv, resource) {
                         if (resource == "@abort")
-                            return true;
+                            return false;
                         return callback(wv, resource);
                     });
-                    execute("hints");
+                    if (selector)
+                    {
+                        execute("hints_selector " + selector);
+                    }
+                    else 
+                    {
+                        execute("hints");
+                    }
                 });
             }
         },

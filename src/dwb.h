@@ -348,6 +348,7 @@ typedef enum {
   HINT_T_PRIMARY    = 6,
   HINT_T_RAPID      = 7,
   HINT_T_RAPID_NW   = 8,
+  HINT_T_SELECTOR   = 9,
 } HintType;
 #define HINT_NOT_RAPID (dwb.state.hint_type != HINT_T_RAPID && dwb.state.hint_type != HINT_T_RAPID_NW)
 

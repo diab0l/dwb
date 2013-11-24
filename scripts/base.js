@@ -20,21 +20,24 @@ Object.freeze((function () {
         lastPosition : 0,
         newTab : false,
         notify : null,
-        hintTypes :  [ "a, textarea, select, input:not([type=hidden]), button,  frame, iframe, [onclick], [onmousedown]," + 
+        hintTypes :  [ 
+            "a, textarea, select, input:not([type=hidden]), button,  frame, iframe, [onclick], [onmousedown]," + 
             "[role=link], [role=option], [role=button], [role=option], img",  // HINT_T_ALL
         //[ "iframe", 
-        "a",  // HINT_T_LINKS
-        "img",  // HINT_T_IMAGES
-        "input:not([type=hidden]), input[type=text], input[type=password], input[type=search], textarea",  // HINT_T_EDITABLE
-        "[src], [href]"  // HINT_T_URL
-                 ]
+            "a",  // HINT_T_LINKS
+            "img",  // HINT_T_IMAGES
+            "input:not([type=hidden]), input[type=text], input[type=password], input[type=search], textarea",  // HINT_T_EDITABLE
+            "[src], [href]",  // HINT_T_URL
+            null, 
+         ]
     };
     var HintTypes = {
         HINT_T_ALL : 0,
         HINT_T_LINKS : 1,
         HINT_T_IMAGES : 2,
         HINT_T_EDITABLE : 3,
-        HINT_T_URL : 4
+        HINT_T_URL : 4, 
+        HINT_T_SELECTOR : 5
     };
     var OpenMode = {
         OPEN_NORMAL      : 1<<0, 
@@ -415,7 +418,9 @@ Object.freeze((function () {
                     p_createHints(e.contentWindow, varructor, type);
                     continue;
                 }
-                else if (e instanceof HTMLImageElement && type != HintTypes.HINT_T_IMAGES) {
+                else if (e instanceof HTMLImageElement 
+                         && type != HintTypes.HINT_T_SELECTOR 
+                         && type != HintTypes.HINT_T_IMAGES) {
                     if (e.hasAttribute("usemap")) 
                         p_createMap(hints, varructor, e, win, r, oe);
                 }
@@ -430,16 +435,22 @@ Object.freeze((function () {
             console.error(exc);
         }
     };
-    var p_showHints = function (type, newTab) 
+    var p_showHints = function (type, newTab, selector) 
     {
         var i;
         if (document.activeElement) 
         {
             document.activeElement.blur();
         }
+        
+        if (type == HintTypes.HINT_T_SELECTOR && selector)
+        {
+            globals.hintTypes[HintTypes.HINT_T_SELECTOR] = selector;
+        }
         globals.newTab = newTab;
         p_createHints(window, globals.style == "letter" ? p_letterHint : p_numberHint, type);
         var l = globals.elements.length;
+        console.log(l);
 
         if (l === 0) 
         {
@@ -594,6 +605,7 @@ Object.freeze((function () {
         globals.positions = [];
         globals.matchHint = -1;
         globals.actionElement = null;
+        globals.hintTypes[HintTypes.HINT_T_SELECTOR] = null;
         if (globals.notify && globals.notify.parentNode)
         {
             globals.notify.parentNode.removeChild(globals.notify);
@@ -857,7 +869,7 @@ Object.freeze((function () {
         },
         showHints : function(obj) 
         {
-            return p_showHints(obj.type, obj.newTab);
+            return p_showHints(obj.type, obj.newTab, obj.selector);
         },
         updateHints : function (obj) 
         {

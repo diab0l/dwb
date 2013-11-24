@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 11/19/2013
+.\"      Date: 11/24/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "11/19/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "11/24/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -109,7 +109,7 @@ Bind a javascript function to a shortcut\&. This is the preferred method of bind
 .PP
 \fIshortcut\fR
 .RS 4
-A shortcut shortcut, will be parsed the same way as if set in dwb:keys
+A shortcut, will be parsed the same way as if set in dwb:keys
 .RE
 .PP
 \fIcallback\fR
@@ -158,6 +158,37 @@ true if execution was successful
 .RS 4
 .sp
 Exit dwb, must be called if the script is running from commandline\&.
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBBoolean hint(String shortcut, Function callback, [String command], [String selector])\fR
+.RS 4
+.sp
+Adds a custom hintmode, similar to bind but executes the function before the hint will be followed, use unbind to remove the hintmode
+.PP
+\fIshortcut\fR
+.RS 4
+A shortcut to start the hint mode\&.
+.RE
+.PP
+\fIcallback\fR
+.RS 4
+The callback function, that will be called before the hint is followed, see followHint\&. To handle the hint and prevent dwb from following the hint the callback must return true\&. The callback won\(cqt be called if escape was pressed\&.
+.RE
+.PP
+\fIcommand\fR
+.RS 4
+The command to start the hint mode, optional\&.
+.RE
+.PP
+\fIselector\fR
+.RS 4
+A css selector passed to querySelectorAll, optional\&.
+.RE
 .RE
 .sp
 .it 1 an-trap
@@ -3263,6 +3294,49 @@ An argument, if the command isn\(cqt executed from commandline this will always 
 \fIcommandinfo\&.nummod\fR
 .RS 4
 The numerical modifier\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBfollowHint\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+new Signal("followHint", function(wv, resource));
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Emitted before a hint is followed, return true to prevent following the hint
+.PP
+\fIwv\fR
+.RS 4
+The webview that currently has focus
+.RE
+.PP
+\fIresource\fR
+.RS 4
+The resource of the hint, can be either a url or
+\fB@input\fR,
+\fB@textarea\fR,
+\fB@radio\fR,
+\fB@checkbox\fR,
+\fB@submit\fR,
+\fB@reset\fR,
+\fB@button\fR,
+\fB@role\fR,
+\fB@unknown\fR
+or
+\fB@abort\fR
+if Escape was pressed\&.
 .RE
 .RE
 .sp

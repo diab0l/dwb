@@ -37,6 +37,7 @@ static KeyValue KEYS[] = {
   { "focus_prev",               {   "K",          0,                0 }, },  
   { "focus_tab",                {   "T",          0,                0 }, },  
   { "hints",                    {   "f",          0,                0 }, },  
+  { "hints_selector",           {   NULL,          0,                0 }, },  
   { "hints_links",              {   ";;",         0,                0 }, },  
   { "hints_images",             {   ";i",         0,                0 }, },  
   { "hints_images_tab",         {   ";It",         0,                0 }, },  
@@ -401,6 +402,9 @@ static FunctionMap FMAP [] = {
   { { "hints",             "follow",                      }, CP_COMMANDLINE | CP_HAS_MODE, 
     (Func)commands_show_hints,          NO_HINTS,                          NEVER_SM,    
     { .n = OPEN_NORMAL, .i = HINT_T_ALL }, EP_NONE, { "hi",  NULL }, },
+  { { "hints_selector",             "follow",                      }, CP_COMMANDLINE | CP_HAS_MODE, 
+    (Func)commands_show_hints,          NO_HINTS,                          NEVER_SM,    
+    { .n = OPEN_NORMAL, .i = HINT_T_SELECTOR }, EP_NONE, { NULL }, },
   
   { { "hints_links",       "follow links",                      }, CP_COMMANDLINE | CP_HAS_MODE, 
     (Func)commands_show_hints,          "No links",                          NEVER_SM,    

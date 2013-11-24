@@ -143,6 +143,7 @@ static const struct {
     { HINT_T_PRIMARY, HINT_T_URL }, 
     { HINT_T_RAPID, HINT_T_URL }, 
     { HINT_T_RAPID_NW, HINT_T_URL }, 
+    { HINT_T_SELECTOR, 5 }, 
 };
 
 
@@ -2360,14 +2361,14 @@ dwb_show_hints(Arg *arg)
 
     if (dwb.state.mode != HINT_MODE) 
     {
-        char json[64];
         gtk_entry_set_text(GTK_ENTRY(dwb.gui.entry), "");
 
-        snprintf(json, sizeof(json), "{ \"newTab\" : \"%d\", \"type\" : \"%d\" }",
-                (dwb.state.nv & (OPEN_NEW_WINDOW|OPEN_NEW_VIEW)), 
-                hint_map[arg->i].arg);
+        char *json = util_create_json(3, INTEGER, "newTab", dwb.state.nv & (OPEN_NEW_VIEW|OPEN_NEW_WINDOW), 
+                INTEGER, "type", hint_map[arg->i].arg, 
+                CHAR, "selector", arg->p);
 
         js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, "showHints", json, kJSTypeObject, &jsret);
+        g_free(json);
         if (jsret != NULL) 
         {
             ret = dwb_evaluate_hints(jsret);

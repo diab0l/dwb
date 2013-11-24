@@ -803,6 +803,7 @@ COMMAND OVERVIEW
 |hints_rapid, rhints, rhi           |Open new tabs in background
                                      rapidly
 |hints_rapid_win, wrhints, wrhi     |Open new windows rapidly
+|hints_selector                     |Show hints using a custom css selector
 |hints_tab, tabhints, thi           |Follow hints in a new tab
 |hints_url, uhints, uhi             |Set hints url in commandline
 |hints_url_tab, utabhints, uthi     |Set hints url in commandline,

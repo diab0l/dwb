@@ -58,7 +58,7 @@ Bind a javascript function to a shortcut. This is the preferred method of
 binding keys to shortcuts since the shortcut is evaluated using the native
 method, but also the keyPress-signal can be used to bind shortcuts. 
 
-_shortcut_;; A shortcut shortcut, will be parsed the same way as if set in
+_shortcut_;; A shortcut, will be parsed the same way as if set in
 dwb:keys
 _callback_;; Callback function that will be called when the shortcut is pressed
 _name_;; A name that identifies the function on command line, optional
@@ -79,6 +79,22 @@ from commandline
 ****
 
 Exit dwb, must be called if the script is running from commandline. 
+****
+
+==== Boolean hint(String shortcut, Function callback, [String command], [String selector])
+
+****
+
+Adds a custom hintmode, similar to bind but executes the function before the
+hint will be followed, use unbind to remove the hintmode
+
+_shortcut_;; A shortcut to start the hint mode. 
+_callback_;; The callback function, that will be called before the hint is
+followed, see followHint. To handle the hint and prevent dwb from following the
+hint the callback must return true. The callback won't be called if escape was
+pressed.  
+_command_;; The command to start the hint mode, optional.
+_selector_;; A css selector passed to querySelectorAll, optional.
 ****
 
 
@@ -1625,6 +1641,19 @@ will always be null.
 _commandinfo.nummod_;; The numerical modifier.
 ****
 
+==== followHint
+****
+----
+new Signal("followHint", function(wv, resource));
+----
+
+Emitted before a hint is followed, return true to prevent following the hint
+
+_wv_;; The webview that currently has focus
+_resource_;; The resource of the hint, can be either a url or 
+*@input*, *@textarea*, *@radio*, *@checkbox*, *@submit*, *@reset*, *@button*,
+*@role*, *@unknown* or *@abort* if Escape was pressed.
+****
 
 ==== frameCreated
 ****
