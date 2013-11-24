@@ -3943,7 +3943,7 @@ io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t
 
     JSValueRef result = js_char_to_value(ctx, response);
 
-    memset(response, 0, strlen(response));
+    sec_memset(response, 0, strlen(response));
     g_free(response);
     return result;
 }/*}}}*/
