@@ -75,6 +75,62 @@
                 }
             }
         }, 
+        /** 
+         * Clears all cookies from the internal cookie jar, i.e. all persistent
+         * and all session cookies. 
+         *
+         * @name clearCookies
+         * @memberOf net
+         * @function
+         *
+         * */
+        "clearCookies" : 
+        { 
+            value : function() 
+            {
+                this.allCookies().forEach(function(c) { c.delete(); });
+            }
+        }, 
+        /**
+        * Gets all session cookies from the cookie jar. 
+        *
+        * @name sessionCookies 
+        * @memberOf net
+        * @function
+        *
+        * @returns {Array[{@link Cookie}]}
+        *      An array of {@link Cookie|cookies}, if there are no session
+        *      cookies it returns an empty array.
+        *
+        * */
+        "sessionCookies" : 
+        {
+            value : function() 
+            {
+                var now = new Date();
+                return this.allCookies().filter(function(c) { return !c.expires || c.expires < now; });
+            }
+        }, 
+        /**
+        * Gets all persistent cookies from the cookie jar. 
+        *
+        * @name persistentCookies 
+        * @memberOf net
+        * @function
+        *
+        * @returns {Array[{@link Cookie}]}
+        *      An array of {@link Cookie|cookies}, if there are no persistent
+        *      cookies it returns an empty array.
+        *
+        * */
+        "persistentCookies" : 
+        {
+            value : function() 
+            {
+                var now = new Date();
+                return this.allCookies().filter(function(c) { return c.expires && c.expires > now; });
+            }
+        }
     });
     Object.freeze(net);
 })();

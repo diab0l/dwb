@@ -76,6 +76,47 @@
 
 #define SERVER_DO_SHUTDOWN(server) do { soup_server_disconnect(server); g_object_unref(server); } while(0)
 
+#define BOXED_GET_CHAR(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
+{\
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        const char *value = getter(priv); \
+        if (priv != NULL) \
+            return js_char_to_value(ctx, value); \
+    } \
+    return NIL; \
+}
+#define BOXED_GET_BOOLEAN(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
+{\
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        return JSValueMakeBoolean(ctx, getter(priv)); \
+    } \
+    return JSValueMakeBoolean(ctx, false); \
+}
+#define BOXED_SET_CHAR(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        char *value = js_value_to_char(ctx, js_value, -1, exception); \
+        if (value != NULL) \
+        {\
+            setter(priv, value); \
+            g_free(value);\
+            return true;\
+        }\
+    } \
+    return false;\
+}
+#define BOXED_SET_BOOLEAN(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        gboolean value = JSValueToBoolean(ctx, js_value); \
+        setter(priv, value); \
+        return true;\
+    } \
+    return false;\
+}
+
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 typedef struct SigData_s {
@@ -168,6 +209,7 @@ static const struct {
     { SCRIPTS_SIG_ERROR,    "error" },
     { SCRIPTS_SIG_SCROLL,    "scroll" },
     { SCRIPTS_SIG_FOLLOW,    "followHint" },
+    { SCRIPTS_SIG_ADD_COOKIE,    "addCookie" },
     { 0, NULL },
 };
 
@@ -183,6 +225,7 @@ enum {
     CONSTRUCTOR_HIDDEN_WEB_VIEW,
     CONSTRUCTOR_SOUP_HEADERS,
     CONSTRUCTOR_SERVER,
+    CONSTRUCTOR_COOKIE,
     CONSTRUCTOR_LAST,
 };
 enum {
@@ -195,6 +238,7 @@ static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, 
 static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
 static void object_destroy_cb(JSObjectRef o);
+static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
 
 /* Static variables */
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
@@ -212,7 +256,8 @@ static JSClassRef s_gobject_class,
                   s_deferred_class, 
                   s_history_class,
                   s_soup_header_class, 
-                  s_soup_server_class;
+                  s_soup_server_class,
+                  s_cookie_class;
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
@@ -2615,6 +2660,38 @@ net_parse_uri(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
     return ret;
 }
 /**
+ * Gets all cookies from the cookie jar. 
+ *
+ * @name allCookies 
+ * @memberOf net
+ * @function
+ *
+ * @returns {Array[{@link Cookie}]}
+ *      An array of {@link Cookie|cookies}
+ *
+ * */
+static JSValueRef 
+net_all_cookies(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NULL;
+    GSList *cookies = dwb_soup_get_all_cookies();
+    if (cookies != NULL)
+    {
+        guint l = g_slist_length(cookies), i=0;
+        JSValueRef *args = g_malloc(l * sizeof (JSValueRef));
+        for (GSList *l = cookies; l; l=l->next, i++)
+        {
+            args[i] = scripts_make_cookie(l->data);
+        }
+        ret = JSObjectMakeArray(ctx, i, args, exc);
+        g_free(args);
+        g_slist_free(cookies);
+    }
+    else 
+        ret = JSObjectMakeArray(ctx, 0, NULL, exc);
+    return ret;
+}
+/**
  * Callback that will be called when <i>Return</i> was pressed after {@link util.tabComplete} was invoked.
  *
  * @callback util~onTabComplete 
@@ -4084,7 +4161,7 @@ io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t 
  *
  * @param {String} path A path to a directory
  *
- * @returns {Arrayp[String]}
+ * @returns {Array[String]}
  *      An array of file names
  * */
 static JSValueRef 
@@ -4985,6 +5062,162 @@ server_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
     }
     return JSValueToObject(ctx, NIL, exception);
 }
+
+JSObjectRef 
+scripts_make_cookie(SoupCookie *cookie)
+{
+    g_return_val_if_fail(cookie != NULL, NULL);
+    return make_boxed(cookie, s_cookie_class);
+}
+static JSObjectRef 
+cookie_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    SoupCookie *cookie = soup_cookie_new("", "", "", "", 0);
+    return JSObjectMake(ctx, s_cookie_class, cookie);
+}
+
+/**
+ * Sets the maximum age of a cookie
+ *
+ * @name setMaxAge
+ * @memberOf Cookie.prototype
+ * @function
+ *
+ * @param {Number} seconds 
+ *      The number of seconds until the cookie expires, if set to -1 it is a
+ *      session cookie
+ * */
+static JSValueRef 
+cookie_set_max_age(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc == 0)
+        return UNDEFINED;
+    SoupCookie *cookie = JSObjectGetPrivate(this);
+    if (cookie != NULL )
+    {
+        double value = JSValueToNumber(ctx, argv[0], exc);
+        if (!isnan(value))
+        {
+            soup_cookie_set_max_age(cookie, (int) value);
+        }
+    }
+    return UNDEFINED;
+}
+/*
+ * Deletes a cookie from the jar
+ *
+ * @name delete
+ * @memberOf Cookie.prototype
+ * @function
+ *
+ * */
+static JSValueRef 
+cookie_delete(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    SoupCookie *cookie = JSObjectGetPrivate(this);
+    if (cookie != NULL)
+        dwb_soup_cookie_delete(cookie);
+    return UNDEFINED;
+}
+/**
+ * Saves a cookie to the jar
+ *
+ * @name save
+ * @memberOf Cookie.prototype
+ * @function
+ *
+ * */
+static JSValueRef 
+cookie_save(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    SoupCookie *cookie = JSObjectGetPrivate(this);
+    if (cookie != NULL)
+        dwb_soup_cookie_save(cookie);
+    return UNDEFINED;
+}
+/** 
+ * The cookie name
+ * @name name
+ * @memberOf Cookie.prototype
+ * @type String
+ * */
+BOXED_GET_CHAR(cookie_get_name, soup_cookie_get_name, SoupCookie);
+BOXED_SET_CHAR(cookie_set_name, soup_cookie_set_name, SoupCookie);
+/** 
+ * The cookie value
+ * @name value
+ * @memberOf Cookie.prototype
+ * @type String
+ * */
+BOXED_GET_CHAR(cookie_get_value, soup_cookie_get_value, SoupCookie);
+BOXED_SET_CHAR(cookie_set_value, soup_cookie_set_value, SoupCookie);
+/** 
+ * The cookie domain
+ * @name domain
+ * @memberOf Cookie.prototype
+ * @type String
+ * */
+BOXED_GET_CHAR(cookie_get_domain, soup_cookie_get_domain, SoupCookie);
+BOXED_SET_CHAR(cookie_set_domain, soup_cookie_set_domain, SoupCookie);
+/** 
+ * The cookie path
+ * @name path
+ * @memberOf Cookie.prototype
+ * @type String
+ * */
+BOXED_GET_CHAR(cookie_get_path, soup_cookie_get_path, SoupCookie);
+BOXED_SET_CHAR(cookie_set_path, soup_cookie_set_path, SoupCookie);
+/** 
+ * If the cookie should only be transferred over ssl
+ * @name secure
+ * @memberOf Cookie.prototype
+ * @type boolean
+ * */
+BOXED_GET_BOOLEAN(cookie_get_secure, soup_cookie_get_secure, SoupCookie);
+BOXED_SET_BOOLEAN(cookie_set_secure, soup_cookie_set_secure, SoupCookie);
+/** 
+ * If the cookie should not be exposed to scripts
+ * @name httpOnly
+ * @memberOf Cookie.prototype
+ * @type String
+ * */
+BOXED_GET_BOOLEAN(cookie_get_http_only, soup_cookie_get_http_only, SoupCookie);
+BOXED_SET_BOOLEAN(cookie_set_http_only, soup_cookie_set_http_only, SoupCookie);
+
+/** 
+ * The cookie expiration time
+ * @name expires
+ * @memberOf Cookie.prototype
+ * @type Date
+ * @readonly
+ * */
+static JSValueRef 
+cookie_get_expires(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  
+{
+    JSValueRef ret = NIL;
+    SoupCookie *cookie = JSObjectGetPrivate(this);
+    if (cookie != NULL)
+    {
+        SoupDate *date = soup_cookie_get_expires(cookie);
+        if (date == NULL)
+            return NIL;
+        char *date_str = soup_date_to_string(date, SOUP_DATE_HTTP);
+        JSValueRef argv[] = { js_char_to_value(ctx, date_str) };
+        g_free(date_str);
+        ret  = JSObjectMakeDate(ctx, 1, argv, exception);
+    }
+    return ret;
+}
+
+static void 
+cookie_finalize(JSObjectRef o)
+{
+    SoupCookie *cookie = JSObjectGetPrivate(o);
+    if (cookie != NULL)
+    {
+        soup_cookie_free(cookie);
+    }
+}
 /* gui {{{*/
 /** 
  * The main window
@@ -5267,6 +5500,19 @@ make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean p
     return retobj;
 }
 
+static JSObjectRef 
+make_boxed(gpointer boxed, JSClassRef klass)
+{
+    JSObjectRef ret = NULL;
+    if (!TRY_CONTEXT_LOCK)
+        return NULL;
+    if (s_global_context != NULL)
+    {
+        ret = JSObjectMake(s_global_context, klass, boxed);
+    }
+    CONTEXT_UNLOCK;
+    return ret;
+}
 
 static JSObjectRef 
 make_object(JSContextRef ctx, GObject *o) 
@@ -5866,6 +6112,7 @@ create_global_object()
         { "sendRequestSync",  net_send_request_sync,         kJSDefaultAttributes },
         { "domainFromHost",   net_domain_from_host,         kJSDefaultAttributes },
         { "parseUri",         net_parse_uri,         kJSDefaultAttributes },
+        { "allCookies",       net_all_cookies,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("net", net_functions, NULL);
@@ -6443,6 +6690,41 @@ create_global_object()
     s_constructors[CONSTRUCTOR_SERVER] = create_constructor(ctx, "Server", s_soup_server_class, server_constructor_cb, NULL);
 
     /** 
+     * Constructs a new cookie
+     *
+     * @class 
+     *    A cookie
+     * @name Cookie
+     *
+     * @constructs Cookie 
+     *
+     * @returns Cookie
+     * */
+    /* download */
+    JSStaticValue cookie_values[] = {
+        { "name",           cookie_get_name, cookie_set_name, kJSPropertyAttributeDontDelete }, 
+        { "value",          cookie_get_value, cookie_set_value, kJSPropertyAttributeDontDelete }, 
+        { "domain",         cookie_get_domain, cookie_set_domain, kJSPropertyAttributeDontDelete }, 
+        { "path",           cookie_get_path, cookie_set_path, kJSPropertyAttributeDontDelete }, 
+        { "expires",        cookie_get_expires, NULL, kJSPropertyAttributeReadOnly }, 
+        { "secure",         cookie_get_secure, cookie_set_secure, kJSPropertyAttributeDontDelete }, 
+        { "httpOnly",       cookie_get_http_only, cookie_set_http_only, kJSPropertyAttributeDontDelete }, 
+        { 0, 0, 0, 0 }, 
+    };
+    JSStaticFunction cookie_functions[] = {
+        { "save",               cookie_save, kJSDefaultAttributes }, 
+        { "delete",             cookie_delete, kJSDefaultAttributes },
+        { "setMaxAge",          cookie_set_max_age, kJSDefaultAttributes }, 
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.staticValues = cookie_values;
+    cd.staticFunctions = cookie_functions;
+    cd.finalize = cookie_finalize;
+    s_cookie_class = JSClassCreate(&cd);
+    s_constructors[CONSTRUCTOR_COOKIE] = create_constructor(ctx, "Cookie", s_soup_server_class, cookie_constructor_cb, NULL);
+
+    /** 
      * Represents a SoupMessage header
      *
      * @class 
@@ -6814,6 +7096,7 @@ scripts_end()
         JSClassRelease(s_history_class);
         JSClassRelease(s_soup_header_class);
         JSClassRelease(s_soup_server_class);
+        JSClassRelease(s_cookie_class);
         JSGlobalContextRelease(s_global_context);
         s_global_context = NULL;
     }

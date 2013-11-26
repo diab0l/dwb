@@ -52,6 +52,7 @@ enum SIGNALS {
   SCRIPTS_SIG_ERROR,
   SCRIPTS_SIG_SCROLL,
   SCRIPTS_SIG_FOLLOW,
+  SCRIPTS_SIG_ADD_COOKIE,
   SCRIPTS_SIG_LAST, 
 } ;
 
@@ -79,6 +80,7 @@ gboolean scripts_execute_one(const char *script);
 void scripts_completion_activate(void);
 void scripts_reapply(void);
 void scripts_check_syntax(char **scripts);
+JSObjectRef scripts_make_cookie(SoupCookie *cookie);
 
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \

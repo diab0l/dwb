@@ -22,6 +22,8 @@
 void dwb_soup_clean(void);
 void dwb_soup_sync_cookies();
 void dwb_soup_allow_cookie_tmp(void);
+GSList * dwb_soup_get_all_cookies(void);
+GSList * dwb_soup_get_cookies(SoupURI *uri, gboolean http_only);
 DwbStatus dwb_soup_allow_cookie(GList **, const char *, CookieStorePolicy);
 const char * dwb_soup_get_host_from_request(WebKitNetworkRequest *);
 SoupMessage * dwb_soup_get_message(WebKitWebFrame *);
@@ -43,5 +45,7 @@ void dwb_soup_clear_cookies(void);
 DwbStatus dwb_soup_set_cookie_expiration(const char *expiration_string);
 const char * dwb_soup_get_host(WebKitWebFrame *frame);
 const char * dwb_soup_get_domain(WebKitWebFrame *frame);
+void dwb_soup_cookie_save(SoupCookie *cookie);
+void dwb_soup_cookie_delete(SoupCookie *cookie);
 
 #endif

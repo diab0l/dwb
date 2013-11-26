@@ -24,6 +24,7 @@
 #include "entry.h"
 #include "util.h"
 #include "domain.h"
+#include "scripts.h"
 #include "soup.h"
 #include "js.h"
 #define DWB_SOUP_CHECK_EXPIRATION(multiplier) \
@@ -336,6 +337,26 @@ dwb_soup_get_cookie_store_policy(const char *policy)
         return COOKIE_STORE_SESSION;
 }/*}}}*/
 
+void
+dwb_soup_cookie_save(SoupCookie *cookie)
+{
+    g_signal_handler_block(s_jar, s_changed_id);
+    soup_cookie_jar_add_cookie(s_jar, soup_cookie_copy(cookie));
+    g_signal_handler_unblock(s_jar, s_changed_id);
+
+}
+void
+dwb_soup_cookie_delete(SoupCookie *cookie)
+{
+    g_signal_handler_block(s_jar, s_changed_id);
+    soup_cookie_jar_delete_cookie(s_jar, cookie);
+    g_signal_handler_unblock(s_jar, s_changed_id);
+}
+GSList *
+dwb_soup_get_all_cookies(void)
+{
+    return soup_cookie_jar_all_cookies(s_jar);
+}
 /*dwb_soup_cookie_changed_cb {{{*/
 static void 
 dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_cookie, gpointer *p) 
@@ -345,6 +366,44 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
 
     if (new_cookie) 
     {
+        /**
+         * Emitted when a cookie will be added to the cookie jar
+         * @event addCookie
+         * @memberOf signals
+         * @param {signals~onAddCookie} callback
+         *      Callback function that will be called when the signal is emitted
+         * */
+        /**
+         * Callback called before a new navigation starts
+         * @callback signals~onAddCookie
+         * @param {Cookie}  cookie 
+         *      The copy of the cookie that will be added to the jar
+         *
+         * @returns {Boolean}
+         *      If the function returns true the original cookie won't be added to the
+         *      jar. To change a cookie this function must return true and the
+         *      copy of the cookie can be added to the jar using {@link Cookie.save|save}
+         *
+         * @example
+         * // Make the cookie a session cookie
+         * Signal.connect("addCookie", function(cookie) {
+         *      cookie.setMaxAge(-1);
+         *      cookie.save();
+         *      return true;
+         * });
+         * */
+        if (EMIT_SCRIPT(ADD_COOKIE))
+        {
+            ScriptSignal sig = { .jsobj = scripts_make_cookie(soup_cookie_copy(new_cookie)), SCRIPTS_SIG_META(NULL, ADD_COOKIE, 0) };
+            if (scripts_emit(&sig))
+            {
+                g_signal_handler_block(jar, s_changed_id);
+                soup_cookie_jar_delete_cookie(jar, new_cookie);
+                g_signal_handler_unblock(jar, s_changed_id);
+                return;
+            }
+        }
+
         /* Check if this is a super-cookie */
         if (new_cookie->domain) 
         {
