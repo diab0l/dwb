@@ -82,6 +82,7 @@
          * @name clearCookies
          * @memberOf net
          * @function
+         * @since 1.5
          *
          * */
         "clearCookies" : 
@@ -92,17 +93,18 @@
             }
         }, 
         /**
-        * Gets all session cookies from the cookie jar. 
-        *
-        * @name sessionCookies 
-        * @memberOf net
-        * @function
-        *
-        * @returns {Array[{@link Cookie}]}
-        *      An array of {@link Cookie|cookies}, if there are no session
-        *      cookies it returns an empty array.
-        *
-        * */
+         * Gets all session cookies from the cookie jar. 
+         *
+         * @name sessionCookies 
+         * @memberOf net
+         * @function
+         * @since 1.5
+         *
+         * @returns {Array[{@link Cookie}]}
+         *      An array of {@link Cookie|cookies}, if there are no session
+         *      cookies it returns an empty array.
+         *
+         * */
         "sessionCookies" : 
         {
             value : function() 
@@ -112,17 +114,18 @@
             }
         }, 
         /**
-        * Gets all persistent cookies from the cookie jar. 
-        *
-        * @name persistentCookies 
-        * @memberOf net
-        * @function
-        *
-        * @returns {Array[{@link Cookie}]}
-        *      An array of {@link Cookie|cookies}, if there are no persistent
-        *      cookies it returns an empty array.
-        *
-        * */
+         * Gets all persistent cookies from the cookie jar. 
+         *
+         * @name persistentCookies 
+         * @memberOf net
+         * @function
+         * @since 1.5
+         *
+         * @returns {Array[{@link Cookie}]}
+         *      An array of {@link Cookie|cookies}, if there are no persistent
+         *      cookies it returns an empty array.
+         *
+         * */
         "persistentCookies" : 
         {
             value : function() 

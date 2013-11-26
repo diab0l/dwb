@@ -44,7 +44,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.4
+#define API_VERSION 1.5
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -2665,6 +2665,7 @@ net_parse_uri(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
  * @name allCookies 
  * @memberOf net
  * @function
+ * @since 1.5
  *
  * @returns {Array[{@link Cookie}]}
  *      An array of {@link Cookie|cookies}
@@ -5082,6 +5083,7 @@ cookie_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
  * @name setMaxAge
  * @memberOf Cookie.prototype
  * @function
+ * @since 1.5
  *
  * @param {Number} seconds 
  *      The number of seconds until the cookie expires, if set to -1 it is a
@@ -5103,12 +5105,13 @@ cookie_set_max_age(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
     }
     return UNDEFINED;
 }
-/*
- * Deletes a cookie from the jar
+/**
+ * Deletes the cookie from the jar
  *
  * @name delete
  * @memberOf Cookie.prototype
  * @function
+ * @since 1.5
  *
  * */
 static JSValueRef 
@@ -5120,11 +5123,12 @@ cookie_delete(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t a
     return UNDEFINED;
 }
 /**
- * Saves a cookie to the jar
+ * Saves the cookie to the jar
  *
  * @name save
  * @memberOf Cookie.prototype
  * @function
+ * @since 1.5
  *
  * */
 static JSValueRef 
@@ -5140,6 +5144,7 @@ cookie_save(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
  * @name name
  * @memberOf Cookie.prototype
  * @type String
+ * @since 1.5
  * */
 BOXED_GET_CHAR(cookie_get_name, soup_cookie_get_name, SoupCookie);
 BOXED_SET_CHAR(cookie_set_name, soup_cookie_set_name, SoupCookie);
@@ -5148,6 +5153,7 @@ BOXED_SET_CHAR(cookie_set_name, soup_cookie_set_name, SoupCookie);
  * @name value
  * @memberOf Cookie.prototype
  * @type String
+ * @since 1.5
  * */
 BOXED_GET_CHAR(cookie_get_value, soup_cookie_get_value, SoupCookie);
 BOXED_SET_CHAR(cookie_set_value, soup_cookie_set_value, SoupCookie);
@@ -5156,6 +5162,7 @@ BOXED_SET_CHAR(cookie_set_value, soup_cookie_set_value, SoupCookie);
  * @name domain
  * @memberOf Cookie.prototype
  * @type String
+ * @since 1.5
  * */
 BOXED_GET_CHAR(cookie_get_domain, soup_cookie_get_domain, SoupCookie);
 BOXED_SET_CHAR(cookie_set_domain, soup_cookie_set_domain, SoupCookie);
@@ -5164,6 +5171,7 @@ BOXED_SET_CHAR(cookie_set_domain, soup_cookie_set_domain, SoupCookie);
  * @name path
  * @memberOf Cookie.prototype
  * @type String
+ * @since 1.5
  * */
 BOXED_GET_CHAR(cookie_get_path, soup_cookie_get_path, SoupCookie);
 BOXED_SET_CHAR(cookie_set_path, soup_cookie_set_path, SoupCookie);
@@ -5172,6 +5180,7 @@ BOXED_SET_CHAR(cookie_set_path, soup_cookie_set_path, SoupCookie);
  * @name secure
  * @memberOf Cookie.prototype
  * @type boolean
+ * @since 1.5
  * */
 BOXED_GET_BOOLEAN(cookie_get_secure, soup_cookie_get_secure, SoupCookie);
 BOXED_SET_BOOLEAN(cookie_set_secure, soup_cookie_set_secure, SoupCookie);
@@ -5180,6 +5189,7 @@ BOXED_SET_BOOLEAN(cookie_set_secure, soup_cookie_set_secure, SoupCookie);
  * @name httpOnly
  * @memberOf Cookie.prototype
  * @type String
+ * @since 1.5
  * */
 BOXED_GET_BOOLEAN(cookie_get_http_only, soup_cookie_get_http_only, SoupCookie);
 BOXED_SET_BOOLEAN(cookie_set_http_only, soup_cookie_set_http_only, SoupCookie);
@@ -5190,6 +5200,7 @@ BOXED_SET_BOOLEAN(cookie_set_http_only, soup_cookie_set_http_only, SoupCookie);
  * @memberOf Cookie.prototype
  * @type Date
  * @readonly
+ * @since 1.5
  * */
 static JSValueRef 
 cookie_get_expires(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  
@@ -6695,6 +6706,7 @@ create_global_object()
      * @class 
      *    A cookie
      * @name Cookie
+     * @since 1.5
      *
      * @constructs Cookie 
      *

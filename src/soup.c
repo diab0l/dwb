@@ -372,10 +372,12 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
          * @memberOf signals
          * @param {signals~onAddCookie} callback
          *      Callback function that will be called when the signal is emitted
+         * @since 1.5
          * */
         /**
          * Callback called before a new navigation starts
          * @callback signals~onAddCookie
+         * @since 1.5
          * @param {Cookie}  cookie 
          *      The copy of the cookie that will be added to the jar
          *
