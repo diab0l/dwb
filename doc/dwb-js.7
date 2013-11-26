@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 11/24/2013
+.\"      Date: 11/27/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "11/24/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "11/27/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -903,6 +903,33 @@ Network related functions
 .nr an-break-flag 1
 .br
 .ps +1
+\fBArray[Cookie] net.allCookies()\fR
+.RS 4
+.sp
+Gets all cookies from the cookie jar\&.
+.PP
+\fBreturns\fR
+.RS 4
+An array of cookies\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid net.clearCookies()\fR
+.RS 4
+.sp
+Removes all cookies from the cookie jar
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBString net.domainFromHost(String hostname)\fR
 .RS 4
 .sp
@@ -999,6 +1026,22 @@ if the uri isn\(cqt valid according to RFC 3986\&.
 .nr an-break-flag 1
 .br
 .ps +1
+\fBArray[Cookie] net.persistentCookies()\fR
+.RS 4
+.sp
+Gets all persistent cookies from the cookie jar\&.
+.PP
+\fBreturns\fR
+.RS 4
+An array of cookies\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBvoid net.sendRequest(String uri, Function callback, [String method], [Object data])\fR
 .RS 4
 .sp
@@ -1063,6 +1106,22 @@ The http request method, default GET, optional\&.
 \fBreturns\fR
 .RS 4
 Object that contains the response body, the response headers and the http status code of the request\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBArray[Cookie] net.sessionCookies()\fR
+.RS 4
+.sp
+Gets all session cookies from the cookie jar\&.
+.PP
+\fBreturns\fR
+.RS 4
+An array of cookies\&.
 .RE
 .RE
 .SS "timer"
@@ -1626,6 +1685,86 @@ Label used for displaying uris, third child of
 .RS 4
 Label used for status information, fourth child of
 \fBgui\&.statusBox\fR\&.
+.RE
+.SS "Cookie"
+.sp
+Represents a cookie\&. Dwb only uses one cookie jar for persistent and session cookies\&. Session cookies can be distinguished from persistent cookies by checking if \fBexpires\fR is null\&. To get a list of cookies currently used by the dwb instance \fBnet\&.allCookies\fR, \fBnet\&.sessionCookies\fR and \fBnet\&.persistentCookies\fR can be used\&. To implement cookie handling use the \fBaddCookie\fR event\&.
+.sp
+A cookie has the following properties
+.PP
+\fIdomain (String, read, write)\fR
+.RS 4
+The cookie domain\&.
+.RE
+.PP
+\fIexpires (Date, read)\fR
+.RS 4
+The cookie expiration date\&.
+.RE
+.PP
+\fIhttpOnly (Boolean, read, write)\fR
+.RS 4
+If the cookie shouldn\(cqt be exposed to scripts\&.
+.RE
+.PP
+\fIname (String, read, write)\fR
+.RS 4
+The cookie name\&.
+.RE
+.PP
+\fIpath (String, read, write)\fR
+.RS 4
+The cookie path\&.
+.RE
+.PP
+\fIsecure (Boolean, read, write)\fR
+.RS 4
+If the cookie should only be transferred over ssl\&.
+.RE
+.PP
+\fIvalue (String, read, write)\fR
+.RS 4
+The cookie value\&.
+.RE
+.sp
+A cookie implements following methods:
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Cookie.delete()\fR
+.RS 4
+.sp
+Deletes a cookie from the jar
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Cookie.delete()\fR
+.RS 4
+.sp
+Saves a cookie to the jar
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid Cookie.setMaxAge(Number seconds)\fR
+.RS 4
+.sp
+Sets the maximum age of a cookie
+.PP
+\fIseconds\fR
+.RS 4
+The number of seconds until the cookie expires, if set to \-1 it is a session cookie\&.
+.RE
 .RE
 .SS "Deferred"
 .sp
@@ -2904,6 +3043,32 @@ var signal = new Signal("nameOfNewSignal", callbackFunction);
 .\}
 .sp
 Signals emitted by dwb are the following:
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBaddCookie\fR
+.RS 4
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+new Signal("addCookie", function(cookie));
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Emitted when cookie has changed or a new cookie will be added to the cookie jar\&. If the callback returns true the cookie won\(cqt be added to the jar\&. To change the cookie the callback must return true and the cookie must be saved manually\&.
+.PP
+\fIcookie\fR
+.RS 4
+The cookie that has been added or changed\&.
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1

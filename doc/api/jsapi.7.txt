@@ -425,6 +425,20 @@ _n_;; Number of the tab
 
 Network related functions
 
+==== Array[Cookie] net.allCookies()
+****
+
+Gets all cookies from the cookie jar.
+
+*returns*;; An array of cookies.
+**** 
+
+==== void net.clearCookies()
+****
+
+Removes all cookies from the cookie jar
+**** 
+
 ==== String net.domainFromHost(String hostname)
 ****
 
@@ -467,6 +481,15 @@ _domain_;; The uri to parse
 *returns*;; A parsed uri or *null* if the uri isn't valid according to RFC 3986.
 ****
 
+==== Array[Cookie] net.persistentCookies()
+****
+
+Gets all persistent cookies from the cookie jar.
+
+*returns*;; An array of cookies.
+**** 
+
+
 ==== void net.sendRequest(String uri, Function callback, [String method], [Object data])
 ****
 
@@ -494,6 +517,14 @@ _method_;; The http request method, default GET, optional.
 the http status code of
 the request. 
 ****
+
+==== Array[Cookie] net.sessionCookies()
+****
+
+Gets all session cookies from the cookie jar.
+
+*returns*;; An array of cookies.
+**** 
 
 === timer === 
 
@@ -748,6 +779,50 @@ _gui.messageLabel (GtkLabel, read)_;; Label used for notifications, first child 
 _gui.entry (GtkEntry, read)_;; The entry, second child of *gui.statusBox*.
 _gui.uriLabel (GtkLabel, read)_;; Label used for displaying uris, third child of *gui.statusBox*.
 _gui.statusLabel (GtkLabel, read)_;; Label used for status information, fourth child of *gui.statusBox*.
+
+=== Cookie === 
+
+Represents a cookie. dwb only uses one cookie jar for persistent and session
+cookies. Session cookies can be distinguished from persistent cookies by
+checking if *expires* is null.
+To get a list of cookies currently used by the dwb instance
+*net.allCookies*, *net.sessionCookies* and *net.persistentCookies* can be used. To
+implement cookie handling use the *addCookie* event.
+
+A cookie has the following properties
+
+_domain (String, read, write)_;; The cookie domain. 
+_expires (Date, read)_;; The cookie expiration date.
+_httpOnly (Boolean, read, write)_;; If the cookie shouldn't be exposed to
+scripts.
+_name (String, read, write)_;; The cookie name. 
+_path (String, read, write)_;; The cookie path. 
+_secure (Boolean, read, write)_;; If the cookie should only be transferred over
+ssl.
+_value (String, read, write)_;; The cookie value. 
+
+A cookie implements following methods:
+
+==== void Cookie.delete()
+****
+
+Deletes a cookie from the jar
+****
+
+==== void Cookie.delete()
+****
+
+Saves a cookie to the jar
+****
+
+==== void Cookie.setMaxAge(Number seconds)
+****
+
+Sets  the maximum age of a cookie
+
+_seconds_;; The number of seconds until the cookie expires, if set to -1 it is a
+session cookie.
+****
 
 
 === Deferred === 
@@ -1488,6 +1563,19 @@ var signal = new Signal("nameOfNewSignal", callbackFunction);
 
 Signals emitted by dwb are the following:
 
+==== addCookie 
+
+****
+----
+new Signal("addCookie", function(cookie));
+----
+
+Emitted when cookie has changed or a new cookie will be added to the cookie jar.
+If the callback returns true the cookie won't be added to the jar. To change
+the cookie the callback must return true and the cookie must be saved manually.
+
+_cookie_;; The cookie that has been added or changed. 
+****
 
 ==== buttonPress 
 
