@@ -124,6 +124,7 @@ dnl
 html_header(Plugins &amp Scripts)
 html_input(adblocker, checkbox, Whether to block advertisements via a filterlist)
 html_input(adblocker-filterlist, text, Path to a adblock plus compatible filterlist)
+html_input(adblocker-element-hider, checkbox, Whether to enable element hider rules, disabling element hiding rules results in faster rendering)
 html_input(enable-java-applet, checkbox, Whether to enable java applets)
 html_input(enable-plugins, checkbox, Whether to enable plugins)
 html_input(enable-scripts, checkbox, Enable embedded scripting languages)

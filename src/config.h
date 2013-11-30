@@ -1185,6 +1185,8 @@ static WebSettings DWB_SETTINGS[] = {
     SETTING_GLOBAL,  BOOLEAN, { .b = false }, (S_Func)dwb_set_adblock,   { 0 }, }, 
   { { "adblocker-filterlist",                    "Path to a filterlist", },                   
     SETTING_GLOBAL,  CHAR, { .p = NULL }, NULL,   { 0 }, }, 
+  { { "adblocker-element-hider",            "Whether to enable element hider rules for the adblocker", },                                            
+    SETTING_GLOBAL,  BOOLEAN, { .b = true }, NULL,   { 0 }, }, 
 #ifndef DISABLE_HSTS
   { { "hsts",                                    "Whether HSTS support should be enabled",},
     SETTING_GLOBAL,  BOOLEAN, { .b = false }, (S_Func)dwb_set_hsts,       { 0 }, },
@@ -1244,6 +1246,7 @@ static WebSettings DWB_SETTINGS[] = {
 
   { { "enable-ipc",            "Whether to enable inter process communication, required for dwbremote", },                                            
     SETTING_GLOBAL,  BOOLEAN, { .b = true }, (S_Func)dwb_set_enable_ipc,   { 0 }, }, 
+
   //{ { "javascript-debugging",                            "If set will be used for 'Accept-Language' header in all requests", },                                            
   //  SETTING_GLOBAL | SETTING_ONINIT,  BOOLEAN, { .b = false }, (S_Func)dwb_set_javascript_debugging,   { 0 }, }, 
 };/*}}}*/

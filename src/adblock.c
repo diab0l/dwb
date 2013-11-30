@@ -631,6 +631,7 @@ adblock_rule_parse(char *filterlist)
     char warning[256];
     int n_css_rules = 0;
     GString *css_rule = g_string_new(NULL);
+    gboolean eh_enabled = GET_BOOL("adblocker-element-hider");
 
     for (int i=0; lines[i] != NULL; i++) 
     {
@@ -647,59 +648,62 @@ adblock_rule_parse(char *filterlist)
         /* Element hiding rules */
         if ( (tmp = strstr(pattern, "##")) != NULL) 
         {
-            /* Match domains */
-            if (*pattern != '#') 
+            if (eh_enabled)
             {
-                domains = g_strndup(pattern, tmp-pattern);
-                domain_arr = g_strsplit(domains, ",", -1);
+                /* Match domains */
+                if (*pattern != '#') 
+                {
+                    domains = g_strndup(pattern, tmp-pattern);
+                    domain_arr = g_strsplit(domains, ",", -1);
 
-                AdblockElementHider *hider = adblock_element_hider_new(tmp+2, domain_arr);
-                GSList *list;
-                gboolean hider_exc = true;
-                for (; *domain_arr; domain_arr++) 
-                {
-                    domain = *domain_arr;
-                    if (*domain == '~')
-                        domain++;
-                    else 
-                        hider_exc = false;
-                    list = g_hash_table_lookup(s_hider_rules, domain);
-                    if (list == NULL) 
+                    AdblockElementHider *hider = adblock_element_hider_new(tmp+2, domain_arr);
+                    GSList *list;
+                    gboolean hider_exc = true;
+                    for (; *domain_arr; domain_arr++) 
                     {
-                        list = g_slist_append(list, hider);
-                        g_hash_table_insert(s_hider_rules, g_strdup(domain), list);
+                        domain = *domain_arr;
+                        if (*domain == '~')
+                            domain++;
+                        else 
+                            hider_exc = false;
+                        list = g_hash_table_lookup(s_hider_rules, domain);
+                        if (list == NULL) 
+                        {
+                            list = g_slist_append(list, hider);
+                            g_hash_table_insert(s_hider_rules, g_strdup(domain), list);
+                        }
+                        else 
+                        {
+                            list = g_slist_append(list, hider);
+                            (void) list;
+                        }
+                        s_has_hider_rules = true;
                     }
-                    else 
+                    hider->exception = hider_exc;
+                    if (hider_exc) 
                     {
-                        list = g_slist_append(list, hider);
-                        (void) list;
+                        g_string_append(s_css_exceptions, tmp + 2);
+                        g_string_append_c(s_css_exceptions, ',');
                     }
-                    s_has_hider_rules = true;
+                    s_hider_list = g_slist_append(s_hider_list, hider);
+                    g_free(domains);
                 }
-                hider->exception = hider_exc;
-                if (hider_exc) 
-                {
-                    g_string_append(s_css_exceptions, tmp + 2);
-                    g_string_append_c(s_css_exceptions, ',');
-                }
-                s_hider_list = g_slist_append(s_hider_list, hider);
-                g_free(domains);
-            }
-            /* general rules */
-            else 
-            {
-                g_string_append(css_rule, tmp+2);
-                n_css_rules++;
-                if (n_css_rules == HIDER_LIST_MAX) 
-                {
-                    g_string_append(css_rule, "{display:none!important;}");
-                    s_css_hider_list = g_slist_prepend(s_css_hider_list, css_rule->str);
-                    n_css_rules = 0;
-                    g_string_free(css_rule, false);
-                    css_rule = g_string_new(NULL);
-                }
+                /* general rules */
                 else 
-                    g_string_append_c(css_rule, ',');
+                {
+                    g_string_append(css_rule, tmp+2);
+                    n_css_rules++;
+                    if (n_css_rules == HIDER_LIST_MAX) 
+                    {
+                        g_string_append(css_rule, "{display:none!important;}");
+                        s_css_hider_list = g_slist_prepend(s_css_hider_list, css_rule->str);
+                        n_css_rules = 0;
+                        g_string_free(css_rule, false);
+                        css_rule = g_string_new(NULL);
+                    }
+                    else 
+                        g_string_append_c(css_rule, ',');
+                }
             }
         }
         /*  Request patterns */

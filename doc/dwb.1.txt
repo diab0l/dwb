@@ -1216,6 +1216,12 @@ Block advertisements using a filterlist, see also
 Default value:
 'false'.
 
+*adblocker-element-hider*::
+Whether element hiding rules are enabled. Disabling element hiding results in
+faster rendering. 
+Default value:
+'true'.
+
 *adblocker-filterlist*::
 A path to a adblock plus compatible filterlist for the adblocker or a path to a
 directory with filterlists.
