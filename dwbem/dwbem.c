@@ -670,6 +670,18 @@ check_installed(const char *name)
         return false;
     return true;
 }
+static gboolean 
+set_content(const char *path, const char *data, size_t length)
+{
+    gboolean ret = false;
+    FILE *f = fopen(path, "w");
+    if (f == NULL)
+        return ret;
+    if (fwrite(data, 1, length, f) == length)
+        ret = true;
+    fclose(f);
+    return ret;
+}
 
 static int 
 install_extension(const char *name, int flags) 
@@ -678,7 +690,6 @@ install_extension(const char *name, int flags)
     char buffer[512];
     char meta[128];
     char *content = NULL;
-    GError *e = NULL;
 
     if (grep(m_meta_data, name, meta, sizeof(meta)) == -1) 
         die(1, "extension %s not found", name);
@@ -709,7 +720,7 @@ install_extension(const char *name, int flags)
         if (status == 200 && msg->response_body->data) 
         {
             snprintf(buffer, sizeof(buffer), "%s/%s", m_user_dir, name);
-            if (g_file_set_contents(buffer, msg->response_body->data, -1, &e)) 
+            if (set_content(buffer, msg->response_body->data, msg->response_body->length))
             {
                 if (add_to_loader(name, msg->response_body->data, flags) == 0) 
                 {
@@ -718,7 +729,7 @@ install_extension(const char *name, int flags)
                 }
             }
             else 
-                print_error("Saving %s failed: %s", name, e->message);
+                print_error("Saving %s failed", name);
         }
         else 
             print_error("Download failed with status %d", status);
