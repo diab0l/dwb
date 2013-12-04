@@ -239,6 +239,7 @@ static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
 static void object_destroy_cb(JSObjectRef o);
 static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
+static JSValueRef do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc);
 
 /* Static variables */
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
@@ -357,6 +358,37 @@ call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, siz
     return ret;
 }
 
+static JSValueRef 
+inject_api_callback(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc)
+{
+    JSObjectRef api_function = NULL;
+    if (argc > 0 && (api_function = js_value_to_function(ctx, argv[0], exc)))
+    {
+        char *body = get_body(ctx, api_function, exc);
+        if (body == NULL)
+            return NULL; 
+        if (TRY_CONTEXT_LOCK)
+        {
+            if (s_global_context != NULL)
+            {
+                if (argc > 1)
+                {
+                    JSValueRef args [] = { js_context_change(ctx, s_global_context, argv[1], exc) };
+                    do_include(s_global_context, "local", body, false, false, 1, args, NULL);
+                }
+                else 
+                {
+                    do_include(s_global_context, "local", body, false, false, 0, NULL, NULL);
+                }
+            }
+            CONTEXT_UNLOCK;
+        }
+        g_free(body);
+        
+    }
+    return NULL;
+}
+
 /* inject {{{*/
 static JSValueRef
 inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -409,6 +441,10 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
         JSObjectRef func = JSObjectMakeFunction(wctx, NULL, 0, NULL, script, NULL, 0, NULL);
         if (func != NULL && JSObjectIsFunction(ctx, func)) 
         {
+            if (count == 1)
+            {
+                js_set_property(wctx, func, "exports", args[0], kJSDefaultAttributes, NULL);
+            }
             JSValueRef wret = JSObjectCallAsFunction(wctx, func, func, count, count == 1 ? args : NULL, &e) ;
             if (exc != NULL) 
             {
@@ -1721,6 +1757,45 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
     return NIL;
 }/*}}}*/
 
+static void
+load_string_resource(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebResource *resource, WebKitNetworkRequest *request, WebKitNetworkResponse *response, gpointer *data) 
+{
+    const char *uri = webkit_network_request_get_uri(request);
+    if (!g_str_has_prefix(uri, "dwb-chrome:"))
+        webkit_network_request_set_uri(request, "about:blank");
+}
+static void
+load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferred)
+{
+    if (TRY_CONTEXT_LOCK)
+    {
+        if (s_global_context != NULL)
+        {
+            WebKitLoadStatus status = webkit_web_frame_get_load_status(frame);
+            if (status == WEBKIT_LOAD_FINISHED)
+                deferred_resolve(s_global_context, deferred, deferred, 0, NULL, NULL);
+            else if (status == WEBKIT_LOAD_COMMITTED && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(frame), "dwb_load_string_external")))
+            {
+                JSContextRef wctx = webkit_web_frame_get_global_context(frame);
+                JSStringRef api_name = JSStringCreateWithUTF8CString("dwb");
+                JSObjectRef api_function = JSObjectMakeFunctionWithCallback(wctx, api_name, inject_api_callback);
+                JSObjectSetProperty(wctx, JSContextGetGlobalObject(wctx), api_name, api_function, kJSDefaultAttributes, NULL);
+                JSStringRelease(api_name);
+            }
+            else if (status == WEBKIT_LOAD_FAILED)
+                deferred_reject(s_global_context, deferred, deferred, 0, NULL, NULL);
+            if (status == WEBKIT_LOAD_FINISHED || status == WEBKIT_LOAD_FAILED)
+            {
+                g_signal_handlers_disconnect_by_func(frame, load_string_status, deferred);
+                g_signal_handlers_disconnect_by_func(webkit_web_frame_get_web_view(frame), load_string_resource, deferred);
+                g_object_steal_data(G_OBJECT(frame), "dwb_load_string_external");
+            }
+            JSValueUnprotect(s_global_context, deferred);
+
+        }
+        CONTEXT_UNLOCK;
+    }
+}
 /**
  * Loads a string in a frame or a webview
  *
@@ -1734,12 +1809,21 @@ frame_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t ar
  *      The MIME-type, if omitted or null <i>text/html</i> is assumed.
  * @param {Number} [encoding]
  *      The character encoding, if omitted or null <i>UTF-8</i> is assumed.
- * @param {Boolean} [baseUri]
+ * @param {String} [baseUri]
  *      The base uri, if present it must either use the uri-scheme <i>dwb-chrome:</i>
  *      or <i>file:</i>, otherwise the request will be ignored. 
+ * @param {boolean} [externalSources]
+ *      Whether external sources, e.g. scripts, are allowed, defaults to false. If
+ *      external resources are forbidden the function <b>dwb</b> can be called
+ *      in the webcontext to execute functions in the scripting context 
+ *
+ * @returns {Deferred}
+ *      A deferred that will be resolved if the webview has finished loading the
+ *      string and rejected if an error occured
  *
  * @since 1.3
  * */
+
 static JSValueRef 
 frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -1751,8 +1835,12 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
     if (argc == 0)
         return UNDEFINED;
     WebKitWebFrame *frame = JSObjectGetPrivate(this);
+    JSObjectRef deferred = NULL;
+    gboolean allow_resources = false;
     if (frame != NULL) 
     {
+        deferred = deferred_new(ctx);
+        JSValueProtect(ctx, deferred);
         content = js_value_to_char(ctx, argv[0], -1, exc);
         if (content == NULL)
             return UNDEFINED;
@@ -1766,15 +1854,23 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
                 {
                     base_uri = js_value_to_char(ctx, argv[3], -1, exc);
                 }
+                if (argc > 4)
+                    allow_resources = JSValueToBoolean(ctx, argv[4]);
             }
         }
+        if (!allow_resources)
+        {
+            g_signal_connect(webkit_web_frame_get_web_view(frame), "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
+        }
+        g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
+        g_object_set_data(G_OBJECT(frame), "dwb_load_string_external", GINT_TO_POINTER(!allow_resources));
         webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
         g_free(content);
         g_free(mime_type);
         g_free(encoding);
         g_free(base_uri);
     }
-    return UNDEFINED;
+    return deferred ? deferred : NIL;
 }
 /*}}}*/
 
@@ -2067,7 +2163,7 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
 }
 /*}}}*/
 
-static JSValueRef 
+JSValueRef 
 do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc)
 {
     JSStringRef js_script;
