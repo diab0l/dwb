@@ -228,7 +228,28 @@
             {
                 return util.changeMode(Modes.CaretMode);
             }
-        }
+        },
+        /** 
+         * Function that creates a multiline string
+         *
+         * @name hereDoc
+         * @memberOf util
+         * @function
+         *
+         * @param {Function} doc
+         *      A function, the body of the function must contain the here
+         *      document. The content must be wrapped in &#47;&#42;*HEREDOC ...HEREDOC*&#42;&#47;
+         *
+         * @returns {String}
+         *      The here document.
+         */
+         "hereDoc" : 
+         {
+             value : function(func)
+             {
+                 return this.getBody(func).replace(/\s*\/\*HEREDOC([\s\S]*)\s*HEREDOC\*\/\s*;?/, "$1");
+             }
+         }
     });
     Object.freeze(util);
     
