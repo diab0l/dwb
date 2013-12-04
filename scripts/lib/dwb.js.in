@@ -278,21 +278,34 @@
          * @name require 
          * @function
          *
-         * @param {Array} names Array of module names or null, passing null
-         *                      will require all defined modules
-         * @param {requireCallback} callback 
+         * @param {Array|String} names 
+         *      Array of module names, a module name or null. If an array or
+         *      null is passed require is called asynchronously, passing null
+         *      will require all modules. If a string is passed to require
+         *      it will be synchronous. The module must have been already defined if the
+         *      synchronous version is used.
+         *      
+         * @param {requireCallback} [callback]
          *      A callback function, the modules are passed as parameters to
-         *      the callback
+         *      the callback, only used if require is used asynchronously
+         *
+         * @returns {Object|undefined}
+         *      The synchronous version returns the module, the asynchronous
+         *      version returns nothing.
          * @example 
+         * // asynchronous
          * require(["foo", "bar"], function(foo, bar) {
          *    io.print(foo.baz);
          * });
+         * // synchronous
+         * var foo = require("foo");
+         * io.print(foo.baz);
          * */
         "require" : 
         {
             value : function(names, callback) 
             {
-                if (names !== null && ! (names instanceof Array)) 
+                if (names !== null && ! (names instanceof Array) && !(typeof names == "string")) 
                 {
                     io.debug({ 
                             error : new Error("require : invalid argument (" + 
@@ -302,11 +315,27 @@
                     });
                     return; 
                 }
+                if (typeof names == "string") {
+                    if (_modules[names])
+                    {
+                        return _modules[names];
+                    }
+                    else 
+                    {
+                        io.debug({ 
+                            error : new Error("require : module " + names + " hasn't been loaded yet!"),
+                            offset : 1, 
+                            arguments : arguments 
+                        });
+                    }
 
+                }
+                else {
                 if (!_initialized) 
                     _callbacks.push({callback : callback, names : names});
                 else 
                     _applyRequired(names, callback);
+                }
             }
         },
         "_deprecated" : 
@@ -515,7 +544,7 @@
             {
                 value : function()
                 {
-                    this.mainFrame.loadString.apply(this.mainFrame, arguments);
+                    return this.mainFrame.loadString.apply(this.mainFrame, arguments);
                 }
             }
     });
