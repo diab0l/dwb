@@ -68,8 +68,14 @@
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
 #define PROP_LENGTH 128
 #define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
+
 #define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) == 0)
 #define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
+#define EXEC_LOCK if (TRY_CONTEXT_LOCK) { if (s_global_context != NULL) { 
+#define EXEC_UNLOCK } CONTEXT_UNLOCK; }
+#define EXEC_LOCK_RETURN(result) if (!TRY_CONTEXT_LOCK) return result; { if (s_global_context != NULL) { 
+#define EXEC_UNLOCK } CONTEXT_UNLOCK; }
+
 #define IS_KEY_EVENT(X) (((int)(X)) == GDK_KEY_PRESS || ((int)(X)) == GDK_KEY_RELEASE)
 #define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE \
                             || ((int)(X)) == GDK_2BUTTON_PRESS || ((int)(X)) == GDK_3BUTTON_PRESS)
@@ -367,22 +373,17 @@ inject_api_callback(JSContextRef ctx, JSObjectRef function, JSObjectRef this, si
         char *body = get_body(ctx, api_function, exc);
         if (body == NULL)
             return NULL; 
-        if (TRY_CONTEXT_LOCK)
+        EXEC_LOCK;
+        if (argc > 1)
         {
-            if (s_global_context != NULL)
-            {
-                if (argc > 1)
-                {
-                    JSValueRef args [] = { js_context_change(ctx, s_global_context, argv[1], exc) };
-                    do_include(s_global_context, "local", body, false, false, 1, args, NULL);
-                }
-                else 
-                {
-                    do_include(s_global_context, "local", body, false, false, 0, NULL, NULL);
-                }
-            }
-            CONTEXT_UNLOCK;
+            JSValueRef args [] = { js_context_change(ctx, s_global_context, argv[1], exc) };
+            do_include(s_global_context, "local", body, false, false, 1, args, NULL);
         }
+        else 
+        {
+            do_include(s_global_context, "local", body, false, false, 0, NULL, NULL);
+        }
+        EXEC_UNLOCK;
         g_free(body);
         
     }
@@ -531,13 +532,13 @@ path_callback_new(JSContextRef ctx, JSObjectRef object, gboolean dir_only)
 static void
 path_callback_free(PathCallback *pc)
 {
-    if (pc != NULL && TRY_CONTEXT_LOCK)
-    {
-        if (s_global_context != NULL)
-            JSValueUnprotect(s_global_context, pc->callback);
-        CONTEXT_UNLOCK;
-        g_free(pc);
-    }
+    g_return_if_fail(pc != NULL);
+
+    EXEC_LOCK;
+    JSValueUnprotect(s_global_context, pc->callback);
+    EXEC_UNLOCK;
+
+    g_free(pc);
 }
 /** 
  * Registers functions for the done and fail chain
@@ -786,17 +787,14 @@ callback_data_free(CallbackData *c)
     {
         if (c->gobject != NULL) 
             g_object_unref(c->gobject);
-        if (TRY_CONTEXT_LOCK)
-        {
-            if (s_global_context == NULL)
-            {
-                if (c->object != NULL) 
-                    JSValueUnprotect(s_global_context, c->object);
-                if (c->callback != NULL) 
-                    JSValueUnprotect(s_global_context, c->callback);
-            }
-            CONTEXT_UNLOCK;
-        }
+
+        EXEC_LOCK;
+        if (c->object != NULL) 
+            JSValueUnprotect(s_global_context, c->object);
+        if (c->callback != NULL) 
+            JSValueUnprotect(s_global_context, c->callback);
+        EXEC_UNLOCK;
+
         g_free(c);
     }
 }/*}}}*/
@@ -806,17 +804,12 @@ ssignal_free(SSignal *sig)
 {
     if (sig != NULL) 
     {
-        if (TRY_CONTEXT_LOCK)
-        {
-            if (s_global_context == NULL)
-            {
-                if (sig->func)
-                    JSValueUnprotect(s_global_context, sig->func);
-                if (sig->object)
-                    JSValueUnprotect(s_global_context, sig->object);
-            }
-            CONTEXT_UNLOCK;
-        }
+        EXEC_LOCK;
+        if (sig->func)
+            JSValueUnprotect(s_global_context, sig->func);
+        if (sig->object)
+            JSValueUnprotect(s_global_context, sig->object);
+        EXEC_UNLOCK;
         if (sig->query)
             g_free(sig->query);
         g_free(sig);
@@ -866,21 +859,17 @@ static void
 callback(CallbackData *c) 
 {
     gboolean ret = false;
-    if (!TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL)
+    EXEC_LOCK;
+    JSValueRef val[] = { c->object != NULL ? c->object : NIL };
+    JSValueRef jsret = call_as_function_debug(s_global_context, c->callback, c->callback, 1, val);
+    if (JSValueIsBoolean(s_global_context, jsret))
+        ret = JSValueToBoolean(s_global_context, jsret);
+    if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
     {
-        JSValueRef val[] = { c->object != NULL ? c->object : NIL };
-        JSValueRef jsret = call_as_function_debug(s_global_context, c->callback, c->callback, 1, val);
-        if (JSValueIsBoolean(s_global_context, jsret))
-            ret = JSValueToBoolean(s_global_context, jsret);
-        if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
-        {
-            g_signal_handlers_disconnect_by_func(c->gobject, callback, c);
-            callback_data_free(c);
-        }
+        g_signal_handlers_disconnect_by_func(c->gobject, callback, c);
+        callback_data_free(c);
     }
-    CONTEXT_UNLOCK;
+    EXEC_UNLOCK;
 }/*}}}*/
 /*}}}*/
 
@@ -1761,40 +1750,55 @@ static void
 load_string_resource(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebResource *resource, WebKitNetworkRequest *request, WebKitNetworkResponse *response, gpointer *data) 
 {
     const char *uri = webkit_network_request_get_uri(request);
-    if (!g_str_has_prefix(uri, "dwb-chrome:"))
+    if (!g_str_has_prefix(uri, "dwb-chrome:") || webkit_web_view_get_main_frame(wv) != frame)
         webkit_network_request_set_uri(request, "about:blank");
 }
+
+static gboolean 
+load_string_navigation(WebKitWebView *wv, WebKitWebFrame *frame, WebKitNetworkRequest *request, WebKitWebNavigationAction *action,
+    WebKitWebPolicyDecision *policy, GList *gl) 
+{
+    if (frame == webkit_web_view_get_main_frame(wv))
+    {
+        const char *uri = webkit_network_request_get_uri(request);
+        if (!g_str_has_prefix(uri, "dwb-chrome:"))
+        {
+            g_signal_handlers_disconnect_by_func(wv, load_string_navigation, NULL);
+            g_signal_handlers_disconnect_by_func(wv, load_string_resource, NULL);
+        }
+    }
+    return false;
+}
+
 static void
 load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferred)
 {
-    if (TRY_CONTEXT_LOCK)
+    EXEC_LOCK;
+    WebKitLoadStatus status = webkit_web_frame_get_load_status(frame);
+    gboolean is_main_frame = webkit_web_view_get_main_frame(webkit_web_frame_get_web_view(frame)) == frame;
+    if (status == WEBKIT_LOAD_FINISHED)
+        deferred_resolve(s_global_context, deferred, deferred, 0, NULL, NULL);
+    else if (status == WEBKIT_LOAD_COMMITTED
+            && is_main_frame
+            && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(frame), "dwb_load_string_external")))
     {
-        if (s_global_context != NULL)
-        {
-            WebKitLoadStatus status = webkit_web_frame_get_load_status(frame);
-            if (status == WEBKIT_LOAD_FINISHED)
-                deferred_resolve(s_global_context, deferred, deferred, 0, NULL, NULL);
-            else if (status == WEBKIT_LOAD_COMMITTED && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(frame), "dwb_load_string_external")))
-            {
-                JSContextRef wctx = webkit_web_frame_get_global_context(frame);
-                JSStringRef api_name = JSStringCreateWithUTF8CString("dwb");
-                JSObjectRef api_function = JSObjectMakeFunctionWithCallback(wctx, api_name, inject_api_callback);
-                JSObjectSetProperty(wctx, JSContextGetGlobalObject(wctx), api_name, api_function, kJSDefaultAttributes, NULL);
-                JSStringRelease(api_name);
-            }
-            else if (status == WEBKIT_LOAD_FAILED)
-                deferred_reject(s_global_context, deferred, deferred, 0, NULL, NULL);
-            if (status == WEBKIT_LOAD_FINISHED || status == WEBKIT_LOAD_FAILED)
-            {
-                g_signal_handlers_disconnect_by_func(frame, load_string_status, deferred);
-                g_signal_handlers_disconnect_by_func(webkit_web_frame_get_web_view(frame), load_string_resource, deferred);
-                g_object_steal_data(G_OBJECT(frame), "dwb_load_string_external");
-            }
-            JSValueUnprotect(s_global_context, deferred);
-
-        }
-        CONTEXT_UNLOCK;
+        JSContextRef wctx = webkit_web_frame_get_global_context(frame);
+        JSStringRef api_name = JSStringCreateWithUTF8CString("dwb");
+        JSObjectRef api_function = JSObjectMakeFunctionWithCallback(wctx, api_name, inject_api_callback);
+        JSObjectSetProperty(wctx, JSContextGetGlobalObject(wctx), api_name, api_function, kJSDefaultAttributes, NULL);
+        JSStringRelease(api_name);
     }
+    else if (status == WEBKIT_LOAD_FAILED)
+        deferred_reject(s_global_context, deferred, deferred, 0, NULL, NULL);
+    if (status == WEBKIT_LOAD_FINISHED || status == WEBKIT_LOAD_FAILED)
+    {
+        g_signal_handlers_disconnect_by_func(frame, load_string_status, deferred);
+        g_signal_handlers_disconnect_by_func(webkit_web_frame_get_web_view(frame), load_string_resource, deferred);
+        g_object_steal_data(G_OBJECT(frame), "dwb_load_string_external");
+    }
+    JSValueUnprotect(s_global_context, deferred);
+    EXEC_UNLOCK;
+
 }
 /**
  * Loads a string in a frame or a webview
@@ -1833,43 +1837,45 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
          *base_uri = NULL;
 
     if (argc == 0)
-        return UNDEFINED;
+        return NIL;
     WebKitWebFrame *frame = JSObjectGetPrivate(this);
+    g_return_val_if_fail(frame != NULL, NIL);
+
     JSObjectRef deferred = NULL;
-    gboolean allow_resources = false;
-    if (frame != NULL) 
+    gboolean forbid_resources = true;
+    WebKitWebView *wv = webkit_web_frame_get_web_view(frame);
+
+    deferred = deferred_new(ctx);
+    JSValueProtect(ctx, deferred);
+    content = js_value_to_char(ctx, argv[0], -1, exc);
+    if (content == NULL)
+        return UNDEFINED;
+    if (argc > 1)
     {
-        deferred = deferred_new(ctx);
-        JSValueProtect(ctx, deferred);
-        content = js_value_to_char(ctx, argv[0], -1, exc);
-        if (content == NULL)
-            return UNDEFINED;
-        if (argc > 1)
+        mime_type = js_value_to_char(ctx, argv[1], -1, exc);
+        if (argc > 2)
         {
-            mime_type = js_value_to_char(ctx, argv[1], -1, exc);
-            if (argc > 2)
-            {
-                encoding = js_value_to_char(ctx, argv[2], -1, exc);
-                if (argc > 3)
-                {
-                    base_uri = js_value_to_char(ctx, argv[3], -1, exc);
-                }
-                if (argc > 4)
-                    allow_resources = JSValueToBoolean(ctx, argv[4]);
-            }
+            encoding = js_value_to_char(ctx, argv[2], -1, exc);
+            if (argc > 3)
+                base_uri = js_value_to_char(ctx, argv[3], -1, exc);
+            if (base_uri != NULL && g_str_has_prefix(base_uri, "dwb-chrome:") && argc > 4)
+                forbid_resources = ! JSValueToBoolean(ctx, argv[4]);
         }
-        if (!allow_resources)
-        {
-            g_signal_connect(webkit_web_frame_get_web_view(frame), "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
-        }
-        g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
-        g_object_set_data(G_OBJECT(frame), "dwb_load_string_external", GINT_TO_POINTER(!allow_resources));
-        webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
-        g_free(content);
-        g_free(mime_type);
-        g_free(encoding);
-        g_free(base_uri);
     }
+    if (forbid_resources)
+    {
+        g_signal_connect(wv, "navigation-policy-decision-requested", G_CALLBACK(load_string_navigation), NULL);
+        g_signal_connect(wv, "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
+    }
+    g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
+    g_object_set_data(G_OBJECT(frame), "dwb_load_string_external", GINT_TO_POINTER(forbid_resources));
+
+    webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
+
+    g_free(content);
+    g_free(mime_type);
+    g_free(encoding);
+    g_free(base_uri);
     return deferred ? deferred : NIL;
 }
 /*}}}*/
@@ -2400,26 +2406,23 @@ get_message_data(SoupMessage *msg)
     JSValueRef ret = NIL;
     JSStringRef s;
 
-    if (!TRY_CONTEXT_LOCK)
-        return NIL;
+    EXEC_LOCK_RETURN(NIL);
 
-    if (s_global_context != NULL)
-    {
-        o = JSObjectMake(s_global_context, NULL, NULL);
-        js_set_object_property(s_global_context, o, "body", msg->response_body->data, NULL);
+    o = JSObjectMake(s_global_context, NULL, NULL);
+    js_set_object_property(s_global_context, o, "body", msg->response_body->data, NULL);
 
-        ho = JSObjectMake(s_global_context, NULL, NULL);
+    ho = JSObjectMake(s_global_context, NULL, NULL);
 
-        soup_message_headers_iter_init(&iter, msg->response_headers);
-        while (soup_message_headers_iter_next(&iter, &name, &value)) 
-            js_set_object_property(s_global_context, ho, name, value, NULL);
+    soup_message_headers_iter_init(&iter, msg->response_headers);
+    while (soup_message_headers_iter_next(&iter, &name, &value)) 
+        js_set_object_property(s_global_context, ho, name, value, NULL);
 
-        s = JSStringCreateWithUTF8CString("headers");
-        JSObjectSetProperty(s_global_context, o, s, ho, kJSDefaultProperty, NULL);
-        JSStringRelease(s);
-        ret = o;
-    }
-    CONTEXT_UNLOCK;
+    s = JSStringCreateWithUTF8CString("headers");
+    JSObjectSetProperty(s_global_context, o, s, ho, kJSDefaultProperty, NULL);
+    JSStringRelease(s);
+    ret = o;
+
+    EXEC_UNLOCK;
 
     return ret;
 }
@@ -2438,20 +2441,15 @@ get_message_data(SoupMessage *msg)
 static void
 request_callback(SoupSession *session, SoupMessage *message, JSObjectRef function) 
 {
-    if (!TRY_CONTEXT_LOCK)
-        return;
-
-    if (s_global_context != NULL)
+    EXEC_LOCK;
+    if (message->response_body->data != NULL) 
     {
-        if (message->response_body->data != NULL) 
-        {
-            JSValueRef o = get_message_data(message);
-            JSValueRef vals[] = { o, make_object(s_global_context, G_OBJECT(message))  };
-            call_as_function_debug(s_global_context, function, function, 2, vals);
-        }
-        JSValueUnprotect(s_global_context, function);
+        JSValueRef o = get_message_data(message);
+        JSValueRef vals[] = { o, make_object(s_global_context, G_OBJECT(message))  };
+        call_as_function_debug(s_global_context, function, function, 2, vals);
     }
-    CONTEXT_UNLOCK;
+    JSValueUnprotect(s_global_context, function);
+    EXEC_UNLOCK;
 }
 static void 
 set_request(JSContextRef ctx, SoupMessage *msg, JSValueRef val, JSValueRef *exc)
@@ -2586,18 +2584,13 @@ static gboolean
 timeout_callback(JSObjectRef obj) 
 {
     gboolean ret = false;
-    if (!TRY_CONTEXT_LOCK)
-        return ret;
-
-    if (s_global_context != NULL)
-    {
-        JSValueRef val = call_as_function_debug(s_global_context, obj, obj, 0, NULL);
-        if (val == NULL)
-            ret = false;
-        else 
-            ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK_RETURN(false);
+    JSValueRef val = call_as_function_debug(s_global_context, obj, obj, 0, NULL);
+    if (val == NULL)
+        ret = false;
+    else 
+        ret = !JSValueIsBoolean(s_global_context, val) || JSValueToBoolean(s_global_context, val);
+    EXEC_UNLOCK;
 
     return ret;
 }/*}}}*/
@@ -2798,18 +2791,13 @@ net_all_cookies(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t 
 void 
 scripts_completion_activate(void) 
 {
-    if (!TRY_CONTEXT_LOCK) 
-        return;
-
-    if (s_global_context != NULL)
-    {
-        const char *text = GET_TEXT();
-        JSValueRef val[] = { js_char_to_value(s_global_context, text) };
-        call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
-        completion_clean_completion(false);
-        dwb_change_mode(NORMAL_MODE, true);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+    const char *text = GET_TEXT();
+    JSValueRef val[] = { js_char_to_value(s_global_context, text) };
+    call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
+    completion_clean_completion(false);
+    dwb_change_mode(NORMAL_MODE, true);
+    EXEC_UNLOCK;
 }
 /** 
  * Initializes tab completion.
@@ -3371,16 +3359,11 @@ clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 static void
 got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
 {
-    if (!TRY_CONTEXT_LOCK)
-        return;
-
-    if (s_global_context != NULL)
-    {
-        JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
-        call_as_function_debug(s_global_context, callback, callback, 1, args);
-        JSValueUnprotect(s_global_context, callback);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+    JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_global_context, text) };
+    call_as_function_debug(s_global_context, callback, callback, 1, args);
+    JSValueUnprotect(s_global_context, callback);
+    EXEC_UNLOCK;
 }
 /**
  * Gets content of the system clipboard
@@ -3657,19 +3640,15 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
     {
         if (data->finished & SPAWN_FINISHED)
         {
-            if (TRY_CONTEXT_LOCK)
-            {
-                if (s_global_context != NULL)
-                {
-                    JSValueRef argv[] = { JSValueMakeNumber(s_global_context, data->status) };
-                    if (data->status != 0)
-                        deferred_reject(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
-                    else if (condition == G_IO_HUP && is_stdout)
-                        deferred_resolve(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
-                    JSValueUnprotect(s_global_context, data->callback);
-                }
-                CONTEXT_UNLOCK;
-            }
+            EXEC_LOCK;
+            JSValueRef argv[] = { JSValueMakeNumber(s_global_context, data->status) };
+            if (data->status != 0)
+                deferred_reject(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
+            else if (condition == G_IO_HUP && is_stdout)
+                deferred_resolve(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
+            JSValueUnprotect(s_global_context, data->callback);
+            EXEC_UNLOCK;
+
             g_free(data);
         }
         else 
@@ -3692,18 +3671,15 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
         }
         else if (status == G_IO_STATUS_NORMAL)
         {
-            if (content != NULL && TRY_CONTEXT_LOCK)
-            {
-                if (s_global_context != NULL)
+            if (content != NULL) {
+                EXEC_LOCK;
+                JSValueRef arg = js_char_to_value(s_global_context, content);
+                if (arg != NULL)
                 {
-                    JSValueRef arg = js_char_to_value(s_global_context, content);
-                    if (arg != NULL)
-                    {
-                        JSValueRef argv[] = { arg };
-                        call_as_function_debug(s_global_context, data->callback, data->callback, 1, argv);
-                    }
+                    JSValueRef argv[] = { arg };
+                    call_as_function_debug(s_global_context, data->callback, data->callback, 1, argv);
                 }
-                CONTEXT_UNLOCK;
+                EXEC_UNLOCK;
             }
         }
         g_free(content);
@@ -4642,14 +4618,10 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
 static void 
 menu_callback(GtkMenuItem *item, JSObjectRef callback)
 {
-    if (!TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL)
-    {
-        JSObjectRef this =  make_object_for_class(s_global_context, s_widget_class, G_OBJECT(item), true);
-        call_as_function_debug(s_global_context, callback, this, 0, NULL);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+    JSObjectRef this =  make_object_for_class(s_global_context, s_widget_class, G_OBJECT(item), true);
+    call_as_function_debug(s_global_context, callback, this, 0, NULL);
+    EXEC_UNLOCK;
 }
 JSValueRef
 soup_header_get_function(JSContextRef ctx, const char * (*func)(SoupMessageHeaders *, const char *name), 
@@ -5045,30 +5017,27 @@ server_handler_cb(SoupServer *server, SoupMessage *message, const char *path, GH
     GHashTableIter iter;
     gpointer key = NULL, value = NULL;
 
-    if (!TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL)
+
+    EXEC_LOCK;
+
+    argv[0] = make_object_for_class(s_global_context, s_message_class, G_OBJECT(message), true);
+    argv[1] = js_char_to_value(s_global_context, path);
+
+    if (query != NULL)
     {
-
-        argv[0] = make_object_for_class(s_global_context, s_message_class, G_OBJECT(message), true);
-        argv[1] = js_char_to_value(s_global_context, path);
-
-        if (query != NULL)
-        {
-            JSObjectRef js_query = JSObjectMake(s_global_context, NULL, NULL);
-            g_hash_table_iter_init(&iter, query);
-            while (g_hash_table_iter_next(&iter, &key, &value) && key != NULL)
-                js_set_object_property(s_global_context, js_query, key, value, NULL);
-            argv[2] = js_query;
-        }
-        else 
-            argv[2] = NIL;
-
-        call_as_function_debug(s_global_context, callback, 
-                make_object_for_class(s_global_context, s_soup_server_class, G_OBJECT(server), true), 
-                3, argv);
+        JSObjectRef js_query = JSObjectMake(s_global_context, NULL, NULL);
+        g_hash_table_iter_init(&iter, query);
+        while (g_hash_table_iter_next(&iter, &key, &value) && key != NULL)
+            js_set_object_property(s_global_context, js_query, key, value, NULL);
+        argv[2] = js_query;
     }
-    CONTEXT_UNLOCK;
+    else 
+        argv[2] = NIL;
+
+    call_as_function_debug(s_global_context, callback, 
+            make_object_for_class(s_global_context, s_soup_server_class, G_OBJECT(server), true), 
+            3, argv);
+    EXEC_UNLOCK;
 }
 static JSValueRef 
 server_handler(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -5519,55 +5488,52 @@ scripts_emit(ScriptSignal *sig)
     if (function == NULL)
         return false;
 
-    if (!TRY_CONTEXT_LOCK)
-        return false;
+    EXEC_LOCK_RETURN(false);
 
-    if (s_global_context != NULL) 
+    if (sig->jsobj != NULL)
+        additional++;
+    if (sig->json != NULL)
+        additional++;
+    if (sig->arg != NULL)
+        additional++;
+
+    numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
+    JSValueRef val[numargs];
+    i = 0;
+
+    if (sig->jsobj != NULL) 
+        val[i++] = sig->jsobj;
+
+    for (int j=0; j<sig->numobj; j++) 
     {
-        if (sig->jsobj != NULL)
-            additional++;
-        if (sig->json != NULL)
-            additional++;
-        if (sig->arg != NULL)
-            additional++;
-
-        numargs = MIN(sig->numobj, SCRIPT_MAX_SIG_OBJECTS)+additional;
-        JSValueRef val[numargs];
-        i = 0;
-
-        if (sig->jsobj != NULL) 
-            val[i++] = sig->jsobj;
-
-        for (int j=0; j<sig->numobj; j++) 
-        {
-            if (sig->objects[j] != NULL) 
-                val[i++] = make_object(s_global_context, G_OBJECT(sig->objects[j]));
-            else 
-                val[i++] = NIL;
-        }
-
-        if (sig->json != NULL)
-        {
-            JSValueRef vson = js_json_to_value(s_global_context, sig->json);
-            val[i++] = vson == NULL ? NIL : vson;
-        }
-        if (sig->arg != NULL)
-        {
-            switch (sig->arg->n)
-            {
-                case BOOLEAN : val[i++] = JSValueMakeBoolean(s_global_context, sig->arg->b); break;
-                case INTEGER : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->i); break;
-                case DOUBLE  : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->d); break;
-                case CHAR    : val[i++] = js_char_to_value(s_global_context, sig->arg->p); break;
-            }
-        }
-
-        JSValueRef js_ret = call_as_function_debug(s_global_context, function, function, numargs, val);
-
-        if (JSValueIsBoolean(s_global_context, js_ret)) 
-            ret = JSValueToBoolean(s_global_context, js_ret);
+        if (sig->objects[j] != NULL) 
+            val[i++] = make_object(s_global_context, G_OBJECT(sig->objects[j]));
+        else 
+            val[i++] = NIL;
     }
-    CONTEXT_UNLOCK;
+
+    if (sig->json != NULL)
+    {
+        JSValueRef vson = js_json_to_value(s_global_context, sig->json);
+        val[i++] = vson == NULL ? NIL : vson;
+    }
+    if (sig->arg != NULL)
+    {
+        switch (sig->arg->n)
+        {
+            case BOOLEAN : val[i++] = JSValueMakeBoolean(s_global_context, sig->arg->b); break;
+            case INTEGER : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->i); break;
+            case DOUBLE  : val[i++] = JSValueMakeNumber(s_global_context, sig->arg->d); break;
+            case CHAR    : val[i++] = js_char_to_value(s_global_context, sig->arg->p); break;
+        }
+    }
+
+    JSValueRef js_ret = call_as_function_debug(s_global_context, function, function, numargs, val);
+
+    if (JSValueIsBoolean(s_global_context, js_ret)) 
+        ret = JSValueToBoolean(s_global_context, js_ret);
+
+    EXEC_UNLOCK;
 
     return ret;
 }/*}}}*/
@@ -5578,14 +5544,12 @@ scripts_emit(ScriptSignal *sig)
 static void 
 object_destroy_cb(JSObjectRef o) 
 {
-    if (!TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL)
-    {
-        JSObjectSetPrivate(o, NULL);
-        JSValueUnprotect(s_global_context, o);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+
+    JSObjectSetPrivate(o, NULL);
+    JSValueUnprotect(s_global_context, o);
+
+    EXEC_UNLOCK;
 }
 
 static JSObjectRef 
@@ -5611,13 +5575,11 @@ static JSObjectRef
 make_boxed(gpointer boxed, JSClassRef klass)
 {
     JSObjectRef ret = NULL;
-    if (!TRY_CONTEXT_LOCK)
-        return NULL;
-    if (s_global_context != NULL)
-    {
-        ret = JSObjectMake(s_global_context, klass, boxed);
-    }
-    CONTEXT_UNLOCK;
+
+    EXEC_LOCK_RETURN(NULL);
+    ret = JSObjectMake(s_global_context, klass, boxed);
+    EXEC_UNLOCK;
+
     return ret;
 }
 
@@ -5750,15 +5712,11 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
 static void
 notify_callback(GObject *o, GParamSpec *param, SSignal *sig)
 {
-    if (!TRY_CONTEXT_LOCK) 
-        return;
-    if (s_global_context != NULL)
-    {
-        g_signal_handlers_block_by_func(o, G_CALLBACK(notify_callback), sig);
-        call_as_function_debug(s_global_context, sig->func, make_object(s_global_context, o), 0, NULL);
-        g_signal_handlers_unblock_by_func(o, G_CALLBACK(notify_callback), sig);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+    g_signal_handlers_block_by_func(o, G_CALLBACK(notify_callback), sig);
+    call_as_function_debug(s_global_context, sig->func, make_object(s_global_context, o), 0, NULL);
+    g_signal_handlers_unblock_by_func(o, G_CALLBACK(notify_callback), sig);
+    EXEC_UNLOCK;
 }
 /**
  * Connect to a GObject-signal. Note that all signals are connected using the
@@ -6937,32 +6895,31 @@ scripts_create_tab(GList *gl)
 void 
 scripts_remove_tab(JSObjectRef obj) 
 {
-    if (obj == NULL || !TRY_CONTEXT_LOCK) 
-        return;
-    if (s_global_context != NULL) 
+    g_return_if_fail(obj != NULL);
+    EXEC_LOCK;
+
+    if (EMIT_SCRIPT(CLOSE_TAB)) 
     {
-        if (EMIT_SCRIPT(CLOSE_TAB)) 
-        {
-            /**
-             * Emitted when a tab is closed
-             * @event  closeTab
-             * @memberOf signals
-             * @param {signals~onCloseTab} callback 
-             *      Callback function that will be called when the signal is emitted
-             *
-             * */
-            /**
-             * Callback called when a tab is closed
-             * @callback signals~onCloseTab
-             *
-             * @param {WebKitWebView} webview The corresponding WebKitWebView
-             * */
-            ScriptSignal signal = { obj, SCRIPTS_SIG_META(NULL, CLOSE_TAB, 0) };
-            scripts_emit(&signal);
-        }
-        JSValueUnprotect(s_global_context, obj);
+        /**
+         * Emitted when a tab is closed
+         * @event  closeTab
+         * @memberOf signals
+         * @param {signals~onCloseTab} callback 
+         *      Callback function that will be called when the signal is emitted
+         *
+         * */
+        /**
+         * Callback called when a tab is closed
+         * @callback signals~onCloseTab
+         *
+         * @param {WebKitWebView} webview The corresponding WebKitWebView
+         * */
+        ScriptSignal signal = { obj, SCRIPTS_SIG_META(NULL, CLOSE_TAB, 0) };
+        scripts_emit(&signal);
     }
-    CONTEXT_UNLOCK;
+    JSValueUnprotect(s_global_context, obj);
+
+    EXEC_UNLOCK;
 }/*}}}*/
 
 void 
@@ -7001,15 +6958,11 @@ scripts_init_archive(const char *path, const char *script)
 void
 evaluate(const char *script) 
 {
-    if (!TRY_CONTEXT_LOCK) 
-        return;
-    if (s_global_context != NULL)
-    {
-        JSStringRef js_script = JSStringCreateWithUTF8CString(script);
-        JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
-        JSStringRelease(js_script);
-    }
-    CONTEXT_UNLOCK;
+    EXEC_LOCK;
+    JSStringRef js_script = JSStringCreateWithUTF8CString(script);
+    JSEvaluateScript(s_global_context, js_script, NULL, NULL, 0, NULL);
+    JSStringRelease(js_script);
+    EXEC_UNLOCK;
 }
 
 JSObjectRef 
@@ -7103,12 +7056,10 @@ scripts_execute_one(const char *script)
 void
 scripts_unprotect(JSObjectRef obj) 
 {
-
-    if (obj == NULL || !TRY_CONTEXT_LOCK)
-        return;
-    if (s_global_context != NULL) 
-        JSValueUnprotect(s_global_context, obj);
-    CONTEXT_UNLOCK;
+    g_return_if_fail(obj != NULL);
+    EXEC_LOCK;
+    JSValueUnprotect(s_global_context, obj);
+    EXEC_UNLOCK;
 }
 void
 scripts_check_syntax(char **scripts)
