@@ -1864,7 +1864,7 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
         }
     }
     create_api_function = base_uri != NULL && g_str_has_prefix(base_uri, "dwb-chrome:") && forbid_resources;
-    if (forbid_resources)
+    if (forbid_resources && create_api_function)
     {
         g_signal_connect(wv, "navigation-policy-decision-requested", G_CALLBACK(load_string_navigation), NULL);
         g_signal_connect(wv, "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
