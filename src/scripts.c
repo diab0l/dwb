@@ -1780,7 +1780,7 @@ load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferre
         deferred_resolve(s_global_context, deferred, deferred, 0, NULL, NULL);
     else if (status == WEBKIT_LOAD_COMMITTED
             && is_main_frame
-            && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(frame), "dwb_load_string_external")))
+            && GPOINTER_TO_INT(g_object_get_data(G_OBJECT(frame), "dwb_load_string_api")))
     {
         JSContextRef wctx = webkit_web_frame_get_global_context(frame);
         JSStringRef api_name = JSStringCreateWithUTF8CString("dwb");
@@ -1794,7 +1794,7 @@ load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferre
     {
         g_signal_handlers_disconnect_by_func(frame, load_string_status, deferred);
         g_signal_handlers_disconnect_by_func(webkit_web_frame_get_web_view(frame), load_string_resource, deferred);
-        g_object_steal_data(G_OBJECT(frame), "dwb_load_string_external");
+        g_object_steal_data(G_OBJECT(frame), "dwb_load_string_api");
     }
     JSValueUnprotect(s_global_context, deferred);
     EXEC_UNLOCK;
@@ -1843,6 +1843,7 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
 
     JSObjectRef deferred = NULL;
     gboolean forbid_resources = true;
+    gboolean create_api_function = false;
     WebKitWebView *wv = webkit_web_frame_get_web_view(frame);
 
     deferred = deferred_new(ctx);
@@ -1858,17 +1859,18 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
             encoding = js_value_to_char(ctx, argv[2], -1, exc);
             if (argc > 3)
                 base_uri = js_value_to_char(ctx, argv[3], -1, exc);
-            if (base_uri != NULL && g_str_has_prefix(base_uri, "dwb-chrome:") && argc > 4)
+            if (argc > 4)
                 forbid_resources = ! JSValueToBoolean(ctx, argv[4]);
         }
     }
+    create_api_function = base_uri != NULL && g_str_has_prefix(base_uri, "dwb-chrome:") && forbid_resources;
     if (forbid_resources)
     {
         g_signal_connect(wv, "navigation-policy-decision-requested", G_CALLBACK(load_string_navigation), NULL);
         g_signal_connect(wv, "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
     }
     g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
-    g_object_set_data(G_OBJECT(frame), "dwb_load_string_external", GINT_TO_POINTER(forbid_resources));
+    g_object_set_data(G_OBJECT(frame), "dwb_load_string_api", GINT_TO_POINTER(create_api_function));
 
     webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
 
