@@ -242,6 +242,17 @@
          *
          * @returns {String}
          *      The here document.
+         * @example 
+         * function myDocument() {
+         * &#47;&#42;HEREDOC 
+         *     &lt;body&gt;
+         *         &lt;input&gt;
+         *         &lt;/input&gt;
+         *     &lt;/body&gt;
+         * HEREDOC&#42;&#47;
+         * }
+         *
+         * tabs.current.loadString(util.hereDoc(myDocument));
          */
          "hereDoc" : 
          {

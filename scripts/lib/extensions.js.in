@@ -3,7 +3,7 @@
  * Handles extensions. If scripts should be managed by <b>dwbem</b> they must
  * be implemented as an extension. In contrast to regular scripts extensions can
  * be enabled/disabled on the fly without reloading all userscripts.  Every extension must contain two special tags, 
- * <b>/*&lt;INFO ... INFO&gt;*<span><span>/</b> that will be used by dwbem to find information
+ * <b>/&42;&lt;INFO ... INFO&gt;&#42;/</b> that will be used by dwbem to find information
  * about the extension and <b>//&lt;DEFAULT_CONFIG ... //&gt;DEFAULT_CONFIG</b> that
  * will be used by dwbem to find the default configuration
  * Every extension must also return an object that can have up to five properties.

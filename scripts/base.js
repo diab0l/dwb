@@ -335,7 +335,11 @@ Object.freeze((function () {
             "margin:0px;" +
             "opacity: " + globals.hintOpacity + "; }" + 
             ".dwb_overlay_normal { position:absolute!important;display:block!important; z-index:19999;background:" + globals.normalColor + ";}";
-        doc.head.appendChild(styleSheet);
+        if (doc.head) 
+            doc.head.appendChild(styleSheet);
+        else 
+            doc.body.appendChild(styleSheet);
+
         doc.hasStyleSheet = true;
     };
     var p_getOffsets = function(doc) 
@@ -404,6 +408,7 @@ Object.freeze((function () {
         {
             var doc = win.document;
             var res = doc.body.querySelectorAll(globals.hintTypes[type]); 
+            console.log(res);
             var e, r;
             p_createStyleSheet(doc);
             var hints = doc.createDocumentFragment();
