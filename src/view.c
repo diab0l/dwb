@@ -721,12 +721,17 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
             return true;
         }
     }
+    if (g_str_has_prefix(uri, "dwb-chrome://"))
+    {
+        if (reason != WEBKIT_WEB_NAVIGATION_REASON_OTHER)
+            scripts_load_chrome(VIEW(gl)->script_wv, uri);
+        return false;
+    }
 
     if (!g_str_has_prefix(uri, "http:") && !g_str_has_prefix(uri, "https:") &&
             !g_str_has_prefix(uri, "about:") && 
             !g_str_has_prefix(uri, "data:") && 
             !g_str_has_prefix(uri, "dwb:") &&
-            !g_str_has_prefix(uri, "dwb-chrome:") &&
             !g_str_has_prefix(uri, "file:")) 
     {
         if (dwb_scheme_handler(gl, request) == STATUS_OK)  

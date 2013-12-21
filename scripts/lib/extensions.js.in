@@ -98,6 +98,8 @@
   var _config = {};
   var _registered = {};
   var _configLoaded = false;
+  var _chromePages = {};
+  var _chromeLoading = [];
 
   function _getPlugin(name, filename) 
   {
@@ -415,8 +417,7 @@
        *        Command that can be used from dwb's command line to toggle the
        *        extension
        * */
-      "bind" : 
-      {
+      "bind" : {
           value : function(name, shortcut, options) 
           {
               if (!name || !shortcut)
@@ -432,7 +433,83 @@
                       io.notify("Extension " + name + " disabled");
               }, options.command);
           }
+      }, 
+      /** 
+       * Registers a chrome page
+       *
+       * @name registerChrome
+       * @memberOf extensions
+       * @function
+       *
+       *
+       * @param {String} name
+       *        Name of the chrome document, can be loaded with
+       *        dwb-chrome://<name>
+       * @param {extensions~onLoadChrome} callback
+       *        Callback function called when the chrome document is requested.
+       * */
+      /**
+       * Callback when a chrome document should be loaded.
+       * @callback extensions~onLoadChrome
+       * @param {WebKitWebView}  wv 
+       *      The webview that requested the chrome document
+       * @param {String}  uri 
+       *      The uri of the chrome document
+       *
+       * @returns {String}
+       *      The html-document that should be loaded
+       * */
+      "registerChrome" : {
+          value : function(name, callback) {
+              _chromePages[name] = callback;
+          }
+      },
+      /** 
+       * Unregisters a chrome page
+       *
+       * @name unregisterChrome
+       * @memberOf extensions
+       * @function
+       *
+       *
+       * @param {String} name
+       *        Name of the chrome document 
+       * */
+      "unregisterChrome" : {
+          value : function(name) {
+              delete _chromePages[name];
+          },
+      },
+      /** 
+       * Loads a registered chrome document, used internally
+       *
+       * @memberOf extensions
+       * @function
+       *
+       *
+       * @param {WebKitWebView} wv
+       *        The webview that loads the chrome document
+       * @param {String} uri
+       *        The uri
+       *
+       * @returns {Boolean}
+       *        True if the chrome page had been registered and loaded
+       * */
+      "loadChrome" : { 
+          value : function(wv, uri) {
+              var name = uri.replace(/^dwb-chrome:\/\/|\?.*/g, "");
+              var callback = _chromePages[name];
+              if (callback) {
+                  var html = callback.call(callback, wv, uri);
+                  if (html) {
+                      wv.loadString(html, null, null, uri);
+                      return true;
+                  }
+              }
+              return false;
+          }
       }
+
   });
 })();
 Object.freeze(extensions);

@@ -81,6 +81,8 @@ void scripts_completion_activate(void);
 void scripts_reapply(void);
 void scripts_check_syntax(char **scripts);
 JSObjectRef scripts_make_cookie(SoupCookie *cookie);
+gboolean scripts_load_chrome(JSObjectRef,  const char *);
+void scripts_load_extension(const char *);
 
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \

@@ -2897,6 +2897,14 @@ dwb_load_uri(GList *gl, const char *arg)
         webkit_web_view_load_uri(web, tmpuri);
         goto clean;
     }
+    else if (g_str_has_prefix(tmpuri, "dwb-chrome://"))
+    {
+        if (!scripts_load_chrome(VIEW(gl)->script_wv, tmpuri))
+        {
+            dwb_set_error_message(dwb.state.fview, "Chrome page not defined %s", tmpuri);
+        }
+        goto clean;
+    }
     /* Check if searchengine is needed and load uri */
     else 
     {

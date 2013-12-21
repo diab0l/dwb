@@ -48,6 +48,7 @@ DwbStatus html_startpage(GList *, HtmlTable *);
 DwbStatus html_scripts(GList *, HtmlTable *);
 DwbStatus html_keys(GList *, HtmlTable *);
 DwbStatus html_plugins(GList *, HtmlTable *);
+DwbStatus html_cookies(GList *, HtmlTable *);
 
 
 static HtmlTable table[] = {
@@ -61,6 +62,7 @@ static HtmlTable table[] = {
     { "dwb:settings",         "Settings",       INFO_FILE,      0, html_settings },
     { "dwb:script",          "Scripts",        NULL,           0, html_scripts },
     { "dwb:startpage",         NULL,            NULL,           0, html_startpage },
+    { "dwb:cookies",         "cookies",            NULL,           0, html_cookies },
 };
 
 static char current_uri[BUFFER_LENGTH];
@@ -562,6 +564,19 @@ DwbStatus
 html_startpage(GList *gl, HtmlTable *table) 
 {
     return dwb_open_startpage(gl);
+}
+DwbStatus
+html_cookies(GList *gl, HtmlTable *table) 
+{
+    static gsize init = 0;
+    if (g_once_init_enter(&init))
+    {
+        gsize value = 1;
+        scripts_load_extension("cookies");
+        g_once_init_leave(&init, value);
+    }
+    dwb_load_uri(gl, "dwb-chrome://cookies");
+    return STATUS_OK;
 }
 gboolean
 html_scripts_confirm(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl) 

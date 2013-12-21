@@ -1750,7 +1750,12 @@ static void
 load_string_resource(WebKitWebView *wv, WebKitWebFrame *frame, WebKitWebResource *resource, WebKitNetworkRequest *request, WebKitNetworkResponse *response, gpointer *data) 
 {
     const char *uri = webkit_network_request_get_uri(request);
-    if (!g_str_has_prefix(uri, "dwb-chrome:") || webkit_web_view_get_main_frame(wv) != frame)
+    if (!(g_str_has_prefix(uri, "dwb-chrome:") 
+            || g_str_has_prefix(uri, "data:image/gif;base64,") 
+            || g_str_has_prefix(uri, "data:image/png;base64,") 
+            || g_str_has_prefix(uri, "data:image/jpeg;base64,") 
+            || g_str_has_prefix(uri, "data:image/svg;base64,") )
+            || webkit_web_view_get_main_frame(wv) != frame)
         webkit_network_request_set_uri(request, "about:blank");
 }
 
@@ -1793,7 +1798,6 @@ load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferre
     if (status == WEBKIT_LOAD_FINISHED || status == WEBKIT_LOAD_FAILED)
     {
         g_signal_handlers_disconnect_by_func(frame, load_string_status, deferred);
-        g_signal_handlers_disconnect_by_func(webkit_web_frame_get_web_view(frame), load_string_resource, deferred);
         g_object_steal_data(G_OBJECT(frame), "dwb_load_string_api");
     }
     JSValueUnprotect(s_global_context, deferred);
@@ -1869,10 +1873,10 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
         g_signal_connect(wv, "navigation-policy-decision-requested", G_CALLBACK(load_string_navigation), NULL);
         g_signal_connect(wv, "resource-request-starting", G_CALLBACK(load_string_resource), NULL);
     }
-    g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
     g_object_set_data(G_OBJECT(frame), "dwb_load_string_api", GINT_TO_POINTER(create_api_function));
 
     webkit_web_frame_load_string(frame, content, mime_type, encoding, base_uri ? base_uri : "");
+    g_signal_connect(frame, "notify::load-status", G_CALLBACK(load_string_status), deferred);
 
     g_free(content);
     g_free(mime_type);
@@ -2189,6 +2193,10 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
         JSObjectRef function = JSObjectMakeFunction(ctx, NULL, 0, NULL, js_script, NULL, 1, exc);
         if (function != NULL) 
         {
+            if (argc > 0)
+            {
+                js_set_property(ctx, function, "exports", argv[0], kJSDefaultAttributes, NULL);
+            }
             ret = JSObjectCallAsFunction(ctx, function, function, argc, argv, exc);
         }
         g_free(debug);
@@ -6923,6 +6931,49 @@ scripts_remove_tab(JSObjectRef obj)
 
     EXEC_UNLOCK;
 }/*}}}*/
+
+JSValueRef  
+exec_namespace_function(JSContextRef ctx, const char *namespace_name, const char *function_name, size_t argc, const JSValueRef *argv)
+{
+    JSObjectRef global = JSContextGetGlobalObject(ctx);
+    JSObjectRef namespace = js_get_object_property(ctx, global, namespace_name);
+
+    g_return_val_if_fail(namespace != NULL, NULL);
+
+    JSObjectRef function = js_get_object_property(ctx, namespace, function_name);
+
+    g_return_val_if_fail(function != NULL, NULL);
+
+    return call_as_function_debug(ctx, function, function, argc, argv);
+}
+
+gboolean
+scripts_load_chrome(JSObjectRef wv, const char *uri)
+{
+    g_return_if_fail(uri != NULL);
+    gboolean ret = false;
+
+    EXEC_LOCK;
+    JSValueRef argv[] = { wv, js_char_to_value(s_global_context, uri) };
+    JSValueRef result = exec_namespace_function(s_global_context, "extensions", "loadChrome", 2, argv);
+    if (result)
+    {
+        ret = JSValueToBoolean(s_global_context, result);
+    }
+    EXEC_UNLOCK;
+    return ret;
+}
+void
+scripts_load_extension(const char *extension)
+{
+    g_return_if_fail(extension != NULL);
+
+    EXEC_LOCK;
+    JSValueRef argv[] = { js_char_to_value(s_global_context, extension) };
+    exec_namespace_function(s_global_context, "extensions", "load", 1, argv);
+    EXEC_UNLOCK;
+}
+
 
 void 
 init_script(const char *path, const char *script, gboolean is_archive, const char *template, int offset)
