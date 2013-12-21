@@ -68,7 +68,7 @@
             writable : true,
             value : (function() {
                 var id = 0;
-                return function(name, callback)
+                return function(name, callback, predicate)
                 {
                     if (!name)
                         throw new Error("new Signal() : missing signal name");
@@ -106,6 +106,18 @@
                              * */
                             "callback" : { value : callback, writable : true }, 
                             /**
+                             * A predicate function, the signal is only emitted
+                             * if the predicate function returns true. The
+                             * predicate function is called with the same
+                             * arguments as the callback function
+                             *
+                             * @name predicate
+                             * @memberOf Signal.prototype
+                             * @since 1.6
+                             *
+                             * */
+                            "predicate" : { value : predicate || null, writable : true }, 
+                            /**
                              * The name of the event
                              * @name name
                              * @memberOf Signal.prototype
@@ -132,10 +144,8 @@
                              *          this.disconnect();
                              * });
                              * */
-                            "disconnect" : 
-                            { 
-                                value : function() 
-                                { 
+                            "disconnect" : { 
+                                value : function() { 
                                     if (!this.connected)
                                         return this;
 
@@ -166,6 +176,8 @@
                              *      The callback function to call, if no
                              *      callback was passed to the constructor
                              *      callback is mandatory.
+                             * @param {Function} [callback]
+                             *      A predicate function, see {@link Signal.prototype.predicate|predicate}
                              *
                              * @returns {Signal}
                              *      self
@@ -182,12 +194,13 @@
                              * // connect to b
                              * signal.connect(b);
                              * */
-                            "connect" : 
-                            { 
-                                value : function(callback) 
+                            "connect" : { 
+                                value : function(callback, predicate) 
                                 {
                                     if (callback)
                                         this.callback = callback;
+                                    if (predicate)
+                                        this.predicate = predicate;
                                     if (this.connected)
                                         return this;
 
@@ -269,6 +282,8 @@
              *      The signal to connect to
              * @param {Function} callback 
              *      Callback that will be called when the signal is emitted.
+             * @param {Function} [predicate] 
+             *      A predicate function, see {@link Signal.prototype.predicate|predicate}
              *
              * @returns {Signal}
              *      A new Signal
@@ -285,9 +300,9 @@
              * */
             "connect" : 
             {
-                value : function(name, callback)
+                value : function(name, callback, predicate)
                 {
-                    return new Signal(name, callback).connect();
+                    return new Signal(name, callback, predicate).connect();
                 }
             },
             /** 
@@ -297,11 +312,15 @@
              * @name once
              * @memberOf Signal
              * @function
+             * @since 1.6
              *
              * @param {String} name 
              *      The signal to connect to
              * @param {Function} callback 
              *      Callback that will be called when the signal is emitted.
+             * @param {Function} [predicate]
+             *      Predicate function, if defined the signal is only emitted
+             *      and disconnected if the predicate function returns true.
              *
              * @returns {Signal}
              *      A new Signal, calling {@link connect} on the returned signal
@@ -309,47 +328,17 @@
              * */
             "once" : 
             {
-                value : function(name, callback) 
+                value : function(name, callback, predicate) 
                 {
                     return new Signal(name, function() {
-                        var ret = callback.apply(this, arguments);
-                        this.disconnect();
-                        return ret;
-                    }).connect();
-                }
-            },
-            /** 
-             * Connects to a signal once using a predicate function. The
-             * predicate function is called with the same arguments as the
-             * callback function. The callback is only executed and disconnected
-             * if the predicate returns true.
-             *
-             * @name oncePredicate
-             * @memberOf Signal
-             * @function
-             *
-             * @param {String} name 
-             *      The signal to connect to
-             * @param {Function} callback 
-             *      Callback that will be called when the signal is emitted.
-             * @param {Function} predicate 
-             *      Predicate function
-             *
-             * @returns {Signal}
-             *      A new Signal, calling {@link connect} on the returned signal
-             *      will only connect once again. 
-             * */
-            "oncePredicate" : 
-            {
-                value : function(name, callback, predicate) {
-                    return new Signal(name, function() {
-                        if (predicate.apply(predicate, arguments)) {
-                            var ret = callback.apply(this, arguments);
+                        var ret = false;
+                        if (!this.predicate || this.predicate.apply(this, arguments))
+                        {
+                            ret = callback.apply(this, arguments);
                             this.disconnect();
-                            return ret;
                         }
-                        return false;
-                    }).connect();
+                        return ret;
+                    }, predicate).connect();
                 }
             },
             /**
@@ -451,7 +440,9 @@
                     for (id in connected)
                     {
                         current = connected[id];
-                        ret = current.callback.apply(current, args) || ret;
+                        if (!current.predicate || current.predicate.apply(current, args)) {
+                            ret = current.callback.apply(current, args) || ret;
+                        }
                     }
                     return ret;
                 }

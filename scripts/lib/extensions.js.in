@@ -440,6 +440,7 @@
        * @name registerChrome
        * @memberOf extensions
        * @function
+       * @since 1.6
        *
        *
        * @param {String} name
@@ -470,6 +471,7 @@
        * @name unregisterChrome
        * @memberOf extensions
        * @function
+       * @since 1.6
        *
        *
        * @param {String} name
@@ -483,8 +485,10 @@
       /** 
        * Loads a registered chrome document, used internally
        *
+       * @name loadChrome
        * @memberOf extensions
        * @function
+       * @since 1.6
        *
        *
        * @param {WebKitWebView} wv
