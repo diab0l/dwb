@@ -3727,7 +3727,7 @@ dwb_reload_userscripts(void)
     g_list_free(dwb.misc.userscripts);
     dwb.misc.userscripts = NULL;
 
-    scripts_end();
+    scripts_end(false);
     KeyMap *m;
     GSList *delete = NULL;
     for (GList *l = dwb.keymap; l; l=l->next) 
@@ -3797,7 +3797,7 @@ dwb_free_custom_keys()
 gboolean
 dwb_clean_up() 
 {
-    scripts_end();
+    scripts_end(true);
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
     

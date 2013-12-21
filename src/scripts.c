@@ -179,7 +179,6 @@ typedef struct SpawnData_s {
     _data->finished = 0; } while (0)
 
 
-//static GSList *s_signals;
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
 static const struct {
@@ -251,6 +250,7 @@ static JSValueRef do_include(JSContextRef ctx, const char *path, const char *scr
 static JSObjectRef s_sig_objects[SCRIPTS_SIG_LAST];
 static JSGlobalContextRef s_global_context;
 static GSList *s_script_list;
+static GSList *s_autoloaded_extensions;
 static JSClassRef s_gobject_class, 
                   s_webview_class, 
                   s_frame_class, 
@@ -6971,6 +6971,7 @@ scripts_load_extension(const char *extension)
     EXEC_LOCK;
     JSValueRef argv[] = { js_char_to_value(s_global_context, extension) };
     exec_namespace_function(s_global_context, "extensions", "load", 1, argv);
+    s_autoloaded_extensions = g_slist_prepend(s_autoloaded_extensions, g_strdup(extension));
     EXEC_UNLOCK;
 }
 
@@ -7043,6 +7044,10 @@ scripts_reapply()
             VIEW(gl)->script_wv = o;
         }
         apply_scripts();
+        for (GSList *l = s_autoloaded_extensions; l; l=l->next) 
+        {
+            scripts_load_extension(l->data);
+        }
     }
 }
 
@@ -7133,12 +7138,12 @@ scripts_check_syntax(char **scripts)
             g_free(content);
         }
     }
-    scripts_end();
+    scripts_end(true);
 }
 
 /* scripts_end {{{*/
 void
-scripts_end() 
+scripts_end(gboolean clean_all) 
 {
     pthread_rwlock_wrlock(&s_context_lock);
     if (s_global_context != NULL) 
@@ -7191,6 +7196,7 @@ scripts_end()
             soup_server_disconnect(server->data);
         }
         g_slist_free(s_servers);
+        
 
         JSValueUnprotect(s_global_context, s_array_contructor);
         JSValueUnprotect(s_global_context, UNDEFINED);
@@ -7213,4 +7219,7 @@ scripts_end()
         s_global_context = NULL;
     }
     pthread_rwlock_unlock(&s_context_lock);
+    if (clean_all) {
+        g_slist_free_full(s_autoloaded_extensions, g_free);
+    }
 }/*}}}*//*}}}*/

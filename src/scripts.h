@@ -70,7 +70,7 @@ typedef struct _ScriptSignal {
 gboolean scripts_emit(ScriptSignal *);
 void scripts_create_tab(GList *gl);
 void scripts_remove_tab(JSObjectRef );
-void scripts_end(void);
+void scripts_end(gboolean);
 void scripts_init_script(const char *, const char *);
 void scripts_init_archive(const char *, const char *);
 gboolean scripts_init(gboolean);
