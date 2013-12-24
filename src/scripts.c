@@ -6301,6 +6301,14 @@ create_global_object()
      * <b>signals.onResource  = null;</b>, instead {@link Signal.disconnect}
      * must be used.
      *
+     * To connect a single webview to an event the callback can directly be set
+     * on the webview, see {@link WebKitWebView} for a list of signals that can
+     * be set on WebKitWebViews.  More than one callback function can be set on
+     * the same webview. 
+     * Note that is is only possible to disconnect from signals directly set on
+     * a webview by calling <b>this.disconnect();</b> in the callback function
+     * or calling <b>Signal.disconnect(callback);</b>.
+     *
      * @namespace 
      * @name signals 
      * @example 
@@ -6315,6 +6323,16 @@ create_global_object()
      * var s = new Signal("navigation", onNavigation).connect();
      * // or equivalently, gi
      * signals.onNavigation = onNavigation;
+     *
+     * // Connect the current tab to an event
+     * tabs.current.onButtonPress = function(webview, result, event) {
+     *      io.print(event);
+     * }
+     * // Connect the current tab once to an event
+     * tabs.current.onceDocumentLoaded = function(wv) {
+     *      io.print("document load finished");
+     * }
+     *
      *
      * */
     cd = kJSClassDefinitionEmpty;
