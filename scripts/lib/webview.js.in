@@ -1,0 +1,451 @@
+(function() {
+    /**
+     * Connects the webview for the buttonPress event, see {@link signals~onButtonPress|onButtonPress}.
+     * Can be set multiple times.
+     *
+     * @name onButtonPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the buttonPress event once, see {@link signals~onButtonPress|onButtonPress}.
+     * Can be set multiple times.
+     *
+     * @name onceButtonPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the buttonRelease event, see {@link signals~onButtonRelease|onButtonRelease}.
+     * Can be set multiple times.
+     *
+     * @name onButtonRelease
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the buttonRelease event once, see {@link signals~onButtonRelease|onButtonRelease}.
+     * Can be set multiple times.
+     *
+     * @name onceButtonRelease
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the closeTab event, see {@link signals~onCloseTab|onCloseTab}.
+     * Can be set multiple times.
+     *
+     * @name onCloseTab
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the closeTab event once, see {@link signals~onCloseTab|onCloseTab}.
+     * Can be set multiple times.
+     *
+     * @name onceCloseTab
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the contextMenu event, see {@link signals~onContextMenu|onContextMenu}.
+     * Can be set multiple times.
+     *
+     * @name onContextMenu
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the contextMenu event once, see {@link signals~onContextMenu|onContextMenu}.
+     * Can be set multiple times.
+     *
+     * @name onceContextMenu
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the documentLoaded event, see {@link signals~onDocumentLoaded|onDocumentLoaded}.
+     * Can be set multiple times.
+     *
+     * @name onDocumentLoaded
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the documentLoaded event once, see {@link signals~onDocumentLoaded|onDocumentLoaded}.
+     * Can be set multiple times.
+     *
+     * @name onceDocumentLoaded
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the download event, see {@link signals~onDownload|onDownload}.
+     * Can be set multiple times.
+     *
+     * @name onDownload
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the download event once, see {@link signals~onDownload|onDownload}.
+     * Can be set multiple times.
+     *
+     * @name onceDownload
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the error event, see {@link signals~onError|onError}.
+     * Can be set multiple times.
+     *
+     * @name onError
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the error event once, see {@link signals~onError|onError}.
+     * Can be set multiple times.
+     *
+     * @name onceError
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the followHint event, see {@link signals~onFollowHint|onFollowHint}.
+     * Can be set multiple times.
+     *
+     * @name onFollowHint
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the followHint event once, see {@link signals~onFollowHint|onFollowHint}.
+     * Can be set multiple times.
+     *
+     * @name onceFollowHint
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the frameCreated event, see {@link signals~onFrameCreated|onFrameCreated}.
+     * Can be set multiple times.
+     *
+     * @name onFrameCreated
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the frameCreated event once, see {@link signals~onFrameCreated|onFrameCreated}.
+     * Can be set multiple times.
+     *
+     * @name onceFrameCreated
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the frameStatus event, see {@link signals~onFrameStatus|onFrameStatus}.
+     * Can be set multiple times.
+     *
+     * @name onFrameStatus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the frameStatus event once, see {@link signals~onFrameStatus|onFrameStatus}.
+     * Can be set multiple times.
+     *
+     * @name onceFrameStatus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the keyPress event, see {@link signals~onKeyPress|onKeyPress}.
+     * Can be set multiple times.
+     *
+     * @name onKeyPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the keyPress event once, see {@link signals~onKeyPress|onKeyPress}.
+     * Can be set multiple times.
+     *
+     * @name onceKeyPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the keyRelease event, see {@link signals~onKeyRelease|onKeyRelease}.
+     * Can be set multiple times.
+     *
+     * @name onKeyRelease
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the keyRelease event once, see {@link signals~onKeyRelease|onKeyRelease}.
+     * Can be set multiple times.
+     *
+     * @name onceKeyRelease
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadCommitted event, see {@link signals~onLoadCommitted|onLoadCommitted}.
+     * Can be set multiple times.
+     *
+     * @name onLoadCommitted
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadCommitted event once, see {@link signals~onLoadCommitted|onLoadCommitted}.
+     * Can be set multiple times.
+     *
+     * @name onceLoadCommitted
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadFinished event, see {@link signals~onLoadFinished|onLoadFinished}.
+     * Can be set multiple times.
+     *
+     * @name onLoadFinished
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadFinished event once, see {@link signals~onLoadFinished|onLoadFinished}.
+     * Can be set multiple times.
+     *
+     * @name onceLoadFinished
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadStatus event, see {@link signals~onLoadStatus|onLoadStatus}.
+     * Can be set multiple times.
+     *
+     * @name onLoadStatus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the loadStatus event once, see {@link signals~onLoadStatus|onLoadStatus}.
+     * Can be set multiple times.
+     *
+     * @name onceLoadStatus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the mimeType event, see {@link signals~onMimeType|onMimeType}.
+     * Can be set multiple times.
+     *
+     * @name onMimeType
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the mimeType event once, see {@link signals~onMimeType|onMimeType}.
+     * Can be set multiple times.
+     *
+     * @name onceMimeType
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the mouseMove event, see {@link signals~onMouseMove|onMouseMove}.
+     * Can be set multiple times.
+     *
+     * @name onMouseMove
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the mouseMove event once, see {@link signals~onMouseMove|onMouseMove}.
+     * Can be set multiple times.
+     *
+     * @name onceMouseMove
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the navigation event, see {@link signals~onNavigation|onNavigation}.
+     * Can be set multiple times.
+     *
+     * @name onNavigation
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the navigation event once, see {@link signals~onNavigation|onNavigation}.
+     * Can be set multiple times.
+     *
+     * @name onceNavigation
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the resource event, see {@link signals~onResource|onResource}.
+     * Can be set multiple times.
+     *
+     * @name onResource
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the resource event once, see {@link signals~onResource|onResource}.
+     * Can be set multiple times.
+     *
+     * @name onceResource
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the scroll event, see {@link signals~onScroll|onScroll}.
+     * Can be set multiple times.
+     *
+     * @name onScroll
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the scroll event once, see {@link signals~onScroll|onScroll}.
+     * Can be set multiple times.
+     *
+     * @name onceScroll
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the tabButtonPress event, see {@link signals~onTabButtonPress|onTabButtonPress}.
+     * Can be set multiple times.
+     *
+     * @name onTabButtonPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the tabButtonPress event once, see {@link signals~onTabButtonPress|onTabButtonPress}.
+     * Can be set multiple times.
+     *
+     * @name onceTabButtonPress
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the tabFocus event, see {@link signals~onTabFocus|onTabFocus}.
+     * Can be set multiple times.
+     *
+     * @name onTabFocus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    /**
+     * Connects the webview for the tabFocus event once, see {@link signals~onTabFocus|onTabFocus}.
+     * Can be set multiple times.
+     *
+     * @name onceTabFocus
+     * @memberOf WebKitWebView.prototype
+     * @type function 
+     * @since 1.7
+     * */
+    var connectors = {};
+    [   "buttonPress", 
+        "buttonRelease",  
+        "closeTab",
+        "contextMenu", 
+        "documentLoaded", 
+        "download", 
+        "error", 
+        "followHint", 
+        "frameCreated", 
+        "frameStatus", 
+        "keyPress", 
+        "keyRelease", 
+        "loadCommitted",
+        "loadFinished", 
+        "loadStatus",
+        "mimeType",
+        "mouseMove", 
+        "navigation", 
+        "resource", 
+        "scroll", 
+        "tabButtonPress", 
+        "tabFocus"
+    ].forEach(function(sig) {
+        var upper = sig[0].toUpperCase() + sig.slice(1);
+        connectors["on" + upper] = {
+            set : function(callback) {
+                var self = this;
+                Signal.connect(sig, function() {
+                    callback.apply(this, arguments);
+                }, function(w) { return w === self; });
+            }
+        };
+        connectors["once" + upper] = {
+            set : function(callback) {
+                var self = this;
+                Signal.once(sig, function() {
+                    callback.apply(this, arguments);
+                }, function(w) { return w === self; });
+            }
+        };
+    });
+    Object.defineProperties(WebKitWebView.prototype, connectors);
+
+    Object.defineProperties(WebKitWebView.prototype, {
+            loadString : 
+            {
+                value : function()
+                {
+                    return this.mainFrame.loadString.apply(this.mainFrame, arguments);
+                }
+            }
+    });
+})();
