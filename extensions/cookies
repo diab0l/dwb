@@ -524,7 +524,7 @@ function chromeCallback(w, uri) {
         // cleanup
         wv.onceNavigation = function() {
             provide(moduleId, null, true);
-            w.settings = scriptsEnabled;
+            w.settings.enableScripts = scriptsEnabled;
             cookies = null;
             data = null;
         };
