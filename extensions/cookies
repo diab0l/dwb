@@ -1,0 +1,547 @@
+function document() {
+/*HEREDOC
+<head>
+<style type="text/css">
+.rowOpen {
+    background : url(data:image/gif;base64,R0lGODlhCgAKAPECAKqqqt3d3f///wAAACH5BAAAAAAALAAAAAAKAAoAAAIUjI8hy2vdHnQK2CvexXJ2+EVJUgAAOw==) no-repeat left center; 
+}
+.rowClosed {
+    background : url(data:image/gif;base64,R0lGODlhCgAKAPECAKqqqt3d3f///wAAACH5BAAAAAAALAAAAAAKAAoAAAIYjI8hy2sMAHsrThWzfNpSYTlKJYlNk6QFADs) no-repeat left center;
+}
+.button {
+    width:12px;
+    height:12px;
+    float: left;
+    text-align : center;
+    margin:2px;
+    cursor:pointer;
+}
+.groupCenter {
+    display:inline-block;
+    vertical-align:middle;
+}
+.groupTop {
+    height:100%;
+    display : inline-block;
+    vertical-align:top;
+}
+.groupBottom {
+    display : inline-block;
+    vertical-align:text-bottom;
+}
+.container {
+    width:60em;
+    margin-left:auto;
+    margin-right:auto;
+}
+.tableContainer {
+    margin-top : 5em;
+}
+.controller {
+    position:fixed;
+    width:100%;
+    display:block;
+    top : 0px;
+    left : 0px; 
+    padding: 0.3em 0.2em;
+    background-color:#202020;
+}
+a {
+    text-decoration : none;
+}
+.actionButton {
+    margin-left:1em;
+    margin-right:1em;
+    display:block;
+    text-align:center;
+    font:bold 13px helvetica;
+    color:#909090;
+    cursor:pointer;
+}
+.actionButton:focus, .actionButton:hover {
+    color:#eee;
+}
+input {
+    border : none;
+    outline:none;
+    background-color:#e0e0e0;
+}
+input:focus {
+    background-color:#fff;
+}
+table {
+    font : 11px normal monospace;
+    border-collapse:collapse;
+    width : 100%;
+    table-layout:fixed;
+}
+thead {
+    margin-left:auto;
+    margin-right:auto;
+    background-color:#505050;
+    color:#eee;
+}
+tr:nth-child(even) { background-color:#ccc; }
+tr:nth-child(odd) { background-color:#e0e0e0; }
+
+th:nth-child(even) { background-color : #505050; }
+th:nth-child(odd) { background-color : #555555; }
+tr {
+    width:100%;
+}
+th, td {
+    padding:0.2em 0.5em;
+}
+td {
+    cursor:pointer;
+    text-align:left;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+    overflow:hidden;
+    display:block;
+}
+tbody {
+    border-top:1px solid #ccc;
+    border-bottom:1px solid #ccc;
+}
+.childrenInvisible {
+    display : none;
+}
+.childrenVisible {
+    display : auto;
+}
+.childRow > td {
+    border-right : 1px dashed #999;
+    border-bottom : 1px dashed #999;
+}
+.mainRow {
+    text-align:left!important;
+    border-bottom:1px dashed #bbb;
+    background-color:#fff!important;
+}
+tr[aria-selected="true"]:nth-child(even) {
+    background-color:#a2b5ed;
+}
+tr[aria-selected="true"]:nth-child(odd) {
+    background-color:#bcd2ee;
+}
+.mainRow[aria-selected="true"] {
+    color:#eee;
+    background-color:#6c7b8b!important;
+}
+
+th:nth-child(1), td:nth-child(1) { width : 20%}
+th:nth-child(2), td:nth-child(2) { width : 12% }
+th:nth-child(3), td:nth-child(3) { width : 10% }
+th:nth-child(4), td:nth-child(4) { width : 10% }
+th:nth-child(5), td:nth-child(5) { width : 10% }
+th:nth-child(6), td:nth-child(6) { width : 8% }
+th:nth-child(7), td:nth-child(7) { width : 25% }
+th:nth-child(8), td:nth-child(8) { max-width : 5% }
+</style>
+</head>
+<body>
+
+<div class="controller">
+    <div class="container">
+
+    <div class="groupCenter">
+        <input tabindex="1" id="searchBox" data-action="search"></input>
+    </div>
+    <div class="groupCenter">
+        <div tabindex="1" data-action="search" class="actionButton" onclick="DomAccessible.search(event)">search</div>
+        <div tabindex="1" data-action="reset" class="actionButton" onclick="DomAccessible.reset(true)">reset</div>
+    </div>
+    <div class="groupCenter">
+        <div tabindex="1" data-action="collapse" class="actionButton" onclick="DomAccessible.collapse(event)">close all</div>
+        <div tabindex="1" data-action="open" class="actionButton" onclick="DomAccessible.openAll(event)">open all</div>
+    </div>
+    <div class="groupCenter">
+        <div tabindex="1" data-action="select" class="actionButton" onclick="DomAccessible.selectAll(event)">select all</div>
+        <div tabindex="1" data-action="deselect" class="actionButton" onclick="DomAccessible.deselectAll(event)">deselect all</div>
+    </div>
+    <div class="groupTop">
+        <div tabindex="1" data-action="delete" class="actionButton" onclick="DomAccessible.deleteCookies(event)">delete</div>
+    </div>
+    <div class="groupCenter" style="float:right">
+        <a href="dwb-chrome://cookies" id="allcookies">
+            <div tabindex="1" class="actionButton">all</div>
+        </a>
+        <a href="dwb-chrome://cookies?persistent" id="persistentcookies">
+            <div tabindex="1" class="actionButton">persistent</div>
+        </a>
+        <a href="dwb-chrome://cookies?session" id="sessioncookies">
+            <div tabindex="1" class="actionButton">session</div>
+        </a>
+        </div>
+    </div>
+</div>
+
+<div class="container tableContainer">
+    <table>
+        <thead>
+            <tr>
+                <th data-name="domain"> domain </th>
+                <th data-name="expire"> expires </th>
+                <th data-name="httpOnly" class="center"> http-only </th>
+                <th data-name="secure"   class="center"> secure </th>
+                <th data-name="path"> path </th>
+                <th data-name="name"> name </th>
+                <th data-name="value"> value </th>
+            </tr>
+    
+        </thead>
+    </table>
+</div>
+</body>
+HEREDOC*/
+}
+
+function injectScript() 
+{
+    var m_moduleId = this.exports.moduleId;
+
+    function query(selector) {
+        var nodes = document.querySelectorAll(selector);
+        return { 
+            forEach : function(callback) {
+                return Array.prototype.forEach.call(nodes, callback);
+            }, 
+            map : function(callback) {
+                return Array.prototype.map.call(nodes, callback);
+            }
+        };
+    }
+    function queryForEach(selector, action) {
+        query(selector).forEach(function(node) {
+            action(node);
+        });
+    }
+
+    function createTextNode(content, refNode)
+    {
+        if (content && content !== "false")
+        {
+            if (content === "true" || typeof content === "boolean")
+            {
+                var node = document.createElement("span");
+                node.innerHTML = "&#x2713;";
+                refNode.appendChild(node);
+    
+            }
+            else {
+                refNode.appendChild(document.createTextNode(content));
+            }
+        }
+    }
+    function createElement(name, refNode, content, props, attrs)
+    {
+        var element = document.createElement(name);
+        var key;
+        for (key in props)
+        {
+            element[key] = props[key];
+        }
+        for (key in attrs)
+        {
+            element.setAttribute(key, attrs[key]);
+        }
+        refNode.appendChild(element);
+        createTextNode(content, element);
+        return element;
+    }
+    function createButton(refNode, content, id)
+    {
+        var cell = createElement("td", refNode);
+        var button = createElement("div", cell, null, { className : "rowClosed button" }, { onclick : "void(0);" });
+        createTextNode(content, cell);
+        refNode.dataset.openState = "closed";
+    
+        button.addEventListener("click", function(e) {
+            toggleOpen(refNode, e.target);
+        });
+        
+        return cell;
+    }
+    function createTable(data) {
+        var headerNodes = document.querySelectorAll("[data-name]");
+        var names = query("[data-name]").map(function(node) {
+                return node.dataset.name;
+        });
+        console.log(names);
+        
+        var table = document.getElementsByTagName("table")[0];
+        data.forEach(function(dataSet) {
+            // mainrow
+            var row = createElement("tr", table, null, { className : "mainRow" }, { "aria-selected" : false, tabindex : 1 });
+            row.dataset.id = dataSet.id;
+            names.forEach(function(parentName, idx) {
+                var td, body;
+                if (dataSet.children && idx == 0) {
+                    row.dataset.searchAttr = dataSet[parentName];
+                    row.setAttribute("onClick", "DomAccessible.onRowClick(event)");
+                    row.dataset.rowType = "parent";
+    
+                    td = createButton(row, dataSet[parentName], dataSet.id);
+                    td.setAttribute("colspan", 7);
+    
+                    body = createElement("tbody", table, null, { className : "childrenInvisible" });
+                    dataSet.children.forEach(function(child) {
+                        var childRow = createElement("tr", body, null, { className : "childRow" }, { tabindex : 1 });
+                        childRow.dataset.rowType = "child";
+                        childRow.setAttribute("onClick", "DomAccessible.onRowClick(event)");
+                        childRow.dataset.id = child.id;
+                        childRow.dataset.parentId = dataSet.id;
+                        names.forEach(function(childName, idx) {
+                            createElement("td", childRow, child[childName] || "");
+                        });
+                    });
+                }
+            });
+        });
+    }
+
+    function select(s, element) {
+        if (element.dataset.rowType == "parent") {
+            var e = element.nextSibling.firstChild;
+            do {
+                e.setAttribute("aria-selected", s);
+                e = e.nextSibling;
+            } while (e);
+        }
+        else if (!s && element.parentNode.previousSibling.getAttribute("aria-selected") == "true") {
+                return;
+        }
+        element.setAttribute("aria-selected", s);
+    }
+    var setSelected = select.bind(null, true);
+    var setDeselected = select.bind(null, false);
+
+    function toggleSelected(element) {
+        if (element.getAttribute("aria-selected") == "true") {
+            setDeselected(element);
+        }
+        else {
+            setSelected(element);
+        }
+    }
+   
+    function closeRows(row, buttonNode) {
+        row.dataset.openState = "closed";
+        row.nextSibling.className = "childrenInvisible";
+        buttonNode = buttonNode || row.querySelector(".button");
+        buttonNode.className = buttonNode.className.replace(/rowOpen/, "rowClosed");
+    }
+    function openRows(row, buttonNode) {
+        row.dataset.openState = "open";
+        row.nextSibling.className = "childrenVisible";
+        buttonNode = buttonNode || row.querySelector(".button");
+        buttonNode.className = buttonNode.className.replace(/rowClosed/, "rowOpen");
+    }
+    function toggleOpen(refNode, button) {
+        if (refNode.dataset.openState == "closed") {
+            openRows(refNode, button);
+        }
+        else {
+            closeRows(refNode, button);
+        }
+    }
+    
+    DomAccessible = {
+        onRowClick : function(e) {
+            var element = e.target;
+            if (/.*\bbutton\b.*$/.test(e.target.className))
+                return;
+            while (element.nodeName != "TR")
+            {
+                element = element.parentNode;
+            }
+            toggleSelected(element);
+        },
+        search : function(e) {
+            DomAccessible.reset(false);
+            var searchBox = document.getElementById("searchBox");
+            var selector = "[data-search-attr]";
+            var reg = new RegExp(".*" + searchBox.value + ".*");
+            Array.prototype.forEach.call(document.querySelectorAll("[data-search-attr]"), function (node) {
+                if(!reg.test(node.dataset.searchAttr)) {
+                    node.style.display = "none";
+                    console.log(node.firstChild);
+                    node.nextSibling.style.display = "none";
+                } 
+            });
+        },
+        reset : function(clear) {
+            Array.prototype.forEach.call(document.querySelectorAll("[data-search-attr]"), function (node) {
+                node.style.display = "";
+                node.nextSibling.style.display = "";
+            });
+            if (clear)
+            {
+                document.getElementById("searchBox").value = "";
+            }
+        }, 
+        openAll : queryForEach.bind(null, "[data-open-state='closed']", openRows),
+        collapse : queryForEach.bind(null, "[data-open-state='open']", closeRows),
+        selectAll : queryForEach.bind(null, "[aria-selected='false']", setSelected),
+        deselectAll : queryForEach.bind(null, "[aria-selected='true']", setDeselected), 
+        deleteCookies : function() {
+            var cookies = {};
+            var s = query("[aria-selected='true']").forEach(function(node) {
+                var parentId = node.dataset.parentId;
+                if (parentId) {
+                    if (!cookies[parentId]) {
+                        cookies[parentId] = [];
+                    }
+                    cookies[parentId].push(node.dataset.id);
+                }
+            });
+            dwb(function() {
+                require(this.exports.moduleId).deleteCookies(this.exports.data);
+            }, { data : cookies, moduleId : m_moduleId });
+        }
+    };
+
+    window.addEventListener("keypress", function(e) {
+        if (e.target.nodeName == "TR") {
+            if (e.keyCode == 32) {
+                toggleSelected(e.target);
+            }
+            else if (e.keyCode == 13 && e.target.dataset.rowType == "parent") {
+                toggleOpen(e.target);
+            }
+        }
+        else if (e.keyCode == 13 && e.target.dataset.action) {
+            switch (e.target.dataset.action) {
+                case "reset" : DomAccessible.reset(true); break;
+                case "collapse" : DomAccessible.collapse(); break;
+                case "search" : DomAccessible.search(); break;
+                case "open" : DomAccessible.openAll(); break;
+                case "delete" : DomAccessible.deleteCookies(); break;
+                default : break;
+            }
+        }
+    });
+    var qStart = location.href.indexOf("?");
+    var q = null;
+    if (qStart != -1)
+    {
+        q = location.href.substring(qStart + 1);
+    }
+    if (q == "session")
+    {
+        document.getElementById("sessioncookies").style.display = "none";
+    }
+    else if (q == "persistent")
+    {
+        document.getElementById("persistentcookies").style.display = "none";
+    }
+    else 
+    {
+        document.getElementById("allcookies").style.display = "none";
+    }
+
+    createTable(this.exports.data);
+}
+
+function fn(n) { return n < 10 ? "0" + n : String(n); }
+function formatDate(d)
+{
+    return      d.getFullYear() + "/" 
+            +   fn(d.getMonth() + 1) + "/"
+            +   fn(d.getDate() + 1) + " "
+            +   fn(d.getHours()) + ":"
+            +   fn(d.getMinutes() + 1);
+
+}
+
+
+function deleteCookies(w, data, cookies) {
+    var key;
+    for (key in cookies) {
+        if (key in data) {
+            var current = cookies[key], l = current.length;
+            for (var i=0; i<current.length; i++) {
+                var children = data[key].children, m = children.length;
+                for (var j=0; j<m; j++) {
+                    if (children[j].id == current[i])
+                        children[j].delete();
+                }
+            }
+        }
+    }
+    w.reload();
+}
+function mapCookies(cookies) {
+    var mapping = {};
+    var key;
+    var data = [];
+    var id = 0;
+    cookies.forEach(function(cookie) {
+        var domain = cookie.domain;
+        if (cookie.domain[0] === ".") {
+            domain = domain.substring(1);
+        }
+        domain = net.domainFromHost(domain);
+        if (!mapping[domain]) {
+            mapping[domain] = { id : domain, domain : domain, children : [] };
+        }
+        cookie.id = ++id;
+        if (cookie.expires) {
+            cookie.expire = formatDate(cookie.expires);
+        }
+        mapping[domain].children.push(cookie);
+
+    });
+    for (key in mapping) {
+        data.push(mapping[key]);
+    }
+    data.sort(function(a, b) {
+        return a.domain < b.domain ? -1 : a.domain > b.domain ? 1 : 0;
+    });
+    return { data : data, mapping : mapping };
+}
+
+function chromeCallback(w, uri) {
+    var cookies;
+
+    var moduleId = "cookieManager_" + script.generateId();
+
+    var scriptsEnabled = w.settings.enableScripts;
+    w.settings.enableScripts = true;
+
+    switch (net.parseUri(uri).query) {
+        case "session" : cookies = mapCookies(net.sessionCookies()); break;
+        case "persistent" : cookies = mapCookies(net.persistentCookies()); break;
+        default : cookies = mapCookies(net.allCookies()); break;
+    }
+
+    w.onceDocumentLoaded = function(wv) {
+        provide(moduleId, {
+            deleteCookies : deleteCookies.bind(null, w, cookies.mapping)
+        }, true);
+
+        // cleanup
+        wv.onceNavigation = function() {
+            provide(moduleId, null, true);
+            w.settings = scriptsEnabled;
+            cookies = null;
+            data = null;
+        };
+
+        wv.inject(injectScript, { moduleId : moduleId, data : cookies.data });
+    };
+    return util.hereDoc(document);
+}
+
+return {
+    init : function(c) {
+        extensions.registerChrome("cookies", chromeCallback);
+        return true;
+    }, 
+    end : function () {
+        extensions.unregisterChrome("cookies");
+        return true;
+    }
+};
+// vim:set ft=javascript:
