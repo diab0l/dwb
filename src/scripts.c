@@ -1909,8 +1909,10 @@ DwbStatus
 scripts_eval_key(KeyMap *m, Arg *arg) 
 {
     char *json = NULL;
-    if (! (m->map->prop & CP_OVERRIDE))
+    if (! (m->map->prop & CP_OVERRIDE)) {
         CLEAR_COMMAND_TEXT();
+        dwb_change_mode(NORMAL_MODE, true);
+    }
 
     if (s_global_context != NULL)
     {
@@ -2021,7 +2023,7 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     gchar *keystr, *callback_name;
     gboolean ret = false;
     char *name = NULL, *callback = NULL;
-    guint option = CP_DONT_SAVE | CP_SCRIPT;
+    guint option = CP_DONT_SAVE | CP_SCRIPT | CP_DONT_CLEAN;
     gboolean override = false;
 
     if (argc < 2) 
@@ -2804,9 +2806,9 @@ scripts_completion_activate(void)
     EXEC_LOCK;
     const char *text = GET_TEXT();
     JSValueRef val[] = { js_char_to_value(s_global_context, text) };
-    call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
     completion_clean_completion(false);
     dwb_change_mode(NORMAL_MODE, true);
+    call_as_function_debug(s_global_context, s_completion_callback, s_completion_callback, 1, val);
     EXEC_UNLOCK;
 }
 /** 
