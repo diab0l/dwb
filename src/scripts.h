@@ -21,40 +21,41 @@
 
 #include <JavaScriptCore/JavaScript.h>
 
-enum SIGNALS {
-  SCRIPTS_SIG_FIRST        = 0,
-  SCRIPTS_SIG_NAVIGATION   = 0,
-  SCRIPTS_SIG_LOAD_STATUS,
-  SCRIPTS_SIG_MIME_TYPE,
-  SCRIPTS_SIG_DOWNLOAD,
-  SCRIPTS_SIG_DOWNLOAD_START,
-  SCRIPTS_SIG_DOWNLOAD_STATUS,
-  SCRIPTS_SIG_RESOURCE,
-  SCRIPTS_SIG_KEY_PRESS,
-  SCRIPTS_SIG_KEY_RELEASE,
-  SCRIPTS_SIG_BUTTON_PRESS,
-  SCRIPTS_SIG_BUTTON_RELEASE,
-  SCRIPTS_SIG_TAB_FOCUS,
-  SCRIPTS_SIG_FRAME_STATUS,
-  SCRIPTS_SIG_LOAD_FINISHED,
-  SCRIPTS_SIG_LOAD_COMMITTED,
-  SCRIPTS_SIG_CLOSE_TAB, 
-  SCRIPTS_SIG_CREATE_TAB, 
-  SCRIPTS_SIG_FRAME_CREATED,
-  SCRIPTS_SIG_CLOSE,
-  SCRIPTS_SIG_DOCUMENT_LOADED,
-  SCRIPTS_SIG_MOUSE_MOVE,
-  SCRIPTS_SIG_STATUS_BAR,
-  SCRIPTS_SIG_TAB_BUTTON_PRESS,
-  SCRIPTS_SIG_CHANGE_MODE,
-  SCRIPTS_SIG_EXECUTE_COMMAND,
-  SCRIPTS_SIG_CONTEXT_MENU,
-  SCRIPTS_SIG_ERROR,
-  SCRIPTS_SIG_SCROLL,
-  SCRIPTS_SIG_FOLLOW,
-  SCRIPTS_SIG_ADD_COOKIE,
-  SCRIPTS_SIG_LAST, 
-} ;
+#define SCRIPTS_SIG_FIRST               0
+#define SCRIPTS_SIG_NAVIGATION          0
+#define SCRIPTS_SIG_LOAD_STATUS         1
+#define SCRIPTS_SIG_MIME_TYPE           2
+#define SCRIPTS_SIG_DOWNLOAD            3
+#define SCRIPTS_SIG_DOWNLOAD_START      4
+#define SCRIPTS_SIG_DOWNLOAD_STATUS     5
+#define SCRIPTS_SIG_RESOURCE            6
+#define SCRIPTS_SIG_KEY_PRESS           7
+#define SCRIPTS_SIG_KEY_RELEASE         8
+#define SCRIPTS_SIG_BUTTON_PRESS        9
+#define SCRIPTS_SIG_BUTTON_RELEASE      10
+#define SCRIPTS_SIG_TAB_FOCUS           11
+#define SCRIPTS_SIG_FRAME_STATUS        12
+#define SCRIPTS_SIG_LOAD_FINISHED       13
+#define SCRIPTS_SIG_LOAD_COMMITTED      14
+#define SCRIPTS_SIG_CLOSE_TAB           15
+#define SCRIPTS_SIG_CREATE_TAB          16
+#define SCRIPTS_SIG_FRAME_CREATED       17
+#define SCRIPTS_SIG_CLOSE               18
+#define SCRIPTS_SIG_DOCUMENT_LOADED     19
+#define SCRIPTS_SIG_MOUSE_MOVE          20
+#define SCRIPTS_SIG_STATUS_BAR          21
+#define SCRIPTS_SIG_TAB_BUTTON_PRESS    22
+#define SCRIPTS_SIG_CHANGE_MODE         23
+#define SCRIPTS_SIG_EXECUTE_COMMAND     24
+#define SCRIPTS_SIG_CONTEXT_MENU        25
+#define SCRIPTS_SIG_ERROR               26
+#define SCRIPTS_SIG_SCROLL              27
+#define SCRIPTS_SIG_FOLLOW              28
+#define SCRIPTS_SIG_ADD_COOKIE          29
+#define SCRIPTS_SIG_SERVER_RUN          30
+#define SCRIPTS_SIG_SERVER_STOP         31
+#define SCRIPTS_SIG_LAST                32
+
 
 #define SCRIPT_MAX_SIG_OBJECTS 8
 
@@ -62,7 +63,7 @@ typedef struct _ScriptSignal {
   JSObjectRef jsobj;
   GObject *objects[SCRIPT_MAX_SIG_OBJECTS]; 
   char *json;
-  unsigned int signal;
+  uint64_t signal;
   int numobj;
   Arg *arg;
 } ScriptSignal;
@@ -84,7 +85,7 @@ JSObjectRef scripts_make_cookie(SoupCookie *cookie);
 gboolean scripts_load_chrome(JSObjectRef,  const char *);
 void scripts_load_extension(const char *);
 
-#define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1<<SCRIPTS_SIG_##sig)))
+#define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1ULL<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \
   if (scripts_emit(&signal)) { \
     g_free(json); \

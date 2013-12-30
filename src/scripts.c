@@ -26,6 +26,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <JavaScriptCore/JavaScript.h>
 #include <glib.h>
@@ -215,6 +216,8 @@ static const struct {
     { SCRIPTS_SIG_SCROLL,    "scroll" },
     { SCRIPTS_SIG_FOLLOW,    "followHint" },
     { SCRIPTS_SIG_ADD_COOKIE,    "addCookie" },
+    { SCRIPTS_SIG_SERVER_RUN,    "serverRun" },
+    { SCRIPTS_SIG_SERVER_STOP,    "serverStop" },
     { 0, NULL },
 };
 
@@ -5076,8 +5079,16 @@ static JSValueRef
 server_run(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     SoupServer *server = JSObjectGetPrivate(this);
-    if (server != NULL)
+    if (server != NULL) {
+        if (EMIT_SCRIPT(SERVER_RUN)) 
+        {
+            char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%d", soup_server_get_port(server));
+            ScriptSignal s = { SCRIPTS_SIG_META(buffer, SERVER_RUN, 0) };
+            scripts_emit(&s);
+        }
         soup_server_run_async(server);
+    }
     return UNDEFINED;
 }
 // TODO: Documentation
@@ -5086,7 +5097,16 @@ server_stop(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
 {
     SoupServer *server = JSObjectGetPrivate(this);
     if (server != NULL)
+    {
+        if (EMIT_SCRIPT(SERVER_STOP)) 
+        {
+            char buffer[16];
+            snprintf(buffer, sizeof(buffer), "%d", soup_server_get_port(server));
+            ScriptSignal s = { SCRIPTS_SIG_META(buffer, SERVER_STOP, 0) };
+            scripts_emit(&s);
+        }
         soup_server_quit(server);
+    }
     return UNDEFINED;
 }
 // TODO: Documentation
@@ -5476,12 +5496,12 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
         if (JSValueIsNull(ctx, value)) 
         {
             s_sig_objects[i] = NULL;
-            dwb.misc.script_signals &= ~(1<<i);
+            dwb.misc.script_signals &= ~(1ULL<<i);
         }
         else if ( (o = js_value_to_function(ctx, value, exception)) != NULL) 
         {
             s_sig_objects[i] = o;
-            dwb.misc.script_signals |= (1<<i);
+            dwb.misc.script_signals |= (1ULL<<i);
         }
         break;
     }

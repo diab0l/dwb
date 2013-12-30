@@ -19,6 +19,7 @@
 #ifndef __DWB_DWB_H__
 #define __DWB_DWB_H__
 #include <gtk/gtk.h>
+#include <stdint.h>
 #include <webkit/webkit.h>
 #include <gdk/gdkkeysyms.h> 
 
@@ -838,7 +839,7 @@ struct _Misc {
   int bar_height;
   TabPosition tab_position;
   char *hint_style;
-  int script_signals;
+  uint64_t script_signals;
   CloseLastTabPolicy clt_policy;
   ProgressBarStyle progress_bar_style;
 
