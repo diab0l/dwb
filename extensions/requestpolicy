@@ -152,89 +152,87 @@ function showMenu()
 {
     var tmpWhiteListed, whiteListed;
     var isWhiteListed = false;
-    var dom, i, l, domains, labels, currentDomain;
+    var dom, i, l, domains, labels, domain;
 
-    var domain = tabs.current.mainFrame.domain;
+    domain = tabs.current.mainFrame.domain;
     if (domain === null)
         return;
 
     domains = getPrivate(tabs.current).domains;
     labels = [];
-    currentDomain = tabs.current.mainFrame.domain;
 
     for (i=0, l=domains.length; i<l; ++i)
     {
-        (function(dom) 
+        (function(dom) {
+            if (persistentList._alwaysBlock && persistentList._alwaysBlock.fastIndexOf(dom) != -1) 
+                return;
+
+            whiteListed = persistentList[domain] && persistentList[domain].fastIndexOf(dom) != -1;
+            tmpWhiteListed = tmpList[domain] && tmpList[domain].fastIndexOf(dom) != -1;
+            if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
             {
-                if (persistentList._alwaysBlock && persistentList._alwaysBlock.fastIndexOf(dom) != -1) 
-                    return;
-
-                whiteListed = persistentList[domain] && persistentList[domain].fastIndexOf(dom) != -1;
-                tmpWhiteListed = tmpList[domain] && tmpList[domain].fastIndexOf(dom) != -1;
-                if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
-                {
-                    if (!whiteListed) {
-                        labels.push({ 
-                                left : "[" + dom + "] allow persistent", 
-                                action : function () {
-                                    listAdd(persistentList, currentDomain, dom, true);
-                                }
-                        });
-                    }
-                    if (!tmpWhiteListed && !whiteListed) {
-                        labels.push({ 
-                                left : "[" + dom + "] allow temporarily", 
-                                action : function() {
-                                    listAdd(tmpList, currentDomain, dom, false);
-                                }
-                        });
-                    }
-
-                    else
-                    {
-                        var right = "";
-                        if (tmpWhiteListed) {
-                            right += "temporarily" + (whiteListed ? "/persistently " : " ");
-                        }
-                        else if (whiteListed) {
-                            right += "persistently ";
-                        }
-                        right += "allowed";
-                        labels.push({ 
-                                left : "[" +  dom + "] block",
-                                right : right,
-                                action : function() {
-                                    listRemove(persistentList, currentDomain, dom, true);
-                                    listRemove(tmpList, currentDomain, dom, false);
-                                }
-                        });
-                    }
-                }
-                isWhiteListed = isWhiteListed || whiteListed || tmpWhiteListed;
-                if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
-                {
-                    labels.push({
-                            left : "[" +  dom + "] allow on all sites", 
-                            action : function() {
-                                listAdd(persistentList, "_always", dom, true);
+                if (!whiteListed) {
+                    labels.push({ 
+                            left : "[" + dom + "] allow persistent", 
+                            action : function () {
+                                listAdd(persistentList, currentDomain, dom, true);
                             }
                     });
                 }
-                else 
-                {
-                    labels.push({
-                            left : "[" + dom + "] don't allow on all sites", 
+                if (!tmpWhiteListed && !whiteListed) {
+                    labels.push({ 
+                            left : "[" + dom + "] allow temporarily", 
                             action : function() {
-                                listRemove(persistentList, "_always", dom, true);
+                                listAdd(tmpList, currentDomain, dom, false);
                             }
                     });
                 }
-                labels.push({ 
-                        left : "[" + dom + "] block on all sites", 
-                        action : function () {
-                            listAdd(persistentList, "_alwaysBlock", dom, true);
+
+                else
+                {
+                    var right = "";
+                    if (tmpWhiteListed) {
+                        right += "temporarily" + (whiteListed ? "/persistently " : " ");
+                    }
+                    else if (whiteListed) {
+                        right += "persistently ";
+                    }
+                    right += "allowed";
+                    labels.push({ 
+                            left : "[" +  dom + "] block",
+                            right : right,
+                            action : function() {
+                                listRemove(persistentList, currentDomain, dom, true);
+                                listRemove(tmpList, currentDomain, dom, false);
+                            }
+                    });
+                }
+            }
+            isWhiteListed = isWhiteListed || whiteListed || tmpWhiteListed;
+            if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
+            {
+                labels.push({
+                        left : "[" +  dom + "] allow on all sites", 
+                        action : function() {
+                            listAdd(persistentList, "_always", dom, true);
                         }
                 });
+            }
+            else 
+            {
+                labels.push({
+                        left : "[" + dom + "] don't allow on all sites", 
+                        action : function() {
+                            listRemove(persistentList, "_always", dom, true);
+                        }
+                });
+            }
+            labels.push({ 
+                    left : "[" + dom + "] block on all sites", 
+                    action : function () {
+                        listAdd(persistentList, "_alwaysBlock", dom, true);
+                    }
+            });
         })(domains[i]);
     }
     var allAllowed = (persistentList._all && persistentList._all.fastIndexOf(domain) != -1) ||
