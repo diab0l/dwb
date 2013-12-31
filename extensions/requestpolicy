@@ -173,14 +173,15 @@ function showMenu()
                 tmpWhiteListed = tmpList[domain] && tmpList[domain].fastIndexOf(dom) != -1;
                 if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
                 {
-                    if (!whiteListed && !tmpWhiteListed) 
-                    {
+                    if (!whiteListed) {
                         labels.push({ 
-                                left : "[" + dom + "] allow", 
+                                left : "[" + dom + "] allow persistent", 
                                 action : function () {
                                     listAdd(persistentList, currentDomain, dom, true);
                                 }
                         });
+                    }
+                    if (!tmpWhiteListed && !whiteListed) {
                         labels.push({ 
                                 left : "[" + dom + "] allow temporarily", 
                                 action : function() {
@@ -189,10 +190,19 @@ function showMenu()
                         });
                     }
 
-                    else 
+                    else
                     {
+                        var right = "";
+                        if (tmpWhiteListed) {
+                            right += "temporarily" + (whiteListed ? "/persistently " : " ");
+                        }
+                        else if (whiteListed) {
+                            right += "persistently ";
+                        }
+                        right += "allowed";
                         labels.push({ 
                                 left : "[" +  dom + "] block",
+                                right : right,
                                 action : function() {
                                     listRemove(persistentList, currentDomain, dom, true);
                                     listRemove(tmpList, currentDomain, dom, false);
