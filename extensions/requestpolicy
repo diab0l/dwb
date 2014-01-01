@@ -173,7 +173,7 @@ function showMenu()
             {
                 if (!whiteListed) {
                     labels.push({ 
-                            left : "[" + dom + "] allow persistent", 
+                            left : "[" + dom + "] allow persistently", 
                             action : function () {
                                 listAdd(persistentList, currentDomain, dom, true);
                             }
