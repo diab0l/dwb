@@ -175,7 +175,7 @@ function showMenu()
                     labels.push({ 
                             left : "[" + dom + "] allow persistently", 
                             action : function () {
-                                listAdd(persistentList, currentDomain, dom, true);
+                                listAdd(persistentList, domain, dom, true);
                             }
                     });
                 }
@@ -183,7 +183,7 @@ function showMenu()
                     labels.push({ 
                             left : "[" + dom + "] allow temporarily", 
                             action : function() {
-                                listAdd(tmpList, currentDomain, dom, false);
+                                listAdd(tmpList, domain, dom, false);
                             }
                     });
                 }
@@ -202,8 +202,8 @@ function showMenu()
                             left : "[" +  dom + "] block",
                             right : right,
                             action : function() {
-                                listRemove(persistentList, currentDomain, dom, true);
-                                listRemove(tmpList, currentDomain, dom, false);
+                                listRemove(persistentList, domain, dom, true);
+                                listRemove(tmpList, domain, dom, false);
                             }
                     });
                 }
@@ -242,12 +242,12 @@ function showMenu()
         labels.unshift({
                 left : "Block all requests on " + domain, 
                 action : function () {
-                    delete persistentList[currentDomain];
-                    listRemove(persistentList, "_all", currentDomain, false);
-                    // necessary if persistentList.currentDomain exists
+                    delete persistentList[domain];
+                    listRemove(persistentList, "_all", domain, false);
+                    // necessary if persistentList.domain exists
                     io.write(config.whiteList, "w", JSON.stringify(persistentList));
-                    delete tmpList[currentDomain];
-                    listRemove(tmpList, "_all", currentDomain, false);
+                    delete tmpList[domain];
+                    listRemove(tmpList, "_all", domain, false);
                 }
         });
     }
@@ -256,8 +256,8 @@ function showMenu()
         labels.unshift({
                 left : "Don't allow all requests on " + domain, 
                 action : function() {
-                    listRemove(tmpList, "_all", currentDomain, false);
-                    listRemove(persistentList, "_all", currentDomain, true);
+                    listRemove(tmpList, "_all", domain, false);
+                    listRemove(persistentList, "_all", domain, true);
                 }
         });
     }
@@ -266,13 +266,13 @@ function showMenu()
         labels.unshift({
                 left : "Temporarily allow all requests on " + domain, 
                 action : function() {
-                    listAdd(tmpList, "_all", currentDomain, false);
+                    listAdd(tmpList, "_all", domain, false);
                 }
         });
         labels.unshift({
                 left : "Allow all requests on " + domain, 
                 action : function() {
-                    listAdd(persistentList, "_all", currentDomain, true);
+                    listAdd(persistentList, "_all", domain, true);
                 }
         });
     }
