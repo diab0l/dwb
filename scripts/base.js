@@ -408,7 +408,6 @@ Object.freeze((function () {
         {
             var doc = win.document;
             var res = doc.body.querySelectorAll(globals.hintTypes[type]); 
-            console.log(res);
             var e, r;
             p_createStyleSheet(doc);
             var hints = doc.createDocumentFragment();
@@ -455,7 +454,6 @@ Object.freeze((function () {
         globals.newTab = newTab;
         p_createHints(window, globals.style == "letter" ? p_letterHint : p_numberHint, type);
         var l = globals.elements.length;
-        console.log(l);
 
         if (l === 0) 
         {

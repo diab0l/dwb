@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2013 Stefan Bolte <portix@gmx.net>
+ * Copyright (c) 2010-2014 Stefan Bolte <portix@gmx.net>
  * Copyright (c) 2013 Elias Norberg <xyzzy@kudzu.se>
  *
  * This program is free software; you can redistribute it and/or modify
