@@ -360,7 +360,6 @@ function injectScript()
         search : function(e) {
             DomAccessible.reset(false);
             var searchBox = document.getElementById("searchBox");
-            var selector = "[data-search-attr]";
             var reg = new RegExp(".*" + searchBox.value + ".*");
             queryForEach("[data-search-attr]", function(node) {
                 if(!reg.test(node.dataset.searchAttr)) {
