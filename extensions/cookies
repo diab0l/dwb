@@ -372,7 +372,7 @@ function injectScript()
             });
         },
         reset : function(clear) {
-            Array.prototype.forEach.call(document.querySelectorAll("[data-search-attr]"), function (node) {
+            queryForEach("[data-search-attr]", function(node) {
                 node.style.display = "";
                 node.nextSibling.style.display = "";
             });
@@ -457,13 +457,15 @@ function formatDate(d)
 
 
 function deleteCookies(w, data, cookies) {
-    var key;
+    var key, current, children, i, j, l, m;
     for (key in cookies) {
         if (key in data) {
-            var current = cookies[key], l = current.length;
-            for (var i=0; i<current.length; i++) {
-                var children = data[key].children, m = children.length;
-                for (var j=0; j<m; j++) {
+            current = cookies[key]; 
+            l = current.length;
+            for (i=0; i<current.length; i++) {
+                children = data[key].children;
+                m = children.length;
+                for (j=0; j<m; j++) {
                     if (children[j].id == current[i])
                         children[j].delete();
                 }
@@ -503,17 +505,26 @@ function mapCookies(cookies) {
 }
 
 function chromeCallback(w, uri) {
-    var cookies;
+    var cookies, moduleId, scriptsEnabled;
 
-    var moduleId = "cookieManager_" + script.generateId();
+    moduleId = "cookieManager_" + script.generateId();
+    scriptsEnabled = w.settings.enableScripts;
 
-    var scriptsEnabled = w.settings.enableScripts;
     w.settings.enableScripts = true;
 
     switch (net.parseUri(uri).query) {
-        case "session" : cookies = mapCookies(net.sessionCookies()); break;
-        case "persistent" : cookies = mapCookies(net.persistentCookies()); break;
-        default : cookies = mapCookies(net.allCookies()); break;
+        case "session" : {
+            cookies = mapCookies(net.sessionCookies()); 
+            break;
+        }
+        case "persistent" : { 
+            cookies = mapCookies(net.persistentCookies()); 
+            break;
+        }
+        default : { 
+            cookies = mapCookies(net.allCookies()); 
+            break;
+        }
     }
 
     w.onceDocumentLoaded = function(wv) {
