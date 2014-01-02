@@ -387,7 +387,7 @@ function injectScript()
         deselectAll : queryForEach.bind(null, "[aria-selected='true']", setDeselected), 
         deleteCookies : function() {
             var cookies = {};
-            var s = query("[aria-selected='true']").forEach(function(node) {
+            queryForEach("[aria-selected='true']", function(node) {
                 var parentId = node.dataset.parentId;
                 if (parentId) {
                     if (!cookies[parentId]) {
