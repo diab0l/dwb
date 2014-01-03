@@ -7012,6 +7012,7 @@ scripts_load_extension(const char *extension)
     JSValueRef argv[] = { js_char_to_value(s_global_context, extension) };
     exec_namespace_function(s_global_context, "extensions", "load", 1, argv);
     s_autoloaded_extensions = g_slist_prepend(s_autoloaded_extensions, g_strdup(extension));
+    dwb_set_normal_message(dwb.state.fview, true, "Extension %s autoloaded", extension);
     EXEC_UNLOCK;
 }
 
