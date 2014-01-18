@@ -234,6 +234,7 @@ enum {
     CONSTRUCTOR_SOUP_HEADERS,
     CONSTRUCTOR_SERVER,
     CONSTRUCTOR_COOKIE,
+    CONSTRUCTOR_MENU,
     CONSTRUCTOR_LAST,
 };
 enum {
@@ -4620,7 +4621,12 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
             return JSValueToObject(ctx, NIL, NULL);
         }
         GtkWidget *widget = gtk_widget_new(type, NULL);
-        return JSObjectMake(ctx, s_widget_class, widget);
+        if (WEBKIT_IS_WEB_VIEW(widget)) {
+            return JSObjectMake(ctx, s_secure_widget_class, widget);
+        }
+        else {
+            return make_object(ctx, G_OBJECT(widget));
+        }
     }
     return JSValueToObject(ctx, NIL, NULL);
 }
@@ -4817,7 +4823,7 @@ soup_headers_clear(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
  *      Position of the item or separator starting at 0, if omitted it will be appended
  *
  * @example 
- * signals.connect("contextMenu", function(wv, menu) {
+ * Signal.connect("contextMenu", function(wv, menu) {
  *      menu.addItems([
  *          // append separator
  *          null, 
@@ -4848,6 +4854,8 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
 
     JSObjectRef callback, o;
     JSValueRef current, label_value, callback_value;
+    JSObjectRef js_submenu;
+    GObject *submenu;
 
     GtkMenu *menu = JSObjectGetPrivate(this);
     if (menu)
@@ -4860,6 +4868,7 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
         js_array_iterator_init(ctx, &iter, arg);
         while ((current = js_array_iterator_next(&iter, exc)) != NULL)
         {
+            item = NULL;
             if (JSValueIsNull(ctx, current))
             {
                 item = gtk_separator_menu_item_new();
@@ -4867,8 +4876,9 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
             }
 
             o = JSValueToObject(ctx, current, exc);
-            if (o == NULL)
+            if (o == NULL) {
                 continue;
+            }
             if (JSObjectHasProperty(ctx, o, str_position))
             {
                 current = JSObjectGetProperty(ctx, o, str_position, exc);
@@ -4878,20 +4888,36 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
                 else 
                     position = (int) p;
             }
-            if (JSObjectHasProperty(ctx, o, str_label) && JSObjectHasProperty(ctx, o, str_callback))
+            if (JSObjectHasProperty(ctx, o, str_label))
             {
                 label_value = JSObjectGetProperty(ctx, o, str_label, exc);
                 label = js_value_to_char(ctx, label_value, -1, exc);
                 if (label == NULL)
                     goto error;
-
-                callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
-                callback = js_value_to_function(ctx, callback_value, exc);
-                if (callback == NULL)
-                    goto error;
-
                 item = gtk_menu_item_new_with_label(label);
-                g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
+
+                if ((js_submenu = js_get_object_property(ctx, o, "menu")) != NULL) {
+                    submenu = JSObjectGetPrivate(js_submenu);
+                    if (submenu == NULL || !GTK_IS_MENU(submenu)) {
+                        gtk_widget_destroy(item);
+                        goto error;
+                    }
+
+                    gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), GTK_WIDGET(submenu));
+                }
+                else if (JSObjectHasProperty(ctx, o, str_callback)) {
+                    callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
+                    callback = js_value_to_function(ctx, callback_value, exc);
+                    if (callback == NULL) {
+                        gtk_widget_destroy(item);
+                        goto error;
+                    }
+                    g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
+                }
+                else {
+                    gtk_widget_destroy(item);
+                    goto error;
+                }
             }
             else 
             {
@@ -4901,7 +4927,7 @@ create:
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
             if (position != -1)
                 gtk_menu_reorder_child(menu, item, position);
-            gtk_widget_show(item);
+            gtk_widget_show_all(item);
 error:
             g_free(label);
         }
