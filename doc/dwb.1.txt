@@ -588,7 +588,7 @@ Open external editor for current input/textarea (command
 
 *g.*::
 Toggle hidden files when browsing local filesystem.
-(command 'open_editor', aliases: 'editor').
+(command 'toggle_hidden_files', aliases: 'hidden').
 
 *F11*::
 Toggle fullscreen (command 'fullscreen', aliases: 'fs').
