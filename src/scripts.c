@@ -4638,12 +4638,7 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
             return JSValueToObject(ctx, NIL, NULL);
         }
         GtkWidget *widget = gtk_widget_new(type, NULL);
-        if (WEBKIT_IS_WEB_VIEW(widget)) {
-            return JSObjectMake(ctx, s_secure_widget_class, widget);
-        }
-        else {
-            return make_object(ctx, G_OBJECT(widget));
-        }
+        return make_object(ctx, G_OBJECT(widget));
     }
     return JSValueToObject(ctx, NIL, NULL);
 }
