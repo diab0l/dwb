@@ -1281,6 +1281,23 @@ wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc,
     return JSValueMakeNumber(ctx, status);
 }
 #endif
+/** 
+ * Whether text is selected in the webview
+ *
+ * @name hasSelection
+ * @memberOf WebKitWebView.prototype
+ * @type Boolean
+ * */
+static JSValueRef 
+wv_has_selection(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    WebKitWebView *wv = JSObjectGetPrivate(object);
+    if (wv != NULL) 
+    {
+        return JSValueMakeBoolean(ctx, webkit_web_view_has_selection(wv));
+    }
+    return JSValueMakeBoolean(ctx, false);
+}/*}}}*/
 /* wv_get_main_frame {{{*/
 /** 
  * The main frame
@@ -4815,8 +4832,11 @@ soup_headers_clear(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
  *      Array of menu items and callbacks, if an item is <i>null</i> or label or
  *      callback is omitted it will be a separator
  * @param {GtkMenu~onMenuActivate} [items[].callback] 
- *      Callback called when the item is clicked, if omitted it will be a
- *      separator
+ *      Callback called when the item is clicked, must be defined if it isn't a
+ *      submenu 
+ * @param {GtkMenu} [items[].menu]
+ *      A gtk menu that will get a submenu of the menu, must be defined if
+ *      callback is omitted
  * @param {String} [items[].label] 
  *      Label of the item, if omitted it will be a separator
  * @param {Number} [items[].position] 
@@ -4824,19 +4844,34 @@ soup_headers_clear(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
  *
  * @example 
  * Signal.connect("contextMenu", function(wv, menu) {
- *      menu.addItems([
- *          // append separator
- *          null, 
- *          // append a menu item
- *          { 
- *              label : "Copy current url", 
- *              callback : function() 
- *              {
- *                  clipboard.set(Selection.clipboard, wv.url);
- *                  io.notify(this.label + " was activated");
- *              }
- *          }
- *      ]);
+ *    var submenu = new GtkWidget("GtkMenu");
+ * 
+ *    submenu.addItems([
+ *                  { 
+ *                      label : "Copy url to clipboard", 
+ *                      callback : function() 
+ *                      {
+ *                          clipboard.set(Selection.clipboard, wv.uri);
+ *                      } 
+ *                  }, 
+ *                  { 
+ *                      label : "Copy url to primary", 
+ *                      callback : function() 
+ *                      {
+ *                          clipboard.set(Selection.primary, wv.uri);
+ *                      } 
+ *                  }
+ *    ]);
+ * 
+ *    menu.addItems([
+ *                  // append separator
+ *                  null, 
+ *                  // append a menu item
+ *                  { 
+ *                      label : "Copy current url", 
+ *                      menu : submenu
+ *                  }
+ *    ]);
  * });
  *
  * */
@@ -6516,6 +6551,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     JSStaticValue wv_values[] = {
+        { "hasSelection",  wv_has_selection, NULL, kJSDefaultAttributes }, 
         { "mainFrame",     wv_get_main_frame, NULL, kJSDefaultAttributes }, 
         { "focusedFrame",  wv_get_focused_frame, NULL, kJSDefaultAttributes }, 
         { "allFrames",     wv_get_all_frames, NULL, kJSDefaultAttributes }, 
