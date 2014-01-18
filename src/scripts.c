@@ -4904,6 +4904,7 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
         while ((current = js_array_iterator_next(&iter, exc)) != NULL)
         {
             item = NULL;
+            label = NULL;
             if (JSValueIsNull(ctx, current))
             {
                 item = gtk_separator_menu_item_new();
@@ -4940,7 +4941,7 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
 
                     gtk_menu_item_set_submenu(GTK_MENU_ITEM(item), GTK_WIDGET(submenu));
                 }
-                else if (JSObjectHasProperty(ctx, o, str_callback)) {
+                if (JSObjectHasProperty(ctx, o, str_callback)) {
                     callback_value = JSObjectGetProperty(ctx, o, str_callback, exc);
                     callback = js_value_to_function(ctx, callback_value, exc);
                     if (callback == NULL) {
@@ -4948,10 +4949,6 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
                         goto error;
                     }
                     g_signal_connect(item, "activate", G_CALLBACK(menu_callback), callback);
-                }
-                else {
-                    gtk_widget_destroy(item);
-                    goto error;
                 }
             }
             else 
