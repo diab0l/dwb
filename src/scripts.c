@@ -4833,40 +4833,46 @@ soup_headers_clear(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
  *      A gtk menu that will get a submenu of the menu, must be defined if
  *      callback is omitted
  * @param {String} [items[].label] 
- *      Label of the item, if omitted it will be a separator
+ *      Label of the item, if omitted it will be a separator, if an character is
+ *      preceded by an underscore it will be used as an accelerator key, to use
+ *      a literal underscore in a label use a double underscore
  * @param {Number} [items[].position] 
  *      Position of the item or separator starting at 0, if omitted it will be appended
  *
  * @example 
+ *
  * Signal.connect("contextMenu", function(wv, menu) {
- *    var submenu = new GtkWidget("GtkMenu");
+ *     var submenu = new GtkWidget("GtkMenu");
  * 
- *    submenu.addItems([
- *                  { 
- *                      label : "Copy url to clipboard", 
- *                      callback : function() 
- *                      {
- *                          clipboard.set(Selection.clipboard, wv.uri);
- *                      } 
- *                  }, 
- *                  { 
- *                      label : "Copy url to primary", 
- *                      callback : function() 
- *                      {
- *                          clipboard.set(Selection.primary, wv.uri);
- *                      } 
- *                  }
- *    ]);
+ *     var submenuItems = [ 
+ *         { 
+ *             label : "Copy url to clipboard", 
+ *             callback : function() 
+ *             {
+ *                 clipboard.set(Selection.clipboard, wv.uri);
+ *             } 
+ *         }, 
+ *         { 
+ *             label : "Copy url to primary", 
+ *             callback : function() 
+ *             {
+ *                 clipboard.set(Selection.primary, wv.uri);
+ *             } 
+ *         }
+ *     ];
  * 
- *    menu.addItems([
- *                  // append separator
- *                  null, 
- *                  // append a menu item
- *                  { 
- *                      label : "Copy current url", 
- *                      menu : submenu
- *                  }
- *    ]);
+ *     var menuItems = [
+ *         // append separator
+ *         null, 
+ *         // append a menu item
+ *         { 
+ *             label : "Copy current url", 
+ *             menu : submenu
+ *         }
+ *     ];
+ * 
+ *    submenu.addItems(submenuItems);
+ *    menu.addItems(menuItems);
  * });
  *
  * */
@@ -4925,7 +4931,7 @@ menu_add_items(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
                 label = js_value_to_char(ctx, label_value, -1, exc);
                 if (label == NULL)
                     goto error;
-                item = gtk_menu_item_new_with_label(label);
+                item = gtk_menu_item_new_with_mnemonic(label);
 
                 if ((js_submenu = js_get_object_property(ctx, o, "menu")) != NULL) {
                     submenu = JSObjectGetPrivate(js_submenu);
