@@ -2,7 +2,88 @@
 (function () {
   var configDir = data.configDir;
   var profile = data.profile;
+  function filterNull(object) { return object !== null; }
+  function filterEmpty(line) { return line.trim().length > 0; }
+  function mapDefault(line) { return line.trim(); }
+  function mapQuickmarks(line) {
+        var token = line.trim().split(" ");
+        return {
+            mark : token[0],
+            url : token.slice(1).join(" ")
+        };
+  }
+  function mapSearchengines(line) {
+      var engine = null;
+      try {
+          var token = line.trim().split(" ");
+          var shortcut = token[0];
+          var url = token.slice(1).join(" ");
+          var purl = net.parseUri(url);
+          var host = purl ? purl.host : null;
+          engine = {
+              shortcut : shortcut, 
+              url : url, 
+              host : host
+          };
+      }
+      catch (e) { }
+      return engine;
+
+  }
   Object.defineProperties(data, {
+      /** 
+       * Parses data to an array
+       *
+       * @name parse 
+       * @memberOf data
+       * @function 
+       * @type Array
+       *
+       * @param {String} name 
+       *        Name of the data to parse, can be one of <i>bookmarks</i>,
+       *        <i>cookiesWhitelist</i>, <i>sessionCookiesWhitelist</i>,
+       *        <i>scriptWhitelist</i>, <i>pluginsWhitelist</i>, <i>quickmarks</i> or
+       *        <i>searchEngines</i>.
+       *
+       * @returns 
+       *    Array of parsed objects;
+       *        <b>quickmarks</b> will return an array of objects
+       *        with properties <b>mark</b> and <b>url</b> and
+       *        <b>searchEngines</b> will return an array of objects with properties <b>shortcut</b>, 
+       *        <b>url</b> and <b>host</b>. All other values will return an
+       *        array of strings.
+       * */
+      parse : {
+          value : function(name) {
+              var mapFunction;
+              switch (name) {
+                case "bookmarks": 
+                case "cookiesWhitelist" : 
+                case "sessionCookiesWhitelist" : 
+                case "scriptWhitelist" : 
+                case "pluginsWhitelist" : 
+                    mapFunction = mapDefault;
+                    break;
+                case "quickmarks" : 
+                    mapFunction = mapQuickmarks;
+                    break;
+                case "searchEngines" : 
+                    mapFunction = mapSearchengines;
+                    break;
+                default : 
+                    throw new Error("Parsing " + name + " is not supported!");
+              }
+              var data = null;
+
+              try {
+                  data = io.read(this[name]); 
+              }
+              catch (e) {
+                  return [];
+              }
+              return data.split("\n").filter(filterEmpty).map(mapFunction).filter(filterNull);
+          }
+      },
       /** 
        * The bookmark file
        * @name bookmarks 
@@ -101,12 +182,12 @@
       "settings"  :  { value : configDir + "/settings", enumerable : true }, 
       /** 
        * The searchengines file
-       * @name searchengines 
+       * @name searchEngines 
        * @memberOf data
        * @readonly
        * @type String
        * */
-      "searchEngines"   :  { value : configDir + "/searchengines", enumerable : true }, 
+      "searchEngines"   :  { value : configDir + "/searchengines", enumerable : true }
   });
 })();
 Object.freeze(data);
