@@ -16,12 +16,12 @@
       var engine = null;
       try {
           var token = line.trim().split(" ");
-          var shortcut = token[0];
+          var keyword = token[0];
           var url = token.slice(1).join(" ");
           var purl = net.parseUri(url);
           var host = purl ? purl.host : null;
           engine = {
-              shortcut : shortcut, 
+              keyword : keyword, 
               url : url, 
               host : host
           };
@@ -49,7 +49,7 @@
        *    Array of parsed objects;
        *        <b>quickmarks</b> will return an array of objects
        *        with properties <b>mark</b> and <b>url</b> and
-       *        <b>searchEngines</b> will return an array of objects with properties <b>shortcut</b>, 
+       *        <b>searchEngines</b> will return an array of objects with properties <b>keyword</b>, 
        *        <b>url</b> and <b>host</b>. All other values will return an
        *        array of strings.
        * */
