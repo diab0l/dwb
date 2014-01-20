@@ -1,4 +1,5 @@
 **/*.o
+**/*.do
 src/hsts_preload.h
 src/tlds.h
 
@@ -20,3 +21,12 @@ dwbem/dwbem
 dwbremote/dwbremote
 
 genapi/**
+
+**/.*.swp
+**/.*.swo
+
+doc/**/*.html
+
+**/*.bak
+
+src/scanbuild/
