@@ -259,6 +259,33 @@
              {
                  return this.getBody(func).replace(/\s*\/\*HEREDOC([\s\S]*)\s*HEREDOC\*\/\s*;?/, "$1");
              }
+         }, 
+         /** 
+          * Searches for a string in the current or a new tab using dwb's
+          * searchengines
+          *
+          * @name search
+          * @memberOf util
+          * @function
+          *
+          * @param {String} keyword
+          *         The search keyword
+          * @param {String} searchString
+          *         The string to search for
+          * @param {Boolean} [newTab]
+          *         Whether to open the result in a new tab, default false
+          * */
+         search : {
+             value : function(keyword, searchString, newTab) {
+                 var command = newTab ? "tabopen" : "open";
+                 data.parse("searchEngines").some(function(engine) {
+                     if (engine.keyword == keyword) {
+                         execute(command + " " + engine.keyword + " " + searchString);
+                         return true;
+                     }
+                     return false;
+                 });
+             }
          }
     });
     Object.freeze(util);
