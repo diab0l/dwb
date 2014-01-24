@@ -45,7 +45,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.7
+#define API_VERSION 1.8
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -7076,25 +7076,83 @@ scripts_load_extension(const char *extension)
     EXEC_UNLOCK;
 }
 
+static char * 
+init_macro(const char *content, const char *name, const char *fmt, ...) {
+    va_list args;
+    char *pattern = NULL, *prepared = NULL, *macro = NULL; 
+    GRegex *r = NULL;
+
+    pattern = g_strdup_printf("[^\\S\\n\\r]*__%s__[^\\S\\n\\r]*\\((.*)\\);[^\\S\\n\\r]*", name);
+    r = g_regex_new(pattern, 0, 0, NULL);
+
+    g_return_val_if_fail(r != NULL, NULL);
+
+    va_start(args, fmt);
+    prepared = g_strdup_vprintf(fmt, args);
+    va_end(args);
+
+    macro = g_regex_replace(r, content, -1, 0, prepared, 0, NULL);
+
+    g_regex_unref(r);
+    g_free(pattern);
+    g_free(prepared);
+    return macro;
+}
+
 
 void 
 init_script(const char *path, const char *script, gboolean is_archive, const char *template, int offset)
 {
-    char *debug = NULL;
+    char *debug = NULL, *prepared = NULL;
     if (s_global_context == NULL) 
         s_global_context = create_global_object();
 
+
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
-        debug = g_strdup_printf(template, path, script);
+        /** 
+         * Prints and assertion message and returns, if called in the global
+         * context of a script it stops the execution of the script. Note that
+         * __assert__ is not acutally a function but a macro, a ; is mandatory
+         * at the end of an __assert__ statement
+         *
+         * @name __assert__
+         * @function
+         *
+         * @param {Expression} expression 
+         *      An expression  that evaluates to true or false.
+         *
+         * @since 1.8
+         *
+         * @example 
+         * //!javascript
+         *
+         * var a = [];
+         *
+         * // returns immediately
+         * __assert__(a.length != 0);
+         *
+         * */
+        prepared = init_macro(script, "assert", 
+                "if(!(\\1)){try{throw new Error();}catch (e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
+                path);
+        if (prepared != NULL) {
+            debug = g_strdup_printf(template, path, prepared);
+            g_free(prepared);
+        }
+        else {
+            debug = g_strdup_printf(template, path, script);
+        }
+
         JSObjectRef function = js_make_function(s_global_context, debug, path, offset);
         if (is_archive)
             js_set_object_property(s_global_context, function, "path", path, NULL);
 
         if (function != NULL) 
             s_script_list = g_slist_prepend(s_script_list, function);
+
+        g_free(debug);
     }
-    g_free(debug);
 }
 
 /* scripts_init_script {{{*/
