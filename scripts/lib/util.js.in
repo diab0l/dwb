@@ -2,6 +2,22 @@
 (function () {
     Object.defineProperties(util, 
     { 
+        /*
+        * Clones an object, object with circular references are not supported.
+        *
+        * @name clone
+        * @memberOf util
+        * @function
+        *
+        * @param {Object} object The object to clone
+        *
+        * @returns {Object} A copy of the object
+        * */
+        "clone" : {
+            value : function(o)  {
+                return JSON.parse(JSON.stringify(o));
+            }
+        },
         /** 
          * Get the selected text in a webview
          * @name getSelection

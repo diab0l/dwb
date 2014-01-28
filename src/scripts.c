@@ -1298,6 +1298,25 @@ wv_has_selection(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
     }
     return JSValueMakeBoolean(ctx, false);
 }/*}}}*/
+/** 
+ * The last search string of the webview
+ *
+ * @name lastSearch
+ * @memberOf WebKitWebView.prototype
+ * @type String
+ * */
+static JSValueRef 
+wv_last_search(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    GList *gl = find_webview(object);
+    if (gl != NULL) {
+        if (VIEW(gl)->status->search_string != NULL) {
+            JSValueRef val = js_char_to_value(ctx, VIEW(gl)->status->search_string);
+            return val;
+        }
+    }
+    return NIL;
+}/*}}}*/
 /* wv_get_main_frame {{{*/
 /** 
  * The main frame
@@ -6549,6 +6568,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     JSStaticValue wv_values[] = {
+        { "lastSearch",    wv_last_search, NULL, kJSDefaultAttributes }, 
         { "hasSelection",  wv_has_selection, NULL, kJSDefaultAttributes }, 
         { "mainFrame",     wv_get_main_frame, NULL, kJSDefaultAttributes }, 
         { "focusedFrame",  wv_get_focused_frame, NULL, kJSDefaultAttributes }, 
@@ -7113,8 +7133,8 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
         /** 
          * Prints and assertion message and returns, if called in the global
          * context of a script it stops the execution of the script. Note that
-         * __assert__ is not acutally a function but a macro, a ; is mandatory
-         * at the end of an __assert__ statement
+         * \__assert\__ is not acutally a function but a macro, a ; is mandatory
+         * at the end of an \__assert\__ statement.
          *
          * @name __assert__
          * @function
@@ -7134,7 +7154,7 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
          *
          * */
         prepared = init_macro(script, "assert", 
-                "if(!(\\1)){try{throw new Error();}catch (e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
+                "if(!(\\1)){try{throw new Error();}catch(e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
                 path);
         if (prepared != NULL) {
             debug = g_strdup_printf(template, path, prepared);
