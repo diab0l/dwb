@@ -130,8 +130,13 @@
       {
           if (typeof _registered[name].end == "function") 
           {
-              _registered[name].end();
-              extensions.message(name, "Extension unloaded.");
+              try {
+                  _registered[name].end();
+                  extensions.message(name, "Extension unloaded.");
+              }
+              catch (e) {
+                  extensions.error(name, e, "Unloading failed!");
+              }
           }
           if (removeConfig)
               delete _config[name];
@@ -363,8 +368,9 @@
       {
           value : function()
           {
-              for (var key in _registered) 
+              for (var key in _registered) { 
                   _unload(key, true);
+              }
           }
       }, 
       /**

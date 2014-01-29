@@ -444,7 +444,6 @@ var requestpolicy = {
     },
     end : function () 
     {
-        disconnect();
         Signal.disconnect(resourceCB);
         Signal.disconnect(navigationCB);
         Signal.disconnect(loadFinishedCB);
