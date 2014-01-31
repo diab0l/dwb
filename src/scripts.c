@@ -3839,10 +3839,8 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
     if (data[0] != NULL && fail == 0) {
         if (!deferred_fulfilled(data[0]->deferred)) {
             EXEC_LOCK;
-            if (fail == 0) {
-                JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
-                deferred_resolve(s_global_context, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
-            }
+            JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
+            deferred_resolve(s_global_context, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
             JSValueUnprotect(s_global_context, data[0]->callback);
             EXEC_UNLOCK;
         }
@@ -3850,10 +3848,8 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
     else if (data[1] != NULL && fail != 0) {
         if (!deferred_fulfilled(data[1]->deferred)) {
             EXEC_LOCK;
-            if (fail != 0) {
-                JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
-                deferred_reject(s_global_context, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
-            }
+            JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
+            deferred_reject(s_global_context, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
             JSValueUnprotect(s_global_context, data[1]->callback);
             EXEC_UNLOCK;
         }
@@ -3986,8 +3982,6 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     }
 
     JSObjectRef deferred = deferred_new(s_global_context);
-
-
 
     if (oc != NULL) 
     {
