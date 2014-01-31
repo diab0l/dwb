@@ -165,17 +165,15 @@ typedef struct SpawnData_s {
     JSObjectRef callback;
     JSObjectRef deferred;
     int status; 
-    gboolean is_stdout;
     int finished;
 } SpawnData;
 #define SPAWN_FINISHED 0x1
 #define SPAWN_CLOSED 0x2
 
-#define SPAWN_DATA_INIT(_data, _channel, _callback, _deferred, _is_stdout) do { \
+#define SPAWN_DATA_INIT(_data, _channel, _callback, _deferred) do { \
     _data->channel = _channel; \
     _data->callback = _callback; \
     _data->deferred = _deferred; \
-    _data->is_stdout = _is_stdout; \
     _data->status = 0; \
     _data->finished = 0; } while (0)
 
@@ -720,14 +718,18 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
  * @readonly
  * */
 
+static gboolean 
+deferred_fulfilled(JSObjectRef deferred) {
+    DeferredPriv *priv = JSObjectGetPrivate(deferred); 
+    if (priv != NULL) {
+        return priv->is_fulfilled;
+    }
+    return true;
+}
 static JSValueRef 
 deferred_is_fulfilled(JSContextRef ctx, JSObjectRef this, JSStringRef js_name, JSValueRef* exception) 
 {
-    gboolean resolved = true;
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv != NULL)
-        resolved = priv->is_fulfilled;
-    return JSValueMakeBoolean(ctx, resolved);
+    return JSValueMakeBoolean(ctx, deferred_fulfilled(this));
 }
 
 void
@@ -3686,32 +3688,15 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
     gboolean result = true;
     gsize length;
     int fd, status;
-    gboolean is_stdout = data->is_stdout;
 
     if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
     {
-        if (data->finished & SPAWN_FINISHED)
-        {
-            EXEC_LOCK;
-            JSValueRef argv[] = { JSValueMakeNumber(s_global_context, data->status) };
-            if (data->status != 0)
-                deferred_reject(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
-            else if (condition == G_IO_HUP && is_stdout)
-                deferred_resolve(s_global_context, data->deferred, data->deferred, 1, argv, NULL);
-            JSValueUnprotect(s_global_context, data->callback);
-            EXEC_UNLOCK;
-
-            g_free(data);
-        }
-        else 
-        {
-            data->finished |= SPAWN_CLOSED;
-            fd = g_io_channel_unix_get_fd(channel);
-            g_io_channel_shutdown(channel, true, NULL);
-            g_io_channel_unref(channel);
-            data->channel = NULL;
-            close(fd);
-        }
+        data->finished |= SPAWN_CLOSED;
+        fd = g_io_channel_unix_get_fd(channel);
+        g_io_channel_shutdown(channel, true, NULL);
+        g_io_channel_unref(channel);
+        data->channel = NULL;
+        close(fd);
         result = false;
     }
     else 
@@ -3831,10 +3816,11 @@ spawn_finish_data(SpawnData *data, int status)
     {
         data->finished |= SPAWN_FINISHED;
         data->status = status;
-        if (data->channel != NULL)
-            g_io_channel_flush(data->channel, NULL);
         if (data->finished & SPAWN_CLOSED)
             g_free(data);
+        else if (data->channel != NULL) {
+            g_io_channel_flush(data->channel, NULL);
+        }
     }
 }
 void 
@@ -3850,6 +3836,28 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
         fail = WSTOPSIG(status);
     g_spawn_close_pid(pid);
 
+    if (data[0] != NULL && fail == 0) {
+        if (!deferred_fulfilled(data[0]->deferred)) {
+            EXEC_LOCK;
+            if (fail == 0) {
+                JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
+                deferred_resolve(s_global_context, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
+            }
+            JSValueUnprotect(s_global_context, data[0]->callback);
+            EXEC_UNLOCK;
+        }
+    }
+    else if (data[1] != NULL && fail != 0) {
+        if (!deferred_fulfilled(data[1]->deferred)) {
+            EXEC_LOCK;
+            if (fail != 0) {
+                JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
+                deferred_reject(s_global_context, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
+            }
+            JSValueUnprotect(s_global_context, data[1]->callback);
+            EXEC_UNLOCK;
+        }
+    }
     spawn_finish_data(data[0], fail);
     spawn_finish_data(data[1], fail);
 
@@ -3986,11 +3994,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         out_channel = g_io_channel_unix_new(outfd);
 
         out_data = g_malloc(sizeof(SpawnData));
-        SPAWN_DATA_INIT(out_data, out_channel, oc, deferred, true);
+        SPAWN_DATA_INIT(out_data, out_channel, oc, deferred);
 
         JSValueProtect(ctx, oc);
-        g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, out_data);
+        g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_channel_set_close_on_unref(out_channel, true);
     }
     if (ec != NULL) 
@@ -3998,11 +4006,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         err_channel = g_io_channel_unix_new(errfd);
 
         err_data = g_malloc(sizeof(SpawnData));
-        SPAWN_DATA_INIT(err_data, err_channel, ec, deferred, false);
+        SPAWN_DATA_INIT(err_data, err_channel, ec, deferred);
 
         JSValueProtect(ctx, ec);
-        g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err_data);
+        g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
     if (pipe_stdin != NULL && infd != -1)

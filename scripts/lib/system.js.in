@@ -6,8 +6,8 @@
             value : (function() {
                 return function(command, detail) {
                     detail = detail || {};
-                    var onStdout = detail.onStdout, 
-                        onStderr = detail.onStderr, 
+                    var onStdout = detail.onStdout || function() {},
+                        onStderr = detail.onStderr || function() {},
                         d = new Deferred();
                     var result = {
                         stdout : "", 
@@ -17,17 +17,11 @@
                     system._spawn(command, 
                         function(response) {
                             result.stdout += response;
-                            if (onStdout)
-                            {
-                                onStdout(response);
-                            }
+                            onStdout(response);
                         }, 
                         function(response) {
                             result.stderr += response;
-                            if (onStderr)
-                            {
-                                onStderr(response);
-                            }
+                            onStderr(response);
 
                     }, detail.stdin, detail.environment).then(function(status) {
                                 result.status = status;

@@ -2,7 +2,7 @@
 (function () {
     Object.defineProperties(util, 
     { 
-        /*
+        /**
         * Clones an object, object with circular references are not supported.
         *
         * @name clone
