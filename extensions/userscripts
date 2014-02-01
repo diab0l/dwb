@@ -116,6 +116,8 @@ var regexes = {
 
 var GM_compatability = function () 
 {
+
+    var unsafeWindow = window;
     var DWB_scriptPrefix = "dwb_userscript_";
     if (DWB_scriptId !== undefined) 
     {
@@ -166,22 +168,6 @@ var GM_compatability = function ()
     function GM_info () { return undefined; };
     function GM_registerMenuCommand () { return undefined; };
     function GM_openInTab (url) { return null; };
-    unsafeWindow = window;
-    //var GM_getResourceText = function (name) 
-    //{
-    //    // TODO implemnt
-    //    return ""; 
-    //};
-    //var GM_getResourceURL = function (name) 
-    //{
-    //    // TODO implemnt
-    //    return ""; 
-    //};
-    //var GM_xmlHttpRequest = function (details) 
-    //{
-    //    // TODO implemnt
-    //    return null;
-    //};
 };
 
 function matchIncludeExclude(frame, items) //{{{
@@ -213,7 +199,7 @@ function matchIncludeExclude(frame, items) //{{{
 function matchMatches(frame, items) //{{{
 {
     var i, item;
-    var o = uriSplit(frame.uri);
+    var o = net.parseUri(frame.uri);
     if (o === null)
         return false;
     for (i=0; i<items.length; i++) 
@@ -302,27 +288,6 @@ function parseIncludeExclude(array) //{{{
     }
 }//}}}
 
-function uriSplit(uri) 
-{
-    var parts, scheme, host, path, idx; 
-    parts = uri.split("://");
-    if (parts[0] === uri) 
-        return null;
-    scheme = parts[0];
-    idx = parts[1].indexOf("/");
-    if (idx == -1) 
-    {
-        host = parts[1];
-        path = null;
-    }
-    else 
-    {
-        host = parts[1].substring(0, idx);
-        path = parts[1].substring(idx);
-    }
-    return { path : path, host: host, scheme : scheme }; 
-}
-
 function parseMatch(m) 
 {
     var i, scheme, host, path, parts, j; 
@@ -330,7 +295,7 @@ function parseMatch(m)
         return { allUrls : true };
     }
 
-    var o = uriSplit(m);
+    var o = net.parseUri(m);
     if (o === null) 
     {
         extensions.warning(me, "Invalid or unsupported match rule: " + m);
@@ -362,21 +327,6 @@ function parseMatch(m)
     
     return { host : o.host, scheme : o.scheme, path : o.path, allUrls : false };
 }
-
-function getRequirements(userscript) //{{{
-{
-    var i;
-    for (i=0; i<userscript.require.length; i++) {
-        //io.print(userscript.require[i]);
-        //sendRequest(userscript.require[0], function (response, message) {
-        //  ;
-        //  //io.print(response);
-        //});
-        //sendRequest(userscripts.require[i], function (response) {
-        //  io.print(response);
-        //});
-    }
-}//}}}
 
 function parseScript(path) //{{{
 {
@@ -466,12 +416,11 @@ function parseScript(path) //{{{
     else
         userscript.scriptId = userscript.namespace + "::" + userscript.name;
     userscript.scriptId = userscript.scriptId.replace(/\s+/g, "_");
-    userscript.script = "var DWB_scriptId = '" + userscript.scriptId + "';" +  
-        curScript.substring(0, metaStart) + 
-        curScript.substring(scriptStart) + util.getBody(GM_compatability);
+    userscript.script = "var DWB_scriptId = '" + userscript.scriptId + "';" 
+        + util.getBody(GM_compatability) 
+        + curScript.substring(0, metaStart) 
+        + curScript.substring(scriptStart);
     userscript.offset = meta.length + 1;
-
-    getRequirements(userscript);
 
     for (i=0; i<userscript.match.length; i++) 
     {
