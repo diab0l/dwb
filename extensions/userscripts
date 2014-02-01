@@ -166,6 +166,7 @@ var GM_compatability = function ()
     function GM_info () { return undefined; };
     function GM_registerMenuCommand () { return undefined; };
     function GM_openInTab (url) { return null; };
+    unsafeWindow = window;
     //var GM_getResourceText = function (name) 
     //{
     //    // TODO implemnt
