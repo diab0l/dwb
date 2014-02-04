@@ -3810,12 +3810,15 @@ system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
 }/*}}}*/
 
 void 
-spawn_finish_data(SpawnData *data, int status)
+spawn_finish_data(JSContextRef ctx, SpawnData *data, int status)
 {
     if (data != NULL)
     {
         data->finished |= SPAWN_FINISHED;
         data->status = status;
+        if (data->callback != NULL) {
+            JSValueUnprotect(ctx, data->callback);
+        }
         if (data->finished & SPAWN_CLOSED)
             g_free(data);
         else if (data->channel != NULL) {
@@ -3841,7 +3844,6 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
             EXEC_LOCK;
             JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
             deferred_resolve(s_global_context, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
-            JSValueUnprotect(s_global_context, data[0]->callback);
             EXEC_UNLOCK;
         }
     }
@@ -3850,12 +3852,13 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
             EXEC_LOCK;
             JSValueRef argv[] = { JSValueMakeNumber(s_global_context, fail) };
             deferred_reject(s_global_context, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
-            JSValueUnprotect(s_global_context, data[1]->callback);
             EXEC_UNLOCK;
         }
     }
-    spawn_finish_data(data[0], fail);
-    spawn_finish_data(data[1], fail);
+    EXEC_LOCK;
+    spawn_finish_data(s_global_context, data[0], fail);
+    spawn_finish_data(s_global_context, data[1], fail);
+    EXEC_UNLOCK;
 
     g_free(data);
 }
@@ -3872,6 +3875,8 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  * system.spawn("foo");
  * // Using stdout/stderr
  * system.spawn("foo", {
+ *      cacheStdout : true, 
+ *      cacheStderr : true, 
  *      onFinished : function(result) {
  *          io.print("Process terminated with status " + result.status);
  *          io.print("Stdout is :" + result.stdout);
@@ -3879,21 +3884,24 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  *      }
  * });
  * // Equivalently using the deferred
- * system.spawn("foo").always(function(result) {
+ * system.spawn("foo", { cacheStdout : true, cacheStderr : true }).always(function(result) {
  *      io.print("Process terminated with status " + result.status);
  *      io.print("Stdout is :" + result.stdout);
  *      io.print("Stderr is :" + result.stderr);
  * });
  * // Only use stdout if the process terminates successfully
- * system.spawn("foo").done(function(result) {
+ * system.spawn("foo", { cacheStdout : true }).done(function(result) {
  *     io.print(result.stdout);
  * });
  * // Only use stderr if the process terminates with an error
- * system.spawn("foo").fail(function(result) {
+ * system.spawn("foo", { cacheStderr : true }).fail(function(result) {
  *     io.print(result.stderr);
  * });
- * // Using environment variables
+ * // Using environment variables with automatic caching
  * system.spawn('sh -c "echo $foo"', {
+ *      onStdout : function(stdout) {
+ *          io.print("stdout: " + stdout);
+ *      },
  *      environment : { foo : "bar" }
  * }).then(function(result) { 
  *      io.print(result.stdout); 
@@ -3905,28 +3913,40 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  * @param {Function} [options.onStdout] 
  *     A callback function that is called when a line from
  *     stdout was read. The function takes one parameter, the line that has been read.
- *     To get the complete stdout use either <i>onFinished</i> or the
+ *     To get the complete stdout use either <b>onFinished</b> or the
  *     Deferred returned from <i>system.spawn</i>.
+ * @param {Boolean} [options.cacheStdout] 
+ *     Whether stdout should be cached. If <b>onStdout</b> is defined
+ *     stdout will be cached automatically. If it isn't defined and stdout is
+ *     required in <b>onFinished</b> or in the Deferred's resolve
+ *     function cacheStdout must be set to true, default: false.
  * @param {Function} [options.onStderr] 
  *     A callback function that is called when a line from
  *     stderr was read. The function takes one parameter, the line that has been read. 
- *     To get the complete stderr use either <i>onFinished</i> or the
+ *     To get the complete stderr use either <b>onFinished</b> or the
  *     Deferred returned from <i>system.spawn</i>.
+ * @param {Boolean} [options.cacheStderr] 
+ *     Whether stderr should be cached. If <b>onStderr</b> is defined
+ *     stderr will be cached automatically. If it isn't defined and stderr is
+ *     required in <b>onFinished</b> or in the Deferred's reject
+ *     function cacheStderr must be set to true, default: false.
  * @param {Function} [options.onFinished] 
  *     A callback that will be called when the child process has terminated. The
- *     callback takes one argument, an object that contains stdout, stderr and
- *     status, i.e. the return code of the child process.
+ *     callback takes one argument, an object that contains stdout if caching of
+ *     stderr is enabled (see <b>cacheStderr</b>), stderr if caching of stderr
+ *     is enabled (see <b>cacheStderr</b>) and status, i.e. the return code of
+ *     the child process.
  * @param {String} [options.stdin] 
  *     String that will be piped to stdin of the child process. 
  * @param {Object} [options.environment] 
  *     Hash of environment variables that will be set in the childs environment
  *
- *
  * @returns {Deferred}
  *      A deferred, it will be resolved if the child exits normally, it will be
  *      rejected if the child process exits abnormally. The argument passed to
- *      resolve and reject is an Object containing stdout, stderr and status,
- *      i.e. the return code of the child process.
+ *      resolve and reject is an Object containing stdout if caching of stdout
+ *      is enabled (see <b>cacheStdout</b>), stderr if caching of stderr is enabled (see 
+        <b>cacheStderr</b>) and status, i.e. the return code of the child process.
  * */
 static JSValueRef 
 system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -3957,10 +3977,10 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (cmdline == NULL) 
         goto error_out;
 
-    if (argc > 1) 
+    if (argc > 1 && !JSValueIsNull(ctx, argv[1])) 
         oc = js_value_to_function(ctx, argv[1], NULL);
     
-    if (argc > 2) 
+    if (argc > 2 && !JSValueIsNull(ctx, argv[2])) 
         ec = js_value_to_function(ctx, argv[2], NULL);
 
     if (argc > 3)
@@ -3983,11 +4003,11 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 
     JSObjectRef deferred = deferred_new(s_global_context);
 
+    out_data = g_malloc(sizeof(SpawnData));
     if (oc != NULL) 
     {
         out_channel = g_io_channel_unix_new(outfd);
 
-        out_data = g_malloc(sizeof(SpawnData));
         SPAWN_DATA_INIT(out_data, out_channel, oc, deferred);
 
         JSValueProtect(ctx, oc);
@@ -3995,11 +4015,15 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_channel_set_close_on_unref(out_channel, true);
     }
+    else {
+        SPAWN_DATA_INIT(out_data, NULL, NULL, deferred);
+    }
+
+    err_data = g_malloc(sizeof(SpawnData));
     if (ec != NULL) 
     {
         err_channel = g_io_channel_unix_new(errfd);
 
-        err_data = g_malloc(sizeof(SpawnData));
         SPAWN_DATA_INIT(err_data, err_channel, ec, deferred);
 
         JSValueProtect(ctx, ec);
@@ -4007,6 +4031,10 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
         g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_channel_set_close_on_unref(err_channel, true);
     }
+    else {
+        SPAWN_DATA_INIT(err_data, NULL, NULL, deferred);
+    }
+
     if (pipe_stdin != NULL && infd != -1)
     {
         if (write(infd, pipe_stdin, strlen(pipe_stdin)) == -1 || write(infd, "\n", 1) == -1)

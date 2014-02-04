@@ -6,24 +6,29 @@
             value : (function() {
                 return function(command, detail) {
                     detail = detail || {};
-                    var onStdout = detail.onStdout || function() {},
-                        onStderr = detail.onStderr || function() {},
-                        d = new Deferred();
-                    var result = {
-                        stdout : "", 
-                        stderr : "", 
-                        status : 0
-                    };
-                    system._spawn(command, 
-                        function(response) {
-                            result.stdout += response;
-                            onStdout(response);
-                        }, 
-                        function(response) {
-                            result.stderr += response;
-                            onStderr(response);
+                    var onStdout = null, onStderr = null;
+                    var d = new Deferred();
+                    var result = { status : 0 };
 
-                    }, detail.stdin, detail.environment).then(function(status) {
+                    if (detail.cacheStdout || detail.onStdout) {
+                        result.stdout = "";
+                        onStdout = function(response) {
+                            result.stdout += response;
+                            if (detail.onStdout) {
+                                detail.onStdout(response);
+                            }
+                        };
+                    }
+                    if (detail.cacheStderr || detail.onStderr) {
+                        result.stderr = "";
+                        onStderr = function(response) {
+                            result.stderr += response;
+                            if (detail.onStderr) {
+                                detail.onStderr(response);
+                            }
+                        };
+                    }
+                    system._spawn(command, onStdout, onStderr, detail.stdin, detail.environment).then(function(status) {
                                 result.status = status;
                                 if (detail.onFinished)
                                 {
