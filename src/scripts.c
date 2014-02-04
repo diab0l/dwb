@@ -3989,6 +3989,13 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (argc > 4)
         envp = get_environment(ctx, argv[4], exc);
 
+    if (oc == NULL) {
+        spawn_options |= G_SPAWN_STDOUT_TO_DEV_NULL;
+    }
+    if (ec == NULL) {
+        spawn_options |= G_SPAWN_STDERR_TO_DEV_NULL;
+    }
+
     if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
             !g_spawn_async_with_pipes(NULL, srgv, envp, spawn_options,
                 NULL, NULL, &pid,  
