@@ -28,23 +28,21 @@
                             }
                         };
                     }
-                    system._spawn(command, onStdout, onStderr, detail.stdin, detail.environment).then(function(status) {
-                                result.status = status;
-                                if (detail.onFinished)
-                                {
-                                    detail.onFinished(result);
-                                }
-                                d.resolve(result);
-                            }, 
-                            function(status) {
-                                result.status = status;
-                                if (detail.onFinished)
-                                {
-                                    detail.onFinished(result);
-                                }
-                                d.reject(result);
+                    system._spawn(command, onStdout, onStderr, detail.stdin, detail.environment).then(
+                        function(status) {
+                            result.status = status;
+                            if (detail.onFinished) {
+                                detail.onFinished(result);
                             }
-
+                            d.resolve(result);
+                        }, 
+                        function(status) {
+                            result.status = status;
+                            if (detail.onFinished) {
+                                detail.onFinished(result);
+                            }
+                            d.reject(result);
+                        }
                     );
                     return d;
                 };

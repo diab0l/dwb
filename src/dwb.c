@@ -5313,7 +5313,7 @@ dwb_delete_profile(const char *profile)
 void
 dwb_version() 
 {
-    fprintf(stderr, "    This is : "NAME"\n"
+    fprintf(stdout, "    This is : "NAME"\n"
                     "    Version : "VERSION"\n"
                     "      Built : "__DATE__" "__TIME__"\n"
                     "  Copyright : "COPYRIGHT"\n"

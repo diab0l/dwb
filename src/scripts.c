@@ -3933,7 +3933,7 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  * @param {Function} [options.onFinished] 
  *     A callback that will be called when the child process has terminated. The
  *     callback takes one argument, an object that contains stdout if caching of
- *     stderr is enabled (see <b>cacheStderr</b>), stderr if caching of stderr
+ *     stdout is enabled (see <b>cacheStdout</b>), stderr if caching of stderr
  *     is enabled (see <b>cacheStderr</b>) and status, i.e. the return code of
  *     the child process.
  * @param {String} [options.stdin] 
