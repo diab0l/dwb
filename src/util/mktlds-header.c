@@ -163,7 +163,7 @@ punycode_encode(const char *host)
     char *host_dup;
 
     enc_str[0] = '\0';
-    host_dup = strdup(host);
+    host_dup = g_strdup(host);
     ptr = host_dup;
     for (;;) {
         if ((next_lbl = strchr(ptr, '.')))
