@@ -1,0 +1,129 @@
+/*
+* Sample extension 
+*
+*/
+
+// Information about the extension, will be used by dwbem to get information
+// about the extension, the <INFO comments are mandatory
+
+/*<INFO
+Sample extension
+INFO>*/
+
+
+// Default configuration of the extension, will be used by dwbem.
+// The //<DEFAULT_CONFIG and //>DEFAULT_CONFIG comments are mandatory
+
+var defaultConfig = {
+//<DEFAULT_CONFIG
+    
+// Sample configuration option
+myConfigOption : "foo", 
+
+// Sample default shortcut
+myShortcut : "Control m"
+
+//>DEFAULT_CONFIG
+};
+
+
+// Some implementation
+
+var myConfig = {};
+
+function myAction() {
+    // some implementation
+}
+
+function mySignalCallback() {
+    // some signal callback
+}
+
+
+
+/*
+* An object that must be returned by the extension. 
+*/
+var myExtension = {
+    // Minimum api version required by the extension, optional
+    apiVersion : 1.6,
+
+    // The default configuration, will be first passed to util.mixin and then to
+    // the init function of this object, optional 
+    defaultConfig : defaultConfig, 
+
+    // An object that can be imported by userscripts, e.g. if  the extension is
+    // called "myExtension", the exports object can be imported with 
+    //
+    // require(["myExtension"], function(myExtension) {
+    //      ...
+    // });
+    //
+    // Optional.
+    exports : {
+        action : myAction
+    },
+
+    // Initialization function, will be called after the the extension has been
+    // loaded. The initialization function must either return true if
+    // initialization was successful or false if it failed. If the
+    // initialization is asynchronous, e.g. if system.spawn is used, the function
+    // can also return a Deferred and call resolve(true)/resolve(false) or reject(reason) 
+    // on the Deferred if initialization was successful/failed respectively.
+    //
+    // Synchronous initialization
+    init : function(config) {
+        myConfig = config;
+
+        this.exports.config = config;
+
+        bind(config.myShortcut, myAction);
+        Signal.connect("onNavigation", mySignalCallback);
+
+
+        return true;
+    },
+    // Asynchronous initialization
+    /* 
+    init : function(config) {
+        myConfig = config;
+
+        this.exports.config = config;
+
+        var deferred = new Deferred();
+
+        system.spawn("some command", {
+            onFinished : function(result) {
+                if (result.status == 0) {
+                    bind(config.myShortcut, myAction);
+                    Signal.connect("onNavigation", mySignalCallback);
+
+                    deferred.resolve(true);
+                }
+                else {
+                    deferred.reject("Spawning some command failed");
+                }
+            }
+        });
+        return deferred;
+    },
+    */ 
+
+    // Cleanup function that will be called when the extension is disabled. Should be
+    // defined if some commands were bound in init or some signals were
+    // connected. Must return true if deinitialization was successful.
+    end : function() {
+        unbind(myAction);
+        Signal.disconnect(mySignalCallback);
+        return true;
+    }
+};
+
+// The defined object must be returned by the extension. Every extension is
+// encapsulated in a function, so it is possible to return an object directly
+// from the extension.
+
+return myExtension;
+
+
+// vim:set ft=javascript:

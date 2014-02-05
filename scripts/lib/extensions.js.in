@@ -38,10 +38,10 @@
  *
  * var defaultConfig = { 
  * //&lt;DEFAULT_CONFIG
- *      // Foo
- *      foo : 37, 
- *      // Shortcut to do some action
- *      shortcut : "foo"
+ * // Foo
+ * foo : 37, 
+ * // Shortcut to do some action
+ * shortcut : "foo"
  * //&gt;DEFAULT_CONFIG
  * };
  *
@@ -54,19 +54,25 @@
  *      ...
  * } 
  * var myExtension = {
+ *      apiVersion : 1.7, 
  *      defaultConfig : defaultConfig, 
  *      exports : {
  *          action : action
  *      },
  *      init : function(config) {
  *          myConfig = config; 
- *          bind(config.shortcut, "action"); 
- *          signals.connect("navigation", onNavigation); 
+ *
+ *          bind(config.shortcut, action); 
+ *          Signal.connect("navigation", onNavigation); 
+ *
+ *          this.exports.config = config;
+ *
  *          return true;
  *      },
  *      end : function() {
- *          signals.disconnect(onNavigation);
+ *          Signal.disconnect(onNavigation);
  *          unbind(action);
+ *
  *          return true;
  *      }
  * };
