@@ -7062,7 +7062,9 @@ scripts_create_tab(GList *gl)
 void 
 scripts_remove_tab(JSObjectRef obj) 
 {
-    g_return_if_fail(obj != NULL);
+    if (obj == NULL) {
+        return;
+    }
     EXEC_LOCK;
 
     if (EMIT_SCRIPT(CLOSE_TAB)) 
