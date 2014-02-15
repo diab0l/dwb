@@ -1857,7 +1857,7 @@ load_string_status(WebKitWebFrame *frame, GParamSpec *param, JSObjectRef deferre
  *      The string to load
  * @param {String} [mimeType]
  *      The MIME-type, if omitted or null <i>text/html</i> is assumed.
- * @param {Number} [encoding]
+ * @param {String} [encoding]
  *      The character encoding, if omitted or null <i>UTF-8</i> is assumed.
  * @param {String} [baseUri]
  *      The base uri, if present it must either use the uri-scheme <i>dwb-chrome:</i>
@@ -7170,7 +7170,7 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
         /** 
-         * Prints and assertion message and returns, if called in the global
+         * Prints an assertion message and returns, if called in the global
          * context of a script it stops the execution of the script. Note that
          * \__assert\__ is not acutally a function but a macro, a ; is mandatory
          * at the end of an \__assert\__ statement.

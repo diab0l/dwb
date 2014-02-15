@@ -81,6 +81,7 @@
                              * @name id
                              * @memberOf Signal.prototype
                              * @readonly
+                             * @type String
                              *
                              * */
                             "id" : { value : id },
@@ -92,6 +93,7 @@
                              *
                              * @name callback
                              * @memberOf Signal.prototype
+                             * @type Function
                              *
                              * @example 
                              * function a() {
@@ -113,6 +115,7 @@
                              *
                              * @name predicate
                              * @memberOf Signal.prototype
+                             * @type Function
                              * @since 1.6
                              *
                              * */
@@ -121,6 +124,7 @@
                              * The name of the event
                              * @name name
                              * @memberOf Signal.prototype
+                             * @type String
                              * @readonly
                              * */
                             "name" : { value : name },

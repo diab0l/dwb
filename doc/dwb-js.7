@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 11/27/2013
+.\"      Date: 02/15/2014
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "11/27/2013" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/15/2014" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -96,6 +96,22 @@ Refers to the global object
 The webkit session
 .RE
 .SS "Methods"
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid _assert\_(Expression expression)\fR
+.RS 4
+.sp
+Prints an assertion message and returns, if called in the global context of a script it stops the execution of the script\&. Note that \fIassert\fR is not acutally a function but a macro, a ; is mandatory at the end of an \fIassert\fR statement\&.
+.PP
+\fIexpression\fR
+.RS 4
+An expression that evaluates to true or false\&.
+.RE
+.RE
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
@@ -804,9 +820,19 @@ Options
 A callback function that is called when a line from stdout was read\&. The function takes one parameter, the line that has been read\&. To get the complete stdout use either onFinished or the Deferred returned from system\&.spawn\&.
 .RE
 .PP
+\fIoptions\&.cacheStdout\fR
+.RS 4
+Whether stdout should be cached\&. If onStdout is defined stdout will be cached automatically\&. If it isn\(cqt defined and stdout is required in onFinished or in the Deferred\(cqs resolve function cacheStdout must be set to true, default: false\&.
+.RE
+.PP
 \fIoptions\&.onStderr\fR
 .RS 4
 A callback function that is called when a line from stderr was read\&. The function takes one parameter, the line that has been read\&. To get the complete stderr use either onFinished or the Deferred returned from system\&.spawn\&.
+.RE
+.PP
+\fIoptions\&.cacheStderr\fR
+.RS 4
+Whether stderr should be cached\&. If onStderr is defined stderr will be cached automatically\&. If it isn\(cqt defined and stderr is required in onFinished or in the Deferred\(cqs reject function cacheStderr must be set to true, default: false\&.
 .RE
 .PP
 \fIoptions\&.onFinished\fR
@@ -826,7 +852,7 @@ Hash of environment variables that will be set in the childs environment
 .PP
 \fBreturns\fR
 .RS 4
-A deferred, it will be resolved if the child process exits normally, it will be rejected if the child process exits abnormally\&. The argument passed to resolve and reject is an object containing stdout, stderr and status, i\&.e\&. the return code of the child process\&.
+A deferred, it will be resolved if the child exits normally, it will be rejected if the child process exits abnormally\&. The argument passed to resolve and reject is an Object containing stdout if caching of stdout is enabled (see cacheStdout), stderr if caching of stderr is enabled (see cacheStderr) and status, i\&.e\&. the return code of the child process\&.
 .RE
 .RE
 .sp
@@ -1239,6 +1265,15 @@ A non\-camelcase string
 .RS 4
 The a camelcase string
 .RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.checksum(String data, ChecksumType type)\fR
+.RS 4
 .sp
 Computes a checksum for given data\&.
 .PP
@@ -1255,6 +1290,27 @@ The type of the checksum, optional, defaults to ChecksumType\&.sha256
 \fBreturns\fR
 .RS 4
 The checksum
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBObject util.clone(Object object)\fR
+.RS 4
+.sp
+Clones an object, circular references are not supported\&.
+.PP
+\fIobject\fR
+.RS 4
+The object to clone
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+A copy of the object
 .RE
 .RE
 .sp
@@ -1287,21 +1343,16 @@ The body of the function as a string
 \fBString util.dispatchEvent(Number event, Modifier modifier, Number keyval)\fR
 .RS 4
 .sp
-Dispatches a keyboard event\&.
+Dispatches a keyboard or mouse event\&.
 .PP
-\fIevent\fR
+\fIobject\fR
 .RS 4
-A GdkEventType
+Event details, see buttonPress, buttonRelease, keyPress or keyRelease for details\&.
 .RE
 .PP
-\fImodifier\fR
+\fIobject\&.type\fR
 .RS 4
-A Modifier
-.RE
-.PP
-\fIkeyval\fR
-.RS 4
-A keyval as listed in gdkkeysyms\&.h
+Type of the event, can be either buttonpress (4), doubleclick (5), tripleclick (6), buttonrelease (7), keypress (8) or keyrelease (9)\&.
 .RE
 .PP
 \fBreturns\fR
@@ -1339,6 +1390,22 @@ Get selected text from the focused webview\&.
 \fBreturns\fR
 .RS 4
 The selection or null if no text was selected\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBString util.hereDoc(Function doc)\fR
+.RS 4
+.sp
+Creates a multiline string\&.
+.PP
+\fIdoc\fR
+.RS 4
+A function, the body of the function must contain the here document\&. The content must be wrapped in /\fBHEREDOC \&...HEREDOC\fR/
 .RE
 .RE
 .sp
@@ -2423,6 +2490,228 @@ Text label of a tab, child of
 \fBwv\&.tabBox\fR\&.
 .RE
 .sp
+Some signal callbacks can also be defined directly on webview instances, they can be set multiple times\&. Event properties that start with on are emitted for every emission of that signal, event properties that start with once are only emitted once and will be disconnected afterwards\&. Not that it isn\(cqt possible to disconnect from signals that are set directly on a webview instance\&.
+.PP
+\fIwv\&.onButtonPress\fR
+.RS 4
+Connects the webview to the buttonPress event\&.
+.RE
+.PP
+\fIwv\&.onceButtonPress\fR
+.RS 4
+Connects the webview to the buttonPress event once\&.
+.RE
+.PP
+\fIwv\&.onButtonRelease\fR
+.RS 4
+Connects the webview to the buttonRelease event\&.
+.RE
+.PP
+\fIwv\&.onceButtonRelease\fR
+.RS 4
+Connects the webview to the buttonRelease event once\&.
+.RE
+.PP
+\fIwv\&.onCloseTab\fR
+.RS 4
+Connects the webview to the closeTab event\&.
+.RE
+.PP
+\fIwv\&.onceCloseTab\fR
+.RS 4
+Connects the webview to the closeTab event\&.
+.RE
+.PP
+\fIwv\&.onContextMenu\fR
+.RS 4
+Connects the webview to the contextMenu event\&.
+.RE
+.PP
+\fIwv\&.onceContextMenu\fR
+.RS 4
+Connects the webview to the contextMenu event once\&.
+.RE
+.PP
+\fIwv\&.onDocumentLoaded\fR
+.RS 4
+Connects the webview to the documentLoaded event\&.
+.RE
+.PP
+\fIwv\&.onceDocumentLoaded\fR
+.RS 4
+Connects the webview to the documentLoaded event once\&.
+.RE
+.PP
+\fIwv\&.onDownload\fR
+.RS 4
+Connects the webview to the download event\&.
+.RE
+.PP
+\fIwv\&.onceDownload\fR
+.RS 4
+Connects the webview to the download event once\&.
+.RE
+.PP
+\fIwv\&.onError\fR
+.RS 4
+Connects the webview to the error event\&.
+.RE
+.PP
+\fIwv\&.onceError\fR
+.RS 4
+Connects the webview to the error event once\&.
+.RE
+.PP
+\fIwv\&.onFollowHint\fR
+.RS 4
+Connects the webview to the followHint event\&.
+.RE
+.PP
+\fIwv\&.onceFollowHint\fR
+.RS 4
+Connects the webview to the followHint event once\&.
+.RE
+.PP
+\fIwv\&.onFrameCreated\fR
+.RS 4
+Connects the webview to the frameCreated event\&.
+.RE
+.PP
+\fIwv\&.onceFrameCreated\fR
+.RS 4
+Connects the webview to the frameCreated event once\&.
+.RE
+.PP
+\fIwv\&.onFrameStatus\fR
+.RS 4
+Connects the webview to the frameStatus event\&.
+.RE
+.PP
+\fIwv\&.onceFrameStatus\fR
+.RS 4
+Connects the webview to the frameStatus event once\&.
+.RE
+.PP
+\fIwv\&.onKeyPress\fR
+.RS 4
+Connects the webview to the keyPress event\&.
+.RE
+.PP
+\fIwv\&.onceKeyPress\fR
+.RS 4
+Connects the webview to the keyPress event once\&.
+.RE
+.PP
+\fIwv\&.onKeyRelease\fR
+.RS 4
+Connects the webview to the keyRelease event\&.
+.RE
+.PP
+\fIwv\&.onceKeyRelease\fR
+.RS 4
+Connects the webview to the keyRelease event once\&.
+.RE
+.PP
+\fIwv\&.onLoadCommitted\fR
+.RS 4
+Connects the webview to the loadCommitted event\&.
+.RE
+.PP
+\fIwv\&.onceLoadCommitted\fR
+.RS 4
+Connects the webview to the loadCommitted event once\&.
+.RE
+.PP
+\fIwv\&.onLoadFinished\fR
+.RS 4
+Connects the webview to the loadFinished event\&.
+.RE
+.PP
+\fIwv\&.onceLoadFinished\fR
+.RS 4
+Connects the webview to the loadFinished event once\&.
+.RE
+.PP
+\fIwv\&.onLoadStatus\fR
+.RS 4
+Connects the webview to the loadStatus event\&.
+.RE
+.PP
+\fIwv\&.onceLoadStatus\fR
+.RS 4
+Connects the webview to the loadStatus event once\&.
+.RE
+.PP
+\fIwv\&.onMimeType\fR
+.RS 4
+Connects the webview to the mimeType event\&.
+.RE
+.PP
+\fIwv\&.onceMimeType\fR
+.RS 4
+Connects the webview to the mimeType event once\&.
+.RE
+.PP
+\fIwv\&.onMouseMove\fR
+.RS 4
+Connects the webview to the mouseMove event\&.
+.RE
+.PP
+\fIwv\&.onceMouseMove\fR
+.RS 4
+Connects the webview to the mouseMove event once\&.
+.RE
+.PP
+\fIwv\&.onNavigation\fR
+.RS 4
+Connects the webview to the navigation event\&.
+.RE
+.PP
+\fIwv\&.onceNavigation\fR
+.RS 4
+Connects the webview to the navigation event once\&.
+.RE
+.PP
+\fIwv\&.onResource\fR
+.RS 4
+Connects the webview to the resource event\&.
+.RE
+.PP
+\fIwv\&.onceResource\fR
+.RS 4
+Connects the webview to the resource event once\&.
+.RE
+.PP
+\fIwv\&.onScroll\fR
+.RS 4
+Connects the webview to the scroll event\&.
+.RE
+.PP
+\fIwv\&.onceScroll\fR
+.RS 4
+Connects the webview to the scroll event once\&.
+.RE
+.PP
+\fIwv\&.onTabButtonPress\fR
+.RS 4
+Connects the webview to the tabButtonPress event\&.
+.RE
+.PP
+\fIwv\&.onceTabButtonPress\fR
+.RS 4
+Connects the webview to the tabButtonPress event once\&.
+.RE
+.PP
+\fIwv\&.onTabFocus\fR
+.RS 4
+Connects the webview to the tabFocus event\&.
+.RE
+.PP
+\fIwv\&.onceTabFocus\fR
+.RS 4
+Connects the webview to the tabFocus event once\&.
+.RE
+.sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
@@ -2492,6 +2781,47 @@ Loads a history item steps away from the current history item
 \fIsteps\fR
 .RS 4
 Number of steps, pass a negative value to go back in history
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBDeferred wv.loadString(String content, [String mimetype], [String encoding], [String baseUri], [Boolean extSource])\fR
+.RS 4
+.sp
+Loads a string in a webview
+.PP
+\fIcontent\fR
+.RS 4
+The string to load
+.RE
+.PP
+\fImimeType\fR
+.RS 4
+The MIME\-type, if omitted or null text/html is assumed, optional
+.RE
+.PP
+\fIencoding\fR
+.RS 4
+The character encoding, if omitted or null UTF\-8 is assumed, optional
+.RE
+.PP
+\fIbaseUri\fR
+.RS 4
+The base uri, if present it must either use the uri\-scheme dwb\-chrome: or file:, otherwise the request will be ignored, optional
+.RE
+.PP
+\fIextSource\fR
+.RS 4
+Whether external sources, e\&.g\&. scripts, are allowed, defaults to false\&. If external resources are forbidden the function dwb can be called in the webcontext to execute functions in the scripting context
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+A deferred that will be resolved if the webview has finished loading the string and rejected if an error occured\&.
 .RE
 .RE
 .sp
@@ -2601,6 +2931,47 @@ The host name of the frame
 .RS 4
 .sp
 Injects a script into a frame, see also webview\&.inject for details\&.
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBDeferred frame.loadString(String content, [String mimetype], [String encoding], [String baseUri], [Boolean extSource])\fR
+.RS 4
+.sp
+Loads a string in a frame
+.PP
+\fIcontent\fR
+.RS 4
+The string to load
+.RE
+.PP
+\fImimeType\fR
+.RS 4
+The MIME\-type, if omitted or null text/html is assumed, optional
+.RE
+.PP
+\fIencoding\fR
+.RS 4
+The character encoding, if omitted or null UTF\-8 is assumed, optional
+.RE
+.PP
+\fIbaseUri\fR
+.RS 4
+The base uri, if present it must either use the uri\-scheme dwb\-chrome: or file:, otherwise the request will be ignored, optional
+.RE
+.PP
+\fIextSource\fR
+.RS 4
+Whether external sources, e\&.g\&. scripts, are allowed, defaults to false\&. If external resources are forbidden the function dwb can be called in the webcontext to execute functions in the scripting context
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+A deferred that will be resolved if the webview has finished loading the string and rejected if an error occured\&.
+.RE
 .RE
 .SS "download"
 .sp
@@ -4065,6 +4436,11 @@ Unique id of the signal
 \fIname (String, read)\fR
 .RS 4
 Name of the event
+.RE
+.PP
+\fIpredicate\fR(Function, read|write)_
+.RS 4
+A predicate function, the signal is only emitted if the predicate function returns true\&. The predicate function is called with the same arguments as the callback function
 .RE
 .SS "Methods"
 .sp

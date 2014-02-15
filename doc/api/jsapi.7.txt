@@ -49,6 +49,16 @@ _session (SoupSession, read)_;; The webkit session
 
 === Methods ===
 
+==== void \__assert\__(Expression expression) 
+
+****
+Prints an assertion message and returns, if called in the global context of a
+script it stops the execution of the script. Note that __assert__ is not
+acutally a function but a macro, a ; is mandatory at the end of an __assert__
+statement.
+
+_expression_;; An expression that evaluates to true or false.
+****
 
 ==== Boolean bind(String shortcut, Function callback, [String name])
 
@@ -376,19 +386,28 @@ _options.onStdout_;; A callback function that is called when a line from stdout
 was read. The function takes one parameter, the line that has been read. To get
 the complete stdout use either onFinished or the Deferred returned from
 system.spawn.
+_options.cacheStdout_;; Whether stdout should be cached. If onStdout is defined
+stdout will be cached automatically. If it isn't defined and stdout is required
+in onFinished or in the Deferred's resolve function cacheStdout must be set to
+true, default: false.
 _options.onStderr_;; A callback function that is called when a line from stderr
 was read. The function takes one parameter, the line that has been read. To get
 the complete stderr use either onFinished or the Deferred returned from
 system.spawn.
+_options.cacheStderr_;; Whether stderr should be cached. If onStderr is defined
+stderr will be cached automatically. If it isn't defined and stderr is required
+in onFinished or in the Deferred's reject function cacheStderr must be set to
+true, default: false.
 _options.onFinished_;; A callback that will be called when the child process has
 terminated. The callback takes one argument, an object that contains stdout,
 stderr and status, i.e. the return code of the child process.
 _options.stdin_;; String that will be piped to stdin of the child process.
 _options.environment_;; Hash of environment variables that will be set in the childs environment
-*returns*;; A deferred, it will be resolved if the child process exits normally, it will
+*returns*;; A deferred, it will be resolved if the child exits normally, it will
 be rejected if the child process exits abnormally. The argument passed to
-resolve and reject is an object containing stdout, stderr and status, i.e. the
-return code of the child process.
+resolve and reject is an Object containing stdout if caching of stdout is
+enabled (see cacheStdout), stderr if caching of stderr is enabled (see
+cacheStderr) and status, i.e. the return code of the child process.
 
 ****
 
@@ -585,6 +604,7 @@ _text_;; A non-camelcase string
 *returns*;; The a camelcase string
 ****
 
+==== String util.checksum(String data, ChecksumType type)
 ****
 
 Computes a checksum for given data.
@@ -594,6 +614,15 @@ _type_;; The type of the checksum, optional, defaults to ChecksumType.sha256
 *returns*;; The checksum
 ****
 
+==== Object util.clone(Object object) 
+
+****
+
+Clones an object, circular references are not supported. 
+
+_object_;; The object to clone
+*returns*;; A copy of the object
+****
 
 ==== String util.getBody(Function func) 
 ****
@@ -608,11 +637,12 @@ _func_;; A function
 ==== String util.dispatchEvent(Number event, Modifier modifier, Number keyval) 
 ****
 
-Dispatches a keyboard event.
+Dispatches a keyboard or mouse event.
 
-_event_;; A GdkEventType 
-_modifier_;; A Modifier
-_keyval_;; A keyval as listed in gdkkeysyms.h
+_object_;; Event details, see buttonPress, buttonRelease, keyPress or
+keyRelease for details.
+_object.type_;; Type of the event, can be either buttonpress (4), doubleclick (5), 
+tripleclick (6), buttonrelease (7), keypress (8) or keyrelease (9).
 *returns*;; True if the event was dispatched
 ****
 
@@ -631,6 +661,13 @@ Get selected text from the focused webview.
 
 *returns*;; The selection or null if no text was selected.
 ****
+
+==== String util.hereDoc(Function doc) 
+
+Creates a multiline string.
+
+_doc_;; A function, the body of the function must contain the here document. The
+content must be wrapped in /*HEREDOC ...HEREDOC*/
 
 ==== String util.markupEscape(String text)
 ****
@@ -1225,6 +1262,56 @@ _wv.tabBox (GtkBox, read)_;; Horizontal box, child of *wv.tabWidget*.
 _wv.tabIcon (GtkImage, read)_;;  Favicon widget, child of *wv.tabBox*.
 _wv.tabLabel (GtkLabel, read)_;; Text label of a tab, child of *wv.tabBox*.
 
+Some signal callbacks can also be defined directly on webview instances, they can
+be set multiple times. Event properties that start with on are emitted for every
+emission of that signal, event properties that start with once are only emitted
+once and will be disconnected afterwards. Not that it isn't possible to
+disconnect from signals that are set directly on a webview instance.
+
+_wv.onButtonPress_;; Connects the webview to the buttonPress event.
+_wv.onceButtonPress_;; Connects the webview to the buttonPress event once.
+_wv.onButtonRelease_;; Connects the webview to the buttonRelease event.
+_wv.onceButtonRelease_;; Connects the webview to the buttonRelease event once.
+_wv.onCloseTab_;; Connects the webview to the closeTab event.
+_wv.onceCloseTab_;; Connects the webview to the closeTab event.
+_wv.onContextMenu_;; Connects the webview to the contextMenu event.
+_wv.onceContextMenu_;; Connects the webview to the contextMenu event once.
+_wv.onDocumentLoaded_;; Connects the webview to the documentLoaded event. 
+_wv.onceDocumentLoaded_;; Connects the webview to the documentLoaded event once.
+_wv.onDownload_;; Connects the webview to the download event.
+_wv.onceDownload_;; Connects the webview to the download event once.
+_wv.onError_;; Connects the webview to the error event.
+_wv.onceError_;; Connects the webview to the error event once.
+_wv.onFollowHint_;; Connects the webview to the followHint event.
+_wv.onceFollowHint_;; Connects the webview to the followHint event once.
+_wv.onFrameCreated_;; Connects the webview to the frameCreated event.
+_wv.onceFrameCreated_;; Connects the webview to the frameCreated event once.
+_wv.onFrameStatus_;; Connects the webview to the frameStatus event.
+_wv.onceFrameStatus_;; Connects the webview to the frameStatus event once.
+_wv.onKeyPress_;; Connects the webview to the keyPress event.
+_wv.onceKeyPress_;; Connects the webview to the keyPress event once.
+_wv.onKeyRelease_;; Connects the webview to the keyRelease event.
+_wv.onceKeyRelease_;; Connects the webview to the keyRelease event once.
+_wv.onLoadCommitted_;; Connects the webview to the loadCommitted event.
+_wv.onceLoadCommitted_;; Connects the webview to the loadCommitted event once.
+_wv.onLoadFinished_;; Connects the webview to the loadFinished event.
+_wv.onceLoadFinished_;; Connects the webview to the loadFinished event once.
+_wv.onLoadStatus_;; Connects the webview to the loadStatus event.
+_wv.onceLoadStatus_;; Connects the webview to the loadStatus event once.
+_wv.onMimeType_;; Connects the webview to the mimeType event.
+_wv.onceMimeType_;; Connects the webview to the mimeType event once.
+_wv.onMouseMove_;; Connects the webview to the mouseMove event.
+_wv.onceMouseMove_;; Connects the webview to the mouseMove event once.
+_wv.onNavigation_;; Connects the webview to the navigation event.
+_wv.onceNavigation_;; Connects the webview to the navigation event once.
+_wv.onResource_;; Connects the webview to the resource event.
+_wv.onceResource_;; Connects the webview to the resource event once.
+_wv.onScroll_;; Connects the webview to the scroll event.
+_wv.onceScroll_;; Connects the webview to the scroll event once.
+_wv.onTabButtonPress_;; Connects the webview to the tabButtonPress event.
+_wv.onceTabButtonPress_;; Connects the webview to the tabButtonPress event once.
+_wv.onTabFocus_;; Connects the webview to the tabFocus event.
+_wv.onceTabFocus_;; Connects the webview to the tabFocus event once.
 
 
 ==== String wv.inject([String code|Function code], [Object arg], [Boolean global]) 
@@ -1261,6 +1348,24 @@ to use the corresponding signals instead to reduce overhead.
 Loads a history item steps away from the current history item
 
 _steps_;; Number of steps, pass a negative value to go back in history
+****
+
+==== Deferred wv.loadString(String content, [String mimetype], [String encoding], [String baseUri], [Boolean extSource])
+
+**** 
+
+Loads a string in a webview
+
+_content_;; The string to load
+_mimeType_;; The MIME-type, if omitted or null text/html is assumed, optional
+_encoding_;; The character encoding, if omitted or null UTF-8 is assumed, optional
+_baseUri_;; The base uri, if present it must either use the uri-scheme
+dwb-chrome: or file:, otherwise the request will be ignored, optional
+_extSource_;; Whether external sources, e.g. scripts, are allowed, defaults to
+false. If external resources are forbidden the function dwb can be called in the
+webcontext to execute functions in the scripting context
+*returns*;; A deferred that will be resolved if the webview has finished loading
+the string and rejected if an error occured.
 ****
 
 ==== Boolean wv.loadUri(String uri, [Function callback]) 
@@ -1320,6 +1425,25 @@ _frame.host (String, read)_;; The host name of the frame
 ****
 
 Injects a script into a frame, see also webview.inject for details.
+****
+
+
+==== Deferred frame.loadString(String content, [String mimetype], [String encoding], [String baseUri], [Boolean extSource])
+
+**** 
+
+Loads a string in a frame
+
+_content_;; The string to load
+_mimeType_;; The MIME-type, if omitted or null text/html is assumed, optional
+_encoding_;; The character encoding, if omitted or null UTF-8 is assumed, optional
+_baseUri_;; The base uri, if present it must either use the uri-scheme
+dwb-chrome: or file:, otherwise the request will be ignored, optional
+_extSource_;; Whether external sources, e.g. scripts, are allowed, defaults to
+false. If external resources are forbidden the function dwb can be called in the
+webcontext to execute functions in the scripting context
+*returns*;; A deferred that will be resolved if the webview has finished loading
+the string and rejected if an error occured.
 ****
 
 
@@ -1956,6 +2080,9 @@ this refers to the connected Signal).
 _connected (Boolean, read)_;; Whether the signal is connected
 _id (Number, read)_;; Unique id of the signal
 _name (String, read)_;; Name of the event
+_predicate_(Function, read|write)_;; A predicate function, the signal is only
+emitted if the predicate function returns true. The predicate function is called
+with the same arguments as the callback function
 
 === Methods
 
