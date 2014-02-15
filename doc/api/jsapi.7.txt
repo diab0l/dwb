@@ -54,7 +54,7 @@ _session (SoupSession, read)_;; The webkit session
 ****
 Prints an assertion message and returns, if called in the global context of a
 script it stops the execution of the script. Note that __assert__ is not
-acutally a function but a macro, a ; is mandatory at the end of an __assert__
+actually a function but a macro, a ; is mandatory at the end of an __assert__
 statement.
 
 _expression_;; An expression that evaluates to true or false.
