@@ -180,7 +180,7 @@ typedef struct SpawnData_s {
 
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
-static const char  *s_sigmap[] = {
+static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
     [SCRIPTS_SIG_NAVIGATION]        = "navigation", 
     [SCRIPTS_SIG_LOAD_STATUS]       = "loadStatus", 
     [SCRIPTS_SIG_MIME_TYPE]         = "mimeType", 
