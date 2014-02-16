@@ -1995,6 +1995,15 @@ _request_;; The network request
 _action_;; The navigation action
 ****
 
+==== ready
+****
+----
+new Signal("ready", function());
+----
+
+Emitted once when dwb has been fully initialized.
+****
+
 ==== resource
 ****
 ----
