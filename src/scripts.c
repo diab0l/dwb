@@ -180,43 +180,40 @@ typedef struct SpawnData_s {
 
 #define S_SIGNAL(X) ((SSignal*)X->data)
 
-static const struct {
-    int sig;
-    const char *name;
-} s_sigmap[] = {
-    { SCRIPTS_SIG_NAVIGATION, "navigation" },
-    { SCRIPTS_SIG_LOAD_STATUS, "loadStatus" },
-    { SCRIPTS_SIG_MIME_TYPE, "mimeType" },
-    { SCRIPTS_SIG_DOWNLOAD, "download" }, 
-    { SCRIPTS_SIG_DOWNLOAD_START, "downloadStart" }, 
-    { SCRIPTS_SIG_DOWNLOAD_STATUS, "downloadStatus" }, 
-    { SCRIPTS_SIG_RESOURCE, "resource" },
-    { SCRIPTS_SIG_KEY_PRESS, "keyPress" },
-    { SCRIPTS_SIG_KEY_RELEASE, "keyRelease" },
-    { SCRIPTS_SIG_BUTTON_PRESS, "buttonPress" },
-    { SCRIPTS_SIG_BUTTON_RELEASE, "buttonRelease" },
-    { SCRIPTS_SIG_TAB_FOCUS, "tabFocus" },
-    { SCRIPTS_SIG_FRAME_STATUS, "frameStatus" },
-    { SCRIPTS_SIG_LOAD_FINISHED, "loadFinished" },
-    { SCRIPTS_SIG_LOAD_COMMITTED, "loadCommitted" },
-    { SCRIPTS_SIG_CLOSE_TAB, "closeTab" },
-    { SCRIPTS_SIG_CREATE_TAB, "createTab" },
-    { SCRIPTS_SIG_FRAME_CREATED, "frameCreated" },
-    { SCRIPTS_SIG_CLOSE, "close" },
-    { SCRIPTS_SIG_DOCUMENT_LOADED, "documentLoaded" },
-    { SCRIPTS_SIG_MOUSE_MOVE, "mouseMove" },
-    { SCRIPTS_SIG_STATUS_BAR, "statusBarChange" },
-    { SCRIPTS_SIG_TAB_BUTTON_PRESS, "tabButtonPress" },
-    { SCRIPTS_SIG_CHANGE_MODE, "changeMode" },
-    { SCRIPTS_SIG_EXECUTE_COMMAND, "executeCommand" },
-    { SCRIPTS_SIG_CONTEXT_MENU, "contextMenu" },
-    { SCRIPTS_SIG_ERROR,    "error" },
-    { SCRIPTS_SIG_SCROLL,    "scroll" },
-    { SCRIPTS_SIG_FOLLOW,    "followHint" },
-    { SCRIPTS_SIG_ADD_COOKIE,    "addCookie" },
-    { SCRIPTS_SIG_SERVER_RUN,    "serverRun" },
-    { SCRIPTS_SIG_SERVER_STOP,    "serverStop" },
-    { 0, NULL },
+static const char  *s_sigmap[] = {
+    [SCRIPTS_SIG_NAVIGATION]        = "navigation", 
+    [SCRIPTS_SIG_LOAD_STATUS]       = "loadStatus", 
+    [SCRIPTS_SIG_MIME_TYPE]         = "mimeType", 
+    [SCRIPTS_SIG_DOWNLOAD]          = "download", 
+    [SCRIPTS_SIG_DOWNLOAD_START]    = "downloadStart", 
+    [SCRIPTS_SIG_DOWNLOAD_STATUS]   = "downloadStatus", 
+    [SCRIPTS_SIG_RESOURCE]          = "resource", 
+    [SCRIPTS_SIG_KEY_PRESS]         = "keyPress", 
+    [SCRIPTS_SIG_KEY_RELEASE]       = "keyRelease", 
+    [SCRIPTS_SIG_BUTTON_PRESS]      = "buttonPress", 
+    [SCRIPTS_SIG_BUTTON_RELEASE]    = "buttonRelease", 
+    [SCRIPTS_SIG_TAB_FOCUS]         = "tabFocus", 
+    [SCRIPTS_SIG_FRAME_STATUS]      = "frameStatus", 
+    [SCRIPTS_SIG_LOAD_FINISHED]     = "loadFinished", 
+    [SCRIPTS_SIG_LOAD_COMMITTED]    = "loadCommitted", 
+    [SCRIPTS_SIG_CLOSE_TAB]         = "closeTab", 
+    [SCRIPTS_SIG_CREATE_TAB]        = "createTab", 
+    [SCRIPTS_SIG_FRAME_CREATED]     = "frameCreated", 
+    [SCRIPTS_SIG_CLOSE]             = "close", 
+    [SCRIPTS_SIG_DOCUMENT_LOADED]   = "documentLoaded", 
+    [SCRIPTS_SIG_MOUSE_MOVE]        = "mouseMove", 
+    [SCRIPTS_SIG_STATUS_BAR]        = "statusBarChange", 
+    [SCRIPTS_SIG_TAB_BUTTON_PRESS]  = "tabButtonPress", 
+    [SCRIPTS_SIG_CHANGE_MODE]       = "changeMode", 
+    [SCRIPTS_SIG_EXECUTE_COMMAND]   = "executeCommand", 
+    [SCRIPTS_SIG_CONTEXT_MENU]      = "contextMenu", 
+    [SCRIPTS_SIG_ERROR]             = "error", 
+    [SCRIPTS_SIG_SCROLL]            = "scroll", 
+    [SCRIPTS_SIG_FOLLOW]            = "followHint", 
+    [SCRIPTS_SIG_ADD_COOKIE]        = "addCookie", 
+    [SCRIPTS_SIG_READY]             = "ready", 
+    [SCRIPTS_SIG_SERVER_RUN]        = "serverRun", 
+    [SCRIPTS_SIG_SERVER_STOP]       = "serverStop", 
 };
 
 enum {
@@ -2143,9 +2140,23 @@ global_get_webkit_session(JSContextRef ctx, JSObjectRef object, JSStringRef js_n
 }
 /* global_execute {{{*/
 /** 
- * Executes a command
+ * Executes a command, note that execute cannot be called in the global scope of
+ * a script or in a function that is called from the global scope of the
+ * script, i.e. it can only be called from functions that aren't executed when
+ * the script is first executed like signal callbacks or bind callbacks. If it
+ * is required call execute directly after dwb has been initialized the
+ * <b>ready</b> signal can be used.
  * @name execute 
  * @function
+ * @example 
+ * bind("Control x", function() {
+ *      execute("tabopen www.example.com");
+ * });
+ *
+ * // Calling execute on startup
+ * Signal.connect("ready", function() {
+ *      execute("tabopen example.com");
+ * });
  *
  * @param {String} name 
  *      A command, the command syntax is the same as the syntax on dwb's
@@ -2154,6 +2165,7 @@ global_get_webkit_session(JSContextRef ctx, JSObjectRef object, JSStringRef js_n
  * @returns {Boolean}
  *      true if execution was successful
  *
+ *
  * */
 static JSValueRef 
 global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -2161,6 +2173,10 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     DwbStatus status = STATUS_ERROR;
     if (argc < 1) 
         return JSValueMakeBoolean(ctx, false);
+    if (!dwb.state.views || !dwb.state.fview) {
+        js_make_exception(ctx, exc, EXCEPTION("execute can only be called after dwb has been initialized"));
+        return JSValueMakeBoolean(ctx, false);
+    }
 
     char *command = js_value_to_char(ctx, argv[0], -1, exc);
     if (command != NULL) 
@@ -5605,7 +5621,7 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
 
     for (int i = SCRIPTS_SIG_FIRST; i<SCRIPTS_SIG_LAST; i++) 
     {
-        if (strcmp(name, s_sigmap[i].name)) 
+        if (strcmp(name, s_sigmap[i])) 
             continue;
 
         if (JSValueIsNull(ctx, value)) 

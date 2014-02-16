@@ -2813,6 +2813,8 @@ dwb_load_uri(GList *gl, const char *arg)
     if (gl == NULL)
         gl = dwb.state.fview;
 
+    g_return_if_fail(gl != NULL);
+
     WebKitWebView *web = WEBVIEW(gl);
 
     if (!g_strcmp0(tmpuri, "$URI"))

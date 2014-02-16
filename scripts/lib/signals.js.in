@@ -338,8 +338,8 @@
                         var ret = false;
                         if (!this.predicate || this.predicate.apply(this, arguments))
                         {
-                            ret = callback.apply(this, arguments);
                             this.disconnect();
+                            ret = callback.apply(this, arguments);
                         }
                         return ret;
                     }, predicate).connect();

@@ -430,6 +430,26 @@ application_start(GApplication *app, char **argv)
     g_object_unref(layout);
 
     dwb_init_signals();
+
+    /**
+     * Emitted once after dwb has been fully initialized. some functions can only be
+     * called after this signal has been emitted, e.g. execute.
+     * @event ready
+     * @memberOf signals
+     * @param {signals~onReady} callback
+     *      Callback function that will be called when the signal is emitted
+     * */
+    /**
+     * Callback called when dwb has been fully initialized
+     * @callback signals~onReady
+     * */
+
+    if (EMIT_SCRIPT(READY)) {
+        ScriptSignal signal = { NULL, SCRIPTS_SIG_META(NULL, READY, 0) };
+        scripts_emit(&signal);
+    }
+
+    
     g_application_hold(app);
 }/*}}}*/
 
