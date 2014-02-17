@@ -4660,6 +4660,25 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     return UNDEFINED;
 }
 
+JSValueRef
+container_child_func(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc, void (*func)(GtkContainer *, GtkWidget *)) {
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+
+    if (! GTK_IS_CONTAINER(widget))
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Not a GtkContainer"));
+        return UNDEFINED;
+    }
+    JSObjectRef jschild = JSValueToObject(ctx, argv[0], exc);
+    if (jschild == NULL)
+        return UNDEFINED;
+    GtkWidget *child = JSObjectGetPrivate(jschild);
+    if (child == NULL || !GTK_IS_WIDGET(child))
+        return UNDEFINED;
+    func(GTK_CONTAINER(widget), child);
+    return UNDEFINED;
+}
 /**  
  * Adds a child to a GtkWidget, note that the function can only be called on
  * widgets derived from GtkContainer
@@ -4675,23 +4694,24 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
 static JSValueRef 
 widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    GtkWidget *widget = JSObjectGetPrivate(this);
-    g_return_val_if_fail(widget != NULL, UNDEFINED);
-
-    if (! GTK_IS_CONTAINER(widget))
-    {
-        js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
-        return UNDEFINED;
-    }
-    JSObjectRef jschild = JSValueToObject(ctx, argv[0], exc);
-    if (jschild == NULL)
-        return UNDEFINED;
-    GtkWidget *child = JSObjectGetPrivate(jschild);
-    if (child == NULL || !GTK_IS_WIDGET(child))
-        return UNDEFINED;
-
-    gtk_container_add(GTK_CONTAINER(widget), child);
-    return UNDEFINED;
+    return container_child_func(ctx, function, this, argc, argv, exc, gtk_container_add);
+}
+/**  
+ * Removes a child from a GtkWidget, note that the function can only be called on
+ * widgets derived from GtkContainer
+ *
+ * @name remove
+ * @memberOf GtkWidget.prototype
+ * @function
+ *
+ * @param {GtkWidget} widget
+ *      The widget to remove from the container
+ *
+ * */
+static JSValueRef 
+widget_container_remove(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    return container_child_func(ctx, function, this, argc, argv, exc, gtk_container_remove);
 }
 /** 
  * Gets all children of a widget. Note that this function can only be called on
@@ -6885,6 +6905,7 @@ create_global_object()
         { "packEnd",                widget_pack,          kJSDefaultAttributes },
         { "reorderChild",           widget_reorder_child, kJSDefaultAttributes },
         { "add",                    widget_container_add, kJSDefaultAttributes },
+        { "remove",                 widget_container_remove, kJSDefaultAttributes },
         { "getChildren",            widget_get_children, kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };

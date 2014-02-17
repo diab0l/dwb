@@ -3139,6 +3139,22 @@ Gets all children of a GtkWidget\&. Note that this function can only be called o
 .RS 4
 An array of GtkWidgets or an empty array if the Widget has no children\&.
 .RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid GtkWidget.remove(GtkWidget widget)\fR
+.RS 4
+.sp
+Removes a widget from it\(cqs parent\&. Note that this function can only be called on widgets derived from GtkContainer\&.
+.PP
+\fIwidget\fR
+.RS 4
+The widget to remove\&.
+.RE
 .sp
 Widgets that implement the GtkBox interface implement the following methods:
 .RE

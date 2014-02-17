@@ -1555,6 +1555,15 @@ derived from GtkContainer.
 children.
 ****
 
+==== void GtkWidget.remove(GtkWidget widget)
+****
+
+Removes a widget from it's parent. Note that this function can only be called on widgets
+derived from GtkContainer.
+
+_widget_;; The widget to remove.
+****
+
 
 Widgets that implement the GtkBox interface implement the following methods:
 
