@@ -244,6 +244,22 @@ _data.searchEngines_;; Searchengines
 ****
 
 
+==== Array data.parse(String name)
+****
+
+Parses data into an array
+
+_prompt_;; Name of the data to parse, can be one of bookmarks, cookiesWhitelist,
+sessionCookiesWhitelist, scriptWhitelist, pluginsWhitelist, quickmarks or
+searchEngines.
+*returns*;; Array of parsed objects; quickmarks will return an array of objects
+with properties mark and url and searchEngines will return an array of objects
+with properties keyword, url and host. All other values will return an array of
+strings.
+****
+
+
+
 === io ===
 The io object implements methods for input and output. 
 
@@ -1512,11 +1528,31 @@ _type_;; The type of the widget, e.g. "GtkLabel"
 
 All created widgets implement the following methods: 
 
+==== void GtkWidget.add(GtkWidget widget)
+****
+
+Adds a widget as a child. Note that this function can only be called on widgets
+derived from GtkContainer.
+
+_widget_;; The widget to add.
+****
+
+
 ==== void GtkWidget.destroy()
 ****
 
 Destroys a widget. Note that only newly created widgets can be destroyed.
 
+****
+
+==== Array GtkWidget.getChildren() 
+****
+
+Gets all children of a GtkWidget. Note that this function can only be called on widgets
+derived from GtkContainer.
+
+*returns*;; An array of GtkWidgets or an empty array if the Widget has no
+children.
 ****
 
 

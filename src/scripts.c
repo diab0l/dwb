@@ -45,7 +45,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.8
+#define API_VERSION 1.9
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -4541,7 +4541,7 @@ hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const
 }
 
 /** 
- * Moves a widget in a GtkBox to a new Position
+ * Moves a widget in a GtkBox or a GtkMenu to a new Position
  *
  * @name reorderChild
  * @memberOf GtkWidget.prototype
@@ -4560,9 +4560,9 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     GtkWidget *widget = JSObjectGetPrivate(this);
     g_return_val_if_fail(widget != NULL, UNDEFINED);
 
-    if (! GTK_IS_BOX(widget))
+    if (! (GTK_IS_BOX(widget) || GTK_IS_MENU(widget)))
     {
-        js_make_exception(ctx, exc, EXCEPTION("Widget.packStart: Not a GtkBox"));
+        js_make_exception(ctx, exc, EXCEPTION("Widget.reorderChild: Not a GtkBox or GtkMenu"));
         return UNDEFINED;
     }
 
@@ -4575,7 +4575,12 @@ widget_reorder_child(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     double position = JSValueToNumber(ctx, argv[1], exc);
     if (isnan(position))
         return UNDEFINED;
-    gtk_box_reorder_child(GTK_BOX(widget), child, (int)position);
+    if (GTK_IS_BOX(widget)) {
+        gtk_box_reorder_child(GTK_BOX(widget), child, (int)position);
+    }
+    else {
+        gtk_menu_reorder_child(GTK_MENU(widget), child, (int)position);
+    }
     return UNDEFINED;
 }
 
@@ -4655,6 +4660,18 @@ widget_pack(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t arg
     return UNDEFINED;
 }
 
+/**  
+ * Adds a child to a GtkWidget, note that the function can only be called on
+ * widgets derived from GtkContainer
+ *
+ * @name add
+ * @memberOf GtkWidget.prototype
+ * @function
+ *
+ * @param {GtkWidget} widget
+ *      The widget to add to the container
+ *
+ * */
 static JSValueRef 
 widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -4675,6 +4692,50 @@ widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
 
     gtk_container_add(GTK_CONTAINER(widget), child);
     return UNDEFINED;
+}
+/** 
+ * Gets all children of a widget. Note that this function can only be called on
+ * widgets derived from GtkContainer.
+ *
+ * @name getChildren
+ * @memberOf GtkWidget.prototype
+ * @function
+ * @since 1.9
+ *
+ * @return {Array[GtkWidget]} 
+ *      An array of children or an empty array if the widget has no children
+ *
+ * */
+static JSValueRef 
+widget_get_children(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    GtkWidget *widget = JSObjectGetPrivate(this);
+    g_return_val_if_fail(widget != NULL, UNDEFINED);
+    JSValueRef result = NIL;
+    GList *children = NULL;
+    int i=0;
+
+    if (! GTK_IS_CONTAINER(widget))
+    {
+        js_make_exception(ctx, exc, EXCEPTION("Widget.getChildren: Not a GtkContainer"));
+        return NIL;
+    }
+    children = gtk_container_get_children(GTK_CONTAINER(widget));
+    if (children == NULL) {
+        return JSObjectMakeArray(ctx, 0, NULL, exc);
+    }
+    int n_children = g_list_length(children);
+    if (n_children == 0) {
+        result = JSObjectMakeArray(ctx, 0, NULL, exc);
+    }
+    else {
+        JSValueRef js_children[n_children];
+        for (GList *l=children; l; l = l->next, i++) {
+            js_children[i] = make_object(ctx, G_OBJECT(l->data));
+        }
+        result = JSObjectMakeArray(ctx, n_children, js_children, exc);
+    }
+    g_list_free(children);
+    return result;
 }
 
 /**
@@ -6824,6 +6885,7 @@ create_global_object()
         { "packEnd",                widget_pack,          kJSDefaultAttributes },
         { "reorderChild",           widget_reorder_child, kJSDefaultAttributes },
         { "add",                    widget_container_add, kJSDefaultAttributes },
+        { "getChildren",            widget_get_children, kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     cd = kJSClassDefinitionEmpty;

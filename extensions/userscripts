@@ -493,7 +493,6 @@ function parseScripts(scripts) //{{{
             }
         }
     });
-
     return userscriptsStart();
 }//}}}
 

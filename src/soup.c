@@ -367,7 +367,7 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
     if (new_cookie) 
     {
         /**
-         * Emitted when a cookie will be added to the cookie jar
+         * Emitted when a cookie will be added to the session cookie jar
          * @event addCookie
          * @memberOf signals
          * @param {signals~onAddCookie} callback
@@ -375,7 +375,11 @@ dwb_soup_cookie_changed_cb(SoupCookieJar *jar, SoupCookie *old, SoupCookie *new_
          * @since 1.5
          * */
         /**
-         * Callback called before a new navigation starts
+         * Callback when a cookie is added to the session cookie jar. If
+         * expiration of the cookie is in the future and persistent cookies are
+         * allowed or the cookie is whitelisted it will also be added to
+         * the persistent cookie jar. 
+         *
          * @callback signals~onAddCookie
          * @since 1.5
          * @param {Cookie}  cookie 
