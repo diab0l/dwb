@@ -439,22 +439,17 @@ children environment, optional.
 ****
 
 === tabs ===
-The tabs object implements methods and properties to get webview objects. 
-
+The tabs object is an array like object can be used to get webviews. It has the
+following properties. 
 
 _tabs.current (webview, read)_;; The currently focused webview
 _tabs.length (Number, read)_;; Total number of tabs
 _tabs.number (Number, read)_;; Number of the currently focused tab
 
+Additionally tabs implements all ECMAScript 5 array methods like forEach, map,
+filter, ...
 
-==== webview tabs.nth(Number n) 
-****
 
-Gets the webview object of the nth tab
-
-_n_;; Number of the tab
-*returns*;; The corresponding webview
-****
 
 === net ===
 
