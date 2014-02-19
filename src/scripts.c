@@ -923,32 +923,22 @@ tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* ex
 }/*}}}*/
 
 /* tabs_get_nth {{{*/
-/** 
- * Gets the WebKitWebView of the nth tab, counting at 0
- * @name nth
- * @memberOf tabs
- * @function
- *
- * @param {Number} number Number of the tab
- *
- * @returns {WebKitWebView} 
- *      The corresponding {@link WebKitWebView}
- * */
-static JSValueRef 
-tabs_get_nth(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) 
-        return NIL;
-
-    double n = JSValueToNumber(ctx, argv[0], exc);
-    if (isnan(n))
-        return NIL;
-    GList *nth = g_list_nth(dwb.state.views, (int)n);
-    if (nth == NULL)
-        return NIL;
-    return VIEW(nth)->script_wv;
-}/*}}}*/
 /*}}}*/
+static JSValueRef 
+tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) {
+    JSValueRef v = JSValueMakeString(ctx, name);
+    double n = JSValueToNumber(ctx, v, exc);
+    if (!isnan(n)) {
+        GList *nth = g_list_nth(dwb.state.views, (int)n);
+        if (nth != NULL) {
+            return VIEW(nth)->script_wv;
+        }
+        else {
+            return NIL;
+        }
+    }
+    return NULL;
+}
 
 /* WEBVIEW {{{*/
 
@@ -4703,6 +4693,7 @@ widget_container_add(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
  * @name remove
  * @memberOf GtkWidget.prototype
  * @function
+ * @since 1.9
  *
  * @param {GtkWidget} widget
  *      The widget to remove from the container
@@ -6141,13 +6132,14 @@ set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, 
 
 /* create_class {{{*/
 static JSClassRef 
-create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[]) 
+create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[], JSObjectGetPropertyCallback get_property_cb) 
 {
     JSClassDefinition cd = kJSClassDefinitionEmpty;
     cd.className = name;
     cd.staticFunctions = staticFunctions;
     cd.staticValues = staticValues;
     cd.setProperty = set_property_cb;
+    cd.getProperty = get_property_cb;
     return JSClassCreate(&cd);
 }/*}}}*/
 
@@ -6359,7 +6351,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
 
-    JSClassRef class = create_class("dwb", global_functions, global_values);
+    JSClassRef class = create_class("dwb", global_functions, global_values, NULL);
     ctx = JSGlobalContextCreate(class);
     JSClassRelease(class);
 
@@ -6391,7 +6383,7 @@ create_global_object()
         { "userDataDir",    data_get_user_data_dir, NULL, kJSDefaultAttributes },
         { 0, 0, 0,  0 }, 
     };
-    class = create_class("data", NULL, data_values);
+    class = create_class("data", NULL, data_values, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "data", NULL);
     JSClassRelease(class);
 
@@ -6407,7 +6399,7 @@ create_global_object()
         { "stop",        timer_stop,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("timer", timer_functions, NULL);
+    class = create_class("timer", timer_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "timer", NULL);
     JSClassRelease(class);
     /**
@@ -6424,7 +6416,7 @@ create_global_object()
         { "allCookies",       net_all_cookies,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("net", net_functions, NULL);
+    class = create_class("net", net_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
     JSClassRelease(class);
 
@@ -6464,7 +6456,7 @@ create_global_object()
         { "error",     io_error,            kJSDefaultAttributes },
         { 0,           0,           0 },
     };
-    class = create_class("io", io_functions, NULL);
+    class = create_class("io", io_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
     JSClassRelease(class);
 
@@ -6486,14 +6478,10 @@ create_global_object()
         { "mkdir",           system_mkdir,            kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("system", system_functions, NULL);
+    class = create_class("system", system_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "system", NULL);
     JSClassRelease(class);
 
-    JSStaticFunction tab_functions[] = { 
-        { "nth",          tabs_get_nth,        kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
     JSStaticValue tab_values[] = { 
         { "current",      tabs_current, NULL,   kJSDefaultAttributes },
         { "number",       tabs_number,  NULL,   kJSDefaultAttributes },
@@ -6502,14 +6490,23 @@ create_global_object()
     };
 
     /**
-     * Getting webviews
+     * tabs is an array like object that can be used to get webviews. tabs also
+     * implements all ECMAScript 5 array functions like forEach, map, filter, ...
      *
      * @namespace 
      *      Static object that can be used to get webviews
      * @name tabs 
      * @static 
+     * @example
+     * // get the second tab
+     * var secondTab = tabs[1];
+     *
+     * // iterate over all tabs
+     * tabs.forEach(function(tab) {
+     *      ...
+     * });
      * */
-    class = create_class("tabs", tab_functions, tab_values);
+    class = create_class("tabs", NULL, tab_values, tabs_get);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "tabs", NULL);
     JSClassRelease(class);
 
@@ -6577,11 +6574,11 @@ create_global_object()
     create_object(ctx, class, global_object, kJSDefaultAttributes, "signals", NULL);
     JSClassRelease(class);
 
-    class = create_class("extensions", NULL, NULL);
+    class = create_class("extensions", NULL, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
     JSClassRelease(class);
 
-    class = create_class("Signal", NULL, NULL);
+    class = create_class("Signal", NULL, NULL, NULL);
     create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "Signal", NULL);
     JSClassRelease(class);
 
@@ -6606,7 +6603,7 @@ create_global_object()
         { "_base64Decode",    sutil_base64_decode,    kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("util", util_functions, NULL);
+    class = create_class("util", util_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
     JSClassRelease(class);
 
@@ -6623,7 +6620,7 @@ create_global_object()
         { "set",     clipboard_set,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("clipboard", clipboard_functions, NULL);
+    class = create_class("clipboard", clipboard_functions, NULL, NULL);
     create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
     JSClassRelease(class);
 

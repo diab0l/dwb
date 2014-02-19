@@ -887,6 +887,33 @@
             }
         });
     }
+    Object.defineProperties(tabs, {
+        /** 
+         * tabs.nth has been deprecated, tabs are now an array-like object, use tabs[n]
+         * instead.
+         * @name nth
+         * @memberOf tabs
+         * @function
+         * @deprecated
+         *
+         * @param {Number} number Number of the tab
+         *
+         * @returns {WebKitWebView} 
+         *      The corresponding {@link WebKitWebView}
+         * */
+         nth : {
+             value : function(n) {
+                 io.print("\033[31;1mDWB DEPRECATION:\033[0m tabs.nth(n) is deprecated, use tabs[n] instead!");
+                     return this[n];
+             }
+         },
+    });
+    [ "forEach", "indexOf", "lastIndexOf", "filter", "map", "reduce", "reduceRight", "every", "some" ].forEach(function(method) {
+        Object.defineProperty(tabs, method, { value : function() { 
+            return Array.prototype[method].apply(tabs, arguments); 
+        }});
+    });
+    Object.freeze(tabs);
 })();
 
 Object.preventExtensions(this);
