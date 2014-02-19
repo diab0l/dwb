@@ -439,7 +439,7 @@ children environment, optional.
 ****
 
 === tabs ===
-The tabs object is an array like object can be used to get webviews. It has the
+The tabs object is an array like object that can be used to get webviews. It has the
 following properties. 
 
 _tabs.current (webview, read)_;; The currently focused webview
