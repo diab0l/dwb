@@ -479,6 +479,31 @@
                                     return object[key + id];
                                 }.bind(self, id)
                             },
+                            /** 
+                             * Deletes a private property from an object
+                             * previously set with {@link * script.setPrivate|setPrivate}
+                             * and returns the previously set property if any
+                             *
+                             * @name deletePrivate
+                             * @memberOf script
+                             * @function
+                             *
+                             * @param {Object} object 
+                             *      The object on which the value was set
+                             * @param {String} key
+                             *      The property name
+                             *
+                             * @returns {Object}
+                             *      The private value
+                             * */
+                             "deletePrivate" : {
+                                 value : function(id, object, key) {
+                                     var realKey = key + id;
+                                     var value = object[realKey];
+                                     delete object[realKey];
+                                     return value;
+                                 }.bind(self, id)
+                             },
                             /**
                              * Includes a script, same as {@link include} but
                              * the path must be relative to the including

@@ -4954,6 +4954,32 @@ object of the encapsulating function
 .nr an-break-flag 1
 .br
 .ps +1
+\fBvoid script.deletePrivate(Object object, String key)\fR
+.RS 4
+.sp
+Deletes a private property of an object previously set with \fBscript\&.setPrivate\fR and returns the private value\&.
+.PP
+\fIobject\fR
+.RS 4
+The object on which the value was set\&.
+.RE
+.PP
+\fIkey\fR
+.RS 4
+The property name
+.RE
+.PP
+\fBreturns\fR
+.RS 4
+The private value
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBvoid script.debug(Object params)\fR
 .RS 4
 .sp

@@ -2432,6 +2432,17 @@ function, it has the following properties and methods:
 _script.path (Object, read)_;; The path of the script.
 _script._arguments (Object, read)_;; *arguments* object of the encapsulating function
 
+==== void script.deletePrivate(Object object, String key)
+****
+
+Deletes a private property of an object previously set with *script.setPrivate*
+and returns the private value.
+
+_object_;; The object on which the value was set.
+_key_;; The property name
+*returns*;; The private value
+****
+
 ==== void script.debug(Object params)
 ****
 
