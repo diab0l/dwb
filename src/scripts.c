@@ -922,8 +922,6 @@ tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* ex
     return JSValueMakeNumber(ctx, g_list_length(dwb.state.views));
 }/*}}}*/
 
-/* tabs_get_nth {{{*/
-/*}}}*/
 static JSValueRef 
 tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) {
     JSValueRef v = JSValueMakeString(ctx, name);
@@ -1938,6 +1936,8 @@ DwbStatus
 scripts_eval_key(KeyMap *m, Arg *arg) 
 {
     char *json = NULL;
+    int nummod = dwb.state.nummod;
+
     if (! (m->map->prop & CP_OVERRIDE)) {
         CLEAR_COMMAND_TEXT();
         dwb_change_mode(NORMAL_MODE, true);
@@ -1948,11 +1948,11 @@ scripts_eval_key(KeyMap *m, Arg *arg)
         if (arg->p == NULL) 
             json = util_create_json(3, CHAR, "key", m->key, 
                     INTEGER, "modifier", m->mod,  
-                    INTEGER, "nummod", dwb.state.nummod);
+                    INTEGER, "nummod", nummod);
         else 
             json = util_create_json(4, CHAR, "key", m->key, 
                     INTEGER, "modifier", m->mod,  
-                    INTEGER, "nummod", dwb.state.nummod, 
+                    INTEGER, "nummod", nummod,
                     CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
@@ -6491,7 +6491,7 @@ create_global_object()
 
     /**
      * tabs is an array like object that can be used to get webviews. tabs also
-     * implements all ECMAScript 5 array functions like forEach, map, filter, ...
+     * implements all ECMAScript 5 array methods like forEach, map, filter, ...
      *
      * @namespace 
      *      Static object that can be used to get webviews
