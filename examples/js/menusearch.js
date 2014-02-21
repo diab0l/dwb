@@ -1,7 +1,7 @@
 //!javascript
 //
 // Adds new menus to the right click context menu if text is selected on a
-// website. Add a menu entry for each configured searchengine that can be used
+// website. Adds a menu entry for each configured searchengine that can be used
 // to search for the selected text.
 
 // The maximum length of the preview string
