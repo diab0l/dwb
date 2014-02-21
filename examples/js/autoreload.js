@@ -20,7 +20,7 @@ var defaultInterval = 60;
 
 // used for 'arall', if set to 0 all tabs will be reloaded at once which may
 // block dwb  with many tabs open
-var reloadDelay = 5;
+var reloadDelay = 7;
 
 // bind("shortcut", func, "commandline");
 bind(null, start,       "ar");
