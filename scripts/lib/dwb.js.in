@@ -481,7 +481,7 @@
                             },
                             /** 
                              * Deletes a private property from an object
-                             * previously set with {@link * script.setPrivate|setPrivate}
+                             * previously set with {@link script.setPrivate|setPrivate}
                              * and returns the previously set property if any
                              *
                              * @name deletePrivate
@@ -791,7 +791,7 @@
      * function onNavigation() {
      *      var x = y;
      * };
-     * signals.connect("navigation", onNavigation.debug(script));
+     * Signal.connect("navigation", onNavigation.debug(script));
      *
      * // Debug message:
      * ==> DEBUG [FILE]       : /path/to/script.js
