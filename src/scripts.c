@@ -7513,8 +7513,10 @@ scripts_end(gboolean clean_all)
         }
         g_slist_free(s_servers);
         for (GList *gl = dwb.state.views; gl; gl=gl->next) {
-            JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
-            VIEW(gl)->script_wv = NULL;
+            if (VIEW(gl)->script_wv != NULL) {
+                JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
+                VIEW(gl)->script_wv = NULL;
+            }
         }
         
 
