@@ -30,6 +30,7 @@ bind(null, stopAll,     "arstopall");
 
 
 var onCreateTab = Signal("createTab");
+Signal.connect("closeTab", doStop);
 
 function doStop(wv) {
     var id = script.deletePrivate(wv, "refresh");
@@ -77,6 +78,3 @@ function stopAll(cmd) {
     onCreateTab.disconnect();
     tabs.forEach(doStop);
 }
-
-Signal.connect("closeTab", doStop);
-
