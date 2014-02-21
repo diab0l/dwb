@@ -922,6 +922,7 @@ tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* ex
     return JSValueMakeNumber(ctx, g_list_length(dwb.state.views));
 }/*}}}*/
 
+/* tabs_get{{{*/
 static JSValueRef 
 tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) {
     JSValueRef v = JSValueMakeString(ctx, name);
@@ -937,6 +938,7 @@ tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
     }
     return NULL;
 }
+/*}}}*/
 
 /* WEBVIEW {{{*/
 
@@ -6491,7 +6493,7 @@ create_global_object()
 
     /**
      * tabs is an array like object that can be used to get webviews. tabs also
-     * implements all ECMAScript 5 array methods like forEach, map, filter, ...
+     * implements all ECMAScript 5 array functions like forEach, map, filter, ...
      *
      * @namespace 
      *      Static object that can be used to get webviews
@@ -7510,6 +7512,10 @@ scripts_end(gboolean clean_all)
             soup_server_disconnect(server->data);
         }
         g_slist_free(s_servers);
+        for (GList *gl = dwb.state.views; gl; gl=gl->next) {
+            JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
+            VIEW(gl)->script_wv = NULL;
+        }
         
 
         JSValueUnprotect(s_global_context, s_array_contructor);
