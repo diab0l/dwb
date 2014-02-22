@@ -108,5 +108,8 @@ gboolean util_keyfile_do(char *path, KeyFileAction action, const void *data);
 char * util_strescape_char(char *string, char invalid, char esc_char);
 void * sec_memset(void *, char c, size_t s);
 
+GWeakRef * util_get_weak_ref(GObject *);
+void util_free_weak_ref(GWeakRef *);
+
 
 #endif

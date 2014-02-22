@@ -267,7 +267,7 @@ static JSClassRef s_gobject_class,
 static JSObjectRef s_array_contructor;
 static JSObjectRef s_completion_callback;
 static GQuark s_ref_quark;
-static JSObjectRef s_init_before, s_init_after; // s_private;
+static JSObjectRef s_init_before, s_init_after;
 static JSObjectRef s_constructors[CONSTRUCTOR_LAST];
 static JSObjectRef s_soup_session;
 static GSList *s_timers = NULL;
@@ -1357,17 +1357,28 @@ wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, 
 static JSValueRef 
 wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
-    int argc, n = 0;
+    int argc = 0, n = 0;
+    GSList *frames = NULL;
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    argc = g_slist_length(VIEW(gl)->status->frames);
+    for (GSList *l = VIEW(gl)->status->frames; l; l=l->next) {
+        WebKitWebFrame *frame = g_weak_ref_get(l->data);
+        if (frame != NULL) {
+            frames = g_slist_append(frames, frame);
+            argc++;
+        }
+    }
 
     JSValueRef argv[argc];
-    n=0;
 
-    for (GSList *sl = VIEW(gl)->status->frames; sl; sl=sl->next) 
-        argv[n++] = make_object(ctx, G_OBJECT(sl->data));
+    for (GSList *sl = frames; sl; sl=sl->next) {
+        WebKitWebFrame *frame = sl->data;
+        if (frame != NULL) {
+            argv[n++] = make_object(ctx, G_OBJECT(sl->data));
+        }
+    }
+    g_slist_free_full(frames, (GDestroyNotify)g_object_unref);
 
     return JSObjectMakeArray(ctx, argc, argv, exception);
 }/*}}}*/
@@ -7406,7 +7417,6 @@ scripts_init(gboolean force)
 
     s_init_before = get_private(s_global_context, "_initBefore");
     s_init_after = get_private(s_global_context, "_initAfter");
-    //s_private = get_private(s_global_context, "_private");
 
     JSObjectRef o = JSObjectMakeArray(s_global_context, 0, NULL, NULL);
     s_array_contructor = js_get_object_property(s_global_context, o, "constructor");
@@ -7524,7 +7534,6 @@ scripts_end(gboolean clean_all)
         JSValueUnprotect(s_global_context, UNDEFINED);
         JSValueUnprotect(s_global_context, NIL);
         JSValueUnprotect(s_global_context, s_soup_session);
-        //JSValueUnprotect(s_global_context, s_private);
         JSClassRelease(s_gobject_class);
         JSClassRelease(s_webview_class);
         JSClassRelease(s_frame_class);

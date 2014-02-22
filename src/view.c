@@ -464,7 +464,8 @@ view_frame_created_cb(WebKitWebView *wv, WebKitWebFrame *frame, GList *gl)
         scripts_emit(&signal);
     }
     g_signal_connect(frame, "notify::load-status", G_CALLBACK(view_frame_committed_cb), gl);
-    VIEW(gl)->status->frames = g_slist_prepend(VIEW(gl)->status->frames, frame);
+    
+    VIEW(gl)->status->frames = g_slist_prepend(VIEW(gl)->status->frames, util_get_weak_ref(G_OBJECT(frame)));
 }/*}}}*/
 
 /* view_console_message_cb(WebKitWebView *web, char *message, int line, char *sourceid, GList *gl) {{{*/
@@ -1142,12 +1143,15 @@ view_load_status_cb(WebKitWebView *web, GParamSpec *pspec, GList *gl)
 
     switch (status) 
     {
-        case WEBKIT_LOAD_PROVISIONAL: 
+        case WEBKIT_LOAD_PROVISIONAL: {
             dwb_clean_load_begin(gl);
-            g_slist_free(v->status->frames);
+            g_slist_free_full(v->status->frames, (GDestroyNotify)util_free_weak_ref);
             v->status->frames = NULL;
-            v->status->frames = g_slist_prepend(v->status->frames, webkit_web_view_get_main_frame(WEBVIEW(gl)));
+
+            WebKitWebFrame *main_frame = webkit_web_view_get_main_frame(web);
+            v->status->frames = g_slist_prepend(v->status->frames, util_get_weak_ref(G_OBJECT(main_frame)));
             break;
+        }
         case WEBKIT_LOAD_FIRST_VISUALLY_NON_EMPTY_LAYOUT: 
             /* This is more or less a dummy call, to compile the script and speed up
              * execution time 

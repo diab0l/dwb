@@ -1012,5 +1012,19 @@ sec_memset(void *data, char c, size_t s)
         *v++ = c;
     return data;
 }
+GWeakRef * 
+util_get_weak_ref(GObject *o) {
+    g_return_val_if_fail(o != NULL, NULL);
 
+    GWeakRef *ref = g_malloc(sizeof(GWeakRef));
+    g_weak_ref_init(ref, o);
+    return ref;
+}
 
+void 
+util_free_weak_ref(GWeakRef *ref) {
+    g_return_if_fail(ref != NULL);
+
+    g_weak_ref_clear(ref);
+    g_free(ref);
+}
