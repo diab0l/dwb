@@ -938,7 +938,7 @@ dwb_update_status_text(GList *gl, GtkAdjustment *a)
     dwb_update_uri(gl, false);
     GString *string = g_string_new(NULL);
 
-    const char *bof = back && forward ? " [+-]" : back ? " [+]" : forward  ? " [-]" : " ";
+    const char *bof = back && forward ? " [-+]" : back ? " [-]" : forward  ? " [+]" : " ";
     g_string_append(string, bof);
 
     g_string_append_printf(string, "[%d/%d]", g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
