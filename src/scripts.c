@@ -1926,6 +1926,19 @@ frame_load_string(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size
 }
 /*}}}*/
 
+static void 
+unbind_free_keymap(JSContextRef ctx, GList *l)
+{
+    g_return_if_fail(l != NULL);
+    KeyMap *m = l->data;
+    JSValueUnprotect(ctx, m->map->arg.js);
+    g_free(m->map->n.first);
+    g_free(m->map->n.second);
+    g_free(m->map);
+    g_free(m);
+    dwb.keymap = g_list_delete_link(dwb.keymap, l);
+}
+
 /* GLOBAL {{{*/
 /** 
  * Callback that will be called when a shortcut or command was invoked that was
@@ -1950,6 +1963,9 @@ scripts_eval_key(KeyMap *m, Arg *arg)
 {
     char *json = NULL;
     int nummod = dwb.state.nummod;
+    // set this keymap to readonly so that unbind in the bind callback cannot
+    // free the keymap
+    m->map->arg.ro = true;
 
     if (! (m->map->prop & CP_OVERRIDE)) {
         CLEAR_COMMAND_TEXT();
@@ -1971,68 +1987,76 @@ scripts_eval_key(KeyMap *m, Arg *arg)
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
         call_as_function_debug(s_global_context, arg->js, arg->js, 1, argv);
     }
+    m->map->arg.ro = false;
+    // if id is set to 0 the keymap isn't valid anymore but hasn't been freed yet.
+    if (m->map->arg.i == 0) {
+        unbind_free_keymap(s_global_context, g_list_find(dwb.keymap, m));
+    }
 
     g_free(json);
 
     return STATUS_OK;
 }/*}}}*/
 
-static void 
-unbind_free_keymap(JSContextRef ctx, GList *l)
-{
-    KeyMap *m = l->data;
-    JSValueUnprotect(ctx, m->map->arg.js);
-    g_free(m->map->n.first);
-    g_free(m->map->n.second);
-    g_free(m->map);
-    g_free(m);
-    dwb.keymap = g_list_delete_link(dwb.keymap, l);
-}
+
 /* global_unbind{{{*/
 /** 
  * Unbind a shortcut previously bound with <b>bind</b>
  * @name unbind 
  * @function
  *
- * @param {String|bindCallback} command|callback Either the function or the command
- *                          passed to {@link bind}
+ * @param {Number|String|bindCallback} id|command|callback 
+ *      Either the id returned from bind or the function or the command passed to {@link bind}
+ *
  * @returns {Boolean}
- *      Whether the shortcut was unbound
+ *      Whether the shortcut was found and unbound
  *
  * */
 static JSValueRef 
 global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    if (argc < 1) 
+#define KEYMAP_MAP(l) (((KeyMap*)((l)->data))->map)
+    if (argc == 0) 
         return JSValueMakeBoolean(ctx, false);
 
     GList *l = NULL;
-    if (JSValueIsString(ctx, argv[0])) 
+    if (JSValueIsNumber(ctx, argv[0])) {
+        int id = (int)JSValueToNumber(ctx, argv[0], exc);
+        for (l = dwb.keymap; l && KEYMAP_MAP(l)->arg.i != id; l=l->next)
+            ;
+
+    }
+    else if (JSValueIsString(ctx, argv[0])) 
     {
         char *name = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-        for (l = dwb.keymap; l && g_strcmp0(((KeyMap*)l->data)->map->n.first, name); l=l->next)
+        for (l = dwb.keymap; l && g_strcmp0(KEYMAP_MAP(l)->n.first, name); l=l->next)
             ;
         g_free(name);
     }
     else if (JSValueIsObject(ctx, argv[0])) 
     {
         for (l = dwb.keymap; l; l=l->next)
-            if ( ((KeyMap*)l->data)->map->arg.js && 
-                    JSValueIsEqual(ctx, argv[0], ((KeyMap*)l->data)->map->arg.js, exc) )
+            if ( KEYMAP_MAP(l)->arg.js && 
+                    JSValueIsEqual(ctx, argv[0], KEYMAP_MAP(l)->arg.js, exc) )
                 break;
     }
     if (l != NULL) 
     {
+        // if set to readonly it cannot be freed, we mark it as invalid then.
+        if (KEYMAP_MAP(l)->arg.ro) 
+            KEYMAP_MAP(l)->arg.i = 0;
+        else 
+            unbind_free_keymap(ctx, l);
         for (GList *gl = dwb.override_keys; gl; gl=gl->next)
         {
             KeyMap *m = gl->data;
             if (m->map->prop & CP_SCRIPT) 
                 dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
         }
-        unbind_free_keymap(ctx, l);
         return JSValueMakeBoolean(ctx, true);
     }
     return JSValueMakeBoolean(ctx, false);
+#undef KEYMAP_MAP
 }/*}}}*/
 /* global_bind {{{*/
 /** 
@@ -2051,8 +2075,8 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
  *      A command the can be used on dwb's commandline or an 
  *      {@link Enums and Flags.OverrideKey|OverrideKey} flag 
  *
- * @returns {Boolean}
- *      true if the shortcut/command was bound
+ * @returns {Number}
+ *      The shortcut id, can be used in {@link unbind} to identify the shortcut
  * @example 
  * bind("Control U", function () { 
  *      execute("tabopen " + tabs.current.uri);
@@ -2062,8 +2086,10 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
 static JSValueRef 
 global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
+    static int id;
+    int ret = -1;
+
     gchar *keystr, *callback_name;
-    gboolean ret = false;
     char *name = NULL, *callback = NULL;
     guint option = CP_DONT_SAVE | CP_SCRIPT | CP_DONT_CLEAN;
     gboolean override = false;
@@ -2105,15 +2131,15 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
 
     JSValueProtect(ctx, func);
 
-    Arg a = { .js = func };
+    ret = id++;
+    Arg a = { .js = func, .i = ret };
     KeyMap *map = dwb_add_key(keystr, name, callback, (Func)scripts_eval_key, option, &a);
     if (override)
         dwb.override_keys = g_list_prepend(dwb.override_keys, map);
 
-    ret = true;
 error_out:
     g_free(keystr);
-    return JSValueMakeBoolean(ctx, ret);
+    return JSValueMakeNumber(ctx, ret);
 }/*}}}*/
 
 /** 
