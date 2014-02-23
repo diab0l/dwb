@@ -1791,6 +1791,7 @@ view_clean(GList *gl)
 
     plugins_free(v->plugins);
     g_slist_free(v->status->allowed_plugins);
+    g_slist_free_full(v->status->frames, (GDestroyNotify)util_free_weak_ref);
 
     scripts_remove_tab(v->script_wv);
 

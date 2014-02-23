@@ -125,5 +125,4 @@ var myExtension = {
 
 return myExtension;
 
-
 // vim:set ft=javascript:

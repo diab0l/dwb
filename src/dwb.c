@@ -772,7 +772,7 @@ dwb_set_normal_message(GList *gl, gboolean hide, const char  *text, ...)
     vsnprintf(message, sizeof(message), text, arg_list);
     va_end(arg_list);
 
-    if (gtk_widget_get_visible(dwb.gui.bottombox)) 
+    if (dwb.state.mode & COMMAND_MODE || gtk_widget_get_visible(dwb.gui.bottombox)) 
     {
         dwb_set_status_bar_text(dwb.gui.lstatus, message, &dwb.color.active_fg, dwb.font.fd_active, false);
     }
@@ -938,7 +938,7 @@ dwb_update_status_text(GList *gl, GtkAdjustment *a)
     dwb_update_uri(gl, false);
     GString *string = g_string_new(NULL);
 
-    const char *bof = back && forward ? " [+-]" : back ? " [+]" : forward  ? " [-]" : " ";
+    const char *bof = back && forward ? " [-+]" : back ? " [-]" : forward  ? " [+]" : " ";
     g_string_append(string, bof);
 
     g_string_append_printf(string, "[%d/%d]", g_list_position(dwb.state.views, dwb.state.fview) + 1, g_list_length(dwb.state.views));
@@ -3287,9 +3287,9 @@ dwb_insert_mode(void)
 static DwbStatus 
 dwb_command_mode(void) 
 {
+    dwb.state.mode = COMMAND_MODE;
     dwb_set_normal_message(dwb.state.fview, false, ":");
     entry_focus();
-    dwb.state.mode = COMMAND_MODE;
     return STATUS_OK;
 }/*}}}*/
 
