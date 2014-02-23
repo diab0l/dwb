@@ -8,21 +8,24 @@
     var _contexts = {};
     var _applyRequired = function(names, callback) 
     {
-        if (names === null) 
+        if (names === null) {
             callback.call(this, _modules);
+        }
         else 
         {
+            var j, m;
             var modules = [];
             var name, detail;
-            for (var j=0, m=names.length; j<m; j++) 
+            for (j=0, m=names.length; j<m; j++) 
             {
                 name = names[j];
                 if (/^\w*!/.test(name)) 
                 {
                     detail = name.split("!");
                     name = detail[0];
-                    if (!_modules[name]) 
+                    if (!_modules[name]) {
                         include(detail.slice(1).join("!"));
+                    }
                 }
                 if (_modules[name])
                 {
@@ -56,11 +59,93 @@
              *
              *
              * */
-            if (callback)
+            if (callback) {
                 callback.apply(callback, modules);
+            }
         }
     };
+    function _removeTimerHandle()  {
+        timer._stop(this.id);
+    }
+    /**
+     * Calls a function reqeatedly or after a timeout, similar to window.setInterval
+     * or window.setTimeout that are available in the webcontext.
+     * @name start 
+     * @memberOf timer
+     * @function
+     * @example 
+     * // equivalent to window.setInterval
+     * timer.start(1000, function() {
+     *      ...
+     * });
+     * // equivalent to window.setTimeout
+     * timer.start(1000, function() {
+     *      ...
+     *      return false;
+     * });
+     * 
+     * @param {Number} interval The interval in milliseconds, the minimum interval
+     *                          is 10 milliseconds
+     * @param {timer~startCallback} callback 
+     *      The callback that will be called, if the callback returns <i>false</i>
+     *      the timer will be stopped
+     *
+     * @returns {Number}
+     *      A timer id that can be passed to {@link timer.stop|stop}
+     * */
+
+    Object.defineProperties(timer, { 
+        "start" : {
+            value : function() {
+                var id = this._start.apply(null, arguments);
+                return { id : id, remove : _removeTimerHandle };
+            }
+        },
+        // FIXME: wrapper for old api, remove the at some point
+        "stop" : {
+            value : function(handle) {
+                return this._stop(handle.id);
+            }
+        }
+
+    });
+    function _removeBindHandle()  {
+        unbind(this.id);
+    }
     Object.defineProperties(this, { 
+        /** 
+         * Bind a function to a shortcut or commandline command, use {@link unbind} to remove
+         * the command
+         * @name bind 
+         * @function
+         *
+         * @param {String} shortcut 
+         *      A shortcut, the syntax is the same as in dwb:keys, pass <i>null</i> if
+         *      only a commandline command should be bound 
+         * @param {bindCallback} callback 
+         *      A callback function that will be called if the shortcut is pressed or
+         *      the command was executed from commandline
+         * @param {String|OverrideKey} [command|override] 
+         *      A command the can be used on dwb's commandline or an 
+         *      {@link Enums and Flags.OverrideKey|OverrideKey} flag 
+         *
+         * @returns {Number}
+         *      The shortcut id, can be used in {@link unbind} to identify the shortcut
+         * @example 
+         * bind("Control U", function () { 
+         *      execute("tabopen " + tabs.current.uri);
+         * }, "tabopen_current");
+         *
+         * */
+        "bind" : {
+            value : function() {
+                var id = _bind.apply(null, arguments);
+                if (id != -1) {
+                    return { id : id, remove : _removeBindHandle };
+                }
+                return { remove : function() {} };
+            }
+        },
         /** 
          * Adds a custom hintmode, similar to {@link bind} but executes the
          * function before the hint will be followed, use {@link unbind} to
@@ -218,9 +303,9 @@
          *
          * @param {String} name The name of the module
          * @param {Object} module The module
-         * @param {Boolean} overwrite 
+         * @param {Boolean} [overwrite]
          *      Whether to overwrite existing module with
-         *      the same name 
+         *      the same name, default false
          * @example 
          * provide("foo", {
          *    baz : 37, 
@@ -274,7 +359,7 @@
             }
         },
         /** 
-         * Load modules asynchronously
+         * Load modules defined in other scripts. 
          * @name require 
          * @function
          *
@@ -283,7 +368,9 @@
          *      null is passed require is called asynchronously, passing null
          *      will require all modules. If a string is passed to require
          *      it will be synchronous. The module must have been already defined if the
-         *      synchronous version is used.
+         *      synchronous version is used. If all modules are defined during
+         *      startup all modules will be defined after the <i>ready</i> event
+         *      has been emitted.
          *      
          * @param {requireCallback} [callback]
          *      A callback function, the modules are passed as parameters to
@@ -297,9 +384,15 @@
          * require(["foo", "bar"], function(foo, bar) {
          *    io.print(foo.baz);
          * });
+         *
          * // synchronous
          * var foo = require("foo");
          * io.print(foo.baz);
+         *
+         * // ensuring that all modules have been defined for synchronous loading
+         * Signal.connect("ready", function() {
+         *     var foo = require("foo");
+         * });
          * */
         "require" : 
         {
@@ -407,7 +500,78 @@
                              *
                              * */
                             "debug" : { value : io.debug.bind(self) }, 
+                            /** 
+                             * For internal usage only
+                             *
+                             * @name _arguments
+                             * @memberOf script
+                             * @property {Object}
+                             * @private
+                             *
+                             * */
                             "_arguments" : { value : arguments },
+                            /** 
+                             * For internal usage only
+                             *
+                             * @name _handles
+                             * @memberOf script
+                             * @property {Object}
+                             * @private
+                             *
+                             * */
+                            "_handles" : { value : [], writable : true },
+                            /** 
+                             * Own handles returned from timer.start,
+                             * Signal.connect and bind or other objects that
+                             * implement a remove function.
+                             *
+                             * @name own
+                             * @memberOf script
+                             * @function
+                             * @param {Objects...} objects 
+                             *      Some objects that implement a remove
+                             *      function
+                             *
+                             * @returns {Array} 
+                             *      The arguments accumulated to an array
+                             * @example 
+                             * script.own(
+                             *      timer.start(1000, timerCallback), 
+                             *      bind.start("shortcut", bindCallback), 
+                             *      Signal.connect("navigation", navigationCallback)
+                             * );
+                             * */
+                            "own" : {
+                                value : function() {
+                                    io.print("foobarbaz");
+                                   this._handles = this._handles.concat(Array.prototype.slice.call(arguments));
+                                   io.print(this._handles.length);
+                                   return this._handles;
+                                }
+                            },
+                            /** 
+                             * Removes all handles owned by this script
+                             *
+                             * @name removeHandles
+                             * @memberOf script
+                             * @function 
+                             *
+                             * @example 
+                             * script.own(
+                             *      bind.start("shortcut", bindCallback), 
+                             *      Signal.connect("navigation", navigationCallback)
+                             * );
+                             * bind(null, function() {
+                             *      script.removeHandles();
+                             * }, "stopscript");
+                             * */
+                            "removeHandles" : {
+                                value : function() {
+                                    this._handles.forEach(function(handle) { 
+                                        handle.remove();
+                                    });
+                                }
+                            },
                             /** 
                              * Generates a unique id. Successive calls will
                              * generate new ids.
@@ -883,6 +1047,7 @@
             }
         });
     }
+
     /**
      * Standard RegExp object with additional methods
      * @name RegExp

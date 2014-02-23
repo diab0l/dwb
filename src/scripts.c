@@ -2058,31 +2058,15 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     return JSValueMakeBoolean(ctx, false);
 #undef KEYMAP_MAP
 }/*}}}*/
-/* global_bind {{{*/
 /** 
- * Bind a function to a shortcut or commandline command, use {@link unbind} to remove
- * the command
- * @name bind 
+ * For internal usage only
+ *
+ * @name _bind
  * @function
- *
- * @param {String} shortcut 
- *      A shortcut, the syntax is the same as in dwb:keys, pass <i>null</i> if
- *      only a commandline command should be bound 
- * @param {bindCallback} callback 
- *      A callback function that will be called if the shortcut is pressed or
- *      the command was executed from commandline
- * @param {String|OverrideKey} [command|override] 
- *      A command the can be used on dwb's commandline or an 
- *      {@link Enums and Flags.OverrideKey|OverrideKey} flag 
- *
- * @returns {Number}
- *      The shortcut id, can be used in {@link unbind} to identify the shortcut
- * @example 
- * bind("Control U", function () { 
- *      execute("tabopen " + tabs.current.uri);
- * }, "tabopen_current");
+ * @private
  *
  * */
+/* global_bind {{{*/
 static JSValueRef 
 global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -2695,6 +2679,15 @@ timeout_callback(JSObjectRef obj)
 }/*}}}*/
 
 /* global_timer_stop {{{*/
+
+/** 
+ * For internal usage only
+ *
+ * @name _stop
+ * @memberOf timer
+ * @function
+ * @private
+ * */
 /**
  * Stops a timer started by {@link timerStart}
  * @name stop 
@@ -2727,33 +2720,14 @@ timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc,
     return JSValueMakeBoolean(ctx, false);
 }/*}}}*/
 
-/**
- * Calls a function reqeatedly or after a timeout, similar to window.setInterval
- * or window.setTimeout that are available in the webcontext.
- * @name start 
+/** 
+ * For internal usage only
+ *
+ * @name _start
  * @memberOf timer
  * @function
- * @example 
- * // equivalent to window.setInterval
- * timer.start(1000, function() {
- *      ...
- * });
- * // equivalent to window.setTimeout
- * timer.start(1000, function() {
- *      ...
- *      return false;
- * });
- * 
- * @param {Number} interval The interval in milliseconds, the minimum interval
- *                          is 10 milliseconds
- * @param {timer~startCallback} callback 
- *      The callback that will be called, if the callback returns <i>false</i>
- *      the timer will be stopped
- *
- * @returns {Number}
- *      A timer id that can be passed to {@link timer.stop|stop}
+ * @private
  * */
-
 /* global_timer_start {{{*/
 static JSValueRef 
 timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -3209,6 +3183,14 @@ sutil_change_mode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
 }
 
 
+/** 
+ * For internal usage only 
+ *
+ * @name _base64Encode
+ * @memberOf util
+ * @function
+ * @private
+ * */
 static JSValueRef 
 sutil_base64_encode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -3243,6 +3225,14 @@ sutil_base64_encode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObje
     return ret;
 }
 
+/** 
+ * For internal usage only 
+ *
+ * @name _base64Decode
+ * @memberOf util
+ * @function
+ * @private
+ * */
 static JSValueRef 
 sutil_base64_decode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
@@ -3909,6 +3899,14 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
 }
 
 /* system_spawn {{{*/
+/**  
+ * For internal usage only
+ *
+ * @name _spawn
+ * @memberOf system
+ * @function
+ * @private
+ * */
 /** 
  * Spawn a process asynchronously
  * 
@@ -6383,7 +6381,7 @@ create_global_object()
     JSStaticFunction global_functions[] = { 
         { "execute",          global_execute,         kJSDefaultAttributes },
         { "exit",             global_exit,            kJSDefaultAttributes },
-        { "bind",             global_bind,            kJSDefaultAttributes },
+        { "_bind",             global_bind,            kJSDefaultAttributes },
         { "unbind",           global_unbind,          kJSDefaultAttributes },
         { "include",          global_include,         kJSDefaultAttributes },
         { "_xinclude",         global_xinclude,       kJSDefaultAttributes },
@@ -6434,8 +6432,9 @@ create_global_object()
      * @static
      * */
     JSStaticFunction timer_functions[] = { 
-        { "start",       timer_start,         kJSDefaultAttributes },
-        { "stop",        timer_stop,         kJSDefaultAttributes },
+        { "_start",       timer_start,         kJSDefaultAttributes },
+        // FIXME: wrapper isn't really necessary
+        { "_stop",        timer_stop,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("timer", timer_functions, NULL, NULL);
