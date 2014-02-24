@@ -7305,10 +7305,11 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
     if (js_check_syntax(s_global_context, script, path, 2)) 
     {
         /** 
-         * Prints an assertion message and returns, if called in the global
-         * context of a script it stops the execution of the script. Note that
-         * \__assert\__ is not actually a function but a macro, a ; is mandatory
-         * at the end of an \__assert\__ statement.
+         * Prints an assertion message and removes all handles owned by the
+         * script. If called in the global context of a script it stops the
+         * execution of the script. Note that \__assert\__ is not actually a
+         * function but a macro, a ; is mandatory at the end of an \__assert\__
+         * statement.
          *
          * @name __assert__
          * @function
@@ -7328,7 +7329,7 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
          *
          * */
         prepared = init_macro(script, "assert", 
-                "if(!(\\1)){try{throw new Error();}catch(e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
+                "if(!(\\1)){try{script.removeHandles();throw new Error();}catch(e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
                 path);
         if (prepared != NULL) {
             debug = g_strdup_printf(template, path, prepared);
