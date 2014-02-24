@@ -2006,7 +2006,7 @@ scripts_eval_key(KeyMap *m, Arg *arg)
  * @function
  *
  * @param {Number|String|bindCallback} id|command|callback 
- *      Either the id returned from bind or the function or the command passed to {@link bind}
+ *      Either the handle id returned from bind or the function or the command passed to {@link bind}
  *
  * @returns {Boolean}
  *      Whether the shortcut was found and unbound
@@ -2694,7 +2694,8 @@ timeout_callback(JSObjectRef obj)
  * @memberOf timer
  * @function
  * 
- * @param {Number} id A timer id retrieved from {@link timer.start|start}
+ * @param {Number} id 
+ *      A timer handle retrieved from {@link timer.start|start}
  *
  * @returns {Boolean}
  *      true if the timer was stopped

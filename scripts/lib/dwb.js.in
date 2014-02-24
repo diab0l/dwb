@@ -90,8 +90,9 @@
      *      The callback that will be called, if the callback returns <i>false</i>
      *      the timer will be stopped
      *
-     * @returns {Number}
-     *      A timer id that can be passed to {@link timer.stop|stop}
+     * @returns {Object}
+     *      A handle, call handle.remove or timer.stop(handle) to stop the
+     *      timer.
      * */
 
     Object.defineProperties(timer, { 
@@ -129,8 +130,9 @@
          *      A command the can be used on dwb's commandline or an 
          *      {@link Enums and Flags.OverrideKey|OverrideKey} flag 
          *
-         * @returns {Number}
-         *      The shortcut id, can be used in {@link unbind} to identify the shortcut
+         * @returns {Object}
+         *      An handle that contains an id, handle.remove() or
+         *      unbind(handle.id) will unbind this shortcut
          * @example 
          * bind("Control U", function () { 
          *      execute("tabopen " + tabs.current.uri);
