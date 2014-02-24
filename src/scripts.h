@@ -87,7 +87,7 @@ gboolean scripts_load_chrome(JSObjectRef,  const char *);
 void scripts_load_extension(const char *);
 void scripts_clear_keymap(KeyMap *km);
 
-#define SCRIPTS_INVALID_BIND(m) (((m)->map->prop & CP_SCRIPT) && (m)->map->arg.n == 0)
+#define SCRIPTS_INVALID_BIND(m) (((m)->map->prop & CP_SCRIPT) && (m)->map->arg.i == 0)
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1ULL<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \
   if (scripts_emit(&signal)) { \

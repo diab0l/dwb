@@ -2023,7 +2023,7 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     if (JSValueIsNumber(ctx, argv[0])) {
         int id = (int)JSValueToNumber(ctx, argv[0], exc);
         for (l = dwb.keymap; l; l=l->next)
-            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && KEYMAP_MAP(l)->arg.n == id) {
+            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && KEYMAP_MAP(l)->arg.i == id) {
                 break;
             }
     }
@@ -2047,7 +2047,7 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     {
         // don't free it yet, if unbind is called from inside a bind
         // callback parse_command_line and eval_key would use an invalid keymap
-        KEYMAP_MAP(l)->arg.n = 0;
+        KEYMAP_MAP(l)->arg.i = 0;
 
         for (GList *gl = dwb.override_keys; gl; gl=gl->next)
         {
@@ -2118,7 +2118,7 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
     JSValueProtect(ctx, func);
 
     ret = ++id;
-    Arg a = { .js = func, .n = ret };
+    Arg a = { .js = func, .i = ret };
     KeyMap *map = dwb_add_key(keystr, name, callback, (Func)scripts_eval_key, option, &a);
     if (override)
         dwb.override_keys = g_list_prepend(dwb.override_keys, map);
