@@ -19,6 +19,9 @@
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE 
 #endif
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 1
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -579,19 +582,20 @@ exar_delete(const char *archive, const char *file)
     unsigned char rbuf;
     size_t dir_length = 0;
     int status = EE_ERROR;
+    int fd;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
 
     snprintf(tmp_file, sizeof(tmp_file), "%s.XXXXXX", archive);
-    if (mktemp(tmp_file) == NULL)
+    if ((fd = mkstemp(tmp_file)) == -1)
     {
-        fprintf(stderr, "Failed to create temporary file\n");
+        perror("mktemp");
         goto finish;
     }
 
     LOG(3, "Opening %s for writing\n", tmp_file);
-    if ((ftmp = fopen(tmp_file, "w")) == NULL)
+    if ((ftmp = fdopen(fd, "w")) == NULL)
         goto finish;
 
     while ((status = get_file_header(f, &header)) == EE_OK)
