@@ -545,7 +545,6 @@
                              * */
                             "own" : {
                                 value : function() {
-                                    io.print("foobarbaz");
                                    this._handles = this._handles.concat(Array.prototype.slice.call(arguments));
                                    io.print(this._handles.length);
                                    return this._handles;
