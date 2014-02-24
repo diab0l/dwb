@@ -3217,6 +3217,7 @@ dwb_eval_key(GdkEventKey *e)
             }
         }
     }
+
     /* autocompletion */
     if (dwb.state.mode & AUTO_COMPLETE) 
         completion_clean_autocompletion();
@@ -3228,6 +3229,9 @@ dwb_eval_key(GdkEventKey *e)
     {
         commands_simple_command(tmp);
         ret = true;
+        if (SCRIPTS_INVALID_BIND(tmp)) {
+            scripts_clear_keymap(tmp);
+        }
     }
     else if (e->state & GDK_CONTROL_MASK || !isprint) 
         ret = false;
@@ -5270,7 +5274,10 @@ dwb_parse_command_line(const char *line)
 
     if (!(m->map->prop & CP_DONT_CLEAN) || (m->map->prop & CP_NEEDS_ARG && has_arg) ) 
         dwb_change_mode(NORMAL_MODE, dwb.state.message_id == 0);
-    
+
+    if (SCRIPTS_INVALID_BIND(m)) {
+        scripts_clear_keymap(m);
+    }
     return ret;
 }/*}}}*/
 void 

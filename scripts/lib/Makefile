@@ -1,5 +1,6 @@
 # See COPYING for copyright and license details
 TARGETS := $(patsubst %.js.in, %.js, $(wildcard *.js.in)) 
+CFLAGS := -std=c99 -Wall -Wextra -pedantic -Werror
 
 all: $(TARGETS)
 
@@ -8,7 +9,7 @@ all: $(TARGETS)
 	@./minify $< $@
 
 minify: minify.c
-	$(CC) $< -o $@
+	$(CC) $< -o $@ ${CFLAGS} ${CPPFLAGS}
 
 clean:  
 	$(RM) $(TARGETS)

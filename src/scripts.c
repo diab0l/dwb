@@ -1939,6 +1939,7 @@ unbind_free_keymap(JSContextRef ctx, GList *l)
     dwb.keymap = g_list_delete_link(dwb.keymap, l);
 }
 
+
 /* GLOBAL {{{*/
 /** 
  * Callback that will be called when a shortcut or command was invoked that was
@@ -1963,8 +1964,6 @@ scripts_eval_key(KeyMap *m, Arg *arg)
 {
     char *json = NULL;
     int nummod = dwb.state.nummod;
-    // set this keymap to readonly so that unbind in the bind callback cannot
-    // free the keymap
 
     if (! (m->map->prop & CP_OVERRIDE)) {
         CLEAR_COMMAND_TEXT();
@@ -1984,19 +1983,20 @@ scripts_eval_key(KeyMap *m, Arg *arg)
                     CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
-        m->map->arg.ro = true;
         call_as_function_debug(s_global_context, arg->js, arg->js, 1, argv);
-        m->map->arg.ro = false;
-    }
-    // if id is set to 0 the keymap isn't valid anymore but hasn't been freed yet.
-    if (m->map->arg.i == 0) {
-        unbind_free_keymap(s_global_context, g_list_find(dwb.keymap, m));
     }
 
     g_free(json);
 
     return STATUS_OK;
 }/*}}}*/
+
+void 
+scripts_clear_keymap(KeyMap *km) {
+    EXEC_LOCK;
+    unbind_free_keymap(s_global_context, g_list_find(dwb.keymap, km));
+    EXEC_UNLOCK;
+}
 
 
 /* global_unbind{{{*/
@@ -2022,15 +2022,18 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     GList *l = NULL;
     if (JSValueIsNumber(ctx, argv[0])) {
         int id = (int)JSValueToNumber(ctx, argv[0], exc);
-        for (l = dwb.keymap; l && KEYMAP_MAP(l)->arg.i != id; l=l->next)
-            ;
-
+        for (l = dwb.keymap; l; l=l->next)
+            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && KEYMAP_MAP(l)->arg.n == id) {
+                break;
+            }
     }
     else if (JSValueIsString(ctx, argv[0])) 
     {
         char *name = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-        for (l = dwb.keymap; l && g_strcmp0(KEYMAP_MAP(l)->n.first, name); l=l->next)
-            ;
+        for (l = dwb.keymap; l; l=l->next)
+            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && g_strcmp0(KEYMAP_MAP(l)->n.first, name)) {
+                break;
+            }
         g_free(name);
     }
     else if (JSValueIsObject(ctx, argv[0])) 
@@ -2042,11 +2045,10 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
     }
     if (l != NULL) 
     {
-        // if set to readonly it cannot be freed, we mark it as invalid then.
-        if (KEYMAP_MAP(l)->arg.ro) 
-            KEYMAP_MAP(l)->arg.i = 0;
-        else 
-            unbind_free_keymap(ctx, l);
+        // don't free it yet, if unbind is called from inside a bind
+        // callback parse_command_line and eval_key would use an invalid keymap
+        KEYMAP_MAP(l)->arg.n = 0;
+
         for (GList *gl = dwb.override_keys; gl; gl=gl->next)
         {
             KeyMap *m = gl->data;
@@ -2115,8 +2117,8 @@ global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size
 
     JSValueProtect(ctx, func);
 
-    ret = id++;
-    Arg a = { .js = func, .i = ret };
+    ret = ++id;
+    Arg a = { .js = func, .n = ret };
     KeyMap *map = dwb_add_key(keystr, name, callback, (Func)scripts_eval_key, option, &a);
     if (override)
         dwb.override_keys = g_list_prepend(dwb.override_keys, map);
