@@ -1965,7 +1965,6 @@ scripts_eval_key(KeyMap *m, Arg *arg)
     int nummod = dwb.state.nummod;
     // set this keymap to readonly so that unbind in the bind callback cannot
     // free the keymap
-    m->map->arg.ro = true;
 
     if (! (m->map->prop & CP_OVERRIDE)) {
         CLEAR_COMMAND_TEXT();
@@ -1985,9 +1984,10 @@ scripts_eval_key(KeyMap *m, Arg *arg)
                     CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_global_context, json) };
+        m->map->arg.ro = true;
         call_as_function_debug(s_global_context, arg->js, arg->js, 1, argv);
+        m->map->arg.ro = false;
     }
-    m->map->arg.ro = false;
     // if id is set to 0 the keymap isn't valid anymore but hasn't been freed yet.
     if (m->map->arg.i == 0) {
         unbind_free_keymap(s_global_context, g_list_find(dwb.keymap, m));
