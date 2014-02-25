@@ -49,15 +49,26 @@ _session (SoupSession, read)_;; The webkit session
 
 === Methods ===
 
-==== void \__assert\__(Expression expression) 
+==== void pass:[__assert__](Expression expression) 
 
 ****
 Prints an assertion message and returns, if called in the global context of a
-script it stops the execution of the script. Note that __assert__ is not
-actually a function but a macro, a ; is mandatory at the end of an __assert__
-statement.
+script it stops the execution of the script. Note that pass:[__assert__] is not
+actually a function but a macro, a ; is mandatory at the end of an 
+pass:[__assert__] statement.
 
 _expression_;; An expression that evaluates to true or false.
+****
+
+==== void pass:[__profile__](String profile, ...) 
+
+****
+Use this script only for the specified profiles. If the current profile doesn't
+match the specified profiles the script will stop immediately. This macro must
+be defined at the beginning of the script. Note that pass:[__profile__] is a
+macro, a ; is mandatory at the end of a pass:[__profile__] statement.
+
+_profile_;; A list of profiles that use this script.
 ****
 
 ==== Boolean bind(String shortcut, Function callback, [String name])

@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 02/20/2014
+.\"      Date: 02/25/2014
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/20/2014" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "02/25/2014" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -102,14 +102,30 @@ The webkit session
 .nr an-break-flag 1
 .br
 .ps +1
-\fBvoid _assert\_(Expression expression)\fR
+\fBvoid __assert__(Expression expression)\fR
 .RS 4
 .sp
-Prints an assertion message and returns, if called in the global context of a script it stops the execution of the script\&. Note that \fIassert\fR is not actually a function but a macro, a ; is mandatory at the end of an \fIassert\fR statement\&.
+Prints an assertion message and returns, if called in the global context of a script it stops the execution of the script\&. Note that __assert__ is not actually a function but a macro, a ; is mandatory at the end of an __assert__ statement\&.
 .PP
 \fIexpression\fR
 .RS 4
 An expression that evaluates to true or false\&.
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
+\fBvoid __profile__(String profile, \&...)\fR
+.RS 4
+.sp
+Use this script only for the specified profiles\&. If the current profile doesn\(cqt match the specified profiles the script will stop immediately\&. This macro must be defined at the beginning of the script\&. Note that __profile__ is a macro, a ; is mandatory at the end of a __profile__ statement\&.
+.PP
+\fIprofile\fR
+.RS 4
+A list of profiles that use this script\&.
 .RE
 .RE
 .sp

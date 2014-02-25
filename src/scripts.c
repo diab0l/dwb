@@ -7336,9 +7336,9 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
         /** 
          * Use this script only for the specified profiles. If the current profile doesn't match
          * the specified profiles the script will stop immediately. This macro
-         * must be defined at the beginning of the script
-         * script.  Note that \__profile\__ is a macro, a ; is mandatory at the
-         * end of an \__profile\__ statement.
+         * must be defined at the beginning of the script.  Note that
+         * \__profile\__ is a macro, a ; is mandatory at the end of a
+         * \__profile\__ statement.
          *
          * @name __profile__
          * @function
