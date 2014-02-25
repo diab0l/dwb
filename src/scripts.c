@@ -7299,7 +7299,7 @@ init_macro(const char *content, const char *name, const char *fmt, ...) {
 void 
 init_script(const char *path, const char *script, gboolean is_archive, const char *template, int offset)
 {
-    char *debug = NULL, *prepared = NULL;
+    char *debug = NULL, *prepared = NULL, *tmp = NULL;
     if (s_global_context == NULL) 
         s_global_context = create_global_object();
 
@@ -7333,6 +7333,35 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
         prepared = init_macro(script, "assert", 
                 "if(!(\\1)){try{script.removeHandles();throw new Error();}catch(e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
                 path);
+        /** 
+         * Use this script only for the specified profiles. If the current profile doesn't match
+         * the specified profiles the script will stop immediately. This macro
+         * must be defined at the beginning of the script
+         * script.  Note that \__profile\__ is a macro, a ; is mandatory at the
+         * end of an \__profile\__ statement.
+         *
+         * @name __profile__
+         * @function
+         *
+         * @param {String...} profiles
+         *      Profiles that use this script 
+         *
+         * @since 1.8
+         *
+         * @example 
+         * //!javascript
+         *
+         * __profile__("default", "private");
+         *
+         * // not reached if the profile isn't default or private
+         *
+         * */
+        if (prepared != NULL) {
+            tmp = prepared;
+            prepared = init_macro(prepared, "profile", 
+                    "if(!([\\1].some(function(n) { return data.profile == n; }))){return;}");
+            g_free(tmp);
+        }
         if (prepared != NULL) {
             debug = g_strdup_printf(template, path, prepared);
             g_free(prepared);
