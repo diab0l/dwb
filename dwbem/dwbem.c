@@ -47,8 +47,10 @@
 
 #include <exar.h>
 
-#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
-#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
+//#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
+#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwbemtest/src/tip/src/?format=yaml"
+//#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
+#define REPO_BASE "https://bitbucket.org/portix/dwbemtest" 
 #define REPO_TREE "/raw/tip/src" 
 
 #define SKIP(line, c) do{ \
@@ -252,11 +254,17 @@ get_data(const char *name, const char *data, const char *template, int flags)
         format = "(?<=^|\n)//<%s%s|//>%s%s\\s*(?=\n|$)";
 
     regex = g_strdup_printf(format, nname, template, nname, template);
-    if (flags & F_MATCH_CONTENT) 
+    if (flags & F_MATCH_CONTENT) {
         new_data = data;
+    }
     else 
     {
-        g_file_get_contents(data, &content, NULL, NULL);
+        if (exar_check_version(data) == 0) {
+            content = (char*)exar_search_extract(data, "main.js", NULL);
+        }
+        else {
+            g_file_get_contents(data, &content, NULL, NULL);
+        }
         new_data = content;
     }
     if (new_data != NULL) 
@@ -690,6 +698,7 @@ install_extension(const char *name, int flags)
     char buffer[512];
     char meta[128];
     char *content = NULL;
+    const char *tmp = NULL;
 
     if (grep(m_meta_data, name, meta, sizeof(meta)) == -1) 
         die(1, "extension %s not found", name);
@@ -698,7 +707,16 @@ install_extension(const char *name, int flags)
     if (g_file_test(buffer, G_FILE_TEST_EXISTS)) 
     {
         notify("Using %s", buffer);
-        if (g_file_get_contents(buffer, &content, NULL, NULL) ) 
+        if (exar_check_version(buffer) == 0) {
+            content = (char*) exar_search_extract(buffer, "main.js", NULL);
+            if (add_to_loader(name, content, flags) == 0) 
+            {
+                update_installed(name, meta);
+                ret = 0;
+            }
+            g_free(content);
+        }
+        else if (g_file_get_contents(buffer, &content, NULL, NULL) ) 
         {
             if (add_to_loader(name, content, flags) == 0) 
             {
@@ -722,10 +740,20 @@ install_extension(const char *name, int flags)
             snprintf(buffer, sizeof(buffer), "%s/%s", m_user_dir, name);
             if (set_content(buffer, msg->response_body->data, msg->response_body->length))
             {
-                if (add_to_loader(name, msg->response_body->data, flags) == 0) 
+                if (exar_check_version(buffer) == 0) {
+                    content = (char *)exar_search_extract(buffer, "main.js", NULL);
+                    tmp = content;
+                }
+                else {
+                    tmp = msg->response_body->data;
+                }
+                if (add_to_loader(name, tmp, flags) == 0) 
                 {
                     update_installed(name, meta);
                     ret = 0;
+                }
+                if (content != NULL) {
+                    g_free(content);
                 }
             }
             else 
@@ -1109,8 +1137,18 @@ cl_info(const char *name, int flags)
     path = g_strconcat(REPO_BASE REPO_TREE, "/", name, NULL);
     msg = soup_message_new("GET", path);
     int status = soup_session_send_message(session, msg);
-    if (status == 200) 
-        data = get_data(NULL, msg->response_body->data, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
+    if (status == 200) {
+        if (exar_check_version_from_data(msg->response_body->data, msg->response_body->length) == 0) {
+            char *mainfile = (char *)exar_search_extract_from_data((unsigned char *)msg->response_body->data, "main.js", NULL);
+            if (mainfile != NULL) {
+                data = get_data(NULL, mainfile, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
+                g_free(mainfile);
+            }
+        }
+        else {
+            data = get_data(NULL, msg->response_body->data, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
+        }
+    }
 unwind: 
     if (data != NULL) 
     {
