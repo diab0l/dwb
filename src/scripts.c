@@ -56,6 +56,7 @@
 "var exports=arguments[0];"\
 "_initNewContext(this,arguments,'%s');"\
 "var xinclude=_xinclude.bind(this,this.path);"\
+"var xgettext=_xgettext.bind(this,this.path);"\
 "const script=this;"\
 "if(!exports.id)Object.defineProperty(exports,'id',{value:script.generateId()});/*<dwb*/"
 
@@ -2394,6 +2395,68 @@ error_out:
     return ret;
 }/*}}}*/
 
+
+static char * 
+xextract(JSContextRef ctx, size_t argc, const JSValueRef argv[], char **archive, off_t *fs, JSValueRef *exc)
+{
+    char *content = NULL, *larchive = NULL, *path = NULL;
+    if (argc < 2) 
+        return NULL;
+    if ((larchive = js_value_to_char(ctx, argv[0], -1, exc)) == NULL)
+        goto error_out;
+    if ((path = js_value_to_char(ctx, argv[1], -1, exc)) == NULL)
+        goto error_out;
+    if (*path == '~') {
+        content = (char*)exar_search_extract(larchive, path + 1, fs);
+    }
+    else {
+        content = (char*)exar_extract(larchive, path, fs);
+    }
+error_out: 
+    if (archive != NULL) 
+        *archive = larchive;
+    else 
+        g_free(larchive);
+    g_free(path);
+    return content;
+}
+/** 
+ * Load a textfile from an archive. This script can only be called from scripts
+ * inside an archive.
+ *
+ * @name xgettext
+ * @function
+ * @param {String} path
+ *      Path of the file in the archive, if the path starts with a ~ dwb
+ *      searches for the file in the archive, i.e. it doesn't have to be an
+ *      absolute archive path but the filename has to be unique
+ * @returns {String} 
+ *      The content of the file
+ *
+ * @example
+ * // Archive structure
+ * //
+ * // content/main.js
+ * // content/bar.html
+ * // content/foo.html
+ * var bar = xgettext("content/bar.html"); 
+ * var foo = xgettext("~foo.html"); 
+ * 
+ * */
+static JSValueRef
+global_xget_text(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    char *content = NULL;
+    JSValueRef ret = NIL;
+    off_t fs;
+
+    content = xextract(ctx, argc, argv, NULL, &fs, exc);
+    if (content != NULL) {
+        ret = js_char_to_value(ctx, content);
+    }
+    g_free(content);
+    return ret;
+}
 /** 
  * Include scripts from an archive.
  *
@@ -2413,7 +2476,9 @@ error_out:
  * @name xinclude
  * @function
  * @param {String} path
- *      Path of the file in the archive
+ *      Path of the file in the archive, if the path starts with a ~ dwb
+ *      searches for the file in the archive, i.e. it doesn't have to be an
+ *      absolute archive path but the filename has to be unique
  *
  * @returns {Object}
  *      The object returned from the included file.
@@ -2427,7 +2492,8 @@ error_out:
  *
  * // main.js
  * xinclude("content/foo.js");
- * xinclude("content/bar.js");
+ * // searches for bar.js in the archive
+ * xinclude("~bar.js");
  *
  * // content/foo.js
  * function getFoo() {
@@ -2451,31 +2517,20 @@ error_out:
  * }); 
  *
  * */
-
 static JSValueRef
 global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    char *archive = NULL, *path = NULL, *content = NULL;
+    char *content = NULL, *archive = NULL;
     JSValueRef ret = NIL;
     off_t fs;
 
-    if (argc < 2)
-        return NIL;
-    if ((archive = js_value_to_char(ctx, argv[0], -1, exc)) == NULL)
-        goto error_out;
-    if ((path = js_value_to_char(ctx, argv[1], -1, exc)) == NULL)
-        goto error_out;
-
-    content = (char*)exar_extract(archive, path, &fs);
+    content = xextract(ctx, argc, argv, &archive, &fs, exc);
     if (content != NULL)
     {
         JSValueRef exports[] = { get_exports(ctx, archive) };
         ret = do_include(ctx, archive, content, false, true, 1, exports, exc);
     }
-
-error_out:
     g_free(archive);
-    g_free(path);
     g_free(content);
     return ret;
 }
@@ -6388,6 +6443,7 @@ create_global_object()
         { "unbind",           global_unbind,          kJSDefaultAttributes },
         { "include",          global_include,         kJSDefaultAttributes },
         { "_xinclude",         global_xinclude,       kJSDefaultAttributes },
+        { "_xgettext",         global_xget_text,       kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
 
@@ -7333,6 +7389,9 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
         prepared = init_macro(script, "assert", 
                 "if(!(\\1)){try{script.removeHandles();throw new Error();}catch(e){io.debug('Assertion in %s:'+(e.line)+' failed: \\1');};return;}", 
                 path);
+
+        g_return_if_fail(prepared != NULL);
+
         /** 
          * Use this script only for the specified profiles. If the current profile doesn't match
          * the specified profiles the script will stop immediately. This macro
@@ -7356,19 +7415,13 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
          * // not reached if the profile isn't default or private
          *
          * */
-        if (prepared != NULL) {
-            tmp = prepared;
-            prepared = init_macro(prepared, "profile", 
-                    "if(!([\\1].some(function(n) { return data.profile == n; }))){return;}");
-            g_free(tmp);
-        }
-        if (prepared != NULL) {
-            debug = g_strdup_printf(template, path, prepared);
-            g_free(prepared);
-        }
-        else {
-            debug = g_strdup_printf(template, path, script);
-        }
+        tmp = prepared;
+        prepared = init_macro(tmp, "profile", 
+                "if(!([\\1].some(function(n) { return data.profile == n; }))){return;}");
+
+        g_return_if_fail(prepared != NULL);
+
+        debug = g_strdup_printf(template, path, prepared);
 
         JSObjectRef function = js_make_function(s_global_context, debug, path, offset);
         if (is_archive)
@@ -7377,6 +7430,8 @@ init_script(const char *path, const char *script, gboolean is_archive, const cha
         if (function != NULL) 
             s_script_list = g_slist_prepend(s_script_list, function);
 
+        g_free(prepared);
+        g_free(tmp);
         g_free(debug);
     }
 }
