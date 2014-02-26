@@ -47,10 +47,8 @@
 
 #include <exar.h>
 
-//#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
-#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwbemtest/src/tip/src/?format=yaml"
-//#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
-#define REPO_BASE "https://bitbucket.org/portix/dwbemtest" 
+#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
+#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
 #define REPO_TREE "/raw/tip/src" 
 
 #define SKIP(line, c) do{ \
@@ -1138,7 +1136,7 @@ cl_info(const char *name, int flags)
     msg = soup_message_new("GET", path);
     int status = soup_session_send_message(session, msg);
     if (status == 200) {
-        if (exar_check_version_from_data(msg->response_body->data, msg->response_body->length) == 0) {
+        if (exar_check_version_from_data((unsigned char *)msg->response_body->data, msg->response_body->length) == 0) {
             char *mainfile = (char *)exar_search_extract_from_data((unsigned char *)msg->response_body->data, "main.js", NULL);
             if (mainfile != NULL) {
                 data = get_data(NULL, mainfile, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
