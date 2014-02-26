@@ -7246,7 +7246,7 @@ exec_namespace_function(JSContextRef ctx, const char *namespace_name, const char
 gboolean
 scripts_load_chrome(JSObjectRef wv, const char *uri)
 {
-    g_return_if_fail(uri != NULL);
+    g_return_val_if_fail(uri != NULL, false);
     gboolean ret = false;
 
     EXEC_LOCK;
