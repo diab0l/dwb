@@ -155,7 +155,7 @@ exar_check_version(const char *archive);
 /*
  * Checks if the given data is an archive file with compatible version number
  *
- * @data  The archive
+ * @data  The raw archive data
  *
  * @returns 0 on success and -1 on error
  */
