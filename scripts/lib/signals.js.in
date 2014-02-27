@@ -408,12 +408,9 @@
                 value : function(name, callback)
                 {
                     var wv;
-                    for (var i=0; i<tabs.length; i++)
-                    {
-                        wv = tabs.nth(i);
-                        if (wv)
-                            wv.connect(name, function() { callback.apply(wv, arguments); });
-                    }
+                    tabs.forEach(function(w) {
+                        w.connect(name, function() { callback.apply(w, arguments); });
+                    });
                     Signal.connect("createTab", function(wv) {
                         wv.connect(name, function() { callback.apply(wv, arguments);});
                     });
