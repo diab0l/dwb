@@ -990,63 +990,6 @@
                 }
         });
     }
-    /**
-     * Standard javascript array with additional methods
-     * @name Array
-     * @class 
-     * */
-    /**
-     * Basically the same as Array.indexOf but without typechecking
-     * @name fastIndexOf
-     * @memberOf Array.prototype
-     * @function 
-     *
-     * @param {Object} object Object to search for
-     *
-     * @returns {Number}
-     *      The index of the object or -1 if the array doesn't contain the
-     *      object
-     * */
-    if (Array.prototype.fastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=0, l=this.length; i<l; ++i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
-    /**
-     * Basically the same as Array.lastIndexOf but without typechecking
-     * @name fastLastIndexOf
-     * @memberOf Array.prototype
-     * @function 
-     *
-     * @param {Object} object Object to search for
-     *
-     * @returns {Number}
-     *      The index of the object or -1 if the array doesn't contain the
-     *      object
-     * */
-    if (Array.prototype.fastLastIndexOf === undefined) 
-    {
-        Object.defineProperty(Array.prototype, "fastLastIndexOf", 
-        {
-            value : function (v) 
-            {
-                for (var i=this.length-1; i>=0; --i) {
-                    if (this[i] == v)
-                        return i;
-                }
-                return -1;
-            }
-        });
-    }
 
     /**
      * Standard RegExp object with additional methods

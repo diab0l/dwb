@@ -127,7 +127,7 @@ function listAdd(o, key, value, doWrite)
 {
     if (!o[key])
         o[key] = [];
-    if (o[key].fastIndexOf(value) == -1) 
+    if (o[key].indexOf(value) == -1) 
         o[key].push(value);
     if (doWrite) 
         io.write(config.whiteList, "w", JSON.stringify(persistentList));
@@ -135,7 +135,7 @@ function listAdd(o, key, value, doWrite)
 function listRemove(o, firstParty, domain, doWrite) 
 {
     var idx;
-    if (o[firstParty] && (idx = o[firstParty].fastIndexOf(domain)) != -1) 
+    if (o[firstParty] && (idx = o[firstParty].indexOf(domain)) != -1) 
     {
         o[firstParty].splice(idx, 1);
         if (o[firstParty].length === 0) 
@@ -164,12 +164,12 @@ function showMenu()
     for (i=0, l=domains.length; i<l; ++i)
     {
         (function(dom) {
-            if (persistentList._alwaysBlock && persistentList._alwaysBlock.fastIndexOf(dom) != -1) 
+            if (persistentList._alwaysBlock && persistentList._alwaysBlock.indexOf(dom) != -1) 
                 return;
 
-            whiteListed = persistentList[domain] && persistentList[domain].fastIndexOf(dom) != -1;
-            tmpWhiteListed = tmpList[domain] && tmpList[domain].fastIndexOf(dom) != -1;
-            if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
+            whiteListed = persistentList[domain] && persistentList[domain].indexOf(dom) != -1;
+            tmpWhiteListed = tmpList[domain] && tmpList[domain].indexOf(dom) != -1;
+            if (!persistentList._always || persistentList._always.indexOf(dom) == -1) 
             {
                 if (!whiteListed) {
                     labels.push({ 
@@ -209,7 +209,7 @@ function showMenu()
                 }
             }
             isWhiteListed = isWhiteListed || whiteListed || tmpWhiteListed;
-            if (!persistentList._always || persistentList._always.fastIndexOf(dom) == -1) 
+            if (!persistentList._always || persistentList._always.indexOf(dom) == -1) 
             {
                 labels.push({
                         left : "[" +  dom + "] allow on all sites", 
@@ -235,8 +235,8 @@ function showMenu()
             });
         })(domains[i]);
     }
-    var allAllowed = (persistentList._all && persistentList._all.fastIndexOf(domain) != -1) ||
-                         (tmpList._all && tmpList._all.fastIndexOf(domain) != -1);
+    var allAllowed = (persistentList._all && persistentList._all.indexOf(domain) != -1) ||
+                         (tmpList._all && tmpList._all.indexOf(domain) != -1);
     if (isWhiteListed || allAllowed) 
     {
         labels.unshift({
@@ -304,7 +304,7 @@ function unblockCurrent()
     var labels = [], i, l;
     for (i=0, l = domains.length; i<l; i++) 
     {
-        if (persistentList._alwaysBlock.fastIndexOf(domains[i]) != -1) 
+        if (persistentList._alwaysBlock.indexOf(domains[i]) != -1) 
             labels.push({ left : domains[i] });
     }
     if (labels.length > 0) 
@@ -372,25 +372,25 @@ var resourceCB = (function ()
             return false;
 
         o = getPrivate(wv);
-        if (o.domains.fastIndexOf(domain) == -1) 
+        if (o.domains.indexOf(domain) == -1) 
             o.domains.push(domain);
 
         // Check for requests that are always blocked
-        if (persistentList._alwaysBlock && persistentList._alwaysBlock.fastIndexOf(domain) != -1) 
+        if (persistentList._alwaysBlock && persistentList._alwaysBlock.indexOf(domain) != -1) 
             return blockRequest(wv, request, o, domain);
 
         // Check if domain is always allowed
-        if ((persistentList._all && persistentList._all.fastIndexOf(firstParty) != -1) || 
-                (tmpList._all && tmpList._all.fastIndexOf(firstParty) != -1)) 
+        if ((persistentList._all && persistentList._all.indexOf(firstParty) != -1) || 
+                (tmpList._all && tmpList._all.indexOf(firstParty) != -1)) 
             return false; 
 
         // Check request is always allowed
-        if (persistentList._always && persistentList._always.fastIndexOf(domain) != -1) 
+        if (persistentList._always && persistentList._always.indexOf(domain) != -1) 
             return false;
 
         // Check if request is whitelisted
-        if (  (!persistentList[firstParty]    || persistentList[firstParty].fastIndexOf(domain) == -1) && 
-                (!tmpList[firstParty] || tmpList[firstParty].fastIndexOf(domain) == -1)) 
+        if (  (!persistentList[firstParty]    || persistentList[firstParty].indexOf(domain) == -1) && 
+                (!tmpList[firstParty] || tmpList[firstParty].indexOf(domain) == -1)) 
             return blockRequest(wv, request, o, domain);
     };
 })();

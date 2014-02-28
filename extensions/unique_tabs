@@ -49,24 +49,21 @@ var signal;
 var removeDuplicates = function() 
 {
     var uris = [];
-    for (var i=tabs.length-1; i>=0; --i)
-    {
-        var uri = tabs.nth(i).uri;
-        if (uris.fastIndexOf(uri) == -1)
+    tabs.forEach(function(tab) {
+        var uri = tab.uri;
+        if (uris.indexOf(uri) == -1)
             uris.push(uri);
         else 
             execute((i+1) + "close_tab");
-    }
+    });
 };
 var onNavigation = function(wv, frame, request) 
 {
     var uri = request.uri;
-    for (var i=tabs.length-1; i>=0; --i)
-    {
-        if (tabs.nth(i).uri == uri && i != wv.number) 
-        {
+    tabs.forEach(function(tab, i) {
+        if (tab.uri == uri && i != wv.number) {
             /* defer execute, otherwise some other navigation callbacks will
-             * fail */
+            * fail */
             timer.start(10, function() {
                 execute((i+1) + "focus_tab");
                 if (/^\s*$/.test(wv.uri))
@@ -75,7 +72,7 @@ var onNavigation = function(wv, frame, request)
             });
             return true;
         }
-    }
+    });
     return false;
 };
 var toggleAutoFocus = function()
