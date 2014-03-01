@@ -3632,9 +3632,11 @@ dwb_get_scripts()
                 if (exar_check_version(path) == 0)
                 {
                     content = (char *) exar_search_extract(path, "main.js", NULL);
-                    if (content != NULL)
+                    if (content != NULL) {
                         scripts_init_archive(path, content);
-                    goto loop_end;
+                        exar_free(content);
+                    }
+                    continue;
                 }
                 else if (  (f = fopen(path, "r")) != NULL)  
                 {

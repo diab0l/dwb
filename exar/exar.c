@@ -112,10 +112,34 @@ get_offset(char *buffer, size_t n, const char *path, int *end)
     return offset;
 }
 static int 
+version_cmp(const unsigned char *data, int verbose) {
+    unsigned char orig_version[SZ_VERSION] = {0};
+    unsigned char version[SZ_VERSION] = {0};
+
+    memcpy(version, data, sizeof(version));
+    memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
+
+    LOG(2, "Checking filetype\n");
+    if (strncmp((char*)version, EXAR_VERSION_BASE, 5))
+    {
+        if (verbose)
+            fprintf(stderr, "Not an exar file?\n");
+        return EE_ERROR;
+    }
+
+    LOG(2, "Found version %s\n", data);
+    if (memcmp(version, orig_version, SZ_VERSION))
+    {
+        if (verbose)
+            fprintf(stderr, "Incompatible version number\n");
+        return EE_ERROR;
+    }
+    return EE_OK;
+}
+static int 
 check_version(FILE *f, int verbose)
 {
     unsigned char version[SZ_VERSION] = {0};
-    unsigned char orig_version[SZ_VERSION] = {0};
     LOG(2, "Reading version header\n");
     if (fread(version, 1, SZ_VERSION, f) != SZ_VERSION)
     {
@@ -128,23 +152,7 @@ check_version(FILE *f, int verbose)
             return EE_ERROR;
         }
     }
-    memcpy(orig_version, EXAR_VERSION, sizeof(orig_version));
-    LOG(2, "Checking filetype\n");
-    if (strncmp((char*)version, EXAR_VERSION_BASE, 5))
-    {
-        if (verbose)
-            fprintf(stderr, "Not an exar file?\n");
-        return EE_ERROR;
-    }
-
-    LOG(2, "Found version %s\n", version);
-    if (memcmp(version, orig_version, SZ_VERSION))
-    {
-        if (verbose)
-            fprintf(stderr, "Incompatible version number\n");
-        return EE_ERROR;
-    }
-    return EE_OK;
+    return version_cmp(version, verbose);
 }
 /*
  * Opens archive and checks version, mode is either read or read-write
@@ -172,11 +180,35 @@ close_file(FILE *f, const char *archive)
 }
 
 static int 
+check_header(struct exar_header_s *head, const char *size) {
+    char *endptr;
+    off_t fs;
+    if (head->eh_flag != DIR_FLAG && head->eh_flag != FILE_FLAG)
+    {
+        LOG(1, "No file flag found\n");
+        fprintf(stderr, "The archive seems to be corrupted\n");
+        return EE_ERROR;
+    }
+    if (head->eh_flag == FILE_FLAG)
+    {
+        fs = strtol(size, &endptr, 16);
+        if (*endptr)
+        {
+            LOG(1, "Cannot determine file size\n");
+            fprintf(stderr, "The archive seems to be corrupted\n");
+            return EE_ERROR;
+        }
+        head->eh_size = fs;
+    }
+    else 
+        head->eh_size = 0;
+    return EE_OK;
+}
+
+static int 
 get_file_header(FILE *f, struct exar_header_s *head)
 {
-    char *endptr;
     char header[HDR_NAME];
-    off_t fs;
     char rb;
     size_t i = 0;
     int st_version = 0;
@@ -193,25 +225,9 @@ get_file_header(FILE *f, struct exar_header_s *head)
 
     head->eh_flag = header[HDR_DFLAG];
 
-    if (head->eh_flag != DIR_FLAG && head->eh_flag != FILE_FLAG)
-    {
-        LOG(1, "No file flag found\n");
-        fprintf(stderr, "The archive seems to be corrupted\n");
+    if (check_header(head, &header[HDR_SIZE]) == EE_ERROR) {
         return EE_ERROR;
     }
-    if (head->eh_flag == FILE_FLAG)
-    {
-        fs = strtol(&header[HDR_SIZE], &endptr, 16);
-        if (*endptr)
-        {
-            LOG(1, "Cannot determine file size\n");
-            fprintf(stderr, "The archive seems to be corrupted\n");
-            return EE_ERROR;
-        }
-        head->eh_size = fs;
-    }
-    else 
-        head->eh_size = 0;
 
     while (fread(&rb, 1, 1, f) > 0)
     {
@@ -225,6 +241,50 @@ get_file_header(FILE *f, struct exar_header_s *head)
             return EE_ERROR;
         }
     }
+
+    LOG(2, "Found file header (%s, %c, %jd)\n", head->eh_name, head->eh_flag, (intmax_t)head->eh_size);
+    return EE_OK;
+}
+static int 
+get_file_header_from_data(const unsigned char *data, int *offset, struct exar_header_s *head)
+{
+    char size[SZ_SIZE];
+    size_t i = 0;
+    int st_version = 0;
+    const unsigned char *tmp = data;;
+
+    *offset = 0;
+
+    if ((st_version = version_cmp(tmp, 0)) != EE_OK)
+        return st_version;
+    tmp += SZ_VERSION;
+
+    LOG(2, "Reading file header\n");
+    memcpy(&(head->eh_flag), tmp, SZ_DFLAG);
+    tmp += SZ_DFLAG;
+    memcpy(size, tmp, SZ_SIZE);
+    tmp += SZ_SIZE;
+
+    if (check_header(head, size) == EE_ERROR) {
+        return EE_ERROR;
+    }
+    *offset = SZ_VERSION + SZ_DFLAG + SZ_SIZE;
+    while (*tmp && *tmp != '\0')
+    {
+        head->eh_name[i] = *tmp;
+        i++;
+        tmp++;
+        if (i == EXAR_NAME_MAX)
+        {
+            fprintf(stderr, "Cannot get filename\n");
+            return EE_ERROR;
+        }
+    }
+    if (*tmp != '\0') {
+        LOG(1, "The archive seems to be corrupted\n");
+        return EE_ERROR;
+    }
+    *offset += i+1;
 
     LOG(2, "Found file header (%s, %c, %jd)\n", head->eh_name, head->eh_flag, (intmax_t)head->eh_size);
     return EE_OK;
@@ -247,7 +307,7 @@ next_file(FILE *f, struct exar_header_s *header)
 static int 
 find_cmp(const char *name, const char *search)
 {
-    char buffer[EXAR_NAME_MAX];
+    char buffer[EXAR_NAME_MAX] = {0};
     if (strcmp(name, search) != 0)
     {
         size_t offset = get_offset(buffer, EXAR_NAME_MAX, name, NULL);
@@ -284,7 +344,7 @@ extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *
     FILE *f = NULL;
     unsigned char *ret = NULL;
     if (s != NULL)
-        *s = 0;
+        *s = -1;
 
     if ((f = open_archive(archive, "r")) == NULL)
         goto finish;
@@ -299,15 +359,14 @@ extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *
                 if (fread(ret, 1, header.eh_size, f) != (size_t)header.eh_size)
                 {
                     fprintf(stderr, "Failed to read %s\n", header.eh_name);
-                    *s = -1;
-                    free(ret);
-                    ret = NULL;
+                    exar_free(ret);
                 }
                 else if (s != NULL)
                     *s = header.eh_size;
             }
-            else 
+            else {
                 fprintf(stderr, "%s is a directory, only regular files can be extracted\n", file);
+            }
             goto finish;
         }
         else if (header.eh_flag == FILE_FLAG)
@@ -320,6 +379,37 @@ extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *
 finish:
     close_file(f, archive);
     return ret;
+}
+static unsigned char *
+extract_from_data(const unsigned char *data, const char *file, off_t *s, int (*cmp)(const char *, const char *)) {
+    (void) data, (void) s, (void) cmp, (void) file;
+    unsigned char *ret = NULL;
+    struct exar_header_s header = EXAR_HEADER_EMPTY;
+    int offset = 0;
+
+    if (s != NULL) 
+        *s = -1;
+
+    while((get_file_header_from_data(data, &offset, &header) == EE_OK)) {
+        data += offset;
+        if (cmp(header.eh_name, file) == 0) {
+            if (header.eh_flag == FILE_FLAG) {
+                ret = xcalloc(header.eh_size, sizeof(unsigned char));
+                memcpy(ret, data, header.eh_size);
+                if (s != NULL) {
+                    *s = header.eh_size;
+                }
+                return ret;
+            }
+            else {
+                fprintf(stderr, "%s is a directory, only regular files can be extracted\n", file);
+                return NULL;
+            }
+        }
+        data += header.eh_size;
+    }
+    fprintf(stderr, "File %s was not found.\n", file);
+    return NULL;
 }
 
 static int 
@@ -569,6 +659,20 @@ exar_search_extract(const char *archive, const char *file, off_t *s)
 
     return extract(archive, file, s, find_cmp);
 }
+unsigned char * 
+exar_extract_from_data(const unsigned char *data, const char *file, off_t *s)
+{
+    assert(data != NULL);
+
+    return extract_from_data(data, file, s, strcmp);
+}
+unsigned char * 
+exar_search_extract_from_data(const unsigned char *data, const char *file, off_t *s)
+{
+    assert(data != NULL);
+
+    return extract_from_data(data, file, s, find_cmp);
+}
 int 
 exar_delete(const char *archive, const char *file)
 {
@@ -696,8 +800,17 @@ exar_check_version(const char *archive)
     close_file(f, archive);
     return result;
 }
+int
+exar_check_version_from_data(const unsigned char *data, size_t s)
+{
+    assert(data != NULL);
+
+    if (s < SZ_VERSION) 
+        return EE_ERROR;
+    return version_cmp(data, 0) == EE_OK ? EE_OK : EE_ERROR;
+}
 void 
-exar_verbose(unsigned char v)
+exar_verbose(const unsigned char v)
 {
     s_verbose = v & EXAR_VERBOSE_MASK;
 }

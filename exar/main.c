@@ -91,6 +91,16 @@ int
 main (int argc, char **argv)
 {
     int flag = 0;
+    char buffer[4096] = {0};
+    FILE *f = fopen(argv[1], "r");
+    exar_verbose(EXAR_VERBOSE_MASK);
+    fread(buffer, 1, 4096, f);
+    puts(buffer);
+    char *data = (char*)exar_extract_from_data((unsigned char *)buffer, "foo/main.js", NULL);
+    puts(data);
+    //printf("%d %lu\n", exar_check_version_from_data(buffer), strlen(buffer));
+    fclose(f);
+    return 0;
     if (argc < 3)
     {
         help(EXIT_FAILURE);

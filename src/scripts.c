@@ -2348,7 +2348,8 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
 {
     JSValueRef ret = NIL;
     gboolean global = false;
-    char *path = NULL, *content = NULL; 
+    char *path = NULL, *content = NULL, *econtent = NULL; 
+    const char *script;
     JSValueRef exports[1];
     gboolean is_archive = false;
 
@@ -2363,34 +2364,38 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
 
     if (exar_check_version(path) == 0)
     {
-        content = (char*) exar_search_extract(path, "main.js", NULL);
-        if (content == NULL)
+        econtent = (char*) exar_search_extract(path, "main.js", NULL);
+        if (econtent == NULL)
         {
             js_make_exception(ctx, exc, EXCEPTION("include: main.js was not found in %s."), path);
             goto error_out;
         }
         exports[0] = get_exports(ctx, path);
         is_archive = true;
+        script = econtent;
     }
-    else if ( (content = util_get_file_content(path, NULL)) == NULL) 
+    else if ( (content = util_get_file_content(path, NULL)) != NULL) 
     {
+        script = content;
+    }
+    else {
         js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
         goto error_out;
     }
 
-    const char *tmp = content;
-    if (*tmp == '#') 
+    if (*script == '#') 
     {
         do {
-            tmp++;
-        } while(*tmp && *tmp != '\n');
-        tmp++;
+            script++;
+        } while(*script && *script != '\n');
+        script++;
     }
 
-    ret = do_include(ctx, path, tmp, global, is_archive, is_archive ? 1 : 0, is_archive ? exports : NULL, exc);
+    ret = do_include(ctx, path, script, global, is_archive, is_archive ? 1 : 0, is_archive ? exports : NULL, exc);
 
 error_out: 
     g_free(content);
+    exar_free(econtent);
     g_free(path);
     return ret;
 }/*}}}*/
@@ -2531,7 +2536,7 @@ global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t 
         ret = do_include(ctx, archive, content, false, true, 1, exports, exc);
     }
     g_free(archive);
-    g_free(content);
+    exar_free(content);
     return ret;
 }
 

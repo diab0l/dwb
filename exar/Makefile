@@ -1,6 +1,6 @@
 ORIG_CFLAGS := $(CFLAGS)
 
-CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -Os
+CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -O0 -g 
 CFLAGS += $(ORIG_CFLAGS)
 
 DCFLAGS += -g -O0 -Wall -pedantic -Werror -Wextra -std=c99 
@@ -25,7 +25,7 @@ debug:
 	make CFLAGS="$(DCFLAGS)"
 
 cgdb: 
-	make CFLAGS="$(DCFLAGS)"
+	make CFLAGS="$(DCFLAGS)" exar
 	cgdb exar
 
 clean: 

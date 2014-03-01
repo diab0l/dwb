@@ -15,7 +15,7 @@ SYSTEM_EXTENSION_DIR=$(PREFIX)/share/dwb/extensions
 
 CFLAGS := $(CFLAGS)
 CFLAGS += -std=c99 
-CFLAGS += -Wall -g
+CFLAGS += -Wall -g -O0
 CFLAGS += -Wextra -Werror=format-security 
 CFLAGS += $(shell pkg-config --cflags $(LIBS))
 CFLAGS += -DSYSTEM_EXTENSION_DIR=\"$(SYSTEM_EXTENSION_DIR)\"
