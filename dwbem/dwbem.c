@@ -47,8 +47,10 @@
 
 #include <exar.h>
 
-#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
-#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
+#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwbemtest/src/tip/src/?format=yaml"
+#define REPO_BASE "https://bitbucket.org/portix/dwbemtest" 
+//#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
+//#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
 #define REPO_TREE "/raw/tip/src" 
 
 #define SKIP(line, c) do{ \
@@ -241,7 +243,7 @@ static char *
 get_data(const char *name, const char *data, const char *template, int flags) 
 {
     char *ret = NULL;
-    char *content = NULL, *regex = NULL;
+    char *content = NULL, *regex = NULL, *econtent = NULL;
     const char *new_data = NULL;
     const char *format;
     const char *nname = name == NULL ? "" : name;
@@ -258,12 +260,13 @@ get_data(const char *name, const char *data, const char *template, int flags)
     else 
     {
         if (exar_check_version(data) == 0) {
-            content = (char*)exar_search_extract(data, "main.js", NULL);
+            econtent = (char*)exar_search_extract(data, "main.js", NULL);
+            new_data = econtent;
         }
         else {
             g_file_get_contents(data, &content, NULL, NULL);
+            new_data = content;
         }
-        new_data = content;
     }
     if (new_data != NULL) 
     {
@@ -273,6 +276,7 @@ get_data(const char *name, const char *data, const char *template, int flags)
         g_strfreev(matches);
     }
     g_free(content);
+    exar_free(econtent);
     g_free(regex);
     return ret;
 }
@@ -728,7 +732,7 @@ install_extension(const char *name, int flags)
                 update_installed(name, meta);
                 ret = 0;
             }
-            g_free(content);
+            exar_free(content);
         }
         else if (g_file_get_contents(buffer, &content, NULL, NULL) ) 
         {
@@ -766,9 +770,7 @@ install_extension(const char *name, int flags)
                     update_installed(name, meta);
                     ret = 0;
                 }
-                if (content != NULL) {
-                    g_free(content);
-                }
+                exar_free(content);
             }
             else 
                 print_error("Saving %s failed", name);
@@ -1133,19 +1135,21 @@ cl_info(const char *name, int flags)
     (void) flags;
 
     SoupMessage *msg = NULL;
-    char *data = NULL, *path;
+    char *path, *data = NULL;
     const char *tmp;
 
     path = g_build_filename(m_system_dir, name, NULL);
-    if ((data = get_data(NULL, path, "INFO", F_MATCH_MULTILINE)) != NULL) 
+    if ((data = get_data(NULL, path, "INFO", F_MATCH_MULTILINE)) != NULL) {
+        tmp = data;
         goto unwind;
-    FREE0(data);
+    }
     g_free(path);
 
     path = g_build_filename(m_user_dir, name, NULL);
-    if ((data = get_data(NULL, path, "INFO", F_MATCH_MULTILINE)) != NULL) 
+    if ((data = get_data(NULL, path, "INFO", F_MATCH_MULTILINE)) != NULL)  {
+        tmp = data;
         goto unwind;
-    FREE0(data);
+    }
     g_free(path);
 
     path = g_strconcat(REPO_BASE REPO_TREE, "/", name, NULL);
@@ -1156,17 +1160,17 @@ cl_info(const char *name, int flags)
             char *mainfile = (char *)exar_search_extract_from_data((unsigned char *)msg->response_body->data, "main.js", NULL);
             if (mainfile != NULL) {
                 data = get_data(NULL, mainfile, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
-                g_free(mainfile);
+                exar_free(mainfile);
             }
         }
         else {
             data = get_data(NULL, msg->response_body->data, "INFO", F_MATCH_MULTILINE | F_MATCH_CONTENT);
         }
+        tmp = data;
     }
 unwind: 
-    if (data != NULL) 
+    if (tmp != NULL) 
     {
-        tmp = data;
         SKIP_SPACE(tmp);
         printf("\033[1m%s\033[0m - %s", name, tmp);
     }
@@ -1278,7 +1282,7 @@ exar_xextract(const char *archive, const char *path,
         {
             fprintf(stderr, "Error extracting %s from %s\n", path, archive);
         }
-        free(content);
+        exar_free(content);
     }
 }
 void 

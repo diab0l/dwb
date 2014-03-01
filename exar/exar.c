@@ -269,7 +269,7 @@ get_file_header_from_data(const unsigned char *data, int *offset, struct exar_he
         return EE_ERROR;
     }
     *offset = SZ_VERSION + SZ_DFLAG + SZ_SIZE;
-    while (*tmp != '\0')
+    while (*tmp && *tmp != '\0')
     {
         head->eh_name[i] = *tmp;
         i++;
@@ -280,7 +280,10 @@ get_file_header_from_data(const unsigned char *data, int *offset, struct exar_he
             return EE_ERROR;
         }
     }
-    // terminating null byte
+    if (*tmp != '\0') {
+        LOG(1, "The archive seems to be corrupted\n");
+        return EE_ERROR;
+    }
     *offset += i+1;
 
     LOG(2, "Found file header (%s, %c, %jd)\n", head->eh_name, head->eh_flag, (intmax_t)head->eh_size);

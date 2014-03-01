@@ -46,6 +46,7 @@ enum {
     EXAR_VERBOSE_L3 = 1<<2,
 };
 #define EXAR_VERBOSE_MASK (0x7)
+#define exar_free(x)  ((x) = (x) == NULL ? NULL : (free(x), NULL))
 
 /* 
  * Packs a file or directory
