@@ -47,10 +47,8 @@
 
 #include <exar.h>
 
-#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwbemtest/src/tip/src/?format=yaml"
-#define REPO_BASE "https://bitbucket.org/portix/dwbemtest" 
-//#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
-//#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
+#define API_BASE "https://api.bitbucket.org/1.0/repositories/portix/dwb_extensions/src/tip/src/?format=yaml"
+#define REPO_BASE "https://bitbucket.org/portix/dwb_extensions" 
 #define REPO_TREE "/raw/tip/src" 
 
 #define SKIP(line, c) do{ \
