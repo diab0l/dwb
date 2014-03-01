@@ -2426,7 +2426,7 @@ error_out:
     return content;
 }
 /** 
- * Load a textfile from an archive. This script can only be called from scripts
+ * Load a textfile from an archive. This function can only be called from scripts
  * inside an archive.
  *
  * @name xgettext
@@ -2459,7 +2459,7 @@ global_xget_text(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t
     if (content != NULL) {
         ret = js_char_to_value(ctx, content);
     }
-    g_free(content);
+    exar_free(content);
     return ret;
 }
 /** 
