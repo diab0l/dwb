@@ -359,8 +359,7 @@ extract(const char *archive, const char *file, off_t *s, int (*cmp)(const char *
                 if (fread(ret, 1, header.eh_size, f) != (size_t)header.eh_size)
                 {
                     fprintf(stderr, "Failed to read %s\n", header.eh_name);
-                    free(ret);
-                    ret = NULL;
+                    exar_free(ret);
                 }
                 else if (s != NULL)
                     *s = header.eh_size;
