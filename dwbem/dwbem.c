@@ -1134,7 +1134,7 @@ cl_info(const char *name, int flags)
 
     SoupMessage *msg = NULL;
     char *path, *data = NULL;
-    const char *tmp;
+    const char *tmp = NULL;
 
     path = g_build_filename(m_system_dir, name, NULL);
     if ((data = get_data(NULL, path, "INFO", F_MATCH_MULTILINE)) != NULL) {

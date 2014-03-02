@@ -1,6 +1,6 @@
 ORIG_CFLAGS := $(CFLAGS)
 
-CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -O0 -g 
+CFLAGS := -Wall -pedantic -Werror -Wextra -std=c99 -O2
 CFLAGS += $(ORIG_CFLAGS)
 
 DCFLAGS += -g -O0 -Wall -pedantic -Werror -Wextra -std=c99 
