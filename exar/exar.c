@@ -469,7 +469,7 @@ ftw_pack(const char *fpath, const struct stat *st, int tf)
         LOG(3, "Skipping output file %s\n", s_out_path);
         return 0;
     }
-    
+
     filename = strrchr(stripped, '/');
 
     if (filename == NULL) 

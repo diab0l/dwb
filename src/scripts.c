@@ -58,7 +58,9 @@
 "var xinclude=_xinclude.bind(this,this.path);"\
 "var xgettext=_xgettext.bind(this,this.path);"\
 "const script=this;"\
-"if(!exports.id)Object.defineProperty(exports,'id',{value:script.generateId()});/*<dwb*/"
+"if(!exports.id)Object.defineProperty(exports,'id',{value:script.generateId()});"\
+"var xprovide=function(n,m,o){provide(n+exports.id,m,o);};"\
+"var xrequire=function(n){return require(n+exports.id);};/*<dwb*/"
 
 #define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
 
@@ -2439,6 +2441,31 @@ error_out:
     g_free(path);
     return content;
 }
+/** 
+ * Same as {@link provide}, but can only be called from an archive. The module
+ * can only be required by the same archive
+ * inside an archive.
+ *
+ * @name xprovide
+ * @function
+ * @param {String} name The name of the module
+ * @param {Object} module The module
+ * @param {Boolean} [overwrite]
+ *      Whether to overwrite existing module with
+ *      the same name, default false
+ * */
+/** 
+ * Same as {@link require}, but can only be called from an archive and xrequire
+ * is always synchronous. Only modules provided in the same archive can be
+ * loaded with xrequire.
+ *
+ * @name xrequire
+ * @function
+ * @param {String} name The name of the module
+ *
+ * @returns {Object} 
+ *      The module
+ * */
 /** 
  * Load a textfile from an archive. This function can only be called from scripts
  * inside an archive.
