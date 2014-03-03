@@ -1997,11 +1997,14 @@ void
 scripts_clear_keymap() {
     if (s_keymap_dirty) {
         EXEC_LOCK;
-        for (GList *l = dwb.keymap; l; l=l->next) {
-            KeyMap *km = l->data;
+        GList *l, *next = dwb.keymap;
+        KeyMap *km;
+        while (next) {
+            l = next;
+            next = next->next;
+            km = l->data;
             if (km->map->prop & CP_SCRIPT && km->map->arg.i == 0) {
                 unbind_free_keymap(s_global_context, l);
-                break;
             }
         }
         EXEC_UNLOCK;
