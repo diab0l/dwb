@@ -462,10 +462,23 @@ ftw_pack(const char *fpath, const struct stat *st, int tf)
     FILE *f = NULL;
     char flag;
     const char *stripped = &fpath[s_offset];
+    const char *filename;
 
     if (!strcmp(stripped, s_out_path))
     {
         LOG(3, "Skipping output file %s\n", s_out_path);
+        return 0;
+    }
+    
+    filename = strrchr(stripped, '/');
+
+    if (filename == NULL) 
+        filename = stripped;
+    else 
+        filename+=1;
+
+    if (*filename == '.') {
+        LOG(1, "Ignoring hidden file %s\n", stripped);
         return 0;
     }
     LOG(1, "Packing %s (archive path: %s)\n", fpath, stripped);
