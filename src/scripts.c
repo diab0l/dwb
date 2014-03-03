@@ -276,6 +276,7 @@ static GPtrArray *s_gobject_signals = NULL;
 static gboolean s_debugging = false;
 static GHashTable *s_exports = NULL;
 static GSList *s_servers = NULL;
+static gboolean s_keymap_dirty = false;
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -1993,10 +1994,19 @@ scripts_eval_key(KeyMap *m, Arg *arg)
 }/*}}}*/
 
 void 
-scripts_clear_keymap(KeyMap *km) {
-    EXEC_LOCK;
-    unbind_free_keymap(s_global_context, g_list_find(dwb.keymap, km));
-    EXEC_UNLOCK;
+scripts_clear_keymap() {
+    if (s_keymap_dirty) {
+        EXEC_LOCK;
+        for (GList *l = dwb.keymap; l; l=l->next) {
+            KeyMap *km = l->data;
+            if (km->map->prop & CP_SCRIPT && km->map->arg.i == 0) {
+                unbind_free_keymap(s_global_context, l);
+                break;
+            }
+        }
+        EXEC_UNLOCK;
+        s_keymap_dirty = false;
+    }
 }
 
 
@@ -2049,6 +2059,7 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, si
         // don't free it yet, if unbind is called from inside a bind
         // callback parse_command_line and eval_key would use an invalid keymap
         KEYMAP_MAP(l)->arg.i = 0;
+        s_keymap_dirty = true;
 
         for (GList *gl = dwb.override_keys; gl; gl=gl->next)
         {

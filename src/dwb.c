@@ -3194,6 +3194,8 @@ dwb_eval_key(GdkEventKey *e)
         }
     }
 
+    scripts_clear_keymap();
+
     for (GList *l = dwb.keymap; l; l=l->next) 
     {
         KeyMap *km = l->data;
@@ -3229,9 +3231,6 @@ dwb_eval_key(GdkEventKey *e)
     {
         commands_simple_command(tmp);
         ret = true;
-        if (SCRIPTS_INVALID_BIND(tmp)) {
-            scripts_clear_keymap(tmp);
-        }
     }
     else if (e->state & GDK_CONTROL_MASK || !isprint) 
         ret = false;
@@ -3291,6 +3290,7 @@ dwb_insert_mode(void)
 static DwbStatus 
 dwb_command_mode(void) 
 {
+    scripts_clear_keymap();
     dwb.state.mode = COMMAND_MODE;
     dwb_set_normal_message(dwb.state.fview, false, ":");
     entry_focus();
@@ -5209,6 +5209,8 @@ dwb_parse_command_line(const char *line)
     if (!token[0]) 
         return STATUS_OK;
 
+    scripts_clear_keymap();
+
     bak = token[0];
 
     if (token[1])
@@ -5277,9 +5279,6 @@ dwb_parse_command_line(const char *line)
     if (!(m->map->prop & CP_DONT_CLEAN) || (m->map->prop & CP_NEEDS_ARG && has_arg) ) 
         dwb_change_mode(NORMAL_MODE, dwb.state.message_id == 0);
 
-    if (SCRIPTS_INVALID_BIND(m)) {
-        scripts_clear_keymap(m);
-    }
     return ret;
 }/*}}}*/
 void 

@@ -110,9 +110,6 @@
         }
 
     });
-    function _removeBindHandle()  {
-        unbind(this.id);
-    }
     Object.defineProperties(this, { 
         /** 
          * Bind a function to a shortcut or commandline command, use {@link unbind} to remove
@@ -143,7 +140,12 @@
             value : function() {
                 var id = _bind.apply(null, arguments);
                 if (id != -1) {
-                    return { id : id, remove : _removeBindHandle };
+                    return { 
+                        id : id, 
+                        remove : function() {
+                            unbind(id);
+                        }
+                    };
                 }
                 return { remove : function() {} };
             }
