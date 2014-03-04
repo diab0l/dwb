@@ -1,5 +1,7 @@
 // See COPYING for copyright and license details
 (function() {
+    var system = namespace("system");
+
     Object.defineProperties(system, {
         "spawn" : 
         {

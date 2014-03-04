@@ -1,5 +1,7 @@
 // See COPYING for copyright and license details
 (function () {
+    var io = namespace("io");
+
     var prefixMessage     = "\n==> DEBUG [MESSAGE]    : ";
     var prefixFile        = "\n==> DEBUG [FILE]       : ";
     var prefixError       = "\n==> DEBUG [ERROR]      : ";

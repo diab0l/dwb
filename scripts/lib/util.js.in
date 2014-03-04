@@ -1,5 +1,9 @@
 // See COPYING for copyright and license details
 (function () {
+    var util    = namespace("util");
+    var data    = namespace("data");
+    var tabs    = namespace("tabs");
+
     Object.defineProperties(util, 
     { 
         /**

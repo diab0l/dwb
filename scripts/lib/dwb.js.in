@@ -1,5 +1,11 @@
 // See COPYING for copyright and license details
 (function() {
+    var gui     = namespace("gui");
+    var io      = namespace("io");
+    var tabs    = namespace("tabs");
+    var timer   = namespace("timer");
+    var util    = namespace("util");
+
     var _modules = {};
     var _requires = {};
     var _callbacks = [];

@@ -1,6 +1,8 @@
 // See COPYING for copyright and license details
-(function ()  
-{
+(function ()  {
+    var signals = namespace("signals");
+    var tabs    = namespace("tabs");
+
     var _sigCount = {};
     var _byName = {};
     var _byId = {};

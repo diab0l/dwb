@@ -279,6 +279,22 @@ static gboolean s_debugging = false;
 static GHashTable *s_exports = NULL;
 static GSList *s_servers = NULL;
 static gboolean s_keymap_dirty = false;
+enum {
+    NAMESPACE_CLIPBOARD, 
+    NAMESPACE_CONSOLE, 
+    NAMESPACE_DATA, 
+    NAMESPACE_EXTENSIONS, 
+    NAMESPACE_GUI, 
+    NAMESPACE_IO, 
+    NAMESPACE_NET, 
+    NAMESPACE_SIGNALS, 
+    NAMESPACE_SYSTEM, 
+    NAMESPACE_TABS, 
+    NAMESPACE_TIMER, 
+    NAMESPACE_UTIL, 
+    NAMESPACE_LAST,
+};
+static JSValueRef s_namespaces[NAMESPACE_LAST];
 
 /* Only defined once */
 static JSValueRef UNDEFINED, NIL;
@@ -2220,6 +2236,37 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
         exit(0);
     return JSValueMakeBoolean(ctx, status == STATUS_OK);
 }/*}}}*/
+static JSValueRef 
+global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    const static char *mapping[] = {
+        [NAMESPACE_CLIPBOARD] = "clipboard",
+        [NAMESPACE_CONSOLE] = "console",
+        [NAMESPACE_DATA] = "data",
+        [NAMESPACE_EXTENSIONS] = "extensions",
+        [NAMESPACE_GUI] = "gui",
+        [NAMESPACE_IO] = "io",
+        [NAMESPACE_NET] = "net",
+        [NAMESPACE_SIGNALS] = "signals",
+        [NAMESPACE_SYSTEM] = "system",
+        [NAMESPACE_TABS] = "tabs",
+        [NAMESPACE_TIMER] = "timer",
+        [NAMESPACE_UTIL] = "util",
+    };
+    JSValueRef ret = NIL;
+    if (argc > 0) {
+        char *name = js_value_to_char(ctx, argv[0], PROP_LENGTH, exc);
+        if (name != NULL) {
+            for (int i; i<NAMESPACE_LAST; i++) {
+                if (!strcmp(name, mapping[i])) {
+                    ret = s_namespaces[i];
+                    break;
+                }
+            } 
+            g_free(name);
+        }
+    }
+    return ret;
+}
 
 /** 
  * Exit dwb
@@ -2443,8 +2490,7 @@ error_out:
 }
 /** 
  * Same as {@link provide}, but can only be called from an archive. The module
- * can only be required by the same archive
- * inside an archive.
+ * can only be required by the same archive in which the module was provided.
  *
  * @name xprovide
  * @function
@@ -6290,6 +6336,7 @@ create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSClassAttrib
 {
     JSObjectRef ret = JSObjectMake(ctx, class, private);
     js_set_property(ctx, obj, name, ret, attr, NULL);
+    JSValueProtect(ctx, ret);
     return ret;
 }/*}}}*/
 
@@ -6473,6 +6520,7 @@ create_global_object()
 {
     pthread_rwlock_wrlock(&s_context_lock);
     JSClassDefinition cd; 
+    JSValueRef o;
     s_ref_quark = g_quark_from_static_string("dwb_js_ref");
     JSGlobalContextRef ctx;
 
@@ -6483,6 +6531,7 @@ create_global_object()
     };
 
     JSStaticFunction global_functions[] = { 
+        { "namespace",        global_namespace,         kJSDefaultAttributes },
         { "execute",          global_execute,         kJSDefaultAttributes },
         { "exit",             global_exit,            kJSDefaultAttributes },
         { "_bind",             global_bind,            kJSDefaultAttributes },
@@ -6526,7 +6575,8 @@ create_global_object()
         { 0, 0, 0,  0 }, 
     };
     class = create_class("data", NULL, data_values, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "data", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "data", NULL);
+    s_namespaces[NAMESPACE_DATA] = o;
     JSClassRelease(class);
 
     /**
@@ -6543,7 +6593,8 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("timer", timer_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "timer", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "timer", NULL);
+    s_namespaces[NAMESPACE_TIMER] = o;
     JSClassRelease(class);
     /**
      * @namespace 
@@ -6560,7 +6611,8 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("net", net_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
+    s_namespaces[NAMESPACE_NET] = o;
     JSClassRelease(class);
 
 
@@ -6600,7 +6652,8 @@ create_global_object()
         { 0,           0,           0 },
     };
     class = create_class("io", io_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
+    o = create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
+    s_namespaces[NAMESPACE_IO] = o;
     JSClassRelease(class);
 
     /**
@@ -6622,7 +6675,8 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("system", system_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "system", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "system", NULL);
+    s_namespaces[NAMESPACE_SYSTEM] = o;
     JSClassRelease(class);
 
     JSStaticValue tab_values[] = { 
@@ -6650,7 +6704,8 @@ create_global_object()
      * });
      * */
     class = create_class("tabs", NULL, tab_values, tabs_get);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "tabs", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "tabs", NULL);
+    s_namespaces[NAMESPACE_TABS] = o;
     JSClassRelease(class);
 
     /**
@@ -6714,11 +6769,13 @@ create_global_object()
     cd.setProperty = signal_set;
     class = JSClassCreate(&cd);
 
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "signals", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "signals", NULL);
+    s_namespaces[NAMESPACE_SIGNALS] = o;
     JSClassRelease(class);
 
     class = create_class("extensions", NULL, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
+    s_namespaces[NAMESPACE_EXTENSIONS] = o;
     JSClassRelease(class);
 
     class = create_class("Signal", NULL, NULL, NULL);
@@ -6747,7 +6804,8 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("util", util_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
+    s_namespaces[NAMESPACE_UTIL] = o;
     JSClassRelease(class);
 
     /**
@@ -6764,7 +6822,8 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     class = create_class("clipboard", clipboard_functions, NULL, NULL);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
+    s_namespaces[NAMESPACE_CLIPBOARD] = o;
     JSClassRelease(class);
 
 
@@ -6778,7 +6837,8 @@ create_global_object()
      * @name console 
      * @static 
      * */
-    create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
+    o = create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
+    s_namespaces[NAMESPACE_CONSOLE] = o;
 
     /** 
      * Base class for webkit/gtk objects
@@ -7114,7 +7174,8 @@ create_global_object()
     cd.className = "gui";
     cd.staticValues = gui_values;
     class = JSClassCreate(&cd);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "gui", NULL);
+    o = create_object(ctx, class, global_object, kJSDefaultAttributes, "gui", NULL);
+    s_namespaces[NAMESPACE_GUI] = o;
     JSClassRelease(class);
 
     /** 
@@ -7686,6 +7747,9 @@ scripts_end(gboolean clean_all)
                 JSValueUnprotect(s_global_context, VIEW(gl)->script_wv);
                 VIEW(gl)->script_wv = NULL;
             }
+        }
+        for (int i=0; i<NAMESPACE_LAST; i++) {
+            JSValueUnprotect(s_global_context, s_namespaces[i]);
         }
         
 

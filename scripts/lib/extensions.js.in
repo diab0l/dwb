@@ -101,11 +101,18 @@
  * */
 
 (function () {
+  var data          = namespace("data");
+  var extensions    = namespace("extensions");
+  var io            = namespace("io"); 
+  var system        = namespace("system");
+  var util          = namespace("util");
+
   var _config = {};
   var _registered = {};
   var _configLoaded = false;
   var _chromePages = {};
   var _chromeLoading = [];
+
 
   function _getPlugin(name, filename) 
   {
