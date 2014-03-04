@@ -1,0 +1,89 @@
+<head>
+<style type="text/css">
+.container {
+    width:35em;
+    margin-left:auto;
+    margin-right:auto;
+}
+.button {
+    border:none;
+    outline:none;
+    width:15px;
+    height:15px;
+    background:url(data:image/gif;base64,R0lGODlhDwAPAPAAAJmZmQAAACH5BAEAAAEALAAAAAAPAA8AAAIgjI+piwDrWpSPHlcTDpvhyXCg94Vbp4GosYqZCL3hHBYAOw==) no-repeat left center;
+    cursor:pointer;
+    background-color:#eee;
+}
+button:focus, input:focus {
+    outline:none;
+    background-color:#fff;
+    box-shadow:0 0 1px 1px #999;
+};
+table {
+    font : 14px normal monospace;
+    border-collapse:collapse;
+    width : 100%;
+    table-layout:fixed;
+};
+thead {
+    margin-left:auto;
+    margin-right:auto;
+}
+tr {
+    width:100%;
+}
+th {
+    text-align:left;
+    color:#eee;
+}
+th, td {
+    padding:0.5em 0.5em;
+}
+th { background-color : #555555; }
+tr { background-color:#ffffff; border-bottom:1px solid #ccc; }
+#saveButton {
+    background-color:#eee;
+    float:right;
+    display:inline;
+    margin-top : 1em;
+    padding:0.2em 0.6em;
+    cursor:pointer;
+    border:none;
+}
+#saveButton:focus {
+    background-color:#fff;
+}
+
+th:nth-child(1), td:nth-child(1) { width : 32%}
+th:nth-child(2), td:nth-child(2) { width : 32% }
+th:nth-child(3), td:nth-child(3) { width : 32% }
+th:nth-child(4), td:nth-child(4) { max-width : 4% }
+input {
+    border : 1px solid #eee;
+    outline:none;
+    background-color:#eee;
+}
+input:focus {
+    background-color:#fff;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <table id="content">
+        <thead>
+            <tr>
+                <th data-name="name">name</th>
+                <th data-name="shortcut"> shortcut </th>
+                <th data-name="command">command</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="content">
+        </tbody>
+    </table>
+    <button id="saveButton">save</button>
+
+</div>
+
+</body>

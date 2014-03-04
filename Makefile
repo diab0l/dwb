@@ -65,7 +65,9 @@ install-data: all
 	@#Extensions
 	install -d $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(EXTENSIONDIR)
 	for file in $(EXTENSIONDIR)/*; do \
-		install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
+		if [ -f $$file ]; then \
+			install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
+		fi \
 	done
 ifdef BASHCOMPLETION
 	install -d $(DESTDIR)/$(BASHCOMPLETION)
