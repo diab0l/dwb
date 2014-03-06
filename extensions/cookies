@@ -199,7 +199,7 @@ HEREDOC*/
 
 function injectScript() 
 {
-    var m_moduleId = this.exports.moduleId;
+    var m_moduleId = exports.moduleId;
 
     function query(selector) {
         var nodes = document.querySelectorAll(selector);
@@ -438,7 +438,7 @@ function injectScript()
         document.getElementById("allcookies").style.display = "none";
     }
 
-    createTable(this.exports.data);
+    createTable(exports.data);
 }
 
 function fn(n) { return n < 10 ? "0" + n : String(n); }
