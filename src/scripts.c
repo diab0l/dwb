@@ -399,14 +399,14 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
 {
     JSValueRef ret = NIL;
     gboolean global = false;
-    JSValueRef args[1];
     JSValueRef e = NULL;
     JSObjectRef f;
     JSStringRef script;
     char *name = NULL;
     char *body = NULL;
-    int count = 0;
     double debug = -1;
+    char *arg = NULL;
+    char *tmp = NULL;
     if (argc < 1) 
     {
         js_make_exception(ctx, exc, EXCEPTION("inject: missing argument"));
@@ -414,8 +414,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     }
     if (argc > 1 && !JSValueIsNull(ctx, argv[1])) 
     {
-        args[0] = js_context_change(ctx, wctx, argv[1], exc);
-        count = 1;
+        arg = js_value_to_json(ctx, argv[1], -1, exc);
     }
     if (argc > 2)
         debug = JSValueToNumber(ctx, argv[2], exc);
@@ -425,40 +424,40 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     if (JSValueIsObject(ctx, argv[0]) && (f = js_value_to_function(ctx, argv[0], exc)) != NULL)
     {
         body = get_body(ctx, f, exc);
-        if (body == NULL)
-            return NIL;
-        script = JSStringCreateWithUTF8CString(body);
         name = js_get_string_property(ctx, f, "name");
     }
     else 
     {
-        script = JSValueToStringCopy(ctx, argv[0], exc);
-        if (script == NULL) 
-            return NIL;
+        body = js_value_to_char(ctx, argv[0], -1, exc);
+    }
+    if (body == NULL) {
+        return NIL;
     }
 
+    if (!global) {
+        tmp = body;
+        if (arg == NULL) {
+            body = g_strdup_printf("(function() {\n%s\n}())", body);
+        }
+        else {
+            body = g_strdup_printf("(function(exports) {\n%s\n}(%s))", body, arg);
+        }
+        g_free(tmp);
+    }
+    script = JSStringCreateWithUTF8CString(body);
 
-    if (global) 
-        JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
-    else 
+    JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
+    if (!global && e == NULL) 
     {
-        JSObjectRef func = JSObjectMakeFunction(wctx, NULL, 0, NULL, script, NULL, 0, NULL);
-        if (func != NULL && JSObjectIsFunction(ctx, func)) 
+        JSValueRef wret = JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
+        if (e == NULL) 
         {
-            if (count == 1)
+            char *retx = js_value_to_json(wctx, wret, -1, NULL);
+            // This could be replaced with js_context_change
+            if (retx) 
             {
-                js_set_property(wctx, func, "exports", args[0], kJSDefaultAttributes, NULL);
-            }
-            JSValueRef wret = JSObjectCallAsFunction(wctx, func, func, count, count == 1 ? args : NULL, &e) ;
-            if (exc != NULL) 
-            {
-                char *retx = js_value_to_json(wctx, wret, -1, NULL);
-                // This could be replaced with js_context_change
-                if (retx) 
-                {
-                    ret = js_char_to_value(ctx, retx);
-                    g_free(retx);
-                }
+                ret = js_char_to_value(ctx, retx);
+                g_free(retx);
             }
         }
     }
@@ -466,17 +465,19 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     {
         int line = 0;
         fprintf(stderr, "DWB SCRIPT EXCEPTION: An error occured injecting %s.\n", name == NULL || *name == '\0' ? "[anonymous]" :  name);
-        js_print_exception(wctx, e, NULL, 0, (int)(debug-1), &line);
+        js_print_exception(wctx, e, NULL, 0, (int)(debug-2), &line);
+        line--;
 
         fputs("==> DEBUG [SOURCE]\n", stderr);
         if (body == NULL)
             body = js_string_to_char(ctx, script, -1);
         char **lines = g_strsplit(body, "\n", -1);
+        char **reallines = global ? lines : lines+1;
 
         fprintf(stderr, "    %s\n", line < 3 ? "BOF" : "...");
-        for (int i=MAX(line-2, 0); lines[i] != NULL && i < line + 1; i++)
-            fprintf(stderr, "%s %d > %s\n", i == line-1 ? "-->" : "   ", i+ ((int) debug), lines[i]);
-        fprintf(stderr, "    %s\n", line + 2 >= (int)g_strv_length(lines) ? "EOF" : "...");
+        for (int i=MAX(line-2, 0); reallines[i] != NULL && i < line + 1; i++)
+            fprintf(stderr, "%s %d > %s\n", i == line-1 ? "-->" : "   ", i+ ((int) debug), reallines[i]);
+        fprintf(stderr, "    %s\n", line + 2 >= (int)g_strv_length(reallines) ? "EOF" : "...");
 
         g_strfreev(lines);
     }
@@ -1766,7 +1767,7 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
  * @param {Object} arg
  *      If the script isn’t injected into the global scope the script is wrapped
  *      inside a function. arg then is accesible via arguments in the injected
- *      script, optional
+ *      script, or by the variable <i>exports</i> optional
  * @param {Number} [line]
  *      Starting line number, useful for debugging. If linenumber is greater
  *      than 0 error messages will be printed to stderr, optional.
