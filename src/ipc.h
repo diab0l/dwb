@@ -33,6 +33,7 @@ enum {
     IPC_HOOK_change_mode = 1<<8, 
     IPC_HOOK_download_finished = 1<<9, 
     IPC_HOOK_document_finished = 1<<10, 
+    IPC_HOOK_quit = 1<<11, 
 };
 
 void ipc_start(GtkWidget *);
