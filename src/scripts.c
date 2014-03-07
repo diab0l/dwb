@@ -56,8 +56,8 @@
 #define SCRIPT_TEMPLATE_XSTART "try{"\
 "var exports=arguments[0];"\
 "_initNewContext(this,arguments,'%s');"\
-"var xinclude=namespace('modules')._xinclude.bind(this,this.path);"\
-"var xgettext=namespace('modules')._xgettext.bind(this,this.path);"\
+"var xinclude=_xinclude.bind(this,this.path);"\
+"var xgettext=_xgettext.bind(this,this.path);"\
 "const script=this;"\
 "if(!exports.id)Object.defineProperty(exports,'id',{value:script.generateId()});"\
 "var xprovide=function(n,m,o){provide(n+exports.id,m,o);};"\
@@ -241,7 +241,6 @@ enum {
     NAMESPACE_EXTENSIONS, 
     NAMESPACE_GUI, 
     NAMESPACE_IO, 
-    NAMESPACE_MODULES,
     NAMESPACE_NET, 
     NAMESPACE_SIGNALS, 
     NAMESPACE_SYSTEM, 
@@ -2309,7 +2308,6 @@ global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
         [NAMESPACE_EXTENSIONS] = "extensions",
         [NAMESPACE_GUI] = "gui",
         [NAMESPACE_IO] = "io",
-        [NAMESPACE_MODULES] = "modules",
         [NAMESPACE_NET] = "net",
         [NAMESPACE_SIGNALS] = "signals",
         [NAMESPACE_SYSTEM] = "system",
@@ -2418,7 +2416,6 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
  * script. 
  *
  * @name include 
- * @memberOf modules
  * @function
  * @param {String} path 
  *      The path to the script
@@ -6466,6 +6463,9 @@ create_global_object()
         { "exit",             global_exit,            kJSDefaultAttributes },
         { "_bind",             global_bind,            kJSDefaultAttributes },
         { "unbind",           global_unbind,          kJSDefaultAttributes },
+        { "include",            global_include,         kJSDefaultAttributes },
+        { "_xinclude",          global_xinclude,       kJSDefaultAttributes },
+        { "_xgettext",          global_xget_text,       kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
 
@@ -6495,18 +6495,6 @@ create_global_object()
      * @type Number
      * */
     js_set_object_number_property(ctx, global_object, "version", API_VERSION, NULL);
-
-    JSStaticFunction module_functions[] = { 
-        { "include",          global_include,         kJSDefaultAttributes },
-        { "_xinclude",         global_xinclude,       kJSDefaultAttributes },
-        { "_xgettext",         global_xget_text,       kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    class = create_class("modules", module_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_MODULES] = create_object(ctx, class, global_object, kJSDefaultAttributes, "modules", NULL);
-    JSClassRelease(class);
-    
-
 
     JSStaticValue data_values[] = {
         { "profile",        data_get_profile, NULL, kJSDefaultAttributes },

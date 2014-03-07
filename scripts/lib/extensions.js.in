@@ -106,7 +106,6 @@
   var io            = namespace("io"); 
   var system        = namespace("system");
   var util          = namespace("util");
-  var modules       = namespace("modules");
 
   var _config = {};
   var _registered = {};
@@ -118,9 +117,9 @@
   function _getPlugin(name, filename) 
   {
       if (system.fileTest(filename, FileTest.exists)) 
-          return modules.include(filename);
+          return include(filename);
       else if (system.fileTest(filename + ".exar", FileTest.exists))
-          return modules.include(filename + ".exar");
+          return include(filename + ".exar");
       return null;
   };
   function _getStack(offset) 
@@ -267,7 +266,7 @@
                   {
                       try 
                       {
-                          config = modules.include(data.configDir + "/extensionrc");
+                          config = include(data.configDir + "/extensionrc");
                       }
                       catch (e) 
                       {

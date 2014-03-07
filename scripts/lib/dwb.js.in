@@ -5,7 +5,6 @@
     var tabs    = namespace("tabs");
     var timer   = namespace("timer");
     var util    = namespace("util");
-    var modules = namespace("modules");
 
     var _modules = {};
     var _requires = {};
@@ -31,7 +30,7 @@
                     detail = name.split("!");
                     name = detail[0];
                     if (!_modules[name]) {
-                        modules.include(detail.slice(1).join("!"));
+                        include(detail.slice(1).join("!"));
                     }
                 }
                 if (_modules[name])
@@ -700,7 +699,7 @@
                                 value : function(relPath, global)
                                 {
                                     var dirName = path.substring(0, path.lastIndexOf("/") + 1);
-                                    return modules.include(dirName + relPath, global);
+                                    return include(dirName + relPath, global);
                                 }
                             }
                     });
