@@ -343,8 +343,8 @@ static FunctionMap FMAP [] = {
     (Func)commands_new_window_or_view,  NULL,                              NEVER_SM,     
     { .n = OPEN_NEW_WINDOW }, EP_NONE, { NULL }, },
   
-  { { "command_mode",          "Enter command mode",                }, 0, 
-    (Func)commands_change_mode,            NULL,                              POST_SM, 
+  { { "command_mode",          "Enter command mode",                }, CP_COMMANDLINE | CP_HAS_MODE, 
+    (Func)commands_command_mode,            NULL,                              POST_SM, 
     { .n = COMMAND_MODE, .b = false }, EP_NONE, { NULL }, },
   
   { { "find_backward",         "Find backward ",                    }, CP_COMMANDLINE|CP_HAS_MODE | CP_NEEDS_ARG, 

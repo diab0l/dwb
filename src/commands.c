@@ -604,6 +604,16 @@ commands_change_mode(KeyMap *km, Arg *a)
     else 
         return dwb_change_mode(a->n);
 }
+DwbStatus 
+commands_command_mode(KeyMap *km, Arg *a)
+{
+    commands_change_mode(km, a);
+    if (a->p != NULL) {
+        entry_set_text(a->p);
+        entry_insert_text(" ");
+    }
+    return STATUS_OK;
+}
 /* commands_save_session {{{*/
 DwbStatus
 commands_save_session(KeyMap *km, Arg *arg) 
@@ -1200,5 +1210,4 @@ commands_entry_delete_active(KeyMap *km, Arg *arg)
     completion_delete_active_completion();
     return STATUS_OK;
 }
-
 
