@@ -53,9 +53,7 @@
 #define SCRIPTS_SIG_FOLLOW              28
 #define SCRIPTS_SIG_ADD_COOKIE          29
 #define SCRIPTS_SIG_READY               30
-#define SCRIPTS_SIG_SERVER_RUN          31
-#define SCRIPTS_SIG_SERVER_STOP         32
-#define SCRIPTS_SIG_LAST                33
+#define SCRIPTS_SIG_LAST                31
 
 
 #define SCRIPT_MAX_SIG_OBJECTS 8

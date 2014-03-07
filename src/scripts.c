@@ -261,6 +261,7 @@ enum {
     CLASS_WIDGET, 
     CLASS_MENU, 
     CLASS_SECURE_WIDGET, 
+    CLASS_HIDDEN_WEBVIEW, 
     CLASS_MESSAGE, 
     CLASS_DEFERRED, 
     CLASS_HISTORY,
@@ -285,6 +286,7 @@ typedef struct ScriptContext_s {
     GSList *script_list;
     GSList *autoload;
     GSList *timers;
+    GSList *created_widgets;
     GPtrArray *gobject_signals;
     GHashTable *exports;
 
@@ -408,6 +410,15 @@ script_context_free(ScriptContext *ctx) {
             g_slist_free(ctx->timers);
             ctx->timers = NULL;
         }
+        for (GSList *l = s_ctx->created_widgets; l; l=l->next) {
+            GtkWidget *w = l->data;
+            JSObjectRef ref = g_object_steal_qdata(G_OBJECT(w), s_ctx->ref_quark);
+            if (ref != NULL) {
+                JSObjectSetPrivate(ref, NULL);
+            }
+            gtk_widget_destroy(w);
+        }
+
         if (s_ctx->global_context != NULL) {
             if (ctx->constructors != NULL) {
                 for (int i=0; i<CONSTRUCTOR_LAST; i++) 
@@ -4777,7 +4788,7 @@ static JSObjectRef
 hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
     GObject *wv = G_OBJECT(webkit_web_view_new());
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_WEBVIEW], wv, false);
+    return make_object_for_class(ctx, s_ctx->classes[CLASS_HIDDEN_WEBVIEW], wv, false);
 }
 
 /** 
@@ -5012,6 +5023,7 @@ widget_destroy(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
     GtkWidget *widget = JSObjectGetPrivate(this);
     g_return_val_if_fail(widget != NULL, UNDEFINED);
 
+    s_ctx->created_widgets = g_slist_remove_all(s_ctx->created_widgets, widget);
     gtk_widget_destroy(widget);
     return UNDEFINED;
 }
@@ -5032,6 +5044,7 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
             return JSValueToObject(ctx, NIL, NULL);
         }
         GtkWidget *widget = gtk_widget_new(type, NULL);
+        s_ctx->created_widgets = g_slist_prepend(s_ctx->created_widgets, widget);
         return make_object(ctx, G_OBJECT(widget));
     }
     return JSValueToObject(ctx, NIL, NULL);
@@ -6886,13 +6899,6 @@ create_global_object()
 
     s_ctx->constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(ctx, "WebKitWebView", s_ctx->classes[CLASS_WEBVIEW], NULL, NULL);
 
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "HiddenWebView";
-    cd.staticFunctions = wv_functions;
-    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
-
-    s_ctx->constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(ctx, "HiddenWebView", s_ctx->classes[CLASS_WEBVIEW], hwv_constructor_cb, NULL);
-
 
     /* Frame */
     /** 
@@ -7085,6 +7091,14 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_SECURE_WIDGET];
     s_ctx->classes[CLASS_WIDGET] = JSClassCreate(&cd);
     s_ctx->constructors[CONSTRUCTOR_WIDGET] = create_constructor(ctx, "GtkWidget", s_ctx->classes[CLASS_WIDGET], widget_constructor_cb, NULL);
+
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "HiddenWebView";
+    cd.staticFunctions = widget_functions;
+    cd.parentClass = s_ctx->classes[CLASS_WEBVIEW];
+    s_ctx->classes[CLASS_HIDDEN_WEBVIEW] = JSClassCreate(&cd);
+
+    s_ctx->constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(ctx, "HiddenWebView", s_ctx->classes[CLASS_HIDDEN_WEBVIEW], hwv_constructor_cb, NULL);
 
     /**
      * @class 
@@ -7644,7 +7658,6 @@ scripts_end(gboolean clean_all)
     pthread_rwlock_wrlock(&s_context_lock);
     if (s_ctx != NULL) 
     {
-        // keys
         GList *next, *l;
         next = dwb.override_keys;
         while (next != NULL)
