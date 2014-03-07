@@ -38,6 +38,7 @@ enum {
 void ipc_start(GtkWidget *);
 void ipc_end(GtkWidget *);
 void ipc_send_hook(char *hook, const char *format, ...);
+void ipc_send_end_win(void);
 
 #define IPC_SEND_HOOK(hook, ...); do { \
     if (dwb.state.ipc_hooks & IPC_HOOK_##hook) ipc_send_hook(#hook, __VA_ARGS__); \

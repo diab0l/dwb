@@ -59,4 +59,7 @@ dwbremote_set_int_property(Display *dpy, Window win, Atom atom, int status);
 int 
 dwbremote_get_last_focus_id(Display *dpy, Window win, Atom a, Window *win_ret);
 
+void 
+dwbremote_wait(Display *dpy, Window win, Atom atom);
+
 #endif

@@ -26,7 +26,7 @@
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
-#define IPC_EXECUTE(list) do { char *_ex_command = g_strjoinv(" ", list); dwb_parse_command_line(_ex_command); g_free(_ex_command); } while(0)
+#define IPC_EXECUTE(list) do { char *_ex_command = g_strjoinv(" ", list); s_dirty = true; dwb_parse_command_line(_ex_command); s_dirty = false; g_free(_ex_command); } while(0)
 
 #define OPTNL(cond) ((cond) ? "" : "\n")
 
@@ -48,6 +48,7 @@ static Window s_win;
 static gulong s_sig_property;
 static gulong s_sig_focus;
 static Window s_root; 
+static int s_dirty;
 
 static long 
 get_number(const char *text)
@@ -413,6 +414,13 @@ ipc_send_hook(char *name, const char *format, ...)
         dwbremote_set_property_value(s_dpy, s_win, s_atoms[DWB_ATOM_HOOK], name);
 }
 void 
+ipc_send_end_win(void) {
+    if (s_win != 0 && s_dirty) {
+        dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], 0);
+        dwbremote_wait(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS]);
+    }
+}
+void 
 ipc_end(GtkWidget *widget)
 {
     if (s_sig_property != 0)
@@ -427,6 +435,7 @@ ipc_end(GtkWidget *widget)
         XDeleteProperty(s_dpy, s_win, s_atoms[DWB_ATOM_FOCUS_ID]);
         s_sig_focus = 0;
     }
+    s_win = 0;
 }
 void 
 ipc_start(GtkWidget *widget)

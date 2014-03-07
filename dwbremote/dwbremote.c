@@ -140,3 +140,16 @@ error_out:
         XFree((char *)children);
     return max;
 }
+void 
+dwbremote_wait(Display *dpy, Window win, Atom atom) {
+    XEvent e; 
+    XPropertyEvent *pe;
+    XSelectInput (dpy, win, PropertyChangeMask);
+    while (1) {
+        XNextEvent(dpy, &e);
+        pe = &(e.xproperty);
+        if (pe->atom == atom) {
+            break;
+        }
+    }
+}

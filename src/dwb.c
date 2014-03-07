@@ -4036,6 +4036,7 @@ dwb_end(gint session_flags)
             return false;
         }
     }
+    ipc_send_end_win();
     if (EMIT_SCRIPT(CLOSE)) 
     {
         /**
@@ -5258,8 +5259,9 @@ dwb_parse_command_line(const char *line)
     if (!found)
         g_free(orig_line);
     g_strfreev(token);
-    if (ret == STATUS_END)
+    if (ret == STATUS_END) {
         return ret;
+    }
 
     dwb_glist_prepend_unique(&dwb.fc.commands, g_strdup(line));
     dwb.state.last_com_history = dwb.fc.commands;
