@@ -446,19 +446,15 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     }
     script = JSStringCreateWithUTF8CString(body);
 
-    JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
+    JSValueRef wret = JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
     if (!global && e == NULL) 
     {
-        JSValueRef wret = JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
-        if (e == NULL) 
+        char *retx = js_value_to_json(wctx, wret, -1, NULL);
+        // This could be replaced with js_context_change
+        if (retx) 
         {
-            char *retx = js_value_to_json(wctx, wret, -1, NULL);
-            // This could be replaced with js_context_change
-            if (retx) 
-            {
-                ret = js_char_to_value(ctx, retx);
-                g_free(retx);
-            }
+            ret = js_char_to_value(ctx, retx);
+            g_free(retx);
         }
     }
     if (e != NULL && !isnan(debug) && debug > 0)
@@ -1754,11 +1750,11 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
  * @example 
  * //!javascript
  * function injectable() {
- *    var text = arguments[0];
+ *    var text = exports.text;
  *    document.body.innerHTML = text;
  * }
  * signals.connect("documentLoaded", function(wv) {
- *    wv.inject(injectable, "foo", 3);
+ *    wv.inject(injectable, { text : "foo", number : 37 }, 3);
  * });
  *
  * @param {String|Function} code
@@ -1767,7 +1763,7 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
  * @param {Object} arg
  *      If the script isn’t injected into the global scope the script is wrapped
  *      inside a function. arg then is accesible via arguments in the injected
- *      script, or by the variable <i>exports</i> optional
+ *      script, or by the variable <i>exports</i>, optional
  * @param {Number} [line]
  *      Starting line number, useful for debugging. If linenumber is greater
  *      than 0 error messages will be printed to stderr, optional.
