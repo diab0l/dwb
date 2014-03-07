@@ -81,6 +81,7 @@ get_hooks(char **list, int count)
         HOOK_MAP(change_mode),
         HOOK_MAP(download_finished),
         HOOK_MAP(document_finished),
+        HOOK_MAP(quit),
         { 0, 0 }
     };
 #undef HOOK_MAP
@@ -416,6 +417,7 @@ ipc_send_hook(char *name, const char *format, ...)
 void 
 ipc_send_end_win(void) {
     if (s_win != 0 && s_dirty) {
+        IPC_SEND_HOOK(quit, "");
         dwbremote_set_int_property(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS], 0);
         dwbremote_wait(s_dpy, s_win, s_atoms[DWB_ATOM_STATUS]);
     }

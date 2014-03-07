@@ -191,6 +191,8 @@ COMMANDS
             Emitted when new tab is created, return format: 'new_tab <n>'
             *n*::::
                 Number of the new tab
+        *quit*;; 
+            Emitted when dwb is closed. The response will be empty
 
 *prompt* 'promptmessage'::
     Shows a prompt dialog.
