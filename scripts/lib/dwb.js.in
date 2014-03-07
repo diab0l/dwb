@@ -1,5 +1,12 @@
 // See COPYING for copyright and license details
 (function() {
+    var gui     = namespace("gui");
+    var io      = namespace("io");
+    var tabs    = namespace("tabs");
+    var timer   = namespace("timer");
+    var util    = namespace("util");
+    var modules = namespace("modules");
+
     var _modules = {};
     var _requires = {};
     var _callbacks = [];
@@ -24,7 +31,7 @@
                     detail = name.split("!");
                     name = detail[0];
                     if (!_modules[name]) {
-                        include(detail.slice(1).join("!"));
+                        modules.include(detail.slice(1).join("!"));
                     }
                 }
                 if (_modules[name])
@@ -693,7 +700,7 @@
                                 value : function(relPath, global)
                                 {
                                     var dirName = path.substring(0, path.lastIndexOf("/") + 1);
-                                    return include(dirName + relPath, global);
+                                    return modules.include(dirName + relPath, global);
                                 }
                             }
                     });

@@ -1,5 +1,7 @@
 // See COPYING for copyright and license details
 (function() {
+    var net = namespace("net");
+
     var tldEnd = new RegExp("\\.tld$");
     Object.defineProperties(net, {
         /**

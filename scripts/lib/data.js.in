@@ -1,193 +1,197 @@
 // See COPYING for copyright and license details
 (function () {
-  var configDir = data.configDir;
-  var profile = data.profile;
-  function filterNull(object) { return object !== null; }
-  function filterEmpty(line) { return line.trim().length > 0; }
-  function mapDefault(line) { return line.trim(); }
-  function mapQuickmarks(line) {
-        var token = line.trim().split(" ");
-        return {
-            mark : token[0],
-            url : token.slice(1).join(" ")
-        };
-  }
-  function mapSearchengines(line) {
-      var engine = null;
-      try {
+    var data    = namespace("data");
+    var io      = namespace("io");
+    var net     = namespace("net");
+
+    var configDir = data.configDir;
+    var profile = data.profile;
+    function filterNull(object) { return object !== null; }
+    function filterEmpty(line) { return line.trim().length > 0; }
+    function mapDefault(line) { return line.trim(); }
+    function mapQuickmarks(line) {
           var token = line.trim().split(" ");
-          var keyword = token[0];
-          var url = token.slice(1).join(" ");
-          var purl = net.parseUri(url);
-          var host = purl ? purl.host : null;
-          engine = {
-              keyword : keyword, 
-              url : url, 
-              host : host
+          return {
+              mark : token[0],
+              url : token.slice(1).join(" ")
           };
-      }
-      catch (e) { }
-      return engine;
+    }
+    function mapSearchengines(line) {
+        var engine = null;
+        try {
+            var token = line.trim().split(" ");
+            var keyword = token[0];
+            var url = token.slice(1).join(" ");
+            var purl = net.parseUri(url);
+            var host = purl ? purl.host : null;
+            engine = {
+                keyword : keyword, 
+                url : url, 
+                host : host
+            };
+        }
+        catch (e) { }
+        return engine;
 
-  }
-  Object.defineProperties(data, {
-      /** 
-       * Parses data to an array
-       *
-       * @name parse 
-       * @memberOf data
-       * @function 
-       * @type Array
-       *
-       * @param {String} name 
-       *        Name of the data to parse, can be one of <i>bookmarks</i>,
-       *        <i>cookiesWhitelist</i>, <i>sessionCookiesWhitelist</i>,
-       *        <i>scriptWhitelist</i>, <i>pluginsWhitelist</i>, <i>quickmarks</i> or
-       *        <i>searchEngines</i>.
-       *
-       * @returns 
-       *    Array of parsed objects;
-       *        <b>quickmarks</b> will return an array of objects
-       *        with properties <b>mark</b> and <b>url</b> and
-       *        <b>searchEngines</b> will return an array of objects with properties <b>keyword</b>, 
-       *        <b>url</b> and <b>host</b>. All other values will return an
-       *        array of strings.
-       * */
-      parse : {
-          value : function(name) {
-              var mapFunction;
-              switch (name) {
-                case "bookmarks": 
-                case "cookiesWhitelist" : 
-                case "sessionCookiesWhitelist" : 
-                case "scriptWhitelist" : 
-                case "pluginsWhitelist" : 
-                    mapFunction = mapDefault;
-                    break;
-                case "quickmarks" : 
-                    mapFunction = mapQuickmarks;
-                    break;
-                case "searchEngines" : 
-                    mapFunction = mapSearchengines;
-                    break;
-                default : 
-                    throw new Error("Parsing " + name + " is not supported!");
-              }
-              var data = null;
+    }
+    Object.defineProperties(data, {
+        /** 
+         * Parses data to an array
+         *
+         * @name parse 
+         * @memberOf data
+         * @function 
+         * @type Array
+         *
+         * @param {String} name 
+         *        Name of the data to parse, can be one of <i>bookmarks</i>,
+         *        <i>cookiesWhitelist</i>, <i>sessionCookiesWhitelist</i>,
+         *        <i>scriptWhitelist</i>, <i>pluginsWhitelist</i>, <i>quickmarks</i> or
+         *        <i>searchEngines</i>.
+         *
+         * @returns 
+         *    Array of parsed objects;
+         *        <b>quickmarks</b> will return an array of objects
+         *        with properties <b>mark</b> and <b>url</b> and
+         *        <b>searchEngines</b> will return an array of objects with properties <b>keyword</b>, 
+         *        <b>url</b> and <b>host</b>. All other values will return an
+         *        array of strings.
+         * */
+        parse : {
+            value : function(name) {
+                var mapFunction;
+                switch (name) {
+                  case "bookmarks": 
+                  case "cookiesWhitelist" : 
+                  case "sessionCookiesWhitelist" : 
+                  case "scriptWhitelist" : 
+                  case "pluginsWhitelist" : 
+                      mapFunction = mapDefault;
+                      break;
+                  case "quickmarks" : 
+                      mapFunction = mapQuickmarks;
+                      break;
+                  case "searchEngines" : 
+                      mapFunction = mapSearchengines;
+                      break;
+                  default : 
+                      throw new Error("Parsing " + name + " is not supported!");
+                }
+                var data = null;
 
-              try {
-                  data = io.read(this[name]); 
-              }
-              catch (e) {
-                  return [];
-              }
-              return data.split("\n").filter(filterEmpty).map(mapFunction).filter(filterNull);
-          }
-      },
-      /** 
-       * The bookmark file
-       * @name bookmarks 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "bookmarks" :  { value : configDir + "/" + profile + "/bookmarks", enumerable : true }, 
-      /** 
-       * The history file
-       * @name history 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "history"   :  { value : configDir + "/" + profile + "/history", enumerable : true },
-      /** 
-       * The cookie file
-       * @name cookies 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "cookies"   :  { value : configDir + "/" + profile + "/cookies", enumerable : true }, 
-      /** 
-       * The quickmarks file
-       * @name quickmarks 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "quickmarks" : { value : configDir + "/" + profile + "/quickmarks", enumerable : true },
-      /** 
-       * The whitelist for persistent cookies
-       * @name cookiesWhitelist 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "cookiesWhitelist"  :  { value : configDir + "/" + profile + "/cookies.allow", enumerable : true }, 
-      /** 
-       * The whitelist for session cookies
-       * @name sessionCookiesWhitelist 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "sessionCookiesWhitelist"   :  { value : configDir + "/" + profile + "/cookies_session.allow", enumerable : true }, 
-      /** 
-       * The whitelist for plugins
-       * @name pluginsWhitelist 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "pluginsWhitelist"  :  { value : configDir + "/" + profile + "/plugins.allow", enumerable : true }, 
-      /** 
-       * The whitelist for scripts
-       * @name scriptWhitelist 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "scriptWhitelist"   :  { value : configDir + "/" + profile + "/scripts.allow", enumerable : true }, 
-      /** 
-       * The session file
-       * @name session 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "session"   :  { value : configDir + "/" + profile + "/session", enumerable : true }, 
-      /** 
-       * The custom keys file
-       * @name customKeys 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "customKeys"  :  { value : configDir + "/" + profile + "/custom_keys", enumerable : true }, 
-      /** 
-       * The keyboard configuration file
-       * @name keys 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "keys"  :  { value : configDir + "/keys", enumerable : true }, 
-      /** 
-       * The settings configuration file
-       * @name settings 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "settings"  :  { value : configDir + "/settings", enumerable : true }, 
-      /** 
-       * The searchengines file
-       * @name searchEngines 
-       * @memberOf data
-       * @readonly
-       * @type String
-       * */
-      "searchEngines"   :  { value : configDir + "/searchengines", enumerable : true }
-  });
+                try {
+                    data = io.read(this[name]); 
+                }
+                catch (e) {
+                    return [];
+                }
+                return data.split("\n").filter(filterEmpty).map(mapFunction).filter(filterNull);
+            }
+        },
+        /** 
+         * The bookmark file
+         * @name bookmarks 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "bookmarks" :  { value : configDir + "/" + profile + "/bookmarks", enumerable : true }, 
+        /** 
+         * The history file
+         * @name history 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "history"   :  { value : configDir + "/" + profile + "/history", enumerable : true },
+        /** 
+         * The cookie file
+         * @name cookies 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "cookies"   :  { value : configDir + "/" + profile + "/cookies", enumerable : true }, 
+        /** 
+         * The quickmarks file
+         * @name quickmarks 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "quickmarks" : { value : configDir + "/" + profile + "/quickmarks", enumerable : true },
+        /** 
+         * The whitelist for persistent cookies
+         * @name cookiesWhitelist 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "cookiesWhitelist"  :  { value : configDir + "/" + profile + "/cookies.allow", enumerable : true }, 
+        /** 
+         * The whitelist for session cookies
+         * @name sessionCookiesWhitelist 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "sessionCookiesWhitelist"   :  { value : configDir + "/" + profile + "/cookies_session.allow", enumerable : true }, 
+        /** 
+         * The whitelist for plugins
+         * @name pluginsWhitelist 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "pluginsWhitelist"  :  { value : configDir + "/" + profile + "/plugins.allow", enumerable : true }, 
+        /** 
+         * The whitelist for scripts
+         * @name scriptWhitelist 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "scriptWhitelist"   :  { value : configDir + "/" + profile + "/scripts.allow", enumerable : true }, 
+        /** 
+         * The session file
+         * @name session 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "session"   :  { value : configDir + "/" + profile + "/session", enumerable : true }, 
+        /** 
+         * The custom keys file
+         * @name customKeys 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "customKeys"  :  { value : configDir + "/" + profile + "/custom_keys", enumerable : true }, 
+        /** 
+         * The keyboard configuration file
+         * @name keys 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "keys"  :  { value : configDir + "/keys", enumerable : true }, 
+        /** 
+         * The settings configuration file
+         * @name settings 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "settings"  :  { value : configDir + "/settings", enumerable : true }, 
+        /** 
+         * The searchengines file
+         * @name searchEngines 
+         * @memberOf data
+         * @readonly
+         * @type String
+         * */
+        "searchEngines"   :  { value : configDir + "/searchengines", enumerable : true }
+    });
 })();
 Object.freeze(data);
