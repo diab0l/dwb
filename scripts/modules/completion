@@ -1,0 +1,341 @@
+var util = namespace("util");
+
+var mWidget = null;
+var shortCut = "tg";
+var label = "tabsearch:";
+var fontFamily = "monospace";
+var fontSize = 11;
+var visibleItems = 11;
+var lineSpacing = 2;
+var margin = 3;
+var _keyPress, _keyRelease;
+
+function htmlContent() {
+/*HEREDOC
+<head>
+<style type="text/css">
+body {
+    margin:0; 
+    padding:0; 
+    border-top:1px solid #000;
+}
+.line {
+    width : 100%;
+}
+.lineSelected {
+    width : 100%;
+}
+.label {
+    display:inline-block;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin:0; 
+    padding:0; 
+}
+.label.left {
+    width : 50%;
+    padding-right:5px;
+}
+.label.right {
+    width:45%;
+    float:right;
+    text-align:right;
+    padding-left:5px;
+    display:inline-block;
+}
+body > div {
+    width : 100%; 
+    height : 100%; 
+    margin:0; 
+    padding:0;
+    overflow-x:none;
+}
+* {
+    -webkit-user-select:none;
+}
+</style>
+<script type="text/javascript">
+    var mSelectedIdx = -1, mElements, mContent;
+    function clear() {
+        if (mContent) {
+            document.body.removeChild(mContent);
+        }
+        mElements = null;
+        mSelectedIdx = -1;
+        mContent = null;
+    }
+    function getSelected() {
+        return mElements[mSelectedIdx].dataset.id;
+    }
+    function select(dir) {
+        var l = mElements.length, element;
+        if (l == 0) {
+            return;
+        }
+        else if (mSelectedIdx == -1) {
+            mSelectedIdx = 0;
+        }
+        else if (l > 1) {
+            mElements[mSelectedIdx].className = "line";
+            mSelectedIdx += dir;
+            mSelectedIdx = mSelectedIdx < 0 ? (l-1) : (mSelectedIdx > l-1 ? 0 : mSelectedIdx);
+        }
+        else {
+            return; 
+        }
+        element = mElements[mSelectedIdx];
+        element.className = "lineSelected";
+        element.scrollIntoView();
+    }
+    function createElement(tag, refElement, props) {
+        var element, key;
+        var element = document.createElement(tag);
+        for (key in props) {
+            element[key] = props[key];
+        }
+        refElement.appendChild(element);
+        return element;
+    }
+    function update(data) {
+        clear();
+        mContent = document.createElement("div");
+        mElements = data.map(function(tab, i) {
+            var className = "line ";
+            var element = createElement("div", mContent, {
+                className : "line",
+            });
+            createElement("div", element, {
+                textContent : tab.leftLabel || "",
+                className : "label left"
+            });
+            createElement("div", element, {
+                textContent : tab.rightLabel || "", 
+                className : "label right"
+            });
+            element.dataset.id = tab.id;
+            return element;
+        });
+        select();
+        document.body.appendChild(mContent);
+    }
+    function applyStyle(styles) {
+        var selector, style, i, sheet, item;
+        var styleSheets = document.styleSheets[0].cssRules;
+        for (i=styleSheets.length - 1; i>=0; --i) {
+            sheet = styleSheets[i];
+            if ((style = styles[sheet.selectorText])) {
+                for (selector in style) {
+                    sheet.style[selector] = style[selector];
+                }
+            }
+        }
+        
+    }
+</script>
+</head>
+<body>
+</body>
+HEREDOC*/
+}
+
+function Completion(args) {
+    if (!args.shortcut) {
+        throw new Error("Completion no shortcut defined!");
+    }
+    if (!args.onUpdate) {
+        throw new Error("Completion: onUpdate not defined!");
+    }
+    if (!args.onSelected) {
+        throw new Error("Completion: onSelected not defined!");
+    }
+    util.mixin(this, args);
+
+    this._startup();
+}
+
+Object.defineProperties(Completion.prototype, {
+    _sigKeyPress   : { value : null, writable : true },
+    _sigKeyRelease : { value : null, writable : true },
+    _update : { value : null, writable : true },
+    _idLabelNotify : { value : -1, writable : true },
+    _lastText : { value : "", writable : true },
+    _data : { value : {}, writable : true },
+
+    onUpdate : { value : null, writable : true },
+    onSelected : { value : null, writable : true },
+    shortcut : { value : "", writable : true }, 
+    label : { value : ":", writable : true }, 
+    visibleItems : { value : 11, writable : true },
+    fontSize : { value : 11, writable : true },
+    fontFamily : { value : "monospace", writable : true },
+    lineSpacing : { value : 2, writable : true },
+
+    _cleanup : {
+        value : function() {
+            this._sigKeyRelease.disconnect();
+            this._sigKeyPress.disconnect();
+            gui.messageLabel.disconnect(this._idLabelNotify);
+            gui.messageLabel.label = "";
+
+            mWidget.inject("clear()");
+            mWidget.visible = false;
+
+            this._lastText = "";
+            this._data = null;
+            util.normalMode();
+        }
+    }, 
+    _getSelected : { 
+        value : function() {
+            var id = JSON.parse(mWidget.inject("return getSelected()"));
+            var item = null; 
+            this._data.some(function(i) { 
+                if (i.id == id) {
+                    item = i;
+                    return true
+                }
+                return false;
+            });
+            this.onSelected(item);
+        }
+    },
+    _onKeyPress : {
+        value : function(w, e) {
+            switch(e.name) {
+                case "Return" : 
+                    this._getSelected();
+                    this._cleanup();
+                    return true;
+                case "Escape" : 
+                    this._cleanup();
+                    return true;
+                case "Down" :
+                case "Tab" : 
+                    mWidget.inject("select(1)");
+                    return true;
+                case "Up" :
+                case "ISO_Left_Tab" : 
+                    mWidget.inject("select(-1)");
+                    return true;
+                default : 
+                    return false;
+            }
+        }
+    },
+    _onKeyRelease : { 
+        value : function(w, e) {
+            if (e.isModifier) {
+                return;
+            }
+            this._update();
+        }
+    },
+    _updateHeight : { 
+        value : function() {
+            if (!this.height) {
+                mWidget.heightRequest = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
+            }
+        }
+    },
+    _start : { 
+        value : function() {
+            this._data = this.onShow();
+            this._updateHeight();
+            if (this._data) {
+                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
+            }
+        }
+    },
+    _update : {
+        value : function() {
+            var text, words, elements, data;
+
+            text = gui.entry.text.trim();
+            if (text == this._lastText) {
+                return;
+            }
+            this._lastText = text;
+
+            this._data = this.onUpdate(text);
+
+            this._updateHeight();
+            if (this._data) {
+                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
+            }
+        }
+    },
+    _onUpdateLabel : {
+        value : function() {
+            if (gui.messageLabel.label != this.label) {
+                gui.messageLabel.label = this.label;
+            }
+            return true;
+        },
+    },
+    _bindCallback : {
+        value : function() {
+            mWidget.inject("applyStyle(" + this._style + ")");
+
+            //mWidget.heightRequest = this.height;
+            //update();
+            gui.messageLabel.label = this.label;
+            gui.entry.visible = true;
+            gui.entry.hasFocus = true;
+            this._idLabelNotify = gui.messageLabel.notify("label", this._onUpdateLabel.bind(this));
+
+            this._sigKeyPress.connect();
+            this._sigKeyRelease.connect();
+
+            mWidget.visible = true;
+            this._start();
+        }
+    }, 
+    _startup : {
+        value : function() {
+            this.style = { 
+                body : { 
+                    "background-color" : this.bgColor || settings.normalCompletionBgColor,
+                    "color" : this.fgColor || settings.normalCompletionFgColor, 
+                    "font-size" : this.fontSize,
+                    "font-family" : this.fontFamily,
+                },
+                ".lineselected" : {
+                    "background-color" : this.selectedBgColor || settings.activeCompletionBgColor,   
+                    "color" : this.selectedFgColor || settings.activeCompletionFgColor,
+                },
+                ".label.right" : {
+                    "margin-right" : this.margin || "3", 
+                },
+                ".label.left" : {
+                    "margin-left" : this.margin || "3", 
+                }, 
+                "body > div" : {
+                    "overflow-y" : this.overflow || "auto" 
+                }
+
+            };
+            this._style = JSON.stringify(this.style);
+            this._sigKeyPress   = Signal("keyPress", this._onKeyPress.bind(this));
+            this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
+            bind(this.shortcut, this._bindCallback.bind(this));
+            this.onShow = this.onShow || this.onUpdate;
+        }
+    }
+});
+
+function create(ctorArgs) {
+    return new Completion(ctorArgs); 
+}
+mWidget = new HiddenWebView();
+
+mWidget.canFocus = false;
+Widget.transparent = true;
+
+gui.mainBox.packStart(mWidget, false, false, 0);
+gui.mainBox.reorderChild(mWidget, 2);
+
+mWidget.loadString(util.hereDoc(htmlContent));
+
+return { create : create };
+/* vim: set ft=javascript: */
