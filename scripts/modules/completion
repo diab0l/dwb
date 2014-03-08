@@ -330,12 +330,12 @@ function create(ctorArgs) {
 mWidget = new HiddenWebView();
 
 mWidget.canFocus = false;
-Widget.transparent = true;
+mWidget.transparent = true;
 
 gui.mainBox.packStart(mWidget, false, false, 0);
 gui.mainBox.reorderChild(mWidget, 2);
 
 mWidget.loadString(util.hereDoc(htmlContent));
 
-return { create : create };
+return { create : create, ctor : Completion };
 /* vim: set ft=javascript: */
