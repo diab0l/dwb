@@ -2326,7 +2326,7 @@ global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
         [NAMESPACE_TIMER] = "timer",
         [NAMESPACE_UTIL] = "util",
     };
-    JSValueRef ret = NIL;
+    JSValueRef ret = NULL;
     if (argc > 0) {
         char *name = js_value_to_char(ctx, argv[0], PROP_LENGTH, exc);
         if (name != NULL) {
@@ -7582,7 +7582,7 @@ scripts_init(gboolean force)
     if (dir != NULL) 
     {
         GString *content = g_string_new(NULL);
-        util_get_directory_content(content, dir, "js");
+        util_get_directory_content(content, dir, "js", "dwb.js");
         if (content != NULL)  
         {
             JSStringRef js_script = JSStringCreateWithUTF8CString(content->str);

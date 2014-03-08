@@ -288,7 +288,7 @@ util_web_settings_sort_second(WebSettings *a, WebSettings *b)
 
 /*util_get_directory_content(GString **, const char *filename) {{{*/
 void 
-util_get_directory_content(GString *buffer, const char *dirname, const char *extension) 
+util_get_directory_content(GString *buffer, const char *dirname, const char *extension, const char *firstfile) 
 {
     GDir *dir;
     char *content;
@@ -312,8 +312,14 @@ util_get_directory_content(GString *buffer, const char *dirname, const char *ext
                     continue;
             }
             filepath = g_build_filename(dirname, filename, NULL);
-            if (g_file_get_contents(filepath, &content, NULL, &error)) 
-                g_string_append(buffer, content);
+            if (g_file_get_contents(filepath, &content, NULL, &error)) {
+                if (firstfile != NULL && g_strcmp0(firstfile, filename) == 0) {
+                    g_string_prepend(buffer, content);
+                }
+                else {
+                    g_string_append(buffer, content);
+                }
+            }
             else 
             {
                 fprintf(stderr, "Cannot read %s: %s\n", filename, error->message);

@@ -5,13 +5,32 @@
     var tabs    = namespace("tabs");
     var timer   = namespace("timer");
     var util    = namespace("util");
+    var data    = namespace("data");
 
-    var _modules = {};
-    var _requires = {};
-    var _callbacks = [];
-    var _initialized = false;
-    var _pending = [];
-    var _contexts = {};
+    var _systemModuleDir    = data.systemDataDir + "/scripts/modules/";
+    var _userModuleDir      = data.userDataDir + "/scripts/modules/";
+
+    var _modules        = {};
+    var _requires       = {};
+    var _callbacks      = [];
+    var _initialized    = false;
+    var _pending        = [];
+    var _contexts       = {};
+    var _systemModules  = {};
+    function _getSystemModule(name) {
+        if (!_systemModules[name]) {
+            if (system.fileTest(_userModuleDir + name, FileTest.exists)) {
+                _systemModules[name] = include(_userModuleDir + name);
+            }
+            else if (system.fileTest(_systemModuleDir + name, FileTest.exists)) {
+                _systemModules[name] = include(_systemModuleDir + name);
+            }
+            else {
+                throw new Error("Module not found: " + name);
+            }
+        }
+        return _systemModules[name];
+    }
     var _applyRequired = function(names, callback) 
     {
         if (names === null) {
@@ -419,6 +438,9 @@
                     return; 
                 }
                 if (typeof names == "string") {
+                    if (names.substring(0, 4) == "lib:") {
+                        return _getSystemModule(names.substring(4));
+                    }
                     if (_modules[names])
                     {
                         return _modules[names];

@@ -602,7 +602,7 @@ adblock_rule_parse(char *filterlist)
     if  (g_file_test(filterlist, G_FILE_TEST_IS_DIR)) 
     {
         GString *string = g_string_new(NULL);
-        util_get_directory_content(string, filterlist, NULL);
+        util_get_directory_content(string, filterlist, NULL, NULL);
         if (string->str) 
             lines = g_strsplit(string->str, "\n", -1);
 
