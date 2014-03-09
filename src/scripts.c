@@ -7307,7 +7307,7 @@ void
 scripts_create_tab(GList *gl) 
 {
     static gboolean applied = false;
-    if (s_ctx->global_context == NULL )  
+    if (s_ctx == NULL )  
     {
         VIEW(gl)->script_wv = NULL;
         return;
