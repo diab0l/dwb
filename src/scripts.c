@@ -2063,7 +2063,7 @@ scripts_eval_key(KeyMap *m, Arg *arg)
         dwb_change_mode(NORMAL_MODE, true);
     }
 
-    if (s_ctx->global_context != NULL)
+    if (s_ctx != NULL && s_ctx->global_context != NULL)
     {
         if (arg->p == NULL) 
             json = util_create_json(3, CHAR, "key", m->key, 
@@ -2086,7 +2086,7 @@ scripts_eval_key(KeyMap *m, Arg *arg)
 
 void 
 scripts_clear_keymap() {
-    if (s_ctx->keymap_dirty) {
+    if (s_ctx != NULL && s_ctx->keymap_dirty) {
         EXEC_LOCK;
         GList *l, *next = dwb.keymap;
         KeyMap *km;
@@ -5494,12 +5494,13 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
 JSObjectRef 
 scripts_make_cookie(SoupCookie *cookie)
 {
-    g_return_val_if_fail(cookie != NULL, NULL);
+    g_return_val_if_fail(cookie != NULL || s_ctx != NULL, NULL);
     return make_boxed(cookie, s_ctx->classes[CLASS_COOKIE]);
 }
 static JSObjectRef 
 cookie_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
+    g_return_val_if_fail(s_ctx != NULL, NULL);
     SoupCookie *cookie = soup_cookie_new("", "", "", "", 0);
     return JSObjectMake(ctx, s_ctx->classes[CLASS_COOKIE], cookie);
 }
@@ -5844,6 +5845,8 @@ signal_set(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef
 gboolean
 scripts_emit(ScriptSignal *sig) 
 {
+    g_return_val_if_fail(s_ctx != NULL, false);
+
     int numargs, i, additional = 0;
     gboolean ret = false;
     JSObjectRef function = s_ctx->sig_objects[sig->signal];
@@ -7612,7 +7615,7 @@ gboolean
 scripts_execute_one(const char *script) 
 {
     gboolean ret = false;
-    if (s_ctx->global_context != NULL)
+    if (s_ctx != NULL && s_ctx->global_context != NULL)
     {
         char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, "dwb:scripts", script);
         ret = js_execute(s_ctx->global_context, debug, NULL) != NULL;
