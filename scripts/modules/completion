@@ -126,6 +126,18 @@ function injectable() {
             }
         }
     }
+    function getLineHeight(style) {
+        applyStyle(styles);
+        var textl = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; 
+        var textr = "asdfefghijklmnopqrstuvz1234567890";
+        var line = createElement("div", document.getElementById("content"), {
+            className : "line"
+        });
+        createElement("div", line, { className : "lineLeft" });
+        createElement("div", line, { className : "lineRight" });
+        var style = window.getComputedStyle(element, null);
+        alert(style.height);
+    }
 }
 
 function getWidget() {
@@ -154,14 +166,9 @@ function Completion(args) {
     if (!args.shortcut) {
         throw new Error("Completion no shortcut defined!");
     }
-    if (!args.onUpdate) {
-        throw new Error("Completion: onUpdate not defined!");
-    }
     if (!args.onSelected) {
         throw new Error("Completion: onSelected not defined!");
     }
-    ++Completion._lastId;
-    this._id = Completion._lastId;
 
     util.mixin(this, args);
 
@@ -176,6 +183,7 @@ Object.defineProperties(Completion.prototype, {
     _lastText       : { value : "",     writable : true },
     _data           : { value : null,   writable : true },
     _height         : { value : 0,      writable : true }, 
+    _initialData    : { value : null,   writable : true },
 
     _cleanup : {
         value : function() {
@@ -264,6 +272,9 @@ Object.defineProperties(Completion.prototype, {
                 return;
             }
             var text = gui.entry.text.trim();
+            if (this.ignoreCase) {
+                text = text.toLowerCase();
+            }
             if (text == this._lastText) {
                 return;
             }
@@ -295,7 +306,15 @@ Object.defineProperties(Completion.prototype, {
             this._sigKeyPress.connect();
             this._sigKeyRelease.connect();
 
-            this._doUpdate(this.onShow());
+            this._initialData = this.onShow();
+            if (this.ignoreCase) {
+                this._initialData.forEach(function(item) {
+                    if (item.matchAttr) {
+                        item.matchAttr = item.matchAttr.toLowerCase();
+                    }
+                });
+            }
+            this._doUpdate(this._initialData);
             if (this.height) {
                 widget.visible = true;
             }
@@ -342,9 +361,54 @@ Object.defineProperties(Completion.prototype, {
             if (this.height) {
                 Completion.widget.heightRequest = this.height;
             }
+            if (!this.onUpdate) {
+                switch (this.match) {
+                    case "lazy" : 
+                        this.onUpdate = this._onUpdateLazy; break;
+                    case "exact" : 
+                        this.onUpdate = this._onUpdateExact; break;
+                    default :
+                        this.onUpdate = this._onUpdateWordMatch; break;
+                }
+            }
             this.onShow = this.onShow || this.onUpdate;
         }
     }, 
+    _onUpdateExact : {
+        value : function(text) {
+            return this._initialData.filter(function(item) {
+                return item.matchAttr.indexOf(text) != -1;
+            });
+        }
+    },
+    _onUpdateLazy : { 
+        value : function(text) {
+            return this._initialData.filter(function(item) {
+                var matchAttr = item.matchAttr;
+                var length = matchAttr.length;
+                var tmp = text;
+                for (var i=0; i<length; i++) {
+                    if (tmp[0] == matchAttr[i]) {
+                        tmp = tmp.substring(1);
+                    }
+                    if (!tmp) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+        } 
+    },
+    _onUpdateWordMatch : {
+        value : function(text) {
+            var words = text.split(/\s+/);
+            return this._initialData.filter(function(item) {
+                return words.every(function(word) {
+                    return item.matchAttr.indexOf(word) != -1;
+                });
+            });
+        }
+    },
     // public overridable properties
     onUpdate        : { value : null,           writable : true },
     onSelected      : { value : null,           writable : true },
@@ -354,7 +418,8 @@ Object.defineProperties(Completion.prototype, {
     fontSize        : { value : 11,             writable : true },
     fontFamily      : { value : "monospace",    writable : true },
     lineSpacing     : { value : 2,              writable : true },
-    onHide          : { value : function(){},   writable : true }
+    onHide          : { value : function(){},   writable : true }, 
+    ignoreCase      : { value : true,           writable : true }
 });
 
 Object.defineProperties(Completion, {
