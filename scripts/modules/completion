@@ -7,7 +7,15 @@ mWidget.canFocus = false;
 mWidget.transparent = true;
 
 gui.mainBox.packStart(mWidget, false, false, 0);
-gui.mainBox.reorderChild(mWidget, 2);
+var wp = settings.widgetPacking;
+var idxStatus = wp.search(/[sS]/);
+var idxMain = wp.indexOf("w");
+if (idxStatus > idxMain) {
+    gui.mainBox.reorderChild(mWidget, idxStatus);
+}
+else {
+    gui.mainBox.reorderChild(mWidget, idxStatus + 1);
+}
 
 function htmlContent() {
 /*HEREDOC
@@ -53,8 +61,16 @@ body {
     -webkit-user-select:none;
 }
 </style>
-<script type="text/javascript">
-    var mSelectedIdx = -1, mElements;
+</head>
+<body>
+<div id="content"></div>
+</body>
+HEREDOC*/
+}
+
+function injectable() {
+    var mSelectedIdx = -1; 
+    var mElements;
     function clear() {
         document.getElementById("content").innerHTML = "";
         mElements = null;
@@ -126,15 +142,10 @@ body {
             }
         }
     }
-</script>
-</head>
-<body>
-<div id="content"></div>
-</body>
-HEREDOC*/
 }
 
 mWidget.loadString(util.hereDoc(htmlContent));
+mWidget.inject(injectable, null, 64, true);
 
 function Completion(args) {
     if (!args.shortcut) {
@@ -153,18 +164,19 @@ function Completion(args) {
 
 Object.defineProperties(Completion.prototype, {
     // private
-    _sigKeyPress   : { value : null, writable : true },
-    _sigKeyRelease : { value : null, writable : true },
-    _idLabelNotify : { value : -1, writable : true },
-    _lastText : { value : "", writable : true },
-    _data : { value : {}, writable : true },
-    _height : { value : 0, writable : true }, 
+    _sigKeyPress    : { value : null,   writable : true },
+    _sigKeyRelease  : { value : null,   writable : true },
+    _idLabelNotify  : { value : -1,     writable : true },
+    _lastText       : { value : "",     writable : true },
+    _data           : { value : null,   writable : true },
+    _height         : { value : 0,      writable : true }, 
 
     _cleanup : {
         value : function() {
             this._sigKeyRelease.disconnect();
             this._sigKeyPress.disconnect();
             gui.messageLabel.disconnect(this._idLabelNotify);
+            this._idLabelNotify = -1;
             gui.messageLabel.label = "";
 
             mWidget.inject("clear()");
@@ -316,17 +328,17 @@ Object.defineProperties(Completion.prototype, {
         }
     }, 
     // public 
-    widget : { value : mWidget },
+    widget          : { value : mWidget },
     // public overridable properties
-    onUpdate : { value : null, writable : true },
-    onSelected : { value : null, writable : true },
-    shortcut : { value : null, writable : true }, 
-    label : { value : ":", writable : true }, 
-    visibleItems : { value : 11, writable : true },
-    fontSize : { value : 11, writable : true },
-    fontFamily : { value : "monospace", writable : true },
-    lineSpacing : { value : 2, writable : true },
-    onHide : { value : function(){}, writable : true }, 
+    onUpdate        : { value : null,           writable : true },
+    onSelected      : { value : null,           writable : true },
+    shortcut        : { value : null,           writable : true }, 
+    label           : { value : ":",            writable : true }, 
+    visibleItems    : { value : 11,             writable : true },
+    fontSize        : { value : 11,             writable : true },
+    fontFamily      : { value : "monospace",    writable : true },
+    lineSpacing     : { value : 2,              writable : true },
+    onHide          : { value : function(){},   writable : true }
 });
 
 return Completion;
