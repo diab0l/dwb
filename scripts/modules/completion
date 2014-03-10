@@ -217,7 +217,6 @@ Object.defineProperties(Completion.prototype, {
     },
     _doUpdate : { 
         value : function(data) {
-            io.print("update");
             this._data = data;
             var widget = Completion.widget;
             if (this._data && this._data.length > 0) {
