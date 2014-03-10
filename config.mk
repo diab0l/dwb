@@ -23,6 +23,7 @@ UTILDIR=$(SRCDIR)/util
 TOOLDIR=tools
 EXTENSIONDIR=extensions
 CONTRIBDIR=contrib
+MODULEDIR=$(JSDIR)/modules
 
 DWB_LIB_DIR_EXAR = exar
 DWB_LIB_DIR_RC = dwbremote

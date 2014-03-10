@@ -69,6 +69,14 @@ install-data: all
 			install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
 		fi \
 	done
+	@#Modules
+	install -d $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$(MODULEDIR)
+	for file in $(MODULEDIR)/*; do \
+		if [ -f $$file ]; then \
+			install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
+		fi \
+	done
+
 ifdef BASHCOMPLETION
 	install -d $(DESTDIR)/$(BASHCOMPLETION)
 	install -m 644 $(CONTRIBDIR)/bash-completion $(DESTDIR)/$(BASHCOMPLETION)/dwb
