@@ -204,7 +204,12 @@ Object.defineProperties(Completion.prototype, {
                 }
                 return false;
             });
-            this.onSelected(item);
+            if (item) {
+                this.onSelected(item);
+            }
+            else {
+                this.onHide();
+            }
         }
     },
     _onKeyPress : {
