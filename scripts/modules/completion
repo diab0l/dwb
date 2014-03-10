@@ -218,19 +218,20 @@ Object.defineProperties(Completion.prototype, {
             else {
                 widget.inject("clear()");
             }
-            if (!this.height) {
-                var oldHeight = this._height;
-                this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
-                if (this._height == 0)  {
-                    widget.visible = false;
-                    return;
-                }
-                if (oldHeight != this._height) {
-                    widget.heightRequest = this._height;
-                }
-                if (oldHeight == 0) {
-                    widget.visible = true;
-                }
+            if (this.height) {
+                return;
+            }
+            var oldHeight = this._height;
+            this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
+            if (this._height == 0)  {
+                widget.visible = false;
+                return;
+            }
+            if (oldHeight != this._height) {
+                widget.heightRequest = this._height;
+            }
+            if (oldHeight == 0) {
+                widget.visible = true;
             }
         }
     },
@@ -281,9 +282,9 @@ Object.defineProperties(Completion.prototype, {
     _bindCallback : {
         value : function() {
             var widget = Completion.widget;
-            if (Completion._styleId != this._id) {
-                widget.inject("applyStyle(" + this._style + ")");
-                Completion._styleId = this._id;
+            if (Completion._lastStyle != this._styleId) {
+                widget.inject("applyStyle(" + Completion._styles[this._styleId] + ")");
+                Completion._lastStyle = this._styleId;
             }
 
             gui.messageLabel.label = this.label;
@@ -302,7 +303,7 @@ Object.defineProperties(Completion.prototype, {
     }, 
     _startup : {
         value : function() {
-            this.style = { 
+            var style = JSON.stringify({ 
                 body : { 
                     "background-color" : this.bgColor || settings.normalCompletionBgColor,
                     "color" : this.fgColor || settings.normalCompletionFgColor, 
@@ -323,8 +324,15 @@ Object.defineProperties(Completion.prototype, {
                     "overflow-y" : this.overflow || "auto" 
                 }
 
-            };
-            this._style = JSON.stringify(this.style);
+            });
+            if (!Completion._styles.some(function(s, i) {
+                if (s == style) {
+                    this._styleId = i;
+                    return true;
+                }
+            }, this)) {
+                this._styleId = Completion._styles.push(style) - 1;
+            }
 
             this._sigKeyPress   = Signal("keyPress", this._onKeyPress.bind(this));
             this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
@@ -350,11 +358,11 @@ Object.defineProperties(Completion.prototype, {
 });
 
 Object.defineProperties(Completion, {
-    _lastId : {
-        value : 0, writable : true
+    _lastStyle : {
+        value : -1, writable : true
     },
-    _styleId : {
-        value : 0, writable : true
+    _styles : {
+        value : []
     },
     widget : { 
         value : getWidget() 
