@@ -1,5 +1,6 @@
 var util    = namespace("util");
 var gui     = namespace("gui");
+var timer   = namespace("timer");
 
 function htmlContent() {
 /*HEREDOC
@@ -159,7 +160,6 @@ function Completion(args) {
     }
 
     util.mixin(this, args);
-    io.print(this.fontFamily);
 
     this._startup();
 }
@@ -174,6 +174,8 @@ Object.defineProperties(Completion.prototype, {
     _height         : { value : 0,      writable : true }, 
     _initialData    : { value : null,   writable : true },
     _position       : { value : 0,      writable : true },
+    _timer          : { value : null,   writable : true },
+    _lastKeyRelease : { value : -1,     writable : true },
 
     _cleanup : {
         value : function() {
@@ -193,6 +195,11 @@ Object.defineProperties(Completion.prototype, {
             this._data = null;
             this._initialData = null;
             this._position = 0;
+            this._lastKeyRelease = -1;
+            if (this._timer) {
+                this._timer.remove();
+                this._timer = null;
+            }
             util.normalMode();
         }
     }, 
@@ -210,6 +217,7 @@ Object.defineProperties(Completion.prototype, {
     },
     _doUpdate : { 
         value : function(data) {
+            io.print("update");
             this._data = data;
             var widget = Completion.widget;
             if (this._data && this._data.length > 0) {
@@ -283,7 +291,19 @@ Object.defineProperties(Completion.prototype, {
             if (text == this._lastText) {
                 return;
             }
-            this._doUpdate(this.onUpdate(text));
+            if (this._timer) {
+                this._timer.remove();
+            }
+            if (this.updateDelay > 0) {
+                var self = this;
+                this._timer = timer.start(this.updateDelay, function() {
+                    self._doUpdate(self.onUpdate(text));
+                    return false;
+                });
+            }
+            else {
+                this._doUpdate(this.onUpdate(text));
+            }
             this._lastText = text;
         }
     },
@@ -431,7 +451,8 @@ Object.defineProperties(Completion.prototype, {
     fontFamily      : { value : "monospace",    writable : true },
     lineSpacing     : { value : 2,              writable : true },
     onHide          : { value : function(){},   writable : true }, 
-    ignoreCase      : { value : true,           writable : true }
+    ignoreCase      : { value : true,           writable : true }, 
+    updateDelay     : { value : 0,              writable : true }, 
 });
 
 Object.defineProperties(Completion, {
