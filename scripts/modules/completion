@@ -303,9 +303,15 @@ Object.defineProperties(Completion.prototype, {
 
             };
             this._style = JSON.stringify(this.style);
+
             this._sigKeyPress   = Signal("keyPress", this._onKeyPress.bind(this));
             this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
+
             bind(this.shortcut, this._bindCallback.bind(this));
+
+            if (this.height) {
+                mWidget.heightRequest = this.height;
+            }
             this.onShow = this.onShow || this.onUpdate;
         }
     }, 
