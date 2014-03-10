@@ -1,8 +1,6 @@
 var util    = namespace("util");
 var gui     = namespace("gui");
 
-var mWidget;
-
 function htmlContent() {
 /*HEREDOC
 <head>
@@ -130,7 +128,7 @@ function injectable() {
     }
 }
 
-function startupWidget() {
+function getWidget() {
     var widget, wp, is, iw;
     widget = new HiddenWebView();
 
@@ -162,6 +160,9 @@ function Completion(args) {
     if (!args.onSelected) {
         throw new Error("Completion: onSelected not defined!");
     }
+    ++Completion._lastId;
+    this._id = Completion._lastId;
+
     util.mixin(this, args);
 
     this._startup();
@@ -178,14 +179,15 @@ Object.defineProperties(Completion.prototype, {
 
     _cleanup : {
         value : function() {
+            var widget = Completion.widget;
             this._sigKeyRelease.disconnect();
             this._sigKeyPress.disconnect();
             gui.messageLabel.disconnect(this._idLabelNotify);
             this._idLabelNotify = -1;
             gui.messageLabel.label = "";
 
-            mWidget.inject("clear()");
-            mWidget.visible = false;
+            widget.inject("clear()");
+            widget.visible = false;
             this.onHide();
 
             this._height = 0;
@@ -196,7 +198,7 @@ Object.defineProperties(Completion.prototype, {
     }, 
     _getSelected : { 
         value : function() {
-            var id = JSON.parse(mWidget.inject("return getSelected()"));
+            var id = JSON.parse(Completion.widget.inject("return getSelected()"));
             var item = this._data[id]; 
             if (item) {
                 this.onSelected(item);
@@ -209,24 +211,25 @@ Object.defineProperties(Completion.prototype, {
     _doUpdate : { 
         value : function(data) {
             this._data = data;
+            var widget = Completion.widget;
             if (this._data && this._data.length > 0) {
-                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
+                widget.inject("update(" + JSON.stringify(this._data) + ")");
             }
             else {
-                mWidget.inject("clear()");
+                widget.inject("clear()");
             }
             if (!this.height) {
                 var oldHeight = this._height;
                 this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
                 if (this._height == 0)  {
-                    mWidget.visible = false;
+                    widget.visible = false;
                     return;
                 }
                 if (oldHeight != this._height) {
-                    mWidget.heightRequest = this._height;
+                    widget.heightRequest = this._height;
                 }
                 if (oldHeight == 0) {
-                    mWidget.visible = true;
+                    widget.visible = true;
                 }
             }
         }
@@ -243,11 +246,11 @@ Object.defineProperties(Completion.prototype, {
                     return true;
                 case "Down" :
                 case "Tab" : 
-                    mWidget.inject("select(1)");
+                    Completion.widget.inject("select(1)");
                     return true;
                 case "Up" :
                 case "ISO_Left_Tab" : 
-                    mWidget.inject("select(-1)");
+                    Completion.widget.inject("select(-1)");
                     return true;
                 default : 
                     return false;
@@ -277,7 +280,11 @@ Object.defineProperties(Completion.prototype, {
     },
     _bindCallback : {
         value : function() {
-            mWidget.inject("applyStyle(" + this._style + ")");
+            var widget = Completion.widget;
+            if (Completion._styleId != this._id) {
+                widget.inject("applyStyle(" + this._style + ")");
+                Completion._styleId = this._id;
+            }
 
             gui.messageLabel.label = this.label;
             gui.entry.visible = true;
@@ -289,7 +296,7 @@ Object.defineProperties(Completion.prototype, {
 
             this._doUpdate(this.onShow());
             if (this.height) {
-                mWidget.visible = true;
+                widget.visible = true;
             }
         }
     }, 
@@ -325,13 +332,11 @@ Object.defineProperties(Completion.prototype, {
             bind(this.shortcut, this._bindCallback.bind(this));
 
             if (this.height) {
-                mWidget.heightRequest = this.height;
+                Completion.widget.heightRequest = this.height;
             }
             this.onShow = this.onShow || this.onUpdate;
         }
     }, 
-    // public 
-    widget          : { value : mWidget },
     // public overridable properties
     onUpdate        : { value : null,           writable : true },
     onSelected      : { value : null,           writable : true },
@@ -344,7 +349,17 @@ Object.defineProperties(Completion.prototype, {
     onHide          : { value : function(){},   writable : true }
 });
 
-mWidget = startupWidget();
+Object.defineProperties(Completion, {
+    _lastId : {
+        value : 0, writable : true
+    },
+    _styleId : {
+        value : 0, writable : true
+    },
+    widget : { 
+        value : getWidget() 
+    } 
+});
 
 return Completion;
 /* vim: set ft=javascript: */
