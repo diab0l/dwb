@@ -288,6 +288,9 @@ Object.defineProperties(Completion.prototype, {
             this._sigKeyRelease.connect();
 
             this._doUpdate(this.onShow());
+            if (this.height) {
+                mWidget.visible = true;
+            }
         }
     }, 
     _startup : {
