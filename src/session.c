@@ -223,7 +223,7 @@ session_restore(char *name, int flags)
     int length = g_strv_length(lines) - 1;
     for (int i=1; i<=length; i++) 
     {
-        char **line = g_strsplit(lines[i], " ", 4);
+        char **line = g_strsplit(lines[i], " ", 3);
         if (line[0] && line[1] && line[2]) 
         {
             int current = strtol(line[0], &end, 10);
