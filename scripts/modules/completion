@@ -1,21 +1,7 @@
 var util    = namespace("util");
 var gui     = namespace("gui");
 
-var mWidget = new HiddenWebView();
-
-mWidget.canFocus = false;
-mWidget.transparent = true;
-
-gui.mainBox.packStart(mWidget, false, false, 0);
-var wp = settings.widgetPacking;
-var idxStatus = wp.search(/[sS]/);
-var idxMain = wp.indexOf("w");
-if (idxStatus > idxMain) {
-    gui.mainBox.reorderChild(mWidget, idxStatus);
-}
-else {
-    gui.mainBox.reorderChild(mWidget, idxStatus + 1);
-}
+var mWidget;
 
 function htmlContent() {
 /*HEREDOC
@@ -144,8 +130,27 @@ function injectable() {
     }
 }
 
-mWidget.loadString(util.hereDoc(htmlContent));
-mWidget.inject(injectable, null, 64, true);
+function startupWidget() {
+    var widget, wp, is, iw;
+    widget = new HiddenWebView();
+
+    widget.canFocus = false;
+    widget.transparent = true;
+
+    gui.mainBox.packStart(widget, false, false, 0);
+    wp = settings.widgetPacking;
+    is = wp.search(/[sS]/);
+    iw = wp.indexOf("w");
+    if (is > iw) {
+        gui.mainBox.reorderChild(widget, is);
+    }
+    else {
+        gui.mainBox.reorderChild(widget, is + 1);
+    }
+    widget.loadString(util.hereDoc(htmlContent));
+    widget.inject(injectable, null, 64, true);
+    return widget;
+}
 
 function Completion(args) {
     if (!args.shortcut) {
@@ -340,6 +345,8 @@ Object.defineProperties(Completion.prototype, {
     lineSpacing     : { value : 2,              writable : true },
     onHide          : { value : function(){},   writable : true }
 });
+
+mWidget = startupWidget();
 
 return Completion;
 /* vim: set ft=javascript: */
