@@ -2313,24 +2313,24 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 static JSValueRef 
 global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
     static const char *mapping[] = {
-        [NAMESPACE_CLIPBOARD] = "clipboard",
-        [NAMESPACE_CONSOLE] = "console",
-        [NAMESPACE_DATA] = "data",
-        [NAMESPACE_EXTENSIONS] = "extensions",
-        [NAMESPACE_GUI] = "gui",
-        [NAMESPACE_IO] = "io",
-        [NAMESPACE_NET] = "net",
-        [NAMESPACE_SIGNALS] = "signals",
-        [NAMESPACE_SYSTEM] = "system",
-        [NAMESPACE_TABS] = "tabs",
-        [NAMESPACE_TIMER] = "timer",
-        [NAMESPACE_UTIL] = "util",
+        [NAMESPACE_CLIPBOARD]   = "clipboard",
+        [NAMESPACE_CONSOLE]     = "console",
+        [NAMESPACE_DATA]        = "data",
+        [NAMESPACE_EXTENSIONS]  = "extensions",
+        [NAMESPACE_GUI]         = "gui",
+        [NAMESPACE_IO]          = "io",
+        [NAMESPACE_NET]         = "net",
+        [NAMESPACE_SIGNALS]     = "signals",
+        [NAMESPACE_SYSTEM]      = "system",
+        [NAMESPACE_TABS]        = "tabs",
+        [NAMESPACE_TIMER]       = "timer",
+        [NAMESPACE_UTIL]        = "util",
     };
     JSValueRef ret = NULL;
     if (argc > 0) {
         char *name = js_value_to_char(ctx, argv[0], PROP_LENGTH, exc);
         if (name != NULL) {
-            for (int i; i<NAMESPACE_LAST; i++) {
+            for (int i=0; i<NAMESPACE_LAST; i++) {
                 if (!strcmp(name, mapping[i])) {
                     ret = s_ctx->namespaces[i];
                     break;
@@ -7584,13 +7584,17 @@ scripts_init(gboolean force)
     char *dir = util_get_data_dir(LIBJS_DIR);
     if (dir != NULL) 
     {
+        JSValueRef e = NULL;
         GString *content = g_string_new(NULL);
         util_get_directory_content(content, dir, "js", "dwb.js");
         if (content != NULL)  
         {
             JSStringRef js_script = JSStringCreateWithUTF8CString(content->str);
-            JSEvaluateScript(s_ctx->global_context, js_script, NULL, NULL, 0, NULL);
+            JSEvaluateScript(s_ctx->global_context, js_script, NULL, NULL, 0, &e);
             JSStringRelease(js_script);
+            if (e != NULL) {
+                js_print_exception(s_ctx->global_context, e, NULL, 0, 0, NULL);
+            }
         }
         g_string_free(content, true);
         g_free(dir);
