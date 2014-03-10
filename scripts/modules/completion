@@ -188,6 +188,7 @@ Object.defineProperties(Completion.prototype, {
             mWidget.visible = false;
             this.onHide();
 
+            this._height = 0;
             this._lastText = "";
             this._data = null;
             util.normalMode();
@@ -202,6 +203,31 @@ Object.defineProperties(Completion.prototype, {
             }
             else {
                 this.onHide();
+            }
+        }
+    },
+    _doUpdate : { 
+        value : function(data) {
+            this._data = data;
+            if (this._data && this._data.length > 0) {
+                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
+            }
+            else {
+                mWidget.inject("clear()");
+            }
+            if (!this.height) {
+                var oldHeight = this._height;
+                this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
+                if (this._height == 0)  {
+                    mWidget.visible = false;
+                    return;
+                }
+                if (oldHeight != this._height) {
+                    mWidget.heightRequest = this._height;
+                }
+                if (oldHeight == 0) {
+                    mWidget.visible = true;
+                }
             }
         }
     },
@@ -238,31 +264,7 @@ Object.defineProperties(Completion.prototype, {
                 return;
             }
             this._lastText = text;
-
-            this._data = this.onUpdate(text);
-
-            this._updateHeight();
-            if (this._data) {
-                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
-            }
-        }
-    },
-    _updateHeight : { 
-        value : function() {
-            if (!this.height) {
-                var oldHeight = this._height;
-                this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
-                if (this._height == 0)  {
-                    mWidget.visible = false;
-                    return;
-                }
-                if (oldHeight == 0) {
-                    mWidget.visible = true;
-                }
-                if (oldHeight != this._height) {
-                    mWidget.heightRequest = this._height;
-                }
-            }
+            this._doUpdate(this.onUpdate(text));
         }
     },
     _onUpdateLabel : {
@@ -285,12 +287,7 @@ Object.defineProperties(Completion.prototype, {
             this._sigKeyPress.connect();
             this._sigKeyRelease.connect();
 
-            this._data = this.onShow();
-            this._updateHeight();
-            if (this._data) {
-                mWidget.inject("update(" + JSON.stringify(this._data) + ")");
-            }
-            mWidget.visible = true;
+            this._doUpdate(this.onShow());
         }
     }, 
     _startup : {
