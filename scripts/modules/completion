@@ -110,7 +110,7 @@ function injectable() {
                 textContent : tab.rightLabel || "", 
                 className : "label right"
             });
-            element.dataset.id = tab.id;
+            element.dataset.id = i;
             return element;
         });
         select();
@@ -196,14 +196,7 @@ Object.defineProperties(Completion.prototype, {
     _getSelected : { 
         value : function() {
             var id = JSON.parse(mWidget.inject("return getSelected()"));
-            var item = null; 
-            this._data.some(function(i) { 
-                if (i.id == id) {
-                    item = i;
-                    return true
-                }
-                return false;
-            });
+            var item = this._data[id]; 
             if (item) {
                 this.onSelected(item);
             }
