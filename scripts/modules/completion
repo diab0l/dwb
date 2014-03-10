@@ -95,17 +95,17 @@ function injectable() {
     function update(data) {
         clear();
         var content = document.createDocumentFragment();
-        mElements = data.map(function(tab, i) {
+        mElements = data.map(function(item, i) {
             var className = "line ";
             var element = createElement("div", content, {
                 className : "line",
             });
-            createElement("div", element, {
-                textContent : tab.leftLabel || "",
+            createElement("code", element, {
+                textContent : item.leftLabel || "",
                 className : "label left"
             });
-            createElement("div", element, {
-                textContent : tab.rightLabel || "", 
+            createElement("code", element, {
+                textContent : item.rightLabel || "", 
                 className : "label right"
             });
             element.dataset.id = i;
@@ -125,18 +125,6 @@ function injectable() {
                 }
             }
         }
-    }
-    function getLineHeight(style) {
-        applyStyle(styles);
-        var textl = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"; 
-        var textr = "asdfefghijklmnopqrstuvz1234567890";
-        var line = createElement("div", document.getElementById("content"), {
-            className : "line"
-        });
-        createElement("div", line, { className : "lineLeft" });
-        createElement("div", line, { className : "lineRight" });
-        var style = window.getComputedStyle(element, null);
-        alert(style.height);
     }
 }
 
@@ -171,6 +159,7 @@ function Completion(args) {
     }
 
     util.mixin(this, args);
+    io.print(this.fontFamily);
 
     this._startup();
 }
@@ -184,6 +173,7 @@ Object.defineProperties(Completion.prototype, {
     _data           : { value : null,   writable : true },
     _height         : { value : 0,      writable : true }, 
     _initialData    : { value : null,   writable : true },
+    _position       : { value : 0,      writable : true },
 
     _cleanup : {
         value : function() {
@@ -201,6 +191,8 @@ Object.defineProperties(Completion.prototype, {
             this._height = 0;
             this._lastText = "";
             this._data = null;
+            this._initialData = null;
+            this._position = 0;
             util.normalMode();
         }
     }, 
@@ -243,6 +235,19 @@ Object.defineProperties(Completion.prototype, {
             }
         }
     },
+    _forward : {
+        value : function() {
+            //this._position++;
+            Completion.widget.inject("select(1)");
+        }
+    },
+    _backward : {
+        value : function() {
+            //this._position--;
+            Completion.widget.inject("select(-1)");
+        }
+    },
+
     _onKeyPress : {
         value : function(w, e) {
             switch(e.name) {
@@ -255,11 +260,11 @@ Object.defineProperties(Completion.prototype, {
                     return true;
                 case "Down" :
                 case "Tab" : 
-                    Completion.widget.inject("select(1)");
+                    this._forward();
                     return true;
                 case "Up" :
                 case "ISO_Left_Tab" : 
-                    Completion.widget.inject("select(-1)");
+                    this._backward();
                     return true;
                 default : 
                     return false;
@@ -322,6 +327,7 @@ Object.defineProperties(Completion.prototype, {
     }, 
     _startup : {
         value : function() {
+            var styleId;
             var style = JSON.stringify({ 
                 body : { 
                     "background-color" : this.bgColor || settings.normalCompletionBgColor,
@@ -346,12 +352,15 @@ Object.defineProperties(Completion.prototype, {
             });
             if (!Completion._styles.some(function(s, i) {
                 if (s == style) {
-                    this._styleId = i;
+                    styleId = i;
                     return true;
                 }
             }, this)) {
-                this._styleId = Completion._styles.push(style) - 1;
+                styleId = Completion._styles.push(style) - 1;
             }
+            Object.defineProperty(this, "_styleId", { value : styleId });
+
+            //this.renderedItems = this.renderedItems || this.visibleItems * 3;
 
             this._sigKeyPress   = Signal("keyPress", this._onKeyPress.bind(this));
             this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
