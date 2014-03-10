@@ -278,8 +278,8 @@ Object.defineProperties(Completion.prototype, {
             if (text == this._lastText) {
                 return;
             }
-            this._lastText = text;
             this._doUpdate(this.onUpdate(text));
+            this._lastText = text;
         }
     },
     _onUpdateLabel : {
@@ -376,14 +376,16 @@ Object.defineProperties(Completion.prototype, {
     }, 
     _onUpdateExact : {
         value : function(text) {
-            return this._initialData.filter(function(item) {
+            var data = this._lastText.length < text.length ? this._data : this._initialData;
+            return data.filter(function(item) {
                 return item.matchAttr.indexOf(text) != -1;
             });
         }
     },
     _onUpdateLazy : { 
         value : function(text) {
-            return this._initialData.filter(function(item) {
+            var data = this._lastText.length < text.length ? this._data : this._initialData;
+            return data.filter(function(item) {
                 var matchAttr = item.matchAttr;
                 var length = matchAttr.length;
                 var tmp = text;
@@ -401,8 +403,9 @@ Object.defineProperties(Completion.prototype, {
     },
     _onUpdateWordMatch : {
         value : function(text) {
+            var data = this._lastText.length < text.length ? this._data : this._initialData;
             var words = text.split(/\s+/);
-            return this._initialData.filter(function(item) {
+            return data.filter(function(item) {
                 return words.every(function(word) {
                     return item.matchAttr.indexOf(word) != -1;
                 });
