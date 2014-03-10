@@ -2328,16 +2328,16 @@ global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
     };
     JSValueRef ret = NULL;
     if (argc > 0) {
-        char *name = js_value_to_char(ctx, argv[0], PROP_LENGTH, exc);
+        JSStringRef name = JSValueToStringCopy(ctx, argv[0], exc);
         if (name != NULL) {
             for (int i=0; i<NAMESPACE_LAST; i++) {
-                if (!strcmp(name, mapping[i])) {
+                if (JSStringIsEqualToUTF8CString(name, mapping[i])) {
                     ret = s_ctx->namespaces[i];
                     break;
                 }
             } 
-            g_free(name);
         }
+        JSStringRelease(name);
     }
     return ret;
 }
