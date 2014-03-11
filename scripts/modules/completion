@@ -55,11 +55,13 @@ HEREDOC*/
 
 function injectable() {
     var mSelectedIdx = -1; 
+    var mHeaderOffset = 0;
     var mElements;
     function clear() {
         document.getElementById("content").innerHTML = "";
         mElements = null;
         mSelectedIdx = -1;
+        mHeaderOffset = 0;
     }
     function getSelected() {
         return mElements[mSelectedIdx].dataset.id;
@@ -112,8 +114,8 @@ function injectable() {
             element.dataset.id = i;
             return element;
         });
-        select();
         document.getElementById("content").appendChild(content);
+        select();
     }
     function applyStyle(styles) {
         var selector, style, i, sheet, item;
@@ -206,7 +208,12 @@ Object.defineProperties(Completion.prototype, {
     _getSelected : { 
         value : function() {
             var id = JSON.parse(Completion.widget.inject("return getSelected()"));
-            var item = this._data[id]; 
+            return this._data[id]; 
+        }
+    },
+    _triggerSelectedAction : {
+        value : function() {
+            var item = this._getSelected();
             if (item) {
                 this.onSelected(item);
             }
@@ -217,39 +224,39 @@ Object.defineProperties(Completion.prototype, {
     },
     _prepareMatchBoth : {
         value : function() {
-            this._data.forEach(function(item, i) {
+            this._initialData.forEach(function(item, i) {
                 item.matchAttr = item.leftLabel + " " + item.rightLabel;
             });
         }
     },
     _prepareMatchLeft : {
         value : function() {
-            this._data.forEach(function(item, i) {
+            this._initialData.forEach(function(item, i) {
                 item.matchAttr = item.leftLabel;
             });
         }
     },
     _prepareMatchRight : {
-        value : function() {
-            this._data.forEach(function(item, i) {
+        value : function(data) {
+            this._initialData.forEach(function(item, i) {
                 item.matchAttr = item.rightLabel;
             });
+        }
+    },
+    _prepareData : {
+        value : function() {
+            this._initialData.forEach(function(item, i) {
+                if (this.ignoreCase) {
+                    item.matchAttr = item.matchAttr.toLowerCase();
+                }
+                item.id = i;
+            }, this);
         }
     },
     setData : { 
         value : function(data, refresh) {
             this._position = 0;
             this._data = data;
-            switch (this.match) {
-                case "matchAttr" : break;
-                case "both" : this._prepareMatchBoth(); break;
-                case "left" : this._prepareMatchLeft(); break;
-                case "right" : this._prepareMatchRight(); break;
-                default : throw new Error("Invalid match property");
-            }
-            this._data.forEach(function(item, i) {
-                item.id = i;
-            });
             if (refresh) {
                 this._doUpdate();
             }
@@ -298,7 +305,7 @@ Object.defineProperties(Completion.prototype, {
         value : function(w, e) {
             switch(e.name) {
                 case "Return" : 
-                    this._getSelected();
+                    this._triggerSelectedAction();
                     this._cleanup();
                     return true;
                 case "Escape" : 
@@ -336,13 +343,13 @@ Object.defineProperties(Completion.prototype, {
                 var self = this;
                 this._timer = timer.start(this.updateDelay, function() {
                     this._position = 0;
-                    self.setData(self.onUpdate(text), true);
+                    self.setData(self.onFilter(text), true);
                     return false;
                 });
             }
             else {
                 this._position = 0;
-                this.setData(this.onUpdate(text), true);
+                this.setData(this.onFilter(text), true);
             }
             this._lastText = text;
         }
@@ -371,15 +378,7 @@ Object.defineProperties(Completion.prototype, {
             this._sigKeyPress.connect();
             this._sigKeyRelease.connect();
 
-            this._initialData = this.onShow();
-            if (this.ignoreCase) {
-                this._initialData.forEach(function(item) {
-                    if (item.matchAttr) {
-                        item.matchAttr = item.matchAttr.toLowerCase();
-                    }
-                });
-            }
-            this.setData(this._initialData, true);
+            this.refresh();
             if (this.fixedHeight) {
                 widget.heightRequest = Math.min(this.visibleItems) * (this.fontSize + this.lineSpacing);
                 widget.visible = true;
@@ -389,7 +388,7 @@ Object.defineProperties(Completion.prototype, {
     _startup : {
         value : function() {
             var styleId;
-            var style = JSON.stringify({ 
+            var style = JSON.stringify({
                 body : { 
                     "background-color" : this.bgColor || settings.normalCompletionBgColor,
                     "color" : this.fgColor || settings.normalCompletionFgColor, 
@@ -408,7 +407,7 @@ Object.defineProperties(Completion.prototype, {
                 }, 
                 "#content" : {
                     "overflow-y" : this.overflow || "auto" 
-                }
+                }, 
 
             });
             if (!Completion._styles.some(function(s, i) {
@@ -421,27 +420,25 @@ Object.defineProperties(Completion.prototype, {
             }
             Object.defineProperty(this, "_styleId", { value : styleId });
 
-            //this.renderedItems = this.renderedItems || this.visibleItems * 3;
-
             this._sigKeyPress   = Signal("keyPress", this._onKeyPress.bind(this));
             this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
 
             bind(this.shortcut, this._bindCallback.bind(this));
 
-            if (!this.onUpdate) {
+            if (!this.onFilter) {
                 switch (this.matchStyle) {
                     case "lazy" : 
-                        this.onUpdate = this._onUpdateLazy; break;
+                        this.onFilter = this._onFilterLazy; break;
                     case "exact" : 
-                        this.onUpdate = this._onUpdateExact; break;
+                        this.onFilter = this._onFilterExact; break;
                     default :
-                        this.onUpdate = this._onUpdateWordMatch; break;
+                        this.onFilter = this._onFilterWordMatch; break;
                 }
             }
-            this.onShow = this.onShow || this.onUpdate;
+            this.onShow = this.onShow || this.onFilter;
         }
     }, 
-    _onUpdateExact : {
+    _onFilterExact : {
         value : function(text) {
             var data = this._lastText.length < text.length ? this._data : this._initialData;
             return data.filter(function(item) {
@@ -449,7 +446,7 @@ Object.defineProperties(Completion.prototype, {
             });
         }
     },
-    _onUpdateLazy : { 
+    _onFilterLazy : { 
         value : function(text) {
             var data = this._lastText.length < text.length ? this._data : this._initialData;
             return data.filter(function(item) {
@@ -468,7 +465,7 @@ Object.defineProperties(Completion.prototype, {
             });
         } 
     },
-    _onUpdateWordMatch : {
+    _onFilterWordMatch : {
         value : function(text) {
             var data = this._lastText.length < text.length ? this._data : this._initialData;
             var words = text.split(/\s+/);
@@ -479,8 +476,30 @@ Object.defineProperties(Completion.prototype, {
             });
         }
     },
+    refresh : {
+        value : function() {
+            this._initialData = this.onShow();
+            var text = gui.entry.text.trim();
+            var filter = Boolean(text);
+
+            switch (this.match) {
+                case "both" : this._prepareMatchBoth(); break;
+                case "left" : this._prepareMatchLeft(); break;
+                case "right" : this._prepareMatchRight(); break;
+                default : break;
+            }
+            this._prepareData();
+            if (filter) {
+                this.setData(this.onFilter(text), true);
+            }
+            else {
+                this.setData(this._initialData, true);
+            }
+
+        }
+    },
     // public overridable properties
-    onUpdate        : { value : null,           writable : true },
+    onFilter        : { value : null,           writable : true },
     onSelected      : { value : null,           writable : true },
     shortcut        : { value : null,           writable : true }, 
     label           : { value : ":",            writable : true }, 
@@ -493,7 +512,7 @@ Object.defineProperties(Completion.prototype, {
     updateDelay     : { value : 0,              writable : true }, 
     renderItems     : { value : 20,             writable : true },
     fixedHeight     : { value : false,          writable : true },
-    match           : { value : "both",         writable : true }
+    match           : { value : "both",         writable : true }, 
 });
 
 Object.defineProperties(Completion, {
