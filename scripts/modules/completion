@@ -215,9 +215,48 @@ Object.defineProperties(Completion.prototype, {
             }
         }
     },
-    _doUpdate : { 
-        value : function(data) {
+    _prepareMatchBoth : {
+        value : function() {
+            this._data.forEach(function(item, i) {
+                item.matchAttr = item.leftLabel + " " + item.rightLabel;
+            });
+        }
+    },
+    _prepareMatchLeft : {
+        value : function() {
+            this._data.forEach(function(item, i) {
+                item.matchAttr = item.leftLabel;
+            });
+        }
+    },
+    _prepareMatchRight : {
+        value : function() {
+            this._data.forEach(function(item, i) {
+                item.matchAttr = item.rightLabel;
+            });
+        }
+    },
+    setData : { 
+        value : function(data, refresh) {
+            this._position = 0;
             this._data = data;
+            switch (this.match) {
+                case "matchAttr" : break;
+                case "both" : this._prepareMatchBoth(); break;
+                case "left" : this._prepareMatchLeft(); break;
+                case "right" : this._prepareMatchRight(); break;
+                default : throw new Error("Invalid match property");
+            }
+            this._data.forEach(function(item, i) {
+                item.id = i;
+            });
+            if (refresh) {
+                this._doUpdate();
+            }
+        }
+    },
+    _doUpdate : { 
+        value : function() {
             var widget = Completion.widget;
             if (this._data && this._data.length > 0) {
                 widget.inject("update(" + JSON.stringify(this._data) + ")");
@@ -297,13 +336,13 @@ Object.defineProperties(Completion.prototype, {
                 var self = this;
                 this._timer = timer.start(this.updateDelay, function() {
                     this._position = 0;
-                    self._doUpdate(self.onUpdate(text));
+                    self.setData(self.onUpdate(text), true);
                     return false;
                 });
             }
             else {
                 this._position = 0;
-                this._doUpdate(this.onUpdate(text));
+                this.setData(this.onUpdate(text), true);
             }
             this._lastText = text;
         }
@@ -340,7 +379,7 @@ Object.defineProperties(Completion.prototype, {
                     }
                 });
             }
-            this._doUpdate(this._initialData);
+            this.setData(this._initialData, true);
             if (this.fixedHeight) {
                 widget.heightRequest = Math.min(this.visibleItems) * (this.fontSize + this.lineSpacing);
                 widget.visible = true;
@@ -390,7 +429,7 @@ Object.defineProperties(Completion.prototype, {
             bind(this.shortcut, this._bindCallback.bind(this));
 
             if (!this.onUpdate) {
-                switch (this.match) {
+                switch (this.matchStyle) {
                     case "lazy" : 
                         this.onUpdate = this._onUpdateLazy; break;
                     case "exact" : 
@@ -454,6 +493,7 @@ Object.defineProperties(Completion.prototype, {
     updateDelay     : { value : 0,              writable : true }, 
     renderItems     : { value : 20,             writable : true },
     fixedHeight     : { value : false,          writable : true },
+    match           : { value : "both",         writable : true }
 });
 
 Object.defineProperties(Completion, {
