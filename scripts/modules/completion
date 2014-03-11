@@ -225,7 +225,7 @@ Object.defineProperties(Completion.prototype, {
             else {
                 widget.inject("clear()");
             }
-            if (this.height) {
+            if (this.fixedHeight) {
                 return;
             }
             var oldHeight = this._height;
@@ -244,13 +244,13 @@ Object.defineProperties(Completion.prototype, {
     },
     _forward : {
         value : function() {
-            //this._position++;
+            this._position++;
             Completion.widget.inject("select(1)");
         }
     },
     _backward : {
         value : function() {
-            //this._position--;
+            this._position--;
             Completion.widget.inject("select(-1)");
         }
     },
@@ -296,11 +296,13 @@ Object.defineProperties(Completion.prototype, {
             if (this.updateDelay > 0) {
                 var self = this;
                 this._timer = timer.start(this.updateDelay, function() {
+                    this._position = 0;
                     self._doUpdate(self.onUpdate(text));
                     return false;
                 });
             }
             else {
+                this._position = 0;
                 this._doUpdate(this.onUpdate(text));
             }
             this._lastText = text;
@@ -339,7 +341,8 @@ Object.defineProperties(Completion.prototype, {
                 });
             }
             this._doUpdate(this._initialData);
-            if (this.height) {
+            if (this.fixedHeight) {
+                widget.heightRequest = Math.min(this.visibleItems) * (this.fontSize + this.lineSpacing);
                 widget.visible = true;
             }
         }
@@ -386,9 +389,6 @@ Object.defineProperties(Completion.prototype, {
 
             bind(this.shortcut, this._bindCallback.bind(this));
 
-            if (this.height) {
-                Completion.widget.heightRequest = this.height;
-            }
             if (!this.onUpdate) {
                 switch (this.match) {
                     case "lazy" : 
@@ -452,6 +452,8 @@ Object.defineProperties(Completion.prototype, {
     onHide          : { value : function(){},   writable : true }, 
     ignoreCase      : { value : true,           writable : true }, 
     updateDelay     : { value : 0,              writable : true }, 
+    renderItems     : { value : 20,             writable : true },
+    fixedHeight     : { value : false,          writable : true },
 });
 
 Object.defineProperties(Completion, {
