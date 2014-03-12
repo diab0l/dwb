@@ -347,10 +347,12 @@ Object.defineProperties(Completion.prototype, {
     },
     _onKeyRelease : { 
         value : function(w, e) {
+            var text, data;
+
             if (e.isModifier) {
                 return;
             }
-            var text = gui.entry.text.trim();
+            text = gui.entry.text.trim();
             if (this.ignoreCase) {
                 text = text.toLowerCase();
             }
@@ -360,17 +362,18 @@ Object.defineProperties(Completion.prototype, {
             if (this._timer) {
                 this._timer.remove();
             }
+            data = text.length > this._lastText.length ? this._data : this._initialData;
             if (this.updateDelay > 0) {
                 var self = this;
                 this._timer = timer.start(this.updateDelay, function() {
                     this._position = 0;
-                    self.setData(self.onFilter(text), true);
+                    self.setData(self.onFilter(text, data), true);
                     return false;
                 });
             }
             else {
                 this._position = 0;
-                this.setData(this.onFilter(text), true);
+                this.setData(this.onFilter(text, data), true);
             }
             this._lastText = text;
         }
@@ -460,16 +463,14 @@ Object.defineProperties(Completion.prototype, {
         }
     }, 
     _onFilterExact : {
-        value : function(text) {
-            var data = this._lastText.length < text.length ? this._data : this._initialData;
+        value : function(text, data) {
             return data.filter(function(item) {
                 return item.matchAttr.indexOf(text) != -1;
             });
         }
     },
     _onFilterLazy : { 
-        value : function(text) {
-            var data = this._lastText.length < text.length ? this._data : this._initialData;
+        value : function(text, data) {
             return data.filter(function(item) {
                 var matchAttr = item.matchAttr;
                 var length = matchAttr.length;
@@ -487,8 +488,7 @@ Object.defineProperties(Completion.prototype, {
         } 
     },
     _onFilterWordMatch : {
-        value : function(text) {
-            var data = this._lastText.length < text.length ? this._data : this._initialData;
+        value : function(text, data) {
             var words = text.split(/\s+/);
             return data.filter(function(item) {
                 return words.every(function(word) {
@@ -511,7 +511,7 @@ Object.defineProperties(Completion.prototype, {
             }
             this._prepareData();
             if (filter) {
-                this.setData(this.onFilter(text), true);
+                this.setData(this.onFilter(text, this._initialData), true);
             }
             else {
                 this.setData(this._initialData, true);
