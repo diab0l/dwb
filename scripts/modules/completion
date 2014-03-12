@@ -278,13 +278,14 @@ Object.defineProperties(Completion.prototype, {
             this._height = Math.min(this._data.length, this.visibleItems) * (this.fontSize + this.lineSpacing);
             if (this._height == 0)  {
                 widget.visible = false;
-                return;
             }
-            if (oldHeight != this._height) {
-                widget.heightRequest = this._height;
-            }
-            if (oldHeight == 0) {
-                widget.visible = true;
+            else {
+                if (oldHeight != this._height) {
+                    widget.heightRequest = this._height;
+                }
+                if (oldHeight == 0) {
+                    widget.visible = true;
+                }
             }
         }
     },
@@ -400,7 +401,7 @@ Object.defineProperties(Completion.prototype, {
 
             this.refresh();
             if (this.fixedHeight) {
-                widget.heightRequest = Math.min(this.visibleItems) * (this.fontSize + this.lineSpacing);
+                widget.heightRequest = this.visibleItems * (this.fontSize + this.lineSpacing);
                 widget.visible = true;
             }
         }
