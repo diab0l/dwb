@@ -38,38 +38,6 @@ static guint s_changed_id;
 static SoupCookieJar *s_tmp_jar;
 static long int s_expiration;
 
-#if !_HAS_GTK3
-typedef struct _Auth {
-    SoupSession *session;
-    SoupMessage *msg; 
-    SoupAuth *auth;
-    char *user;
-} Auth; 
-
-Auth *
-auth_new(SoupSession *session, SoupMessage *msg, SoupAuth *auth)
-{
-    Auth *ret = g_malloc(sizeof(Auth));
-    if (ret != NULL)
-    {
-        ret->session = session;
-        ret->msg = g_object_ref(msg);
-        ret->auth = g_object_ref(auth);
-        ret->user = NULL;
-    }
-    return ret;
-}
-void 
-auth_free(Auth *a)
-{
-    g_return_if_fail(a != NULL);
-
-    g_object_unref(a->msg);
-    g_object_unref(a->auth);
-    g_free(a->user);
-}
-#endif
-
 const char *
 dwb_soup_get_host(WebKitWebFrame *frame)
 {
@@ -597,52 +565,6 @@ dwb_soup_set_cookie_expiration(const char *expiration_string)
     return STATUS_ERROR;
 }
 
-#if !_HAS_GTK3
-static gboolean 
-entry_authenticate(GtkWidget *entry, GdkEventKey *e, Auth *a)
-{
-    if (e->keyval == GDK_KEY_Escape)
-    {
-        soup_session_unpause_message(a->session, a->msg);
-        auth_free(a);
-        entry_snoop_end(G_CALLBACK(entry_authenticate), a);
-    }
-    else if (IS_RETURN_KEY(e))
-    {
-        if (a->user != NULL)
-        {
-            const char *password = GET_TEXT();
-            soup_auth_authenticate(a->auth, a->user, password);
-            soup_session_unpause_message(a->session, a->msg);
-            entry_snoop_end(G_CALLBACK(entry_authenticate), a);
-            auth_free(a);
-        }
-        else 
-        {
-            dwb_set_status_bar_text(dwb.gui.lstatus, "Password:", &dwb.color.active_fg, dwb.font.fd_active, false);
-            a->user = g_strdup(GET_TEXT());
-            entry_clear(false);
-        }
-    }
-    return false;
-}
-
-static void 
-on_authenticate(SoupSession *session, SoupMessage *msg, SoupAuth *auth, gboolean retry, gpointer userdata)
-{
-    char buffer[256];
-
-    Auth *a = auth_new(session, msg, auth);
-    soup_session_pause_message(session, msg);
-    entry_snoop(G_CALLBACK(entry_authenticate), a);
-
-    SoupURI *uri = soup_message_get_uri(msg);
-    snprintf(buffer, sizeof(buffer), "Username for %s:", uri && uri->host ? uri->host : "[unknown]");
-
-    dwb_set_status_bar_text(dwb.gui.lstatus, buffer, &dwb.color.active_fg, dwb.font.fd_active, false);
-}
-#endif
-
 /* dwb_soup_init_session_features() {{{*/
 DwbStatus 
 dwb_soup_init_session_features() 
@@ -658,10 +580,6 @@ dwb_soup_init_session_features()
         g_object_set(dwb.misc.soupsession, 
                 SOUP_SESSION_SSL_CA_FILE, cert, NULL);
     }
-#endif
-#if !_HAS_GTK3
-    soup_session_remove_feature_by_type(dwb.misc.soupsession, WEBKIT_TYPE_SOUP_AUTH_DIALOG);
-    g_signal_connect(dwb.misc.soupsession, "authenticate", G_CALLBACK(on_authenticate), NULL);
 #endif
     g_object_set(dwb.misc.soupsession, SOUP_SESSION_SSL_STRICT, GET_BOOL("ssl-strict"), NULL);
     return STATUS_OK;
