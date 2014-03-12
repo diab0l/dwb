@@ -179,7 +179,7 @@ Object.defineProperties(Completion.prototype, {
     _timer          : { value : null,   writable : true },
     _lastKeyRelease : { value : -1,     writable : true },
 
-    _cleanup : {
+    cleanup : {
         value : function() {
             var widget = Completion.widget;
             this._sigKeyRelease.disconnect();
@@ -205,7 +205,7 @@ Object.defineProperties(Completion.prototype, {
             util.normalMode();
         }
     }, 
-    _getSelected : { 
+    getSelected : { 
         value : function() {
             var id = JSON.parse(Completion.widget.inject("return getSelected()"));
             return this._data[id]; 
@@ -213,7 +213,7 @@ Object.defineProperties(Completion.prototype, {
     },
     _triggerSelectedAction : {
         value : function() {
-            var item = this._getSelected();
+            var item = this.getSelected();
             if (item) {
                 this.onSelected(item);
             }
@@ -288,13 +288,13 @@ Object.defineProperties(Completion.prototype, {
             }
         }
     },
-    _forward : {
+    forward : {
         value : function() {
             this._position++;
             Completion.widget.inject("select(1)");
         }
     },
-    _backward : {
+    backward : {
         value : function() {
             this._position--;
             Completion.widget.inject("select(-1)");
@@ -305,19 +305,39 @@ Object.defineProperties(Completion.prototype, {
         value : function(w, e) {
             switch(e.name) {
                 case "Return" : 
-                    this._triggerSelectedAction();
-                    this._cleanup();
+                    if (this.onReturn) {
+                        this.onReturn();
+                    }
+                    else {
+                        this._triggerSelectedAction();
+                        this.cleanup();
+                    }
                     return true;
                 case "Escape" : 
-                    this._cleanup();
+                    if (this.onEscape) {
+                        this.onEscape();
+                    }
+                    else {
+                        this.cleanup();
+                    }
                     return true;
                 case "Down" :
                 case "Tab" : 
-                    this._forward();
+                    if (this.onForward) {
+                        this.onForward();
+                    }
+                    else {
+                        this.forward();
+                    }
                     return true;
                 case "Up" :
                 case "ISO_Left_Tab" : 
-                    this._backward();
+                    if (this.onBackward) {
+                        this.onBackward();
+                    }
+                    else {
+                        this.backward();
+                    }
                     return true;
                 default : 
                     return false;
@@ -513,6 +533,10 @@ Object.defineProperties(Completion.prototype, {
     renderItems     : { value : 20,             writable : true },
     fixedHeight     : { value : false,          writable : true },
     match           : { value : "both",         writable : true }, 
+    onReturn        : { value : null,         writable : true }, 
+    onEscape        : { value : null,         writable : true }, 
+    onForward       : { value : null,         writable : true }, 
+    onBackward      : { value : null,         writable : true }, 
 });
 
 Object.defineProperties(Completion, {
