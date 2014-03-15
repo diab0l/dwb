@@ -178,6 +178,9 @@ Object.defineProperties(Completion.prototype, {
     _position       : { value : 0,      writable : true },
     _timer          : { value : null,   writable : true },
     _lastKeyRelease : { value : -1,     writable : true },
+    _dataPosistion  : { value : 0,      writable : true },
+    _forwardCache   : { value : null,     writable : true },
+    _backwardCache  : { value : null,     writable : true },
 
     cleanup : {
         value : function() {
@@ -195,6 +198,8 @@ Object.defineProperties(Completion.prototype, {
             this._height = 0;
             this._lastText = "";
             this._data = null;
+            this._forwardCache = null;
+            this._backwardCache = null;
             this._initialData = null;
             this._position = 0;
             this._lastKeyRelease = -1;
@@ -448,6 +453,9 @@ Object.defineProperties(Completion.prototype, {
             this._sigKeyRelease = Signal("keyRelease", this._onKeyRelease.bind(this));
 
             bind(this.shortcut, this._bindCallback.bind(this));
+            if (this.renderPageSize == 0) {
+                this.renderPageSize = this.visibleItems * 3;
+            }
 
             if (!this.onFilter) {
                 switch (this.matchStyle) {
@@ -534,10 +542,11 @@ Object.defineProperties(Completion.prototype, {
     renderItems     : { value : 20,             writable : true },
     fixedHeight     : { value : false,          writable : true },
     match           : { value : "both",         writable : true }, 
-    onReturn        : { value : null,         writable : true }, 
-    onEscape        : { value : null,         writable : true }, 
-    onForward       : { value : null,         writable : true }, 
-    onBackward      : { value : null,         writable : true }, 
+    onReturn        : { value : null,           writable : true }, 
+    onEscape        : { value : null,           writable : true }, 
+    onForward       : { value : null,           writable : true }, 
+    onBackward      : { value : null,           writable : true }, 
+    renderPageSize  : { value : 0,              writable : true }
 });
 
 Object.defineProperties(Completion, {
