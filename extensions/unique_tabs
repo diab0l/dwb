@@ -44,9 +44,7 @@ commandToggleAutoFocus : "ut_toggle_autofocus",
 //>DEFAULT_CONFIG
 };
 
-var signal;
-
-var removeDuplicates = function() 
+function removeDuplicates() 
 {
     var uris = [];
     tabs.forEach(function(tab) {
@@ -57,10 +55,9 @@ var removeDuplicates = function()
             execute((i+1) + "close_tab");
     });
 };
-var onNavigation = function(wv, frame, request) 
-{
+function onNavigation(wv, frame, request) {
     var uri = request.uri;
-    tabs.forEach(function(tab, i) {
+    return tabs.some(function(tab, i) {
         if (tab.uri == uri && i != wv.number) {
             /* defer execute, otherwise some other navigation callbacks will
             * fail */
@@ -72,11 +69,10 @@ var onNavigation = function(wv, frame, request)
             });
             return true;
         }
+        return false;
     });
-    return false;
 };
-var toggleAutoFocus = function()
-{
+function toggleAutoFocus() {
     if (signal.toggle())
         io.notify("unique_tabs: autofocus enabled");
     else 
@@ -88,22 +84,21 @@ var uniqueTabs = {
     init : function(c) {
         if (c.shortcutRemoveDuplicates || c.commandRemoveDuplicates)
         {
-            bind(c.shortcutRemoveDuplicates, removeDuplicates, c.commandRemoveDuplicates);
+            script.own(bind(c.shortcutRemoveDuplicates, removeDuplicates, c.commandRemoveDuplicates));
         }
         if (c.shortcutToggleAutoFocus || c.commandToggleAutoFocus)
         {
-            bind(c.shortcutToggleAutoFocus, toggleAutoFocus, c.commandToggleAutoFocus);
+            script.own(bind(c.shortcutToggleAutoFocus, toggleAutoFocus, c.commandToggleAutoFocus));
         }
 
-        signal = new Signal("navigation", onNavigation);
+        var signal = new Signal("navigation", onNavigation);
         if (c.autoFocus)
             signal.connect();
+        script.own(signal);
         return true;
     }, 
     end : function() {
-        unbind(removeDuplicates);
-        unbind(toggleAutoFocus);
-        signal.disconnect();
+        script.removeHandles();
         return true;
     }
 };
