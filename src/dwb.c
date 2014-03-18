@@ -5081,6 +5081,11 @@ dwb_init_custom_keys(gboolean reload)
         keybuf = g_string_new(NULL);
 
         current_line = lines[i];
+        while (g_ascii_isspace(*current_line)) 
+            current_line++;
+        if (*current_line == '#') 
+            continue;
+
         while (*current_line && *current_line != ':') 
         {
             if (*current_line == '\\') 
