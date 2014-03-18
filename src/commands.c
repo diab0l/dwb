@@ -146,7 +146,7 @@ DwbStatus
 commands_add_view(KeyMap *km, Arg *arg) 
 {
     view_add(arg->p, false);
-    if (arg->p == NULL)
+    if (arg->p == NULL && dwb.misc.tabbed_browsing)
         dwb_open_startpage(dwb.state.fview);
     return STATUS_OK;
 }/*}}}*/
