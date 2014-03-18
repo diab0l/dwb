@@ -117,8 +117,8 @@ html_remove_item_cb(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl)
             dwb_remove_search_engine(attr);
         else if (!g_strcmp0(uri, "dwb:plugins")) 
         {
-            const char *checked = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "checked");
-            plugindb_set_enabled(attr, checked == NULL, true);
+            gboolean checked = webkit_dom_html_input_element_get_checked(WEBKIT_DOM_HTML_INPUT_ELEMENT(target));
+            plugindb_set_enabled(attr, checked, true);
         }
     }
     else if ( (attr = dom_node_get_attribute(WEBKIT_DOM_NODE(target), "href")) != NULL) 
