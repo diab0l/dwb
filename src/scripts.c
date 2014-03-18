@@ -45,7 +45,7 @@
 #include "completion.h" 
 #include "entry.h" 
 
-#define API_VERSION 1.9
+#define API_VERSION 1.10
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -125,6 +125,16 @@
     } \
     return false;\
 }
+
+#define BOXED_DEF_VOID(Boxed, name, func) static JSValueRef name(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) { \
+    puts("void"); \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        func(priv); \
+    } \
+    return UNDEFINED; \
+}
+
 #define UNPROTECT_0(ctx, o) ((o) = (o) == NULL ? NULL : (JSValueUnprotect((ctx), (o)), NULL))
 
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
@@ -231,6 +241,7 @@ enum {
     CONSTRUCTOR_COOKIE,
     CONSTRUCTOR_MENU,
     CONSTRUCTOR_ARRAY,
+    CONSTRUCTOR_TIMER, 
     CONSTRUCTOR_LAST,
 };
 
@@ -267,6 +278,7 @@ enum {
     CLASS_HISTORY,
     CLASS_SOUP_HEADER, 
     CLASS_COOKIE,
+    CLASS_TIMER,
     CLASS_LAST,
 };
 
@@ -1786,6 +1798,78 @@ message_set_response(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
     }
     return UNDEFINED;
 }
+
+/** 
+ * The elapsed time since the timer was started, or if the timer is stopped the
+ * elapsed time between first start and last stop.
+ *
+ * @name elapsed
+ * @memberOf Timer.prototype
+ * @type Object 
+ * @property {Number} elapsed.seconds   The elapsed seconds with fractional part
+ * @property {Number} elapsed.micro     The the fractional part in microseconds
+ * @since 1.10
+ * */
+static JSValueRef 
+gtimer_elapsed(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
+{
+    gdouble elapsed = 0;
+    gulong micro = 0;
+    GTimer *timer = JSObjectGetPrivate(object);
+    if (timer != NULL) {
+        elapsed = g_timer_elapsed(timer, &micro);
+        JSObjectRef value = JSObjectMake(ctx, NULL, NULL);
+        js_set_object_number_property(ctx, value, "seconds", elapsed, exception);
+        js_set_object_number_property(ctx, value, "micro", micro, exception);
+        return value;
+    }
+    return NIL;
+}/*}}}*/
+
+/** 
+ * Starts the timer
+ *
+ * @name start
+ * @memberOf Timer.prototype
+ * @function 
+ * @since 1.10
+ * */
+BOXED_DEF_VOID(GTimer, gtimer_start, g_timer_start);
+/** 
+ * Stops the timer
+ *
+ * @name stop
+ * @memberOf Timer.prototype
+ * @function 
+ * @since 1.10
+ * */
+BOXED_DEF_VOID(GTimer, gtimer_stop, g_timer_stop);
+/** 
+ * Continues the timer if the timer has been stopped
+ *
+ * @name continue
+ * @memberOf Timer.prototype
+ * @function 
+ * @since 1.10
+ * */
+BOXED_DEF_VOID(GTimer, gtimer_continue, g_timer_continue);
+/** 
+ * Resets the timer
+ *
+ * @name reset
+ * @memberOf Timer.prototype
+ * @function
+ * @since 1.10
+ * */
+BOXED_DEF_VOID(GTimer, gtimer_reset, g_timer_reset);
+
+static JSObjectRef 
+gtimer_construtor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
+{
+    GTimer *timer = g_timer_new();
+    return JSObjectMake(ctx, s_ctx->classes[CLASS_TIMER], timer);
+}
+
 /* FRAMES {{{*/
 /* frame_get_domain {{{*/
 /** 
@@ -6301,6 +6385,14 @@ finalize_headers(JSObjectRef o)
         soup_message_headers_free(ob);
     }
 }
+static void 
+finalize_gtimer(JSObjectRef o) {
+    GTimer *ob = JSObjectGetPrivate(o);
+    if (ob != NULL)
+    {
+        g_timer_destroy(ob);
+    }
+}
 
 /* set_property {{{*/
 static bool
@@ -6537,7 +6629,7 @@ create_global_object()
      * var timer = namespace("timer");
      * */
     JSStaticFunction timer_functions[] = { 
-        { "_start",       timer_start,         kJSDefaultAttributes },
+        { "_start",         timer_start,         kJSDefaultAttributes },
         // FIXME: wrapper isn't really necessary
         { "_stop",        timer_stop,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
@@ -6947,10 +7039,10 @@ create_global_object()
      * @returns undefined
      * */
     JSStaticValue message_values[] = {
-        { "uri",     message_get_uri, NULL, kJSDefaultAttributes }, 
-        { "firstParty",     message_get_first_party, NULL, kJSDefaultAttributes }, 
+        { "uri",                message_get_uri, NULL, kJSDefaultAttributes }, 
+        { "firstParty",         message_get_first_party, NULL, kJSDefaultAttributes }, 
         { "requestHeaders",     message_get_request_headers, NULL, kJSDefaultAttributes }, 
-        { "responseHeaders",     message_get_response_headers, NULL, kJSDefaultAttributes }, 
+        { "responseHeaders",    message_get_response_headers, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
     JSStaticFunction message_functions[] = {
@@ -6959,6 +7051,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
 
+    cd = kJSClassDefinitionEmpty;
     cd.className = "SoupMessage";
     cd.staticFunctions = message_functions;
     cd.staticValues = message_values;
@@ -6967,6 +7060,33 @@ create_global_object()
 
     s_ctx->constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(ctx, "SoupMessage", s_ctx->classes[CLASS_MESSAGE], NULL, NULL);
 
+    /** 
+     * Constructs a new Timer.
+     *
+     * @name Timer
+     * @class 
+     *      A timer object for measuring time, e.g. for debugging purposes
+     * */
+
+    JSStaticValue gtimer_values[] = {
+        { "elapsed",                 gtimer_elapsed,        NULL, kJSDefaultAttributes }, 
+        { 0, 0, 0, 0 }, 
+    };
+    JSStaticFunction gtimer_functions[] = {
+        { "start",              gtimer_start,       kJSDefaultAttributes }, 
+        { "stop",               gtimer_stop,        kJSDefaultAttributes }, 
+        { "continue",           gtimer_continue,    kJSDefaultAttributes }, 
+        { "reset",              gtimer_reset,       kJSDefaultAttributes }, 
+        { 0, 0, 0 }, 
+    };
+
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "Timer";
+    cd.staticFunctions = gtimer_functions;
+    cd.staticValues = gtimer_values;
+    cd.finalize = finalize_gtimer;
+    s_ctx->classes[CLASS_TIMER] = JSClassCreate(&cd);
+    s_ctx->constructors[CONSTRUCTOR_TIMER] = create_constructor(ctx, "Timer", s_ctx->classes[CLASS_TIMER], gtimer_construtor_cb, NULL);
 
     /**
      * The history of a webview
