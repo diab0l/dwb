@@ -1801,13 +1801,13 @@ message_set_response(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
 
 /** 
  * The elapsed time since the timer was started, or if the timer is stopped the
- * elapsed time between first start and last stop.
+ * elapsed time between last start and last stop.
  *
  * @name elapsed
  * @memberOf Timer.prototype
  * @type Object 
- * @property {Number} elapsed.seconds   The elapsed seconds with fractional part
- * @property {Number} elapsed.micro     The the fractional part in microseconds
+ * @property {Number} seconds   The elapsed seconds with fractional part
+ * @property {Number} micro     The the fractional part in microseconds
  * @since 1.10
  * */
 static JSValueRef 
@@ -3649,7 +3649,7 @@ sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, si
     GdkEvent *event = gdk_event_new(type);
     if (IS_KEY_EVENT(type)) 
     {
-        double keyval = js_val_get_double_property(ctx, argv[0], "keyval", exc);
+        double keyval = js_val_get_double_property(ctx, argv[0], "keyVal", exc);
         if (isnan(keyval))
             goto error_out;
         event->key.window = g_object_ref(gtk_widget_get_window(dwb.gui.window));
@@ -7066,6 +7066,7 @@ create_global_object()
      * @name Timer
      * @class 
      *      A timer object for measuring time, e.g. for debugging purposes
+     * @since 1.10
      * */
 
     JSStaticValue gtimer_values[] = {
