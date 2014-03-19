@@ -127,7 +127,6 @@
 }
 
 #define BOXED_DEF_VOID(Boxed, name, func) static JSValueRef name(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) { \
-    puts("void"); \
     Boxed *priv = JSObjectGetPrivate(this); \
     if (priv != NULL) { \
         func(priv); \
