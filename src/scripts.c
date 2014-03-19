@@ -6826,7 +6826,8 @@ create_global_object()
     cd.setProperty = signal_set;
     class = JSClassCreate(&cd);
 
-    s_ctx->namespaces[NAMESPACE_SIGNALS] = create_object(ctx, class, global_object, kJSDefaultAttributes, "signals", NULL);
+    s_ctx->namespaces[NAMESPACE_SIGNALS] = JSObjectMake(ctx, class, NULL);
+    JSValueProtect(ctx, s_ctx->namespaces[NAMESPACE_SIGNALS]);
     JSClassRelease(class);
 
     class = create_class("extensions", NULL, NULL, NULL);
