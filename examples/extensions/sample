@@ -97,8 +97,10 @@ var myExtension = {
         system.spawn("some command", {
             onFinished : function(result) {
                 if (result.status == 0) {
-                    bind(config.myShortcut, myAction);
-                    Signal.connect("onNavigation", mySignalCallback);
+                    script.own(
+                        bind(config.myShortcut, myAction),
+                        Signal.connect("onNavigation", mySignalCallback),
+                    );
 
                     deferred.resolve(true);
                 }
