@@ -99,7 +99,7 @@ var myExtension = {
                 if (result.status == 0) {
                     script.own(
                         bind(config.myShortcut, myAction),
-                        Signal.connect("onNavigation", mySignalCallback),
+                        Signal.connect("onNavigation", mySignalCallback)
                     );
 
                     deferred.resolve(true);
