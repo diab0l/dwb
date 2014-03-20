@@ -77,8 +77,10 @@ var myExtension = {
 
         this.exports.config = config;
 
-        bind(config.myShortcut, myAction);
-        Signal.connect("onNavigation", mySignalCallback);
+        script.own(
+            bind(config.myShortcut, myAction),
+            Signal.connect("onNavigation", mySignalCallback)
+        );
 
 
         return true;
@@ -113,8 +115,7 @@ var myExtension = {
     // defined if some commands were bound in init or some signals were
     // connected. Must return true if deinitialization was successful.
     end : function() {
-        unbind(myAction);
-        Signal.disconnect(mySignalCallback);
+        script.removeHandles();
         return true;
     }
 };
