@@ -58,10 +58,7 @@ plugindb_set_enabled(const char *path, gboolean enabled, gboolean write)
         }
         if (write && !currently_enabled)
         {
-            if (!currently_enabled)
-            {
-                g_string_append_printf(buf, "%s\n", ppath);
-            }
+            g_string_append_printf(buf, "%s\n", ppath);
         }
     }
     if (write)
