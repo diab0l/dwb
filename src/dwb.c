@@ -1877,13 +1877,24 @@ dwb_history(Arg *a)
     if (bf_list == NULL) 
         return STATUS_ERROR;
 
-    int n = a->i == -1 ? MIN(webkit_web_back_forward_list_get_back_length(bf_list), NUMMOD) : MIN(webkit_web_back_forward_list_get_forward_length(bf_list), NUMMOD);
-    WebKitWebHistoryItem *item = webkit_web_back_forward_list_get_nth_item(bf_list, a->i * n);
-    if (a->n == OPEN_NORMAL) 
+    int n = a->i == -1 ? MIN(webkit_web_back_forward_list_get_back_length(bf_list), NUMMOD) * a->i : MIN(webkit_web_back_forward_list_get_forward_length(bf_list), NUMMOD) * a->i;
+
+    WebKitWebHistoryItem *item = webkit_web_back_forward_list_get_nth_item(bf_list, n);
+    g_return_val_if_fail(item != NULL, STATUS_ERROR);
+
+    const char *uri = webkit_web_history_item_get_uri(item);
+
+    // dirty workaround because of a bug in webkit > 2.2: If some extension or
+    // the adblocker blocks a request it can break the history, fixes #403
+    if (n == -1 && g_strcmp0(webkit_web_view_get_uri(w), uri) == 0) {
+      item = webkit_web_back_forward_list_get_nth_item(bf_list, n-1);
+    }
+
+    if (a->n == OPEN_NORMAL) {
         webkit_web_view_go_to_back_forward_item(w, item);
+    }
     else 
     {
-        const char *uri = webkit_web_history_item_get_uri(item);
         if (a->n == OPEN_NEW_VIEW) 
             view_add(uri, dwb.state.background_tabs);
         if (a->n == OPEN_NEW_WINDOW) 
