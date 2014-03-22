@@ -49,6 +49,10 @@ visual_caret(GdkEventKey *e)
 
     guint keyval[3] = { 0, 0, 0 };
     guint state[3] = { defaultMask, defaultMask, defaultMask };
+    if (DIGIT(e) && (e->keyval != GDK_KEY_0 || dwb.state.nummod != -1)) {
+        dwb_set_nummod(e);
+        return true;
+    }
 
     switch (e->keyval)
     {
@@ -77,6 +81,7 @@ visual_caret(GdkEventKey *e)
             keyval[0] = GDK_KEY_Right;
             state[0] = GDK_CONTROL_MASK | defaultMask;
             break;
+        case GDK_KEY_asciicircum:
         case GDK_KEY_0: 
             keyval[0] = GDK_KEY_Home;
             break;
@@ -120,6 +125,9 @@ visual_caret(GdkEventKey *e)
             break;
         default :return false;
     }
-    dispatch_event(keyval, state);
+    for (int i=0; i<NUMMOD; i++) {
+        dispatch_event(keyval, state);
+    }
+    dwb.state.nummod = -1;
     return true;
 }
