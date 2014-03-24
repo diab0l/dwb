@@ -682,6 +682,7 @@ view_navigation_policy_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetwo
     gboolean ret = false;
     WebKitWebNavigationReason reason = webkit_web_navigation_action_get_reason(action);
     gint button = webkit_web_navigation_action_get_button(action);
+    VIEW(gl)->status->reason = reason;
 
     IPC_SEND_HOOK(navigation, "%d %s %s", g_list_position(dwb.state.views, gl) + 1, 
                             frame == webkit_web_view_get_main_frame(web) ? "true" : "false", 
@@ -1476,7 +1477,7 @@ view_set_favicon(GList *gl, gboolean web)
         pb = webkit_web_view_get_icon_pixbuf(WEBVIEW(gl));
         if (pb) 
         {
-            new = gdk_pixbuf_scale_simple(pb, dwb.misc.bar_height, dwb.misc.bar_height, GDK_INTERP_BILINEAR);
+            new = gdk_pixbuf_scale_simple(pb, dwb.misc.favicon_size, dwb.misc.favicon_size, GDK_INTERP_BILINEAR);
             g_object_unref(pb);
         }
     }
@@ -1686,6 +1687,9 @@ view_create_web_view()
 #endif
 
     v->tablabel = gtk_label_new(NULL);
+    if (dwb.misc.tabbar_height > 0 || dwb.misc.favicon_size > 0) {
+        gtk_widget_set_size_request(v->tablabel, -1, MAX(dwb.misc.tabbar_height, dwb.misc.favicon_size));
+    }
 
     gtk_label_set_use_markup(GTK_LABEL(v->tablabel), true);
     gtk_label_set_width_chars(GTK_LABEL(v->tablabel), 1);

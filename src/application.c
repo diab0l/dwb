@@ -166,7 +166,7 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     FILE *ff = NULL; 
     gchar *path, *unififo = NULL;
     char *appid;
-    GDBusConnection *bus;
+    GDBusConnection *bus = NULL;
 
     GOptionContext *c = application_get_option_context();
     if (!g_option_context_parse(c, &argc, argv, &error)) 
@@ -175,9 +175,11 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
         *exit_status = 1;
         return true;
     }
-    appid = g_strconcat("org.bitbucket.dwb.", dwb.misc.profile, NULL);
-    g_application_set_application_id(app, appid);
-    g_free(appid);
+    if (!s_opt_fallback) {
+        appid = g_strconcat("org.bitbucket.dwb.", dwb.misc.profile, NULL);
+        g_application_set_application_id(app, appid);
+        g_free(appid);
+    }
 
     argc_remain = g_strv_length(*argv);
 
@@ -225,11 +227,13 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     dwb_init_settings();
 
     single_instance = GET_BOOL("single-instance");
-    if (s_opt_single || !single_instance) 
-        g_application_set_flags(app, G_APPLICATION_NON_UNIQUE);
+    if (!s_opt_fallback) {
+        if (s_opt_single || !single_instance) 
+            g_application_set_flags(app, G_APPLICATION_NON_UNIQUE);
 
-    bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
-    if (!s_opt_fallback && bus != NULL && g_application_register(app, NULL, &error)) 
+        bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+    }
+    if (bus != NULL && g_application_register(app, NULL, &error)) 
     { 
         g_object_unref(bus);
         remote = g_application_get_is_remote(app);
@@ -418,16 +422,29 @@ application_start(GApplication *app, char **argv)
 
     application_execute_args(argv);
     /*  Compute bar height */
+    gint bar_height;
     gint w = 0, h = 0;
     PangoContext *pctx = gtk_widget_get_pango_context(VIEW(dwb.state.fview)->tablabel);
     PangoLayout *layout = pango_layout_new(pctx);
     pango_layout_set_text(layout, "a", -1);
     pango_layout_set_font_description(layout, dwb.font.fd_active);
     pango_layout_get_size(layout, &w, &h);
-    dwb.misc.bar_height = h/PANGO_SCALE;
-
-    gtk_widget_set_size_request(dwb.gui.entry, -1, dwb.misc.bar_height);
+    bar_height = h/PANGO_SCALE;
     g_object_unref(layout);
+    if (dwb.misc.statusbar_height <= 0) {
+        dwb.misc.statusbar_height = bar_height;
+    }
+    if (dwb.misc.tabbar_height <= 0) {
+        dwb.misc.tabbar_height = bar_height;
+    }
+    else if (dwb.misc.favicon_size > 0) {
+        dwb.misc.tabbar_height = MAX(dwb.misc.tabbar_height, dwb.misc.favicon_size);
+    }
+    gtk_widget_set_size_request(dwb.gui.entry, -1, bar_height);
+
+    if (dwb.misc.favicon_size == 0) {
+        dwb.misc.favicon_size = dwb.misc.tabbar_height;
+    }
 
     dwb_init_signals();
 

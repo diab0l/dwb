@@ -479,6 +479,9 @@ adblock_resource_request_cb(WebKitWebView *wv, WebKitWebFrame *frame,
     if (uri == NULL)
         return;
 
+    if (strcmp(uri, "about:blank") == 0)
+        return;
+
     SoupMessage *msg = webkit_network_request_get_message(request);
     if (msg == NULL)
         return;
@@ -508,8 +511,9 @@ adblock_resource_request_cb(WebKitWebView *wv, WebKitWebFrame *frame,
 
     if (!adblock_match(s_simple_exceptions, uri, host, domain, firsthost, firstdomain, attribute, thirdparty)) 
     {
-        if (adblock_match(s_simple_rules, uri, host, domain, firsthost, firstdomain, attribute, thirdparty)) 
+        if (adblock_match(s_simple_rules, uri, host, domain, firsthost, firstdomain, attribute, thirdparty)) {
             webkit_network_request_set_uri(request, "about:blank");
+        }
     }
 }/*}}}*/
  

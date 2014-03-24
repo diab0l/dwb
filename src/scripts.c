@@ -5879,13 +5879,13 @@ gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property,
  * */
 static JSValueRef
 gui_get_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    return JSValueMakeNumber(ctx, dwb.misc.bar_height);
+    return JSValueMakeNumber(ctx, dwb.misc.tabbar_height);
 }
 static bool 
 gui_set_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
     double bar_height = JSValueToNumber(ctx, value, exception);
     if (!isnan(bar_height)) {
-        dwb.misc.bar_height = (int) bar_height;
+        dwb.misc.tabbar_height = (int) bar_height;
         return true;
     }
     return false;

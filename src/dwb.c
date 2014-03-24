@@ -81,6 +81,9 @@ static DwbStatus dwb_set_cookies(GList *, WebSettings *);
 static DwbStatus dwb_set_widget_packing(GList *, WebSettings *);
 static DwbStatus dwb_set_cookie_accept_policy(GList *, WebSettings *);
 static DwbStatus dwb_set_favicon(GList *, WebSettings *);
+static DwbStatus dwb_set_favicon_size(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_tabbar_height(GList *gl, WebSettings *s);
+static DwbStatus dwb_set_statusbar_height(GList *gl, WebSettings *s);
 static DwbStatus dwb_set_auto_insert_mode(GList *, WebSettings *);
 static DwbStatus dwb_set_tabbar_delay(GList *, WebSettings *);
 static DwbStatus dwb_set_max_tabs(GList *, WebSettings *);
@@ -607,6 +610,21 @@ dwb_set_favicon(GList *l, WebSettings *s)
     }
     return STATUS_OK;
 }/*}}}*/
+static DwbStatus
+dwb_set_favicon_size(GList *l, WebSettings *s) {
+    dwb.misc.favicon_size = s->arg_local.i;
+    return STATUS_OK;
+}
+static DwbStatus
+dwb_set_tabbar_height(GList *l, WebSettings *s) {
+    dwb.misc.tabbar_height = s->arg_local.i;
+    return STATUS_OK;
+}
+static DwbStatus
+dwb_set_statusbar_height(GList *l, WebSettings *s) {
+    dwb.misc.statusbar_height = s->arg_local.i;
+    return STATUS_OK;
+}
 
 /* dwb_set_proxy{{{*/
 DwbStatus
@@ -4699,6 +4717,10 @@ dwb_init_gui()
 #else
     dwb.gui.vbox = gtk_vbox_new(false, 0);
     dwb.gui.tabcontainer = gtk_hbox_new(true, 1);
+
+    if (dwb.misc.tabbar_height > 0 || dwb.misc.favicon_size > 0) {
+        gtk_widget_set_size_request(dwb.gui.tabcontainer, -1, MAX(dwb.misc.tabbar_height, dwb.misc.favicon_size));
+    }
     dwb.gui.mainbox = gtk_hbox_new(true, 1);
 
     dwb.gui.tabwrapperbox = gtk_hbox_new(false, 0);
@@ -4713,6 +4735,9 @@ dwb_init_gui()
     gtk_box_pack_start(GTK_BOX(dwb.gui.tabbox), dwb.gui.tabcontainer, false, false, 0);
     gtk_widget_show(dwb.gui.tabcontainer);
 #endif
+    if (dwb.misc.tabbar_height != 0) {
+        gtk_widget_set_size_request(dwb.gui.tabbox, -1, dwb.misc.tabbar_height);
+    }
 
     /* Downloadbar */
 #if _HAS_GTK3 
@@ -4755,6 +4780,10 @@ dwb_init_gui()
 #else 
     dwb.gui.status_hbox = gtk_hbox_new(false, 2);
 #endif
+    if (dwb.misc.statusbar_height > 0) {
+        printf("%d\n", dwb.misc.statusbar_height);
+        gtk_widget_set_size_request(dwb.gui.status_hbox, -1, dwb.misc.statusbar_height);
+    }
     dwb.gui.alignment = gtk_alignment_new(0.5, 0.5, 1, 1);
     int padding = GET_INT("bars-padding");
     gtk_alignment_set_padding(GTK_ALIGNMENT(dwb.gui.alignment), padding, padding, padding, padding);
@@ -5049,7 +5078,7 @@ dwb_get_stock_item_base64_encoded(const char *name)
     GdkPixbuf *pb;
     char *ret = NULL;
 #if _HAS_GTK3
-    pb = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(), name, dwb.misc.bar_height, 0, NULL);
+    pb = gtk_icon_theme_load_icon(gtk_icon_theme_get_default(), name, dwb.misc.tabbar_height, 0, NULL);
 #else 
     pb = gtk_widget_render_icon(dwb.gui.window, name, -1, NULL);
 #endif
@@ -5162,7 +5191,9 @@ dwb_init_vars(void)
 
     dwb.misc.https_quark = g_quark_from_static_string("dwb_is_https");
 
-    dwb.misc.bar_height = 0;
+    dwb.misc.tabbar_height = 0;
+    dwb.misc.statusbar_height = 0;
+    dwb.misc.favicon_size = 0;
     dwb.state.last_tab = 0;
 
     dwb.state.last_com_history = NULL;

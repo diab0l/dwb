@@ -1388,6 +1388,9 @@ default value: '#ff0000'.
 The color for prompt-messages. Possible values: an rgb color-string,
 default value: '#00ff00'.
 
+*favicon-size*::
+The size of the favicon, if set to 0 tabbar-height will be used
+
 *file-sync-interval*::
 Interval in seconds to save history, cookies or session to hdd or 0 to
 immediately save, see also *sync-files*,
@@ -1622,10 +1625,17 @@ certificate.  default value: '#ff0000'.
 The default startpage. Possible values: an url or "about:blank" for an empty
 startpage, default value: 'about:blank'.
 
+*statusbar-height*::
+Height of the statusbar, if set to 0 it will be computed automatically.
+
 *sync-files*::
 Type of files to sync, see also *file-sync-interval*.
 Possible values are 'all', 'cookies', 'history', 'session' or a combination,
 default value: 'all'.
+
+*tabbar-height*;; 
+Height of the tabbar, if favicon-size is set the favicon-size will be the
+minimum height, if set to 0 it will be computed automatically.
 
 *tab-orientation (GTK2 only)*::
 Orientation of tabs, possible values are 'horizontal', 'vertical-left' and

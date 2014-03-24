@@ -712,6 +712,7 @@ struct _ViewStatus {
   gboolean deferred;
   char *deferred_uri;
   double marks[MARK_LENGTH];
+  WebKitWebNavigationReason reason;
 };
 struct _View {
   GtkWidget *web;
@@ -836,7 +837,9 @@ struct _Misc {
   int synctimer;
   int sync_interval;
   int sync_files;
-  int bar_height;
+  int statusbar_height;
+  int tabbar_height;
+  int favicon_size;
   TabPosition tab_position;
   char *hint_style;
   uint64_t script_signals;
@@ -1068,6 +1071,7 @@ void dwb_limit_tabs(gint max);
 KeyMap * dwb_add_key(char *, char *, char *, Func, int, Arg *);
 void dwb_mark(GdkEventKey *e);
 DwbStatus dwb_eval_mark(guint val, gint mode);
+void dwb_set_nummod(GdkEventKey *e);
 #if 0
 void dwb_hide_tab(GList *gl);
 void dwb_show_tab(GList *gl);

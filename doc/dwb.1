@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: dwb
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/09/2014
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 03/24/2014
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB" "1" "01/09/2014" "\ \&" "\ \&"
+.TH "DWB" "1" "03/24/2014" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -3052,6 +3052,11 @@ The color for prompt\-messages\&. Possible values: an rgb color\-string, default
 \fI#00ff00\fR\&.
 .RE
 .PP
+\fBfavicon\-size\fR
+.RS 4
+The size of the favicon, if set to 0 tabbar\-height will be used
+.RE
+.PP
 \fBfile\-sync\-interval\fR
 .RS 4
 Interval in seconds to save history, cookies or session to hdd or 0 to immediately save, see also
@@ -3408,6 +3413,11 @@ The default startpage\&. Possible values: an url or "about:blank" for an empty s
 \fIabout:blank\fR\&.
 .RE
 .PP
+\fBstatusbar\-height\fR
+.RS 4
+Height of the statusbar, if set to 0 it will be computed automatically\&.
+.RE
+.PP
 \fBsync\-files\fR
 .RS 4
 Type of files to sync, see also
@@ -3418,6 +3428,11 @@ Type of files to sync, see also
 \fIsession\fR
 or a combination, default value:
 \fIall\fR\&.
+.PP
+\fBtabbar\-height\fR
+.RS 4
+Height of the tabbar, if favicon\-size is set the favicon\-size will be the minimum height, if set to 0 it will be computed automatically\&.
+.RE
 .RE
 .PP
 \fBtab\-orientation (GTK2 only)\fR
