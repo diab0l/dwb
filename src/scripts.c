@@ -5883,7 +5883,6 @@ gui_get_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef property
 }
 static bool 
 gui_set_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
-    puts("bar");
     double bar_height = JSValueToNumber(ctx, value, exception);
     if (!isnan(bar_height)) {
         dwb.misc.bar_height = (int) bar_height;
