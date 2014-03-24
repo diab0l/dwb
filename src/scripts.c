@@ -355,14 +355,18 @@ static char *
 get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc)
 {
     char *sfunc = NULL, *result = NULL;
+    const char *start, *end;
+    JSStringRef js_string;
     if (func == NULL)
         return NULL;
-    JSStringRef js_string = JSValueToStringCopy(ctx, func, exc);
+
+    js_string = JSValueToStringCopy(ctx, func, exc);
     sfunc = js_string_to_char(ctx, js_string, -1);
     if (!sfunc)
         goto error_out;
-    const char *start = strchr(sfunc, '{');
-    const char *end = strrchr(sfunc, '}');
+
+    start = strchr(sfunc, '{');
+    end = strrchr(sfunc, '}');
     if (!start || !end || start == end)
         goto error_out;
     if (start)
@@ -5867,6 +5871,26 @@ gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property,
     return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.rstatus), true);
 }
 /*}}}*/
+/** 
+ * Height of the tabbar, favicons will be rescaled to fit into the tab
+ * @name tabBarHeight 
+ * @memberOf gui
+ * @type Number
+ * */
+static JSValueRef
+gui_get_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
+    return JSValueMakeNumber(ctx, dwb.misc.bar_height);
+}
+static bool 
+gui_set_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
+    puts("bar");
+    double bar_height = JSValueToNumber(ctx, value, exception);
+    if (!isnan(bar_height)) {
+        dwb.misc.bar_height = (int) bar_height;
+        return true;
+    }
+    return false;
+}/*}}}*/
 
 /* SIGNALS {{{*/
 /* signal_set {{{*/
@@ -7270,6 +7294,7 @@ create_global_object()
         { "entry",            gui_get_entry, NULL, kJSDefaultAttributes }, 
         { "uriLabel",         gui_get_uri_label, NULL, kJSDefaultAttributes }, 
         { "statusLabel",      gui_get_status_label, NULL, kJSDefaultAttributes }, 
+        { "tabBarHeight",     gui_get_tabbar_height, gui_set_tabbar_height, kJSPropertyAttributeDontDelete|kJSPropertyAttributeDontEnum }, 
         { 0, 0, 0, 0 }, 
     };
     cd = kJSClassDefinitionEmpty;
