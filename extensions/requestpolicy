@@ -433,23 +433,22 @@ var requestpolicy = {
             }
         }
         persistentList = persistentList || {};
-        Signal.connect("resource", resourceCB);
-        Signal.connect("navigation", navigationCB);
+
+        script.own(
+            Signal.connect("resource", resourceCB),
+            Signal.connect("navigation", navigationCB),
+            bind(config.shortcut, showMenu, "requestpolicy"),
+            bind(config.unblockCurrent, unblockCurrent, "requestpolicyUnblockCurrent"),
+            bind(config.unblockAll, unblockAll, "requestpolicyUnblockAll")
+        );
+
         if (config.notify)
-            Signal.connect("loadFinished", loadFinishedCB);
-        bind(config.shortcut, showMenu, "requestpolicy");
-        bind(config.unblockCurrent, unblockCurrent, "requestpolicyUnblockCurrent");
-        bind(config.unblockAll, unblockAll, "requestpolicyUnblockAll");
+            script.own(Signal.connect("loadFinished", loadFinishedCB));
         return true;
     },
     end : function () 
     {
-        Signal.disconnect(resourceCB);
-        Signal.disconnect(navigationCB);
-        Signal.disconnect(loadFinishedCB);
-        unbind("requestpolicy");
-        unbind("requestpolicyUnblockCurrent");
-        unbind("requestpolicyUnblockAll");
+        script.removeHandles();
     }
 };
 return requestpolicy;
