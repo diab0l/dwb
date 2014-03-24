@@ -1414,6 +1414,23 @@ wv_last_search(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
     }
     return NIL;
 }/*}}}*/
+/** 
+ * Whether the webview has already loaded the first site. loadDeferred can only
+ * be false if 'load-on-focus' is set to true
+ *
+ * @name loadDeferred
+ * @memberOf WebKitWebView.prototype
+ * @type Boolean
+ * */
+static JSValueRef 
+wv_load_deferred(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) {
+    GList *gl = find_webview(object);
+    gboolean deferred = false;
+    if (gl != NULL) {
+        deferred = VIEW(gl)->status->deferred;
+    }
+    return JSValueMakeBoolean(ctx, deferred);
+}
 /* wv_get_main_frame {{{*/
 /** 
  * The main frame
@@ -6993,6 +7010,7 @@ create_global_object()
         { 0, 0, 0 }, 
     };
     JSStaticValue wv_values[] = {
+        { "loadDeferred",  wv_load_deferred, NULL, kJSDefaultAttributes }, 
         { "lastSearch",    wv_last_search, NULL, kJSDefaultAttributes }, 
         { "hasSelection",  wv_has_selection, NULL, kJSDefaultAttributes }, 
         { "mainFrame",     wv_get_main_frame, NULL, kJSDefaultAttributes }, 
