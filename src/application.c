@@ -230,6 +230,12 @@ dwb_application_local_command_line(GApplication *app, gchar ***argv, gint *exit_
     if (!s_opt_fallback) {
         if (s_opt_single || !single_instance) 
             g_application_set_flags(app, G_APPLICATION_NON_UNIQUE);
+#if GLIB_CHECK_VERSION(2, 40, 0)
+        else {
+            int flags = g_application_get_flags(app);
+            g_application_set_flags(app, flags | G_APPLICATION_HANDLES_COMMAND_LINE);
+        }
+#endif
 
         bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
     }
