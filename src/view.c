@@ -414,6 +414,7 @@ view_close_web_view_cb(WebKitWebView *web, GList *gl)
 static void 
 view_frame_committed_cb(WebKitWebFrame *frame, GList *gl) 
 {
+    puts("status");
     if (EMIT_SCRIPT(FRAME_STATUS)) 
     {
         /**
@@ -1016,6 +1017,19 @@ view_value_changed_cb(GtkAdjustment *a, GList *gl)
     dwb_update_status_text(gl, a);
     return false;
 }/* }}} */
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
+static gboolean
+view_run_file_chooser_cb(WebKitWebView *wv, WebKitFileChooserRequest *request, GList *gl) 
+{
+    if (EMIT_SCRIPT(FILE_CHOOSER)) {
+        ScriptSignal s = { SCRIPTS_WV(gl), { G_OBJECT(request) }, SCRIPTS_SIG_META(NULL, FILE_CHOOSER, 1) };
+        if (scripts_emit(&s)) {
+            return true;
+        }
+    }
+    return false;
+}/* }}} */
+#endif
 
 /* view_icon_loaded(GtkAdjustment *a, GList *gl) {{{ */
 void 
@@ -1615,6 +1629,9 @@ view_init_signals(GList *gl)
     v->status->signals[SIG_URI]                   = g_signal_connect(v->web, "notify::uri",                           G_CALLBACK(view_uri_cb), gl);
     v->status->signals[SIG_SCROLL]                = g_signal_connect(v->web, "scroll-event",                          G_CALLBACK(view_scroll_cb), gl);
     v->status->signals[SIG_SCROLL_TAB]            = g_signal_connect(v->tabevent, "scroll-event",                          G_CALLBACK(view_scroll_tab_cb), gl);
+#if WEBKIT_CHECK_VERSION(1, 10, 0) 
+    v->status->signals[SIG_RUN_FILE_CHOOSER]      = g_signal_connect(v->web,      "run-file-chooser",                         G_CALLBACK(view_run_file_chooser_cb), gl);
+#endif
     v->status->signals[SIG_VALUE_CHANGED]         = g_signal_connect(a,      "value-changed",                         G_CALLBACK(view_value_changed_cb), gl);
     if (GET_BOOL("enable-favicon")) 
         v->status->signals[SIG_ICON_LOADED]           = g_signal_connect(v->web, "icon-loaded",                           G_CALLBACK(view_icon_loaded), gl);

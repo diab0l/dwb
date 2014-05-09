@@ -223,6 +223,7 @@ static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
     [SCRIPTS_SIG_SCROLL]            = "scroll", 
     [SCRIPTS_SIG_FOLLOW]            = "followHint", 
     [SCRIPTS_SIG_ADD_COOKIE]        = "addCookie", 
+    [SCRIPTS_SIG_FILE_CHOOSER]      = "chooseFile", 
     [SCRIPTS_SIG_READY]             = "ready", 
 };
 
@@ -277,6 +278,7 @@ enum {
     CLASS_HISTORY,
     CLASS_SOUP_HEADER, 
     CLASS_COOKIE,
+    CLASS_FILE_CHOOSER,
     CLASS_TIMER,
     CLASS_LAST,
 };
@@ -3997,7 +3999,7 @@ data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 /* SYSTEM {{{*/
 /* system_get_env {{{*/
 /** 
- * Get the current process id 
+ * Gets an environment variable
  * 
  * @name getEnv 
  * @memberOf system
@@ -4026,6 +4028,45 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 
     return js_char_to_value(ctx, env);
 }/*}}}*/
+
+/* SYSTEM {{{*/
+/* system_set_env {{{*/
+/** 
+ * Sets an environment variable
+ * 
+ * @name setEnv 
+ * @memberOf system
+ * @function 
+ *
+ * @param {String} name         The name of the environment variable
+ * @param {String} value        The value of the environment variable
+ * @param {String} [overwrite]  Whether to overwrite the variable if it exists
+ *
+ * */
+static JSValueRef 
+system_set_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    if (argc < 2) 
+        return UNDEFINED;
+
+    char *name = js_value_to_char(ctx, argv[0], -1, exc);
+    char *value = js_value_to_char(ctx, argv[1], -1, exc);
+    gboolean overwrite = true;
+    if (name == NULL || value == NULL) 
+        goto error_out;
+
+    if (argc > 2) {
+        overwrite = JSValueToBoolean(ctx, argv[2]);
+    }
+    g_setenv(name, value, overwrite);
+
+error_out:
+    g_free(name);
+    g_free(value);
+
+    return UNDEFINED;
+}/*}}}*/
+
 
 /** 
  * Gets the process if of the dwb instance
@@ -5593,7 +5634,37 @@ download_cancel(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t
     webkit_download_cancel(download);
     return UNDEFINED;
 }/*}}}*/
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
 /*}}}*/
+static JSValueRef 
+file_chooser_select(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    if (argc == 0) {
+        return UNDEFINED;
+    }
+    WebKitFileChooserRequest *request = JSObjectGetPrivate(this);
+    if (request == NULL) {
+        return UNDEFINED;
+    }
+    char **files = g_malloc0_n(argc, sizeof(char *));
+
+    for (size_t i=0; i<argc; i++) {
+        files[i] = js_value_to_char(ctx, argv[i], -1, exc);
+        if (files[i] == NULL) {
+            goto error_out;
+        }
+    }
+    webkit_file_chooser_request_select_files(request, (const gchar * const *)files);
+
+error_out:
+    if (request != NULL) {
+        g_object_unref(request);
+    }
+    g_strfreev(files);
+
+    return UNDEFINED;
+}
+#endif
+
 
 JSObjectRef 
 scripts_make_cookie(SoupCookie *cookie)
@@ -6094,6 +6165,10 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_ctx->classes[CLASS_MENU];
     else if (GTK_IS_WIDGET(o))
         class = s_ctx->classes[CLASS_SECURE_WIDGET];
+    else if (WEBKIT_IS_FILE_CHOOSER_REQUEST(o)) {
+        class = s_ctx->classes[CLASS_FILE_CHOOSER];
+        o = g_object_ref(o);
+    }
     else 
         class = s_ctx->classes[CLASS_GOBJECT];
     return make_object_for_class(ctx, class, o, true);
@@ -6763,6 +6838,7 @@ create_global_object()
         { "_spawn",          system_spawn,           kJSDefaultAttributes },
         { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
+        { "setEnv",          system_set_env,           kJSDefaultAttributes },
         { "getPid",          system_get_pid,           kJSDefaultAttributes },
         { "fileTest",        system_file_test,            kJSDefaultAttributes },
         { "mkdir",           system_mkdir,            kJSDefaultAttributes },
@@ -7349,6 +7425,18 @@ create_global_object()
     s_ctx->classes[CLASS_DOWNLOAD] = JSClassCreate(&cd);
 
     s_ctx->constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(ctx, "WebKitDownload", s_ctx->classes[CLASS_DOWNLOAD], download_constructor_cb, NULL);
+
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
+    JSStaticFunction file_chooser_functions[] = { 
+        { "selectFiles",          file_chooser_select,        kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "WebKitFileChooserRequest";
+    cd.staticFunctions = file_chooser_functions;
+    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
+    s_ctx->classes[CLASS_FILE_CHOOSER] = JSClassCreate(&cd);
+#endif
 
     /** 
      * Constructs a new cookie
