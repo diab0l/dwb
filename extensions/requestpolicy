@@ -130,7 +130,7 @@ function listAdd(o, key, value, doWrite)
     if (o[key].indexOf(value) == -1) 
         o[key].push(value);
     if (doWrite) 
-        io.write(config.whiteList, "w", JSON.stringify(persistentList));
+        io.write(config.whiteList, "w", JSON.stringify(persistentList, null, 2));
 }
 function listRemove(o, firstParty, domain, doWrite) 
 {
@@ -141,7 +141,7 @@ function listRemove(o, firstParty, domain, doWrite)
         if (o[firstParty].length === 0) 
             delete o[firstParty];
         if (doWrite) 
-            io.write(config.whiteList, "w", JSON.stringify(persistentList));
+            io.write(config.whiteList, "w", JSON.stringify(persistentList, null, 2));
         return true;
     }
     return false;
@@ -245,7 +245,7 @@ function showMenu()
                     delete persistentList[domain];
                     listRemove(persistentList, "_all", domain, false);
                     // necessary if persistentList.domain exists
-                    io.write(config.whiteList, "w", JSON.stringify(persistentList));
+                    io.write(config.whiteList, "w", JSON.stringify(persistentList, null, 2));
                     delete tmpList[domain];
                     listRemove(tmpList, "_all", domain, false);
                 }
