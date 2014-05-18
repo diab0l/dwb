@@ -4040,7 +4040,7 @@ system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
  *
  * @param {String} name         The name of the environment variable
  * @param {String} value        The value of the environment variable
- * @param {String} [overwrite]  Whether to overwrite the variable if it exists
+ * @param {String} [overwrite]  Whether to overwrite the variable if it exists, default true
  *
  * */
 static JSValueRef 
