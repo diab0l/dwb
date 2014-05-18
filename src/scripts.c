@@ -278,7 +278,9 @@ enum {
     CLASS_HISTORY,
     CLASS_SOUP_HEADER, 
     CLASS_COOKIE,
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
     CLASS_FILE_CHOOSER,
+#endif
     CLASS_TIMER,
     CLASS_LAST,
 };
@@ -6165,10 +6167,12 @@ make_object(JSContextRef ctx, GObject *o)
         class = s_ctx->classes[CLASS_MENU];
     else if (GTK_IS_WIDGET(o))
         class = s_ctx->classes[CLASS_SECURE_WIDGET];
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
     else if (WEBKIT_IS_FILE_CHOOSER_REQUEST(o)) {
         class = s_ctx->classes[CLASS_FILE_CHOOSER];
         o = g_object_ref(o);
     }
+#endif
     else 
         class = s_ctx->classes[CLASS_GOBJECT];
     return make_object_for_class(ctx, class, o, true);
