@@ -413,13 +413,8 @@ function loadFinishedCB(wv)
     if (blocked > 0) 
         io.notify("RP: blocked " + blocked + " requests");
 }
-
-var requestpolicy = {
-    defaultConfig : defaultConfig, 
-    init : function(c) 
-    {
-        config = c;
-        if (system.fileTest(config.whiteList, FileTest.regular | FileTest.symlink)) 
+function loadWhitelist() {
+    if (system.fileTest(config.whiteList, FileTest.regular | FileTest.symlink)) 
         {
             var rawWhiteList = io.read(config.whiteList);
             try 
@@ -432,7 +427,18 @@ var requestpolicy = {
                 return false;
             }
         }
-        persistentList = persistentList || {};
+    persistentList = persistentList || {};
+}
+
+var requestpolicy = {
+    defaultConfig : defaultConfig, 
+    exports : { loadWhitelist : loadWhitelist }, 
+    init : function(c) 
+    {
+        config = c;
+        this.exports.config = c;
+
+        loadWhitelist();
 
         script.own(
             Signal.connect("resource", resourceCB),
