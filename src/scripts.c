@@ -3462,16 +3462,17 @@ sutil_checksum(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     if (original == NULL)
         return NIL;
 
+    double dtype;
     GChecksumType type = G_CHECKSUM_SHA256;
     if (argc > 1) 
     {
-        type = JSValueToNumber(ctx, argv[1], exc);
-        if (isnan(type)) 
+        dtype = JSValueToNumber(ctx, argv[1], exc);
+        if (isnan(dtype)) 
         {
             ret = NIL;
             goto error_out;
         }
-        type = MIN(MAX(type, G_CHECKSUM_MD5), G_CHECKSUM_SHA256);
+        type = MIN(MAX((GChecksumType)dtype, G_CHECKSUM_MD5), G_CHECKSUM_SHA256);
     }
     checksum = g_compute_checksum_for_data(type, original, -1);
 
