@@ -3306,10 +3306,24 @@ dwb_eval_override_key(GdkEventKey *e, CommandProperty prop)
     return ret;
 }/*}}}*/
 
+void 
+dwb_clear_mode() {
+    Mode mode = dwb.state.mode;
+
+    if (mode == HINT_MODE || mode == SEARCH_FIELD_MODE) 
+        js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, "clear", NULL, kJSTypeUndefined, NULL);
+    else if (mode == DOWNLOAD_GET_PATH) 
+        completion_clean_path_completion();
+    
+    if (mode & COMPLETION_MODE) 
+        completion_clean_completion(false);
+}
+
 /* dwb_insert_mode(Arg *arg) {{{*/
 static DwbStatus
-dwb_insert_mode(void) 
-{
+dwb_insert_mode(void) {
+
+    dwb_clear_mode();
     dwb_focus_scroll(dwb.state.fview);
     dwb_set_normal_message(dwb.state.fview, false, INSERT_MODE_STRING);
 
@@ -3328,6 +3342,7 @@ dwb_command_mode(void)
     return STATUS_OK;
 }/*}}}*/
 
+
 /* dwb_normal_mode() {{{*/
 static DwbStatus 
 dwb_normal_mode(gboolean clean) 
@@ -3336,13 +3351,7 @@ dwb_normal_mode(gboolean clean)
     if (dwb.state.fview == NULL)
         return STATUS_OK;
 
-    if (mode == HINT_MODE || mode == SEARCH_FIELD_MODE) 
-        js_call_as_function(MAIN_FRAME(), CURRENT_VIEW()->js_base, "clear", NULL, kJSTypeUndefined, NULL);
-    else if (mode == DOWNLOAD_GET_PATH) 
-        completion_clean_path_completion();
-    
-    if (mode & COMPLETION_MODE) 
-        completion_clean_completion(false);
+    dwb_clear_mode();
     
     dwb_focus_scroll(dwb.state.fview);
 
