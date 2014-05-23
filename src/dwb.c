@@ -114,7 +114,7 @@ static void dwb_save_key_value(const char *file, const char *key, const char *va
 
 static gboolean dwb_editable_focus_cb(WebKitDOMElement *element, WebKitDOMEvent *event, GList *gl);
 
-static void dwb_reload_layout(GList *,  WebSettings *);
+static DwbStatus dwb_reload_layout(GList *,  WebSettings *);
 
 static void dwb_init_key_map(void);
 static void dwb_init_style(void);
@@ -2060,12 +2060,13 @@ dwb_update_tabs(void)
 }/*}}}*/
 
 /* dwb_reload_layout(GList *,  WebSettings  *s) {{{*/
-static void 
+static DwbStatus 
 dwb_reload_layout(GList *gl, WebSettings *s) 
 {
     dwb_init_style();
     dwb_update_tabs();
     dwb_apply_style();
+    return STATUS_OK;
 }/*}}}*/
 
 /* dwb_get_search_engine_uri(const char *uri) {{{*/
