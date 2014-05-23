@@ -84,8 +84,6 @@
 #define IS_KEY_EVENT(X) (((int)(X)) == GDK_KEY_PRESS || ((int)(X)) == GDK_KEY_RELEASE)
 #define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE \
                             || ((int)(X)) == GDK_2BUTTON_PRESS || ((int)(X)) == GDK_3BUTTON_PRESS)
-#define LOCK_SIGNAL(sig) (s_signal_locks |= SCRIPTS_SIG_##sig)
-#define UNLOCK_SIGNAL(sig) (s_signal_locks &= ~SCRIPTS_SIG_##sig)
 
 #define BOXED_GET_CHAR(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
 {\
@@ -137,6 +135,17 @@
 }
 
 #define UNPROTECT_0(ctx, o) ((o) = (o) == NULL ? NULL : (JSValueUnprotect((ctx), (o)), NULL))
+
+#define SCRIPTS_SIG_PROTECTED (SCRIPTS_SIG_EXECUTE_COMMAND | \
+        SCRIPTS_SIG_CHANGE_MODE | \
+        SCRIPTS_SIG_KEY_PRESS | \
+        SCRIPTS_SIG_KEY_RELEASE | \
+        SCRIPTS_SIG_BUTTON_PRESS | \
+        SCRIPTS_SIG_KEY_RELEASE)
+
+#define PROTECT_SIGNAL(sig) (s_signal_locks |= ((sig) & SCRIPTS_SIG_PROTECTED))
+#define UNPROTECT_SIGNAL(sig) (s_signal_locks &= ~((sig) & SCRIPTS_SIG_PROTECTED))
+#define SIGNAL_IS_PROTECTED(sig) (s_signal_locks & ((sig) & SCRIPTS_SIG_PROTECTED))
 
 static pthread_rwlock_t s_context_lock = PTHREAD_RWLOCK_INITIALIZER;
 
@@ -2414,9 +2423,7 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
     char *command = js_value_to_char(ctx, argv[0], -1, exc);
     if (command != NULL) 
     {
-        LOCK_SIGNAL(EXECUTE_COMMAND);
         status = dwb_parse_command_line(command);
-        UNLOCK_SIGNAL(EXECUTE_COMMAND);
         g_free(command);
     }
     if (status == STATUS_END)
@@ -3508,7 +3515,6 @@ sutil_change_mode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
     double mode = JSValueToNumber(ctx, argv[0], exc);
     if (!isnan(mode))
     {
-        LOCK_SIGNAL(CHANGE_MODE);
         if ((int) mode == NORMAL_MODE)
         {
             dwb_change_mode(NORMAL_MODE, true);
@@ -3517,7 +3523,6 @@ sutil_change_mode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject
         {
             dwb_change_mode((int)mode);
         }
-        UNLOCK_SIGNAL(CHANGE_MODE);
     }
     return UNDEFINED;
 }
@@ -6056,11 +6061,13 @@ scripts_emit(ScriptSignal *sig)
     JSObjectRef function = s_ctx->sig_objects[sig->signal];
     if (function == NULL)
         return false;
-    if ((s_signal_locks & sig->signal) != 0) {
+
+    if (SIGNAL_IS_PROTECTED(sig->signal)) 
         return false;
-    }
 
     EXEC_LOCK_RETURN(false);
+
+    PROTECT_SIGNAL(sig->signal);
 
     if (sig->jsobj != NULL)
         additional++;
@@ -6104,6 +6111,8 @@ scripts_emit(ScriptSignal *sig)
 
     if (JSValueIsBoolean(s_ctx->global_context, js_ret)) 
         ret = JSValueToBoolean(s_ctx->global_context, js_ret);
+
+    UNPROTECT_SIGNAL(sig->signal);
 
     EXEC_UNLOCK;
 
