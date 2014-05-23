@@ -197,6 +197,8 @@ dwb_set_adblock(GList *gl, WebSettings *s)
 static DwbStatus
 dwb_set_passthrough(GList *gl, WebSettings *s) 
 {
+    if (s->arg_local.p == NULL) 
+        return STATUS_ERROR;
     if (!strcmp(s->arg_local.p, "all"))
         dwb.misc.passthrough = PASSTHROUGH_ALL;
     else if (!strcmp(s->arg_local.p, "none"))
