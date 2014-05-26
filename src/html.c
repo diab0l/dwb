@@ -582,7 +582,7 @@ gboolean
 html_scripts_confirm(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl) 
 {
     glong val = webkit_dom_ui_event_get_key_code(WEBKIT_DOM_UI_EVENT(ev));
-    if (val == 13 && webkit_dom_mouse_event_get_ctrl_key((void*)ev)) 
+    if (val == 13 && webkit_dom_keyboard_event_get_ctrl_key(WEBKIT_DOM_KEYBOARD_EVENT(ev))) 
     {
         char *html = webkit_dom_html_element_get_inner_text(WEBKIT_DOM_HTML_ELEMENT(el));
         if (!scripts_execute_one(html)) 
