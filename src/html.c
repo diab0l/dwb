@@ -376,7 +376,7 @@ html_key_changed(WebKitDOMElement *target)
     else 
         return false;
 
-    char *id = webkit_dom_html_element_get_id(WEBKIT_DOM_HTML_ELEMENT(target));
+    char *id = webkit_dom_element_get_id(target);
     if (g_strcmp0(id, "dwb_custom_keys_area")) 
     {
         dwb_set_key(id, value);
