@@ -495,10 +495,15 @@ html_quickmarks(GList *gl, HtmlTable *table)
     DwbStatus ret;
     WebKitWebView *wv = WEBVIEW(gl);
     GString *panels = g_string_new(NULL);
+    GRegex *reg_esc = g_regex_new("'", 0, 0, NULL);
 
     for (GList *gl = dwb.fc.quickmarks; gl; gl=gl->next) 
     {
         Quickmark *q = gl->data;
+        char *esc_key = g_regex_replace_literal(reg_esc, q->key, -1, 0, "&#39", 0, NULL);
+        char *esc_first = g_regex_replace_literal(reg_esc, q->nav->first, -1, 0, "&#39", 0, NULL);
+        char *esc_second = g_regex_replace_literal(reg_esc, q->nav->second, -1, 0, "&#39", 0, NULL);
+
         g_string_append_printf(panels, "\n\
                 <tr class='dwb_table_row'>\n\
                 <td>\n\
@@ -520,9 +525,12 @@ html_quickmarks(GList *gl, HtmlTable *table)
                 </div>\n\
                 </a>\n\
                 </td>\n\
-                <td class='dwb_table_cell_right' style='cursor:pointer;' navigation='%s %s %s' onclick='location.reload()'>&times</td>\n\
+                <td class='dwb_table_cell_right' style='cursor:pointer;' navigation='%s %s %s' onclick='location.reload()'>&times;</td>\n\
                 </tr>", q->key, q->nav->first, q->nav->second && g_strcmp0(q->nav->second, "(null)") ? q->nav->second : q->nav->first,
-            q->nav->first, q->nav->first, q->key, q->nav->first, q->nav->second);
+            q->nav->first, q->nav->first, esc_key, esc_first, esc_second);
+        g_free(esc_key);
+        g_free(esc_first);
+        g_free(esc_second);
     }
     if ( (ret = html_load_page(wv, table, panels->str)) == STATUS_OK) 
         g_signal_connect(wv, "notify::load-status", G_CALLBACK(html_load_status_cb), gl); 
