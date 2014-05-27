@@ -451,6 +451,17 @@ write_file_header(FILE *f, const char *name, char flag, off_t r)
     return EE_OK;
 }
 
+const char *
+strip_current(const char *path) {
+    const char *cstrip = path;
+    if (*cstrip && cstrip[0] == '.' && cstrip[1] == '/') {
+        cstrip++;
+        while (*cstrip && *cstrip == '/') 
+            cstrip++;
+    }
+    return cstrip;
+}
+
 static int
 ftw_pack(const char *fpath, const struct stat *st, int tf)
 {
@@ -464,7 +475,10 @@ ftw_pack(const char *fpath, const struct stat *st, int tf)
     const char *stripped = &fpath[s_offset];
     const char *filename;
 
-    if (!strcmp(stripped, s_out_path))
+    const char *nc_stripped = strip_current(stripped);
+    const char *nc_out_path = strip_current(s_out_path);
+
+    if (!strcmp(nc_stripped, nc_out_path))
     {
         LOG(3, "Skipping output file %s\n", s_out_path);
         return 0;
