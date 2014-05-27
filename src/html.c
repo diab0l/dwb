@@ -376,7 +376,11 @@ html_key_changed(WebKitDOMElement *target)
     else 
         return false;
 
+#if WEBKIT_CHECK_VERSION(2, 4, 0)
     char *id = webkit_dom_element_get_id(target);
+#else
+    char *id = webkit_dom_html_element_get_id(WEBKIT_DOM_HTML_ELEMENT(target));
+#endif
     if (g_strcmp0(id, "dwb_custom_keys_area")) 
     {
         dwb_set_key(id, value);
@@ -590,7 +594,11 @@ gboolean
 html_scripts_confirm(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl) 
 {
     glong val = webkit_dom_ui_event_get_key_code(WEBKIT_DOM_UI_EVENT(ev));
+#if WEBKIT_CHECK_VERSION(2, 4, 0)
     if (val == 13 && webkit_dom_keyboard_event_get_ctrl_key(WEBKIT_DOM_KEYBOARD_EVENT(ev))) 
+#else
+    if (val == 13 && webkit_dom_mouse_event_get_ctrl_key((void*)ev)) 
+#endif
     {
         char *html = webkit_dom_html_element_get_inner_text(WEBKIT_DOM_HTML_ELEMENT(el));
         if (!scripts_execute_one(html)) 

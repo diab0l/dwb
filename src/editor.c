@@ -180,7 +180,11 @@ editor_open(void)
     }
 
     EditorInfo *info = dwb_malloc(sizeof(EditorInfo));
+#if WEBKIT_CHECK_VERSION(2, 4, 0)
     char *id = webkit_dom_element_get_id(active);
+#else
+    char *id = webkit_dom_html_element_get_id(WEBKIT_DOM_HTML_ELEMENT(active));
+#endif
     if (id != NULL && strlen(id) > 0) {
         info->id = id;
     }
