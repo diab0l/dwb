@@ -414,7 +414,6 @@ view_close_web_view_cb(WebKitWebView *web, GList *gl)
 static void 
 view_frame_committed_cb(WebKitWebFrame *frame, GList *gl) 
 {
-    puts("status");
     if (EMIT_SCRIPT(FRAME_STATUS)) 
     {
         /**
