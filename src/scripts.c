@@ -4571,6 +4571,66 @@ error_out:
 
 }/*}}}*/
 
+/**
+ * Quotes a string for usage with a shell
+ *
+ * @name shellQuote
+ * @memberOf system
+ * @function
+ *
+ * @param {String} An unquoted String.
+ *
+ * @returns {String} 
+ *      The quoted string
+ * */
+static JSValueRef 
+system_shell_quote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NIL;
+    char *unquoted = NULL, *quoted = NULL;
+    if (argc > 0) {
+        unquoted = js_value_to_char(ctx, argv[0], -1, exc);
+        if (unquoted != NULL) {
+            quoted = g_shell_quote(unquoted);
+            ret = js_char_to_value(ctx, quoted);
+
+            g_free(quoted);
+            g_free(unquoted);
+        }
+    }
+    return ret;
+}
+/**
+ * Unquotes a quoted string as /bin/sh would unquote it.
+ *
+ * @name shellUnquote
+ * @memberOf system
+ * @function
+ *
+ * @param {String} A quoted String.
+ *
+ * @returns {String} 
+ *      The unquoted string
+ * */
+static JSValueRef 
+system_shell_unquote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    JSValueRef ret = NIL;
+    char *unquoted = NULL, *quoted = NULL;
+    if (argc > 0) {
+        quoted = js_value_to_char(ctx, argv[0], -1, exc);
+        if (quoted != NULL) {
+            unquoted = g_shell_unquote(quoted, NULL);
+            if (unquoted != NULL) {
+                ret = js_char_to_value(ctx, unquoted);
+                g_free(unquoted);
+            }
+            g_free(quoted);
+        }
+    }
+    return ret;
+}
+
 /*}}}*/
 
 /* IO {{{*/
@@ -6864,8 +6924,10 @@ create_global_object()
         { "getEnv",          system_get_env,           kJSDefaultAttributes },
         { "setEnv",          system_set_env,           kJSDefaultAttributes },
         { "getPid",          system_get_pid,           kJSDefaultAttributes },
-        { "fileTest",        system_file_test,            kJSDefaultAttributes },
+        { "fileTest",        system_file_test,        kJSDefaultAttributes },
         { "mkdir",           system_mkdir,            kJSDefaultAttributes },
+        { "shellQuote",      system_shell_quote,      kJSDefaultAttributes },
+        { "shellUnquote",    system_shell_unquote,      kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
     class = create_class("system", system_functions, NULL, NULL);
