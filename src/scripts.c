@@ -4578,7 +4578,7 @@ error_out:
  * @memberOf system
  * @function
  *
- * @param {String} An unquoted String.
+ * @param {String} unquoted An unquoted String.
  *
  * @returns {String} 
  *      The quoted string
@@ -4607,7 +4607,7 @@ system_shell_quote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObjec
  * @memberOf system
  * @function
  *
- * @param {String} A quoted String.
+ * @param {String} quoted A quoted String.
  *
  * @returns {String} 
  *      The unquoted string
