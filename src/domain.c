@@ -145,6 +145,11 @@ domain_get_tld(const char *host)
     g_return_val_if_fail(host != NULL, NULL);
     g_return_val_if_fail(s_tld_table != NULL, NULL);
 
+    // always allow localhost
+    if (g_strcmp0(host, "localhost") == 0) {
+       return host;
+    }
+
     const char *cur_domain = host;
     const char *prev_domain = host;
     const char *pprev_domain = host;
