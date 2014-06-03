@@ -3048,13 +3048,13 @@ timeout_callback(JSObjectRef obj)
 static JSValueRef 
 timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    gdouble sigid;
     if (argc < 1) 
     {
         js_make_exception(ctx, exc, EXCEPTION("timerStop: missing argument."));
         return JSValueMakeBoolean(ctx, false);
     }
-    if (!isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
+    gdouble sigid = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(sigid)) 
     {
         gboolean ret = g_source_remove((int)sigid);
         GSList *source = g_slist_find(s_ctx->timers, GINT_TO_POINTER(sigid));
@@ -3083,8 +3083,9 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc
         js_make_exception(ctx, exc, EXCEPTION("timerStart: missing argument."));
         return JSValueMakeNumber(ctx, -1);
     }
-    double msec = 10;
-    if (isnan(msec = JSValueToNumber(ctx, argv[0], exc)))
+    double msec = JSValueToNumber(ctx, argv[0], exc);
+
+    if (isnan(msec))
         return JSValueMakeNumber(ctx, -1);
 
     JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
@@ -3864,8 +3865,11 @@ clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
 static JSValueRef 
 history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    double n;
-    if (argc > 0 && !isnan(n = JSValueToNumber(ctx, argv[0], NULL)))
+    if (argc == 0) {
+        return NIL;
+    }
+    double n = JSValueToNumber(ctx, argv[0], NULL);
+    if (!isnan(n))
     {
         WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
         g_return_val_if_fail(list != NULL, NIL);
@@ -6478,8 +6482,11 @@ error_out:
 static JSValueRef 
 gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    double sigid;
-    if (argc > 0 && !isnan(sigid = JSValueToNumber(ctx, argv[0], exc))) 
+    if (argc == 0) {
+        return UNDEFINED;
+    }
+    double sigid = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(sigid)) 
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL)
@@ -6499,8 +6506,12 @@ gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, s
 static JSValueRef 
 gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    double sigid;
-    if (argc > 0 && !isnan(sigid = JSValueToNumber(ctx, argv[0], exc)))
+    if (argc == 0) {
+        return UNDEFINED;
+    }
+
+    double sigid = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(sigid))
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL)
@@ -6523,8 +6534,11 @@ gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this,
 static JSValueRef 
 gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    int id;
-    if (argc > 0 && JSValueIsNumber(ctx, argv[0]) && !isnan(id = JSValueToNumber(ctx, argv[0], exc)))
+    if (argc == 0) {
+        return JSValueMakeBoolean(ctx, false);
+    }
+    int id = JSValueToNumber(ctx, argv[0], exc);
+    if (!isnan(id))
     {
         GObject *o = JSObjectGetPrivate(this);
         if (o != NULL && g_signal_handler_is_connected(o, id)) 
