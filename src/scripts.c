@@ -468,6 +468,8 @@ script_context_free(ScriptContext *ctx) {
             UNPROTECT_0(ctx->global_context, ctx->init_before);
             UNPROTECT_0(ctx->global_context, ctx->init_after);
             UNPROTECT_0(ctx->global_context, ctx->session);
+            UNPROTECT_0(ctx->global_context, NIL);
+            UNPROTECT_0(ctx->global_context, UNDEFINED);
             JSGlobalContextRelease(s_ctx->global_context);
             s_ctx->global_context = NULL;
         }
