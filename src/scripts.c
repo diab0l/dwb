@@ -46,7 +46,7 @@
 #include "entry.h" 
 #include "secret.h" 
 
-#define API_VERSION 1.10
+#define API_VERSION 1.11
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
@@ -3823,6 +3823,7 @@ keyring_call_str(JSContextRef ctx, void (*secret_func)(dwb_secret_cb, const char
  * @name checkService
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * keyring.checkService().then(
  *      function() {
@@ -3849,6 +3850,7 @@ keyring_check_service(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
  * @name create
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * keyring.create("foo").then(function() {
  *     io.print("keyring created");
@@ -3871,6 +3873,7 @@ keyring_create(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @name unlock
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * keyring.unlock("foo").then(function() {
  *     io.print("keyring unlocked");
@@ -3893,6 +3896,7 @@ keyring_unlock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @name lock
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * keyring.lock("foo").then(function() {
  *     io.print("keyring locked");
@@ -3916,6 +3920,7 @@ keyring_lock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t arg
  * @name store
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * var id = script.generateId();
  * keyring.store("foo", "mypassword", id, "secretpassword").then(function() {
@@ -3928,7 +3933,7 @@ keyring_lock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t arg
  * @param {String} password The password
  *
  * @returns {Deferred} 
- *      A deferred that will be resolved if the password was save or rejected
+ *      A deferred that will be resolved if the password was saved or rejected
  *      if no such keyring exists or an error occured
  *
  */
@@ -3974,6 +3979,7 @@ error_out:
  * @name lookup
  * @memberOf keyring
  * @function
+ * @since 1.11
  * @example 
  * keyring.lookup("foo", "myid").then(function(password) {
  *     io.print("password: " + password);
@@ -4837,6 +4843,7 @@ error_out:
  * @name shellQuote
  * @memberOf system
  * @function
+ * @since 1.11
  *
  * @param {String} unquoted An unquoted String.
  *
@@ -4866,6 +4873,7 @@ system_shell_quote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObjec
  * @name shellUnquote
  * @memberOf system
  * @function
+ * @since 1.11
  *
  * @param {String} quoted A quoted String.
  *
@@ -7347,6 +7355,7 @@ create_global_object()
      *      Access to gnome-keyring
      * @name keyring 
      * @static 
+     * @since 1.11
      * @example
      *
      * //!javascript
