@@ -27,13 +27,12 @@
 
 typedef void (* dwb_secret_cb)(int, const void *, void *);
 
-enum {
-    DWB_SECRET_OK,
-    DWB_SECRET_COLLECTION_EXISTS,
-    DWB_SECRET_NO_SUCH_COLLECTION,
-    DWB_SECRET_SERVICE_ERROR,
-    DWB_SECRET_ERROR,
-};
+
+#define DWB_SECRET_OK                 0
+#define DWB_SECRET_COLLECTION_EXISTS  1
+#define DWB_SECRET_ERROR              (-1)
+#define DWB_SECRET_SERVICE_ERROR      (-2)
+#define DWB_SECRET_NO_SUCH_COLLECTION (-3)
 
 void 
 dwb_secret_create_collection(dwb_secret_cb cb, const char *name, void *user_data);

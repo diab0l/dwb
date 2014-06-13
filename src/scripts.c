@@ -3780,7 +3780,7 @@ on_keyring_no_val(int status, void *unused, JSObjectRef d) {
     (void) unused;
     EXEC_LOCK;
     JSValueRef args[] = { JSValueMakeNumber(s_ctx->global_context, status) };
-    if (status == DWB_SECRET_OK) {
+    if (status >= 0) {
         deferred_resolve(s_ctx->global_context, d, d, 1, args, NULL);
     }
     else {
@@ -3791,7 +3791,7 @@ on_keyring_no_val(int status, void *unused, JSObjectRef d) {
 void 
 on_keyring_string(int status, const char *value, JSObjectRef dfd) {
     EXEC_LOCK;
-    if (status == DWB_SECRET_OK) {
+    if (status >= 0) {
         JSValueRef args[] = { value == NULL ? NIL : js_char_to_value(s_ctx->global_context, value) };
         deferred_resolve(s_ctx->global_context, dfd, dfd, 1, args, NULL);
     }
@@ -3859,8 +3859,8 @@ keyring_check_service(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
  * @param {String} keyring The name of the keyring
  *
  * @returns {Deferred} 
- *      A deferred that will be resolved if the keyring was created or rejected
- *      if a keyring with the same name already exists or an error occured
+ *      A deferred that will be resolved if the keyring was created or a keyring
+ *      with matching name already exists and rejected if an error occured
  *
  */
 static JSValueRef 
@@ -7366,12 +7366,11 @@ create_global_object()
      * var collection = "foo";
      * var id = script.generateId();
      * 
-     * keyring.create(collection).always(function(status) {
-     *     if (status == KeyringResult.ok || KeyringResult.keyringExists) {
-     *         keyring.store(collection, "foobar", id, "secret").then(function() {
-     *             io.print("password saved");
-     *         });;
-     *     }
+     * // creates a new keyring if it doesn't exist and saves a new password
+     * keyring.create(collection).then(function(status) {
+     *     keyring.store(collection, "foobar", id, "secret").then(function() {
+     *         io.print("password saved");
+     *     });;
      * });
      *
      * */
