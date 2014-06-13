@@ -188,6 +188,7 @@ on_service_create_collection(GObject *source, GAsyncResult *result, dwb_secret_t
 }
 void 
 dwb_secret_create_collection(dwb_secret_cb cb, const char *name, void *user_data) {
+    g_return_if_fail(name != NULL);
     dwb_secret_t *s = dwb_secret_new(cb, g_strdup(name), user_data, g_free, DWB_SECRET_ACTION_NONE);
     get_service_init(on_service_create_collection, s);
 }
@@ -252,11 +253,13 @@ on_service_lock_unlock_collection(GObject *source, GAsyncResult *result, dwb_sec
 
 void 
 dwb_secret_lock_collection(dwb_secret_cb cb, const char *name, void *user_data) {
+    g_return_if_fail(name != NULL);
     dwb_secret_t *s = dwb_secret_new(cb, g_strdup(name), user_data, g_free, DWB_SECRET_ACTION_LOCK);
     get_service_init(on_service_lock_unlock_collection, s);
 }
 void 
 dwb_secret_unlock_collection(dwb_secret_cb cb, const char *name, void *user_data) {
+    g_return_if_fail(name != NULL);
     dwb_secret_t *s = dwb_secret_new(cb, g_strdup(name), user_data, g_free, DWB_SECRET_ACTION_UNLOCK);
     get_service_init(on_service_lock_unlock_collection, s);
 }
@@ -287,10 +290,13 @@ on_lookup_pwd(GObject *o, GAsyncResult *result, dwb_secret_t *secret) {
 static void 
 on_service_pwd(GObject *source, GAsyncResult *result, dwb_secret_t *secret) {
     SecretService *service = get_service(secret, result);
+    const char *path = NULL;
     if (service != NULL) {
         dwb_pwd_t *pwd = secret->data;
-        const char *path = collection_lookup_path(service, pwd->collection);
-        if (path != NULL) {
+        if (pwd->collection != NULL) {
+            path = collection_lookup_path(service, pwd->collection);
+        }
+        if (path != NULL || pwd->collection == NULL) {
             if (secret->action == DWB_SECRET_ACTION_STORE) {
                 secret_password_store(&s_schema, path, pwd->label, pwd->pwd, NULL,
                         (GAsyncReadyCallback)on_store_pwd, secret, "id", pwd->id, NULL);
@@ -309,6 +315,7 @@ on_service_pwd(GObject *source, GAsyncResult *result, dwb_secret_t *secret) {
 void 
 dwb_secret_store_pwd(dwb_secret_cb cb, const char *collection, 
         const char *label, const char *id, const char *password, void *user_data) {
+    g_return_if_fail(label != NULL || id != NULL || password != NULL);
     dwb_pwd_t *pwd = dwb_pwd_new(collection, label, id, password);
     dwb_secret_t *s = dwb_secret_new(cb, pwd, user_data, (void (*)(void *))dwb_pwd_free, DWB_SECRET_ACTION_STORE);
     get_service_init(on_service_pwd, s);
@@ -316,6 +323,7 @@ dwb_secret_store_pwd(dwb_secret_cb cb, const char *collection,
 
 void 
 dwb_secret_lookup_pwd(dwb_secret_cb cb, const char *collection, const char *id, void *user_data) {
+    g_return_if_fail(id != NULL);
     dwb_pwd_t *pwd = dwb_pwd_new(collection, NULL, id, NULL);
     dwb_secret_t *s = dwb_secret_new(cb, pwd, user_data, (void (*)(void *))dwb_pwd_free, DWB_SECRET_ACTION_LOOKUP);
     get_service_init(on_service_pwd, s);

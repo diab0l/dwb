@@ -3927,7 +3927,8 @@ keyring_lock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t arg
  *     io.print("keyring locked");
  * });
  *
- * @param {String} keyring  The name of the keyring
+ * @param {String} keyring  
+ *      The name of the keyring, pass null to use the default keyring
  * @param {String} label    Label for the password
  * @param {String} id       Identifier for the password
  * @param {String} password The password
@@ -3947,8 +3948,7 @@ keyring_store(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t ar
         return NIL;
 
     collection = js_value_to_char(ctx, argv[0], -1, exc);
-    if (collection == NULL) 
-        goto error_out;
+
     label = js_value_to_char(ctx, argv[1], -1, exc);
     if (label == NULL) 
         goto error_out;
@@ -3985,8 +3985,10 @@ error_out:
  *     io.print("password: " + password);
  * });
  *
- * @param {String} keyring  The name of the keyring
- * @param {String} id       Identifier of the password
+ * @param {String} keyring  
+ *      The name of the keyring, pass null to use the default keyring
+ * @param {String} id       
+ *      Identifier of the password
  *
  * @returns {Deferred} 
  *      A deferred that will be resolved if the password was found or rejected
@@ -4003,8 +4005,7 @@ keyring_lookup(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
         return NIL;
 
     collection = js_value_to_char(ctx, argv[0], -1, exc);
-    if (collection == NULL) 
-        goto error_out;
+
     id = js_value_to_char(ctx, argv[1], -1, exc);
     if (id == NULL) 
         goto error_out;
