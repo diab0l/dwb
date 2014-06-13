@@ -47,6 +47,7 @@ Object.freeze(LoadStatus);
  * @constant
  * @name KeyringResult
  * @memberOf Enums and Flags
+ * @since 1.11
  * @type Object
  * @property {Enum}  ok             Function call was successfull
  * @property {Enum}  keyringExists  A keyring with that name already exists
@@ -55,11 +56,11 @@ Object.freeze(LoadStatus);
  * @property {Enum}  error          General error
  * */
 const KeyringResult = { 
-    ok : 0, 
+    ok            : 0, 
     keyringExists : 1,
-    noSuchKeyring : 2,
-    serviceError : 3,
-    error : 4
+    error         : -1,
+    noSuchKeyring : -2,
+    serviceError  : -3,
 };
 Object.freeze(KeyringResult);
 /**
