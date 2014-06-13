@@ -512,7 +512,7 @@ static void
 set_loader(const char *name, const char *config, int flags) 
 {
     char *script = NULL;
-    char shortcut[64], command[128];
+    char shortcut[64], command[128] = { 0 };
     gboolean load = true;
     gboolean has_cmd;
 
@@ -525,7 +525,7 @@ set_loader(const char *name, const char *config, int flags)
         get_response(command, sizeof(command), "Command for toggling "EXT(%s)"?", name);
         load = yes_no(1, "Load "EXT(%s)" on startup", name);
     }
-    has_cmd = command != NULL && *command != '\0';
+    has_cmd = (command != NULL) && (*command != '\0');
 
     if (config == NULL || flags & F_NO_CONFIG) 
     {

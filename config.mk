@@ -131,6 +131,12 @@ else
 $(error Cannot find json-c)
 endif
 
+LIBSECRET=libsecret-1
+ifeq ($(shell pkg-config --exists ${LIBSECRET} && echo 1), 1)
+LIBS+=libsecret-1
+USE_LIB_SECRET := 1
+endif
+
 
 # HTML-files
 INFO_FILE=info.html
@@ -179,6 +185,11 @@ CPPFLAGS+=-DGDK_DISABLE_DEPRECATED
 CPPFLAGS+=-DGSEAL_ENABLE
 M4FLAGS += -DWITH_GTK3=1
 endif
+
+ifeq (${USE_LIB_SECRET}, 1)
+CPPFLAGS+=-DWITH_LIBSECRET
+endif
+
 
 #defines
 CFLAGS += -DINFO_FILE=\"$(INFO_FILE)\"

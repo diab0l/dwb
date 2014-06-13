@@ -561,6 +561,8 @@ pack (const char *archive, const char *path, const char *mode)
     LOG(3, "Closing %s\n", archive);
 
     fclose(s_out);
+    s_out_path = NULL;
+
     return ret;
 }
 

@@ -43,6 +43,26 @@ const LoadStatus =
 };
 Object.freeze(LoadStatus);
 /**
+ * Results of keyring actions
+ * @constant
+ * @name KeyringResult
+ * @memberOf Enums and Flags
+ * @type Object
+ * @property {Enum}  ok             Function call was successfull
+ * @property {Enum}  keyringExists  A keyring with that name already exists
+ * @property {Enum}  noSuchKeyring  A keyring with the provided name wasn't found
+ * @property {Enum}  serviceError   Couldn't get a keyring service
+ * @property {Enum}  error          General error
+ * */
+const KeyringResult = { 
+    ok : 0, 
+    keyringExists : 1,
+    noSuchKeyring : 2,
+    serviceError : 3,
+    error : 4
+};
+Object.freeze(KeyringResult);
+/**
  * Gdk modifier flag
  * @constant
  * @name Modifier 

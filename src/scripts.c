@@ -44,6 +44,7 @@
 #include "application.h" 
 #include "completion.h" 
 #include "entry.h" 
+#include "secret.h" 
 
 #define API_VERSION 1.10
 
@@ -269,6 +270,9 @@ enum {
     NAMESPACE_TABS, 
     NAMESPACE_TIMER, 
     NAMESPACE_UTIL, 
+#ifdef WITH_LIBSECRET
+    NAMESPACE_KEYRING, 
+#endif
     NAMESPACE_LAST,
 };
 enum {
@@ -1071,6 +1075,8 @@ tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
 static GList *
 find_webview(JSObjectRef o) 
 {
+    g_return_val_if_fail(dwb.state.fview != NULL, NULL);
+
     for (GList *r = dwb.state.fview; r; r=r->next)
         if (VIEW(r)->script_wv == o)
             return r;
@@ -1500,6 +1506,7 @@ wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, 
 static JSValueRef 
 wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
+    JSValueRef ret = NIL;
     int argc = 0, n = 0;
     GSList *frames = NULL;
     GList *gl = find_webview(object);
@@ -1513,17 +1520,20 @@ wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
         }
     }
 
-    JSValueRef argv[argc];
+    if (argc > 0) {
+        JSValueRef argv[argc];
 
-    for (GSList *sl = frames; sl; sl=sl->next) {
-        WebKitWebFrame *frame = sl->data;
-        if (frame != NULL) {
-            argv[n++] = make_object(ctx, G_OBJECT(sl->data));
+        for (GSList *sl = frames; sl; sl=sl->next) {
+            WebKitWebFrame *frame = sl->data;
+            if (frame != NULL) {
+                argv[n++] = make_object(ctx, G_OBJECT(sl->data));
+            }
         }
+        ret = JSObjectMakeArray(ctx, argc, argv, exception);
     }
     g_slist_free_full(frames, (GDestroyNotify)g_object_unref);
 
-    return JSObjectMakeArray(ctx, argc, argv, exception);
+    return ret;
 }/*}}}*/
 
 /** 
@@ -2447,6 +2457,9 @@ global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
         [NAMESPACE_TABS]        = "tabs",
         [NAMESPACE_TIMER]       = "timer",
         [NAMESPACE_UTIL]        = "util",
+#ifdef WITH_LIBSECRET
+        [NAMESPACE_KEYRING]     = "keyring"
+#endif
     };
     JSValueRef ret = NULL;
     if (argc > 0) {
@@ -3589,7 +3602,8 @@ sutil_base64_decode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObje
     guchar *data;
     gushort *js_data;
     JSStringRef string;
-    JSValueRef ret = NIL;
+    JSValueRef ret;
+
     if (argc == 0)
         return NIL;
     base64 = js_value_to_char(ctx, argv[0], -1, exc);
@@ -3759,6 +3773,246 @@ atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     else
         return NULL;
 }
+
+#ifdef WITH_LIBSECRET
+void
+on_keyring_no_val(int status, void *unused, JSObjectRef d) {
+    (void) unused;
+    EXEC_LOCK;
+    JSValueRef args[] = { JSValueMakeNumber(s_ctx->global_context, status) };
+    if (status == DWB_SECRET_OK) {
+        deferred_resolve(s_ctx->global_context, d, d, 1, args, NULL);
+    }
+    else {
+        deferred_reject(s_ctx->global_context, d, d, 1, args, NULL);
+    }
+    EXEC_UNLOCK;
+}
+void 
+on_keyring_string(int status, const char *value, JSObjectRef dfd) {
+    EXEC_LOCK;
+    if (status == DWB_SECRET_OK) {
+        JSValueRef args[] = { value == NULL ? NIL : js_char_to_value(s_ctx->global_context, value) };
+        deferred_resolve(s_ctx->global_context, dfd, dfd, 1, args, NULL);
+    }
+    else {
+        JSValueRef args[] = { JSValueMakeNumber(s_ctx->global_context, status) };
+        deferred_reject(s_ctx->global_context, dfd, dfd, 1, args, NULL);
+    }
+    EXEC_UNLOCK;
+}
+
+static JSValueRef
+keyring_call_str(JSContextRef ctx, void (*secret_func)(dwb_secret_cb, const char *, void *), size_t argc, const JSValueRef argv[], JSValueRef *exc) {
+    if (argc > 0) {
+        char *name = js_value_to_char(ctx, argv[0], -1, exc);
+        if (name != NULL) {
+            JSObjectRef d = deferred_new(ctx);
+            secret_func((dwb_secret_cb)on_keyring_no_val, name, d);
+            g_free(name);
+            return d;
+        }
+    }
+    return NIL;
+}
+
+/**
+ * Checks if a service can be retrieved, i.e. gnome-keyring-daemon is installed and
+ * running or could be started 
+ *
+ * @name checkService
+ * @memberOf keyring
+ * @function
+ * @example 
+ * keyring.checkService().then(
+ *      function() {
+ *          io.print("Everything's fine");
+ *      }, 
+ *      function() 
+ *          io.print("No service");
+ *      }
+ * );
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if a service can be retrieved and
+ *      rejected if an error occured.
+ */
+static JSValueRef 
+keyring_check_service(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    JSObjectRef d = deferred_new(ctx);
+    dwb_secret_check_service((dwb_secret_cb)on_keyring_no_val, d);
+    return d;
+}
+/**
+ * Creates a new keyring, if a keyring with the same name already exists no new keyring is created
+ *
+ * @name create
+ * @memberOf keyring
+ * @function
+ * @example 
+ * keyring.create("foo").then(function() {
+ *     io.print("keyring created");
+ * });
+ *
+ * @param {String} keyring The name of the keyring
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if the keyring was created or rejected
+ *      if a keyring with the same name already exists or an error occured
+ *
+ */
+static JSValueRef 
+keyring_create(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    return keyring_call_str(ctx, dwb_secret_create_collection, argc, argv, exc);
+}
+/**
+ * Unlocks a keyring
+ *
+ * @name unlock
+ * @memberOf keyring
+ * @function
+ * @example 
+ * keyring.unlock("foo").then(function() {
+ *     io.print("keyring unlocked");
+ * });
+ *
+ * @param {String} keyring The name of the keyring
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if the keyring was unlocked or rejected
+ *      if no such keyring exists or an error occured
+ *
+ */
+static JSValueRef 
+keyring_unlock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    return keyring_call_str(ctx, dwb_secret_unlock_collection, argc, argv, exc);
+}
+/**
+ * Locks a keyring
+ *
+ * @name lock
+ * @memberOf keyring
+ * @function
+ * @example 
+ * keyring.lock("foo").then(function() {
+ *     io.print("keyring locked");
+ * });
+ *
+ * @param {String} keyring The name of the keyring
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if the keyring was locked or rejected
+ *      if no such keyring exists or an error occured
+ *
+ */
+static JSValueRef 
+keyring_lock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    return keyring_call_str(ctx, dwb_secret_lock_collection, argc, argv, exc);
+}
+
+/**
+ * Stores a password in a keyring
+ *
+ * @name store
+ * @memberOf keyring
+ * @function
+ * @example 
+ * var id = script.generateId();
+ * keyring.store("foo", "mypassword", id, "secretpassword").then(function() {
+ *     io.print("keyring locked");
+ * });
+ *
+ * @param {String} keyring  The name of the keyring
+ * @param {String} label    Label for the password
+ * @param {String} id       Identifier for the password
+ * @param {String} password The password
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if the password was save or rejected
+ *      if no such keyring exists or an error occured
+ *
+ */
+static JSValueRef 
+keyring_store(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    JSValueRef ret = NIL;
+    JSObjectRef dfd;
+    char *collection = NULL, *label = NULL, *id = NULL, *pwd = NULL;
+
+    if (argc < 4) 
+        return NIL;
+
+    collection = js_value_to_char(ctx, argv[0], -1, exc);
+    if (collection == NULL) 
+        goto error_out;
+    label = js_value_to_char(ctx, argv[1], -1, exc);
+    if (label == NULL) 
+        goto error_out;
+    id = js_value_to_char(ctx, argv[2], -1, exc);
+    if (id == NULL) 
+        goto error_out;
+    pwd = js_value_to_char(ctx, argv[3], -1, exc);
+    if (pwd == NULL) 
+        goto error_out;
+
+    dfd = deferred_new(ctx);
+    dwb_secret_store_pwd((dwb_secret_cb)on_keyring_no_val, collection, label, id, pwd, dfd);
+
+    sec_memset(pwd, 0, strlen(pwd));
+
+    ret = dfd;
+error_out: 
+    g_free(collection);
+    g_free(label);
+    g_free(id);
+    g_free(pwd);
+    return ret;
+}
+
+/**
+ * Get a password from a keyring
+ *
+ * @name lookup
+ * @memberOf keyring
+ * @function
+ * @example 
+ * keyring.lookup("foo", "myid").then(function(password) {
+ *     io.print("password: " + password);
+ * });
+ *
+ * @param {String} keyring  The name of the keyring
+ * @param {String} id       Identifier of the password
+ *
+ * @returns {Deferred} 
+ *      A deferred that will be resolved if the password was found or rejected
+ *      if no such keyring exists, the password wasn't found or an error occured
+ *
+ */
+static JSValueRef 
+keyring_lookup(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
+    JSValueRef ret = NIL;
+    JSObjectRef dfd;
+    char *collection = NULL, *id = NULL;
+
+    if (argc < 2) 
+        return NIL;
+
+    collection = js_value_to_char(ctx, argv[0], -1, exc);
+    if (collection == NULL) 
+        goto error_out;
+    id = js_value_to_char(ctx, argv[1], -1, exc);
+    if (id == NULL) 
+        goto error_out;
+
+    dfd = deferred_new(ctx);
+    dwb_secret_lookup_pwd((dwb_secret_cb)on_keyring_string, collection, id, dfd);
+    ret = dfd;
+error_out: 
+    g_free(collection);
+    g_free(id);
+    return ret;
+}
+#endif // WITH_LIBSECRET
+
 /**
  * Sets content of the system clipboard
  * @name set
@@ -5207,9 +5461,12 @@ widget_container_remove(JSContextRef ctx, JSObjectRef function, JSObjectRef this
 static JSValueRef 
 widget_get_children(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc)  {
     GtkWidget *widget = JSObjectGetPrivate(this);
+
     g_return_val_if_fail(widget != NULL, UNDEFINED);
-    JSValueRef result = NIL;
+
+    JSValueRef result;
     GList *children = NULL;
+
     int i=0;
 
     if (! GTK_IS_CONTAINER(widget))
@@ -7083,6 +7340,45 @@ create_global_object()
     class = create_class("util", util_functions, NULL, NULL);
     s_ctx->namespaces[NAMESPACE_UTIL] = create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
     JSClassRelease(class);
+
+    /**
+     * Namespace for managing passwords, needs gnome-keyring
+     * @namespace 
+     *      Access to gnome-keyring
+     * @name keyring 
+     * @static 
+     * @example
+     *
+     * //!javascript
+     * 
+     * var keyring = namespace("keyring");
+     * 
+     * var collection = "foo";
+     * var id = script.generateId();
+     * 
+     * keyring.create(collection).always(function(status) {
+     *     if (status == KeyringResult.ok || KeyringResult.keyringExists) {
+     *         keyring.store(collection, "foobar", id, "secret").then(function() {
+     *             io.print("password saved");
+     *         });;
+     *     }
+     * });
+     *
+     * */
+#ifdef WITH_LIBSECRET
+    JSStaticFunction keyring_functions[] = { 
+        { "checkService",            keyring_check_service,       kJSDefaultAttributes },
+        { "create",                  keyring_create,       kJSDefaultAttributes },
+        { "lock",                    keyring_lock,       kJSDefaultAttributes },
+        { "unlock",                  keyring_unlock,       kJSDefaultAttributes },
+        { "store",                   keyring_store,       kJSDefaultAttributes },
+        { "lookup",                  keyring_lookup,      kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    class = create_class("keyring", keyring_functions, NULL, NULL);
+    s_ctx->namespaces[NAMESPACE_KEYRING] = JSObjectMake(ctx, class, NULL);
+    JSClassRelease(class);
+#endif
 
     /**
      * Access to the system clipboard

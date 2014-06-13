@@ -54,6 +54,7 @@
 #include "dom.h"
 #include "ipc.h"
 #include "plugindb.h"
+#include "secret.h"
 
 #ifndef DISABLE_HSTS
 #include "hsts.h"
@@ -1627,7 +1628,7 @@ DwbStatus
 dwb_set_setting(const char *key, char *value, int scope) 
 {
     WebSettings *s;
-    Arg *a = NULL, oldarg = { .p = NULL };
+    Arg *a = NULL, oldarg;
 
     DwbStatus ret = STATUS_ERROR;
 
@@ -5402,10 +5403,32 @@ dwb_version_libs()
 #endif
     fprintf(stdout, "      cairo : %d.%d.%d\n",  CAIRO_VERSION_MAJOR, CAIRO_VERSION_MINOR, CAIRO_VERSION_MICRO);
 }
+void 
+got_collections(int state, GList *l, gpointer *data) {
+    /*for (GList *g = l; g; g=g->next) {*/
+        /*puts(g->data);*/
+    /*}*/
+    /*g_list_free_full(l, g_free);*/
+    gtk_main_quit();
+}
 /* MAIN {{{*/
 int 
 main(int argc, char *argv[]) 
 {
+//    gtk_init(NULL, NULL);
+//
+//    /*dwb_secret_get_collections((dwb_secret_cb)got_collections, NULL);*/
+//    dwb_secret_create_collection((dwb_secret_cb)got_collections, "foo", NULL);
+//
+//    ///*dwb_secret_create_collection();*/
+//    //dwb_secret_store_password("mytest-password", "blubblub", "xxy");
+//    ///*const char *pwd = dwb_secret_get_password("xxy");*/
+//    ///*if (pwd) {*/
+//    //    /*puts(pwd);*/
+//    ///*}*/
+//    gtk_main();
+//    return 0;
+
     dwb.misc.name = REAL_NAME;
     dwb.misc.profile = "default";
     dwb.misc.prog_path = argv[0];
