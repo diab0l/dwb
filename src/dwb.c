@@ -3847,9 +3847,9 @@ dwb_free_custom_keys()
 gboolean
 dwb_clean_up() 
 {
-    scripts_end(true);
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
+    scripts_end(true);
     
 #ifndef DISABLE_HSTS
     hsts_end(); /* Assumes it has access to dwb.settings */

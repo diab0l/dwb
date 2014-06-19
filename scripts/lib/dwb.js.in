@@ -17,13 +17,25 @@
     var _pending        = [];
     var _contexts       = {};
     var _systemModules  = {};
+    function resolveModulePath(baseDir, name) {
+        var dirPath = baseDir + name;
+        var filePath = baseDir + name + ".js";
+        if (system.fileTest(dirPath, FileTest.dir)) {
+            filePath = dirPath + "/main.js";
+        }
+        if (system.fileTest(filePath, FileTest.exists)) {
+            return filePath;
+        }
+        return null;
+    }
     function _getSystemModule(name) {
         if (!_systemModules[name]) {
-            if (system.fileTest(_userModuleDir + name, FileTest.exists)) {
-                _systemModules[name] = include(_userModuleDir + name);
+            var userModule, systemModule;
+            if ((userModule = resolveModulePath(_userModuleDir, name)) != null) {
+                _systemModules[name] = include(userModule);
             }
-            else if (system.fileTest(_systemModuleDir + name, FileTest.exists)) {
-                _systemModules[name] = include(_systemModuleDir + name);
+            else if ((systemModule = resolveModulePath(_systemModuleDir, name)) != null) {
+                _systemModules[name] = include(systemModule);
             }
             else {
                 throw new Error("Module not found: " + name);

@@ -454,7 +454,7 @@ Object.defineProperties(Completion.prototype, {
 
             bind(this.shortcut, this._bindCallback.bind(this));
             if (this.renderPageSize == 0) {
-                this.renderPageSize = this.visibleItems * 3;
+                this.renderPageSize = this.visibleItems * 2;
             }
 
             if (!this.onFilter) {
@@ -503,6 +503,11 @@ Object.defineProperties(Completion.prototype, {
                     return item.matchAttr.indexOf(word) != -1;
                 });
             });
+        }
+    },
+    _filterForward : {
+        value : function() {
+
         }
     },
     refresh : {
@@ -561,5 +566,5 @@ Object.defineProperties(Completion, {
     } 
 });
 
-return Completion;
+exports = Completion;
 /* vim: set ft=javascript: */

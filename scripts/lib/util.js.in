@@ -19,7 +19,12 @@
         * */
         "clone" : {
             value : function(o)  {
-                return JSON.parse(JSON.stringify(o));
+                if (o instanceof Array) {
+                    return o.slice(0);
+                }
+                else {
+                    return JSON.parse(JSON.stringify(o));
+                }
             }
         },
         /** 
@@ -280,6 +285,38 @@
                  return this.getBody(func).replace(/\s*\/\*HEREDOC([\s\S]*)\s*HEREDOC\*\/\s*;?/, "$1");
              }
          }, 
+         /** 
+          * Flattens an array, this function modifies the original array.
+          *
+          * @name flatten
+          * @memberOf util
+          * @function
+          * @example
+          * var a = [ 1, [ 2, 3, [4, 5, [ 6, 7 ] ] ], 8 ];
+          * var b = util.flatten(a) // -> [ 1, 2, 3, [ 4, 5, [ 6, 7 ] ], 8  ]
+          * var c = util.flatten(a, true) // -> [ 1, 2, 3, 4, 5, 6, 7, 8  ]
+          *
+          * @param {Array} array
+          *     The array to flatten
+          * @param {Boolean} [deep]
+          *     Whether to deep flatten the array
+          *
+          * @returns 
+          *     The a new array that is flat..
+          * */
+         "flatten" : { 
+             value : function(arr, deep) {
+                 if (deep) {
+                     arr = arr.map(function(o, i, a) {
+                         if (o instanceof Array) 
+                             return this.flatten(o, true);
+                         else 
+                             return o;
+                     }, this);
+                 }
+                 return Array.prototype.concat.apply([], arr); 
+             }
+         },
          /** 
           * Searches for a string in the current or a new tab using dwb's
           * searchengines
