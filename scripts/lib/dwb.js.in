@@ -423,12 +423,12 @@
          * @example 
          * // asynchronous
          * require(["foo", "bar"], function(foo, bar) {
-         *    io.print(foo.baz);
+         *    io.out(foo.baz);
          * });
          *
          * // synchronous
          * var foo = require("foo");
-         * io.print(foo.baz);
+         * io.out(foo.baz);
          *
          * // ensuring that all modules have been defined for synchronous loading
          * Signal.connect("ready", function() {
@@ -480,7 +480,7 @@
             value : function(on, nn, args, attachScope) 
             {
                 var i, l, ns, ctx, actx;
-                io.print("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
+                io.err("\033[31;1mDWB DEPRECATION:\033[0m " + on + "() is deprecated, use " + nn + "() instead!");
                 ns = nn.split(".");
                 ctx = actx = attachScope || this;
                 for (i=0, l=ns.length; i<l-1; i++)
@@ -959,11 +959,11 @@
      * }
      * Deferred.when(sync(), function(response) {
      *     // sync
-     *     io.print(response);
+     *     io.out(response);
      * });
      * Deferred.when(async(), function(response) {
      *     // async
-     *     io.print(response);
+     *     io.out(response);
      * });
      * */
     Object.defineProperty(Deferred, "when", {
@@ -1078,7 +1078,7 @@
          * */
          nth : {
              value : function(n) {
-                 io.print("\033[31;1mDWB DEPRECATION:\033[0m tabs.nth(n) is deprecated, use tabs[n] instead!");
+                 io.err("\033[31;1mDWB DEPRECATION:\033[0m tabs.nth(n) is deprecated, use tabs[n] instead!");
                      return this[n];
              }
          },

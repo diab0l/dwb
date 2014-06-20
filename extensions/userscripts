@@ -76,10 +76,17 @@ var onEnd = [];
 */
 
 
+var net     = namespace("net");
+var util    = namespace("util");
+var system  = namespace("system");
+var io      = namespace("io");
+var data    = namespace("data");
+var timer   = namespace("timer");
+
 var metaData = {};
 
-const DATA_DIR = data.userDataDir + "/extension_data/userscripts/resources";
-const META_DATA = DATA_DIR + "/.metadata";
+var DATA_DIR = data.userDataDir + "/extension_data/userscripts/resources";
+var META_DATA = DATA_DIR + "/.metadata";
 
 UserScript.prototype = new Function();
 UserScript.prototype.constructor = UserScript;

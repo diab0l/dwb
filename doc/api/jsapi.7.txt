@@ -303,6 +303,16 @@ _path_;; A path to a directory
 *returns*;; An array with the directory names
 ****
 
+==== void io.err(String text, [String ...])
+****
+
+Print text to stderr
+
+_text_;; The text to print
+...;;  Additional arguments, will be printed comma sperated
+****
+
+
 ==== void io.error(String text)
 ****
 
@@ -319,13 +329,13 @@ Shows a message in the browser window.
 _text_;; The message to show
 ****
 
-==== void io.print(String text, [String stream])
+==== void io.out(String text, [String ...])
 ****
 
-Print text to stdout or stderr 
+Print text to stdout
 
-_text_;; the text to print
-_stream_;; pass "stderr" to print to stderr, optional
+_text_;; The text to print
+...;;  Additional arguments, will be printed comma sperated
 ****
 
 ==== String io.prompt(String text, [Boolean visible])
@@ -1003,10 +1013,10 @@ function loadUri(uri) {
 
 loadUri("http://www.example.com").then(
     function(response) {
-        io.print(response); // Finished
+        io.out(response); // Finished
     }, 
     function(response) {
-        io.print(response); // Failed
+        io.out(response); // Failed
     }
 );
 ---------------------------------
@@ -1026,7 +1036,7 @@ function foo()
 
 function onResponse(response) 
 {
-    io.print(response);
+    io.out(response);
 }
 
 // Will print "rejected" twice to stdout after 2 seconds
@@ -1050,7 +1060,7 @@ function foo()
 
 function onResponse(response) 
 {
-    io.print(response);
+    io.out(response);
 }
 
 // Only the fail will be executed
@@ -1073,14 +1083,14 @@ function foo(message)
 }
 function callback1(response) 
 {
-    io.print(response); // Prints "foo" after 2 seconds
+    io.out(response); // Prints "foo" after 2 seconds
 
     // Return a new Deferred, will replace the old one.
     return foo("bar");
 }
 function callback2(response) 
 {
-    io.print(response); // Prints "bar" after 4 seconds
+    io.out(response); // Prints "bar" after 4 seconds
 }
 
 foo("foo").done(callback1).done(callback2);
@@ -2420,15 +2430,15 @@ on the global object, i.e.
 
 // not allowed, the global object is readonly
 number = 0;
-io.print(number);     // undefined
+io.out(number);     // undefined
 
 var number2 = 0;
-io.print(number2);    // 0
+io.out(number2);    // 0
 
 // not allowed
 foo = function() 
 {
-  io.print("foo");
+  io.out("foo");
 }
 foo();  // fails
 -------
@@ -2508,12 +2518,12 @@ defined with +provide+ and loaded with +require+.
 provide("myModule", {
   foo : 37, 
   doBar : function() {
-    io.print("bar");
+    io.out("bar");
   }
 });
 provide("myOtherModule", {
   act : function (arg) {
-    io.print(arg);
+    io.out(arg);
   }
 });
 -------
@@ -2552,7 +2562,7 @@ the format *name!path*:
 #!javascript 
 
 require(["foo!/path/to/foo"], function(foo) {
-  io.print(foo.bar); // 37
+  io.out(foo.bar); // 37
 });
 -------
 
@@ -2573,7 +2583,7 @@ is ignored and the stored module will be resolved:
 #!javascript 
 
 require(["foo!/path/to/foo"], function(foo) {
-  io.print(foo.bar); // 42
+  io.out(foo.bar); // 42
 });
 provide("foo", { bar : 42 });
 -------
@@ -2583,12 +2593,12 @@ provide("foo", { bar : 42 });
 #!javascript 
 
 require(["foo"], function(foo) {
-  io.print(foo); // undefined
+  io.out(foo); // undefined
 });
 require(["foo!/path/to/foo"]);
 
 require(["foo"], function(foo) {
-  io.print(foo); // { bar : 37 }
+  io.out(foo); // { bar : 37 }
 });
 -------
 

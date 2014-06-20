@@ -143,10 +143,17 @@
                     outMessage += caller.replace(regHasDwb, "$1").replace(/\n/gm, "\n  ");
                     outMessage += prefixFunction;
                 }
-                io.print(outMessage + "\n", "stderr");
+                io.err(outMessage + "\n");
                 return undefined;
+            }, 
+        }, 
+        /*
+        * Deprecated, use io.out or io.err instead
+        * */
+        print : {
+            value : function(out, stream) {
+                _deprecated("io.print", stream == "stderr" ? "io.err" : "io.out", [out]);
             }
-
         }
     });
 })();

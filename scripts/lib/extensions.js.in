@@ -179,7 +179,7 @@
       {
           value : function (name, message) 
           {
-              io.print("\033[1mDWB EXTENSION WARNING: \033[0mextension  \033[1m" + name + "\033[0m: " + message, "stderr");
+              io.err("\033[1mDWB EXTENSION WARNING: \033[0mextension  \033[1m" + name + "\033[0m: " + message);
           }
       }, 
       /**
@@ -205,11 +205,11 @@
                   message = b;
                   else 
                       b = "";
-                  io.print("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m in line " + a.line + ": " + 
-                          message + "\nSTACK: [" + a.stack.match(/[^\n]+/g).join("] [") + "]", "stderr");
+                  io.err("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m in line " + a.line + ": " + 
+                          message + "\nSTACK: [" + a.stack.match(/[^\n]+/g).join("] [") + "]");
               }
               else {
-                  io.print("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m: " + a + "\n" + _getStack(1), "stderr");
+                  io.err("\033[31mDWB EXTENSION ERROR: \033[0mextension \033[1m" + name + "\033[0m: " + a + "\n" + _getStack(1));
               }
           }
       },
@@ -228,7 +228,7 @@
       {
           value : function (name, message) 
           {
-              io.print("\033[1mDWB EXTENSION: \033[0mextension \033[1m" + name + "\033[0m: " + message, "stderr");
+              io.err("\033[1mDWB EXTENSION: \033[0mextension \033[1m" + name + "\033[0m: " + message);
           }
       },
       /**

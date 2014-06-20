@@ -84,6 +84,13 @@
 Block requests from thirdparty domains permanently or just for a session, whitelisting support
 INFO>*/
 
+var data    = namespace("data");
+var io      = namespace("io");
+var net     = namespace("net");
+var system  = namespace("system");
+var tabs    = namespace("tabs");
+var util    = namespace("util");
+
 var defaultConfig = {
 //<DEFAULT_CONFIG
 // path to a whitelist 
@@ -111,6 +118,7 @@ var config = {};
 
 var persistentList = null;
 var tmpList = {};
+
 
 var getPrivate = function (wv)  
 {

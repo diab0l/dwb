@@ -45,6 +45,7 @@
 #include "completion.h" 
 #include "entry.h" 
 #include "secret.h" 
+static int ref_count = 0;
 
 #define API_VERSION 1.11
 
@@ -52,7 +53,7 @@
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
-#define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;/*<dwb*/"
+#define SCRIPT_TEMPLATE_START "try{_initNewContext(this,arguments,'%s');const script=this;var exports=null;/*<dwb*/"
 // FIXME: xgettext, xinclude properly defined
 #define SCRIPT_TEMPLATE_XSTART "try{"\
 "var exports=arguments[0];"\
@@ -64,7 +65,7 @@
 "var xprovide=function(n,m,o){provide(n+exports.id,m,o);};"\
 "var xrequire=function(n){return require(n+exports.id);};/*<dwb*/"
 
-#define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);};"
+#define SCRIPT_TEMPLATE_END "%s/*dwb>*/}catch(e){script.debug(e);} if(exports && !exports.id) return exports;"
 
 #define SCRIPT_TEMPLATE SCRIPT_TEMPLATE_START"//!javascript\n"SCRIPT_TEMPLATE_END
 #define SCRIPT_TEMPLATE_INCLUDE SCRIPT_TEMPLATE_START SCRIPT_TEMPLATE_END
@@ -296,6 +297,8 @@ enum {
 #if WEBKIT_CHECK_VERSION(1, 10, 0)
     CLASS_FILE_CHOOSER,
 #endif
+    CLASS_DOM_OBJECT, 
+    CLASS_DOM_EVENT, 
     CLASS_TIMER,
     CLASS_LAST,
 };
@@ -304,9 +307,10 @@ static void callback(CallbackData *c);
 static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception);
 static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
-static void object_destroy_cb(JSObjectRef o);
 static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
 static JSValueRef do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc);
+static JSClassRef create_class(const char *name, JSStaticFunction [], JSStaticValue [], JSObjectGetPropertyCallback );
+static JSObjectRef make_dom_object(JSContextRef ctx, GObject *o);
 
 typedef struct ScriptContext_s {
     JSGlobalContextRef global_context;
@@ -339,9 +343,9 @@ typedef struct ScriptContext_s {
 static ScriptContext *s_ctx;
 static GSList *s_autoloaded_extensions;
 static uint64_t s_signal_locks;
+static JSValueRef UNDEFINED, NIL;
 
 /* Only defined once */
-static JSValueRef UNDEFINED, NIL;
 
 /* MISC {{{*/
 /* uncamelize {{{*/
@@ -482,6 +486,59 @@ script_context_free(ScriptContext *ctx) {
 }
 
 
+static void 
+object_destroy_weak_cb(JSObjectRef jsobj, GObject *domobj) {
+    EXEC_LOCK;
+    ref_count--;
+    printf("%d\n", ref_count);
+    if (JSObjectGetPrivate(jsobj) != NULL) {
+        JSObjectSetPrivate(jsobj, NULL);
+        JSValueUnprotect(s_ctx->global_context, jsobj);
+    }
+    EXEC_UNLOCK;
+}
+static void 
+object_destroy_cb(JSObjectRef o) 
+{
+    EXEC_LOCK;
+
+    JSObjectSetPrivate(o, NULL);
+    JSValueUnprotect(s_ctx->global_context, o);
+
+    EXEC_UNLOCK;
+}
+
+static void 
+finalize(JSObjectRef o)
+{
+    GObject *ob = JSObjectGetPrivate(o);
+    if (ob != NULL)
+    {
+        g_object_steal_qdata(ob, s_ctx->ref_quark);
+    }
+}
+static void 
+finalize_headers(JSObjectRef o)
+{
+    SoupMessageHeaders *ob = JSObjectGetPrivate(o);
+    if (ob != NULL)
+    {
+        soup_message_headers_free(ob);
+    }
+}
+static void 
+finalize_gtimer(JSObjectRef o) {
+    GTimer *ob = JSObjectGetPrivate(o);
+    if (ob != NULL)
+    {
+        g_timer_destroy(ob);
+    }
+}
+
+
+
+
+
 static JSValueRef 
 call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
 {
@@ -543,7 +600,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     }
     if (argc > 1 && !JSValueIsNull(ctx, argv[1])) 
     {
-        arg = js_value_to_json(ctx, argv[1], -1, exc);
+        arg = js_value_to_json(ctx, argv[1], -1, 0, exc);
     }
     if (argc > 2)
         debug = JSValueToNumber(ctx, argv[2], exc);
@@ -578,7 +635,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
     JSValueRef wret = JSEvaluateScript(wctx, script, NULL, NULL, 0, &e);
     if (!global && e == NULL) 
     {
-        char *retx = js_value_to_json(wctx, wret, -1, NULL);
+        char *retx = js_value_to_json(wctx, wret, -1, 0, NULL);
         // This could be replaced with js_context_change
         if (retx) 
         {
@@ -1501,7 +1558,7 @@ wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, 
  *
  * @name allFrames
  * @memberOf WebKitWebView.prototype
- * @type Array[WebKitWebFrame]
+ * @type Array[{@link WebKitWebFrame}]
  * */
 static JSValueRef 
 wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
@@ -1633,6 +1690,7 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
         return NIL;
     return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->scroll), true);
 }
+
 /** 
  * The history of the webview
  *
@@ -1917,7 +1975,6 @@ gtimer_construtor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, con
     GTimer *timer = g_timer_new();
     return JSObjectMake(ctx, s_ctx->classes[CLASS_TIMER], timer);
 }
-
 /* FRAMES {{{*/
 /* frame_get_domain {{{*/
 /** 
@@ -1962,6 +2019,24 @@ frame_get_host(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
         return NIL;
     return js_char_to_value(ctx, host);
 }/*}}}*/
+
+/** 
+ * The DOMDocument of the frame
+ *
+ * @name document
+ * @memberOf WebKitWebFrame.prototype
+ * @type DOMObject
+ *
+ * */
+static JSValueRef 
+frame_get_document(JSContextRef ctx, JSObjectRef self, JSStringRef js_name, JSValueRef* exception) {
+    WebKitWebFrame *frame = JSObjectGetPrivate(self);
+    if (frame == NULL)
+        return NIL;
+    WebKitDOMDocument *doc = webkit_web_frame_get_dom_document(frame);
+    return make_object(ctx, G_OBJECT(doc));
+    
+}
 
 /* frame_inject {{{*/
 
@@ -2575,7 +2650,7 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
  * // included script 
  * function foo()
  * {
- *     io.print("bar");
+ *     io.out("bar");
  * }
  * return {
  *      foo : foo
@@ -2590,7 +2665,7 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
  * provide("foo", {
  *      foo : function() 
  *      {
- *          io.print("bar");
+ *          io.out("bar");
  *      }
  * });
  *
@@ -2649,6 +2724,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
     else if ( (content = util_get_file_content(path, NULL)) != NULL) 
     {
         script = content;
+        exports[0] = JSValueMakeNull(ctx);
     }
     else {
         js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
@@ -2663,7 +2739,7 @@ global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, c
         script++;
     }
 
-    ret = do_include(ctx, path, script, global, is_archive, is_archive ? 1 : 0, is_archive ? exports : NULL, exc);
+    ret = do_include(ctx, path, script, global, is_archive, 1, exports, exc);
 
 error_out: 
     g_free(content);
@@ -2808,7 +2884,7 @@ global_xget_text(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t
  * // using require/provide
  * // main.js
  * require(["foo" + exports.id], function(foo) {
- *      io.print(foo.bar);
+ *      io.out(foo.bar);
  * });
  * xinclude("content/foo.js");
  *
@@ -3231,6 +3307,858 @@ scripts_completion_activate(void)
     dwb_change_mode(NORMAL_MODE, true);
     call_as_function_debug(s_ctx->global_context, s_ctx->complete, s_ctx->complete, 1, val);
     EXEC_UNLOCK;
+}
+static JSObjectRef
+dom_make_node_array(JSContextRef ctx, GObject *list, JSValueRef *exc, gulong (*getlength)(GObject *item), 
+        WebKitDOMNode * (*getitem)(GObject *, gulong)) {
+    if (list == NULL) 
+        return JSObjectMakeArray(ctx, 0, NULL, exc);
+
+    g_return_val_if_fail(list, JSObjectMakeArray(ctx, 0, NULL, exc));
+
+    JSObjectRef result = NULL;
+    JSValueRef *argv;
+    WebKitDOMNode *node;
+
+    gulong n = getlength(list);
+
+    if (n > 0) {
+        argv = g_try_malloc_n(n, sizeof(JSValueRef));
+        if (argv != NULL) {
+            for (gulong i=0; i<n; i++) {
+                node = getitem(list, i);
+                argv[i] = make_dom_object(ctx, G_OBJECT(node));
+            }
+            result = JSObjectMakeArray(ctx, n, argv, exc);
+            g_free(argv);
+        }
+    }
+    if (result == NULL) {
+        result = JSObjectMakeArray(ctx, 0, NULL, exc);
+    }
+    return result;
+}
+
+static JSObjectRef
+dom_make_collection(JSContextRef ctx, WebKitDOMHTMLCollection *list, JSValueRef *exc) {
+    return dom_make_node_array(ctx, G_OBJECT(list), exc, (gulong (*)(GObject *))webkit_dom_html_collection_get_length, 
+            (WebKitDOMNode * (*)(GObject *, gulong)) webkit_dom_html_collection_item);
+}
+static JSObjectRef
+dom_make_node_list(JSContextRef ctx, WebKitDOMNodeList *list, JSValueRef *exc) {
+    return dom_make_node_array(ctx, G_OBJECT(list), exc, (gulong (*)(GObject *))webkit_dom_node_list_get_length, 
+            (WebKitDOMNode * (*)(GObject *, gulong)) webkit_dom_node_list_item);
+}
+// dom functions
+#define DOM_CAST__DOC_OR_ELEMENT GObject * (*)(GObject *, const char *, GError **)
+static GObject *
+selector_exec(JSContextRef ctx, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef *exc, 
+        GObject * (*fel)(GObject *, const char *, GError **), GObject *(fdoc)(GObject *, const char *, GError **)) {
+    if (argc == 0) 
+        return NULL;
+
+    GError *e = NULL;
+    GObject *result = NULL;
+    GObject *o = JSObjectGetPrivate(self);
+    char *selector = NULL;
+    if (o == NULL) 
+        return NULL;
+
+    gboolean is_element = WEBKIT_DOM_IS_ELEMENT(o);
+    gboolean is_document = WEBKIT_DOM_IS_DOCUMENT(o);
+
+    if (!(is_document || is_element)) 
+        return NULL;
+    selector = js_value_to_char(ctx, argv[0], -1, NULL);
+    if (selector == NULL) 
+        return NULL;
+
+    if (is_element) {
+        result = fel(o, selector, &e);
+    }
+    else {
+        result = fdoc(o, selector, &e);
+    }
+    if (e != NULL) {
+        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+        result = NULL;
+    }
+    g_free(selector);
+    return result;
+}
+/** 
+ * Queries for elements, this method is the equivalent to
+ * element.querySelectorAll. This method is only implemented by <span class="iltype">DOMDocument</span> and
+ * <span class="iltype">Element</span> (ie. nodes with nodeType == 1 or nodeType == 9).
+ *
+ * @name querySelectorAll
+ * @memberOf DOMObject.prototype
+ * @since 1.12
+ * @function
+ * @example 
+ * var doc = tabs.current.document;
+ *
+ * var nodeList = doc.evaluate("[href], [src]");
+ * 
+ * @param {String} selector 
+ *      The DOM selector
+ *
+ * @returns {Array[DOMObject]}
+ *      The result of the query. Unlike the result of element.querySelectorAll the result is converted to a real array.
+ * */
+static JSValueRef 
+dom_query(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    GObject *list = selector_exec(ctx, self, argc, argv, exc, 
+            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_element_query_selector_all, 
+            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_document_query_selector_all);
+    if (list != NULL) {
+        return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(list), exc);
+    }
+    return NIL;
+
+}
+/** 
+ * Gets the computed style of an element, this is only implemented by <span class="iltype">DOMWindow</span>. 
+ * Unlike a CSSStyleDeclaration in the webcontext the properties of the style
+ * declaration can only be get by parsing the cssText-property. 
+ *
+ * @name getComputedStyle
+ * @memberOf DOMObject.prototype
+ * @since 1.12
+ * @function
+ * 
+ * @param {DOMElement} element 
+ *      An element 
+ *
+ * @returns {CSSStyleDeclaration}
+ * */
+static JSValueRef 
+dom_computed_style(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    if (argc == 0) 
+        return NIL;
+    GObject *o = JSObjectGetPrivate(self);
+    GObject *e = js_get_private(ctx, argv[0], exc);
+    if (o == NULL || e == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, WEBKIT_TYPE_DOM_DOM_WINDOW) || !G_TYPE_CHECK_INSTANCE_TYPE(e, WEBKIT_TYPE_DOM_ELEMENT)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return NIL;
+    }
+    WebKitDOMCSSStyleDeclaration *style = webkit_dom_dom_window_get_computed_style(WEBKIT_DOM_DOM_WINDOW(o), WEBKIT_DOM_ELEMENT(e), NULL);
+    if (style == NULL)
+        return NIL;
+    return make_dom_object(ctx, G_OBJECT(style));
+}
+/** 
+ * Queries for an element, this method is the equivalent to
+ * element.querySelector. This method is only implemented by <span class="iltype">DOMDocument</span> and
+ * <span class="iltype">Element</span> (ie. nodes with nodeType == 1 or nodeType == 9).
+ *
+ * @name querySelector
+ * @memberOf DOMObject.prototype
+ * @since 1.12
+ * @function
+ * @example 
+ * var doc = tabs.current.document;
+ *
+ * var nodeList = doc.evaluate("[href], [src]");
+ * 
+ * @param {String} selector 
+ *      The DOM selector
+ *
+ * @returns {DOMObject}
+ *      The result of the query. 
+ * */
+static JSValueRef 
+dom_query_first(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    GObject *element = selector_exec(ctx, self, argc, argv, exc, 
+            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_element_query_selector, 
+            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_document_query_selector);
+    if (element != NULL) {
+        return make_dom_object(ctx, element);
+    }
+    return NIL;
+}
+/** 
+ * Queries for nodes using XPath, this method is the equivalent to
+ * document.evaluate. This method is only implemented by <span class="iltype">DOMDocument</span>.
+ *
+ * @name evaluate
+ * @memberOf DOMObject.prototype
+ * @since 1.12
+ * @function
+ * @example 
+ * var doc = tabs.current.document;
+ *
+ * var nodeList = doc.evaluate(doc.body, "//div/input");
+ * 
+ * @param {Node}  refnode
+ *      The reference node
+ * @param {String} selector 
+ *      The DOM selector
+ *
+ * @returns {Array[DOMObject]}
+ *      The result of the query. Unlink the result of document.evaluate the
+ *      result is converted to a real array.
+ * */
+static JSValueRef 
+dom_evaluate(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    if (argc < 2) {
+        return NIL;
+    }
+    JSValueRef result = NIL;
+    GError *e = NULL;
+    JSValueRef *items = NULL;
+    GObject *o = JSObjectGetPrivate(self);
+    GObject *refNode = js_get_private(ctx, argv[0], exc);
+
+
+    if (o == NULL || !WEBKIT_DOM_IS_DOCUMENT(o) || refNode == NULL || !WEBKIT_DOM_IS_NODE(refNode)) 
+        return NIL;
+
+    char *selector = js_value_to_char(ctx, argv[1], -1, NULL);
+    if (selector == NULL) 
+        return NIL;
+
+    WebKitDOMXPathResult *xpath = webkit_dom_document_evaluate(WEBKIT_DOM_DOCUMENT(o), selector, WEBKIT_DOM_NODE(refNode), NULL, 7, NULL, &e);
+    if (e != NULL) {
+        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+        goto error_out;
+    }
+    gulong l = webkit_dom_xpath_result_get_snapshot_length(xpath, &e);
+    if (e != NULL) {
+        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+        goto error_out;
+    }
+    items = g_malloc_n(l, sizeof(JSValueRef));
+    if (items == NULL) {
+        goto error_out;
+    }
+    for (gulong i = 0; i<l; i++) {
+        WebKitDOMNode *node = webkit_dom_xpath_result_snapshot_item(xpath, i, &e);
+        if (e != NULL) {
+            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+            g_free(items);
+            items = NULL;
+            goto error_out;
+        }
+        items[i] = make_dom_object(ctx, G_OBJECT(node));
+    }
+error_out:
+    if (items == NULL) {
+        result = JSObjectMakeArray(ctx, 0, NULL, exc);
+    }
+    else {
+        result = JSObjectMakeArray(ctx, l, items, exc);
+        g_free(items);
+    }
+    return result;
+
+}
+/** 
+ * Returns the real class name of a DOMObject, opposed to element.toString()
+ * which always returns <i>[object DOMObject]</i>.
+ * 
+ *
+ * @name asString
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @example 
+ * var doc = tabs.current.document
+ *
+ * io.out(doc.body.asString()); // -> [object HTMLBodyElement]
+ * io.out(doc.body.toString()); // -> [object DOMObject]
+ *
+ * @returns {String}
+ *      The classname
+ * */
+static JSValueRef 
+dom_as_string(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    const char *name; 
+    char buffer[256];
+    GObject *o = NULL;
+
+    o = JSObjectGetPrivate(self); 
+    if (o == NULL) {
+        return NULL;
+    }
+
+    name = G_OBJECT_TYPE_NAME(o);
+    g_return_val_if_fail(name != NULL, NULL);
+
+    if (g_str_has_prefix(name, "WebKitDOM")) 
+        name += 9;
+    
+    snprintf(buffer, 256, "[object %s]", name);
+    return js_char_to_value(ctx, buffer);
+}
+/** 
+ * Checks if the DOMObject is derived from some type
+ * 
+ *
+ * @name checkType
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @example 
+ * var doc = tabs.current.document
+ *
+ * io.out(doc.checkType("EventTarget"));  // -> true
+ * io.out(doc.checkType("Element"));      // -> false
+ *
+ * @returns {boolean}
+ *      true is the object is derived from the given type
+ * */
+static JSValueRef 
+dom_check_type(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    gboolean is_type = false;
+    if (argc == 0) {
+        return JSValueMakeBoolean(ctx, false);
+    }
+    GObject *o = JSObjectGetPrivate(self);
+    char *name = js_value_to_char(ctx, argv[0], 128, exc);
+    char typename[256];
+    if (o != NULL && typename != NULL) {
+        snprintf(typename, 256, "WebKitDOM%s", name);
+        GType type = g_type_from_name(typename);
+        is_type = G_TYPE_CHECK_INSTANCE_TYPE(o, type);
+    }
+    g_free(name);
+    return JSValueMakeBoolean(ctx, is_type);
+    
+}
+#define DOM_CAST_VOID__SELF  void (*)(GObject *)
+static JSValueRef
+dom_void__self(JSContextRef ctx, JSObjectRef self, void (*func)(GObject *), size_t argc, const JSValueRef argv[], JSValueRef *exc, GType ts) {
+    GObject *o = JSObjectGetPrivate(self);
+    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type Error"));
+    }
+    else {
+        func(o);
+    }
+    return NULL;
+}
+#define DOM_CAST_BOOL__CHAR_E  gboolean (*)(GObject *, const char *, GError **)
+static JSValueRef
+dom_bool__char_e(JSContextRef ctx, JSObjectRef self, gboolean (*func)(GObject *, const char *, GError **), 
+        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts) {
+    GError *e = NULL;
+    gboolean result = false;
+
+    if (argc == 0) 
+        return JSValueMakeBoolean(ctx, false);
+
+    GObject *o = JSObjectGetPrivate(self);
+    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return JSValueMakeBoolean(ctx, false);
+    }
+    char *val = js_value_to_char(ctx, argv[0], -1, exc);
+    if (val != NULL) {
+        result = func(o, val, &e);
+        if (e != NULL) {
+            result = false;
+            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+            g_error_free(e);
+        }
+        g_free(val);
+    }
+    return JSValueMakeBoolean(ctx, result);
+
+}
+#define DOM_CAST_OBJ__CHAR_E  GObject * (*)(GObject *, const char *, GError **)
+JSValueRef
+dom_obj__char_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, const char *, GError **), 
+        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts) {
+    GError *e = NULL;
+    JSValueRef ret = NIL;
+    if (argc == 0) 
+        return NIL;
+    GObject *o = JSObjectGetPrivate(self);
+    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return UNDEFINED;
+    }
+    char *val = js_value_to_char(ctx, argv[0], -1, exc);
+    if (val != NULL) {
+        GObject *go = func(o, val, &e);
+        if (e != NULL) {
+            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+            g_error_free(e);
+        }
+        else {
+            ret = make_dom_object(ctx, go);
+        }
+        g_free(val);
+    }
+    return ret;
+
+}
+
+#define DOM_CAST_OBJ__OBJ_OBJ_E  GObject * (*)(GObject *, GObject *, GObject *, GError **)
+JSValueRef
+dom_obj__obj_obj_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, GObject *, GObject *, GError **),
+        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1, GType t2) {
+    GError *e = NULL;
+    JSValueRef ret = NIL;
+    if (argc < 2) 
+        return NIL;
+    GObject *o = JSObjectGetPrivate(self);
+    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts))
+        return NIL;
+    GObject *a1 = js_get_private(ctx, argv[0], exc);
+    GObject *a2 = js_get_private(ctx, argv[1], exc);
+    if (o == NULL || a1 == NULL || a2 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || 
+            !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1) || !G_TYPE_CHECK_INSTANCE_TYPE(a2, t2)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return UNDEFINED;
+    }
+    GObject *go = func(o, a1, a2, &e);
+    if (e != NULL) {
+        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+        g_error_free(e);
+    }
+    else {
+        ret = make_dom_object(ctx, go);
+    }
+    return ret;
+}
+#define DOM_CAST_BOOL__OBJ gboolean (*)(GObject *, GObject *)
+JSValueRef
+dom_bool__obj(JSContextRef ctx, JSObjectRef self, gboolean (*func)(GObject *, GObject *),
+        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1) {
+    if (argc == 0) 
+        return JSValueMakeBoolean(ctx, false);
+
+    GObject *o = JSObjectGetPrivate(self);
+    GObject *a1 = js_get_private(ctx, argv[0], exc);
+
+    if (o == NULL || a1 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || 
+            !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return UNDEFINED;
+    }
+    return JSValueMakeBoolean(ctx, func(o, a1));
+}
+#define DOM_CAST_OBJ__OBJ_E  GObject * (*)(GObject *, GObject *, GError **)
+JSObjectRef 
+dom_obj__obj_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, GObject *, GError **),
+        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1) {
+    GError *e = NULL;
+    JSObjectRef ret = NULL;
+    if (argc < 1) 
+        return NULL;
+    GObject *o = JSObjectGetPrivate(self);
+    GObject *a1 = js_get_private(ctx, argv[0], exc);
+    if (o == NULL || a1 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1)) {
+        js_make_exception(ctx, exc, EXCEPTION("Type error"));
+        return NULL;
+    }
+    GObject *go = func(o, a1, &e);
+    if (e != NULL) {
+        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+        g_error_free(e);
+    }
+    else {
+        ret = make_dom_object(ctx, go);
+    }
+    return ret;
+}
+/** 
+ * Creates a new Element. Only implemented by <span class="iltype">DOMDocument</span>
+ * 
+ *
+ * @name createElement
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @param {String} tagname
+ *      The element type
+ * @example 
+ * var doc = tabs.current.document
+ *
+ * var div = doc.createElement("div");
+ *
+ * @returns {Element}
+ *      The new element
+ * */
+static JSValueRef 
+dom_create_element(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__char_e(ctx, self, (DOM_CAST_OBJ__CHAR_E)webkit_dom_document_create_element, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_DOCUMENT);
+}
+/** 
+ * Creates a Textnode. Only implemented by <span class="iltype">DOMDocument</span>
+ * 
+ *
+ * @name createTextNode
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @param {String} tagname
+ *      The element type
+ *
+ * @returns {Node}
+ *      The text node
+ * */
+static JSValueRef 
+dom_create_text_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__char_e(ctx, self, (DOM_CAST_OBJ__CHAR_E)webkit_dom_document_create_text_node, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_DOCUMENT);
+}
+/** 
+ * Inserts a node as a child of a node. Implemented by <span class="iltype">Node</span>
+ * 
+ *
+ * @name insertBefore
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} newNode
+ *      The new element
+ * @param {Node} refNode
+ *      The new element
+ *
+ * @returns {Node}
+ *      The inserted node
+ * */
+static JSValueRef 
+dom_insert_before(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__obj_obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_OBJ_E)webkit_dom_node_insert_before, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+/** 
+ * Replaces a child of a node with a new node. Implemented by <span class="iltype">Node</span>
+ * 
+ *
+ * @name replaceChild
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} newNode
+ *      The new node
+ * @param {Node} oldNode
+ *      The old node
+ *
+ * @returns {Node}
+ *      The replaced node
+ * */
+static JSValueRef 
+dom_replace_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__obj_obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_OBJ_E)webkit_dom_node_replace_child, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+/** 
+ * Appends a node to end of the node. Implemented by <span class="iltype">Node</span>
+ *
+ * @name appendChild
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} newNode
+ *      The new node
+ *
+ * @returns {Node}
+ *      The child node
+ * */
+static JSValueRef 
+dom_append_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_E)webkit_dom_node_append_child, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+
+/** 
+ * Removes a node from the DOM. Implemented by <span class="iltype">Node</span>
+ *
+ * @name removeChild
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @example
+ * var doc = tabs.current.document;
+ *
+ * doc.documentElement.removeChild(doc.body);
+ *
+ * @param {Node} node
+ *      The node to remove
+ *
+ * @returns {Node}
+ *      The removed node
+ * */
+static JSValueRef 
+dom_remove_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_obj__obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_E)webkit_dom_node_remove_child, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+// XXX This is only a workaround, any nodes created will never be released by
+// webkitgtk, so we release them manually
+static JSValueRef 
+dom_dispose(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    GObject *o = JSObjectGetPrivate(self);
+    if (o != NULL) {
+        g_object_run_dispose(o);
+    }
+    return NULL;
+}
+/** 
+ * Tests if two nodes reference the same node. Implemented by <span class="iltype">Node</span>
+ *
+ * @name isSameNode
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} node
+ *      The node to test
+ *
+ * @returns {Boolean}
+ * */
+static JSValueRef 
+dom_is_same_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_is_same_node, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+/** 
+ * Tests two nodes are equal. Implemented by <span class="iltype">Node</span>
+ *
+ * @name isEqualNode
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} node
+ *      The node to test
+ *
+ * @returns {Boolean}
+ * */
+static JSValueRef 
+dom_is_equal_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_is_equal_node, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+/** 
+ * Tests whether a node is a descendant of a node. Implemented by <span class="iltype">Node</span>
+ *
+ * @name contains
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ *
+ * @param {Node} node
+ *      The node to test
+ *
+ * @returns {Boolean}
+ * */
+static JSValueRef 
+dom_contains(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_contains, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
+}
+/** 
+ * Tests if a node matches a given selector, equivalent to webkitMatchesSelector. Implemented by <span class="iltype">Element</span>
+ *
+ * @name matches
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @example 
+ * var doc = tabs.current.document;
+ *
+ * var isBody = doc.body.matches("body"); 
+ * var matchesId = doc.body.matches("#someid"); // true if body has id 'someid'
+ *
+ * @param {String} selector
+ *      A css selector
+ *
+ * @returns {Boolean}
+ * */
+static JSValueRef 
+dom_matches(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_bool__char_e(ctx, self, (DOM_CAST_BOOL__CHAR_E)webkit_dom_element_webkit_matches_selector, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_ELEMENT);
+}
+/** 
+ * Only implemented by <span class="iltype">Event</span>.
+ * @name stopPropagation
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ */
+static JSValueRef 
+dom_stop_propagation(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_event_stop_propagation, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_EVENT);
+}
+/** 
+ * Only implemented by <span class="iltype">Event</span>.
+ * @name stopPropagation
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ */
+static JSValueRef 
+dom_prevent_default(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_event_prevent_default, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_EVENT);
+}
+/** 
+ * Only implemented by <span class="iltype">Element</span>.
+ * @name focus
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ */
+static JSValueRef 
+dom_element_focus(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_element_focus, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_ELEMENT);
+}
+/** 
+ * Only implemented by <span class="iltype">Element</span>.
+ * @name blur
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ */
+static JSValueRef 
+dom_element_blur(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_element_blur, argc, argv, exc, 
+            WEBKIT_TYPE_DOM_ELEMENT);
+}
+
+/**
+ * Callback called for DOM events. <span class="ilkw">this</span> refers to the element that connected to
+ * the event.
+ *
+ * @callback DOMObject~onEvent
+ *
+ * @param {Event}  event 
+ *      The event
+ *
+ * @returns {Boolean}
+ *      If the callback returns true event.preventDefault() and
+ *      event.stopPropagation() are called on event.
+ * */
+static gboolean 
+dom_event_callback(WebKitDOMElement *element, WebKitDOMEvent *event, JSObjectRef cb) {
+    gboolean result = false;
+    EXEC_LOCK_RETURN(false);
+
+    JSObjectRef jselement = make_dom_object(s_ctx->global_context, G_OBJECT(element));
+    JSObjectRef jsevent = make_dom_object(s_ctx->global_context, G_OBJECT(event));
+
+    // e.target isn't exposed, so we set at least the target property 
+    WebKitDOMEventTarget *target = webkit_dom_event_get_target(WEBKIT_DOM_EVENT(event));
+    JSObjectRef jstarget = make_dom_object(s_ctx->global_context, G_OBJECT(target));
+    js_set_property(s_ctx->global_context, jsevent, "target", jstarget, 0, NULL);
+
+    JSValueRef argv[] = { jsevent };
+    JSValueRef ret = call_as_function_debug(s_ctx->global_context, cb, jselement, 1, argv);
+    if (JSValueIsBoolean(s_ctx->global_context, ret)) {
+        result = JSValueToBoolean(s_ctx->global_context, ret);
+        if (result) {
+            webkit_dom_event_prevent_default(event);
+            webkit_dom_event_stop_propagation(event);
+        }
+    }
+
+    EXEC_UNLOCK;
+    return result;
+}
+void 
+dom_event_destroy_cb(JSObjectRef func, GClosure *closure) {
+    EXEC_LOCK;
+    JSValueUnprotect(s_ctx->global_context, func);
+    EXEC_UNLOCK;
+}
+static JSValueRef 
+dom_event_remove(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    GClosure *closure = JSObjectGetPrivate(self);
+    if (closure != NULL) {
+        g_closure_invalidate(closure);
+        g_closure_unref(closure);
+        JSObjectSetPrivate(self, NULL);
+
+        JSStringRef propname = JSStringCreateWithUTF8CString("callback");
+
+        JSValueRef cb = JSObjectGetProperty(ctx, self, propname, exc);
+        JSObjectDeleteProperty(ctx, self, propname, exc);
+
+        JSStringRelease(propname);
+        JSValueUnprotect(ctx, cb);
+    }
+    return NULL;
+}
+/** 
+ * Connects an element to a DOM-Event, equivalent to element.addEventListener().
+ * Implemented by <span class="iltype">EventTarget</span>.
+ *
+ * @name on
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.12
+ * @example
+ * var doc = tabs.current.document;
+ * var win = doc.defaultView;
+ * 
+ * var handle = win.on("click", function(e) {
+ *     this.stop();
+ *     io.out(e.target.nodeName + " was clicked");
+ *     handle.remove();
+ * });
+ *
+ * @param {String} event
+ *      The DOM event
+ * @param {DOMObject~onEvent} callback
+ *      The callback function
+ * @param {Boolean} [capture]
+ *      Pass true to initiate capture, default false.
+ *
+ * @returns {Object}
+ *      An object which implements a remove function to disconnect the
+ *      event handler.
+ * */
+static JSValueRef 
+dom_on(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+    if (argc < 2) 
+        return NULL;
+    char *event = NULL;
+    JSValueRef ret = NIL;
+    gboolean capture = false;
+    
+    GObject *o = JSObjectGetPrivate(self);
+    if (o == NULL || !WEBKIT_DOM_IS_EVENT_TARGET(o)) 
+       goto error_out;
+
+    JSObjectRef cb = js_value_to_function(ctx, argv[1], exc);
+    if (cb == NULL) 
+       goto error_out;
+
+    JSValueProtect(ctx, cb);
+    event = js_value_to_char(ctx, argv[0], 128, exc);
+    if (event == NULL) 
+       goto error_out;
+
+    if (argc > 2) 
+       capture = JSValueToBoolean(ctx, argv[2]);
+
+    GClosure *closure = g_cclosure_new((GCallback)dom_event_callback, cb, (GClosureNotify)dom_event_destroy_cb);
+    g_object_watch_closure(o, closure);
+
+    if (webkit_dom_event_target_add_event_listener_with_closure(WEBKIT_DOM_EVENT_TARGET(o), event, closure, capture)) {
+        JSObjectRef retobj = JSObjectMake(ctx, s_ctx->classes[CLASS_DOM_EVENT], closure);
+        js_set_property(ctx, retobj, "callback", cb, kJSPropertyAttributeDontEnum, exc);
+        ret = retobj;
+
+    }
+    /*g_object_unref(o);*/
+    /*result = webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(o), event, (GCallback)dom_event_callback, capture, cb);*/
+    g_free(event);
+error_out:
+    return ret;
 }
 /** 
  * Initializes tab completion.
@@ -3827,10 +4755,10 @@ keyring_call_str(JSContextRef ctx, void (*secret_func)(dwb_secret_cb, const char
  * @example 
  * keyring.checkService().then(
  *      function() {
- *          io.print("Everything's fine");
+ *          io.out("Everything's fine");
  *      }, 
  *      function() 
- *          io.print("No service");
+ *          io.out("No service");
  *      }
  * );
  *
@@ -3853,7 +4781,7 @@ keyring_check_service(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
  * @since 1.11
  * @example 
  * keyring.create("foo").then(function() {
- *     io.print("keyring created");
+ *     io.out("keyring created");
  * });
  *
  * @param {String} keyring The name of the keyring
@@ -3876,7 +4804,7 @@ keyring_create(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @since 1.11
  * @example 
  * keyring.unlock("foo").then(function() {
- *     io.print("keyring unlocked");
+ *     io.out("keyring unlocked");
  * });
  *
  * @param {String} keyring The name of the keyring
@@ -3899,7 +4827,7 @@ keyring_unlock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t a
  * @since 1.11
  * @example 
  * keyring.lock("foo").then(function() {
- *     io.print("keyring locked");
+ *     io.out("keyring locked");
  * });
  *
  * @param {String} keyring The name of the keyring
@@ -3924,7 +4852,7 @@ keyring_lock(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t arg
  * @example 
  * var id = script.generateId();
  * keyring.store("foo", "mypassword", id, "secretpassword").then(function() {
- *     io.print("keyring locked");
+ *     io.out("keyring locked");
  * });
  *
  * @param {String} keyring  
@@ -3982,7 +4910,7 @@ error_out:
  * @since 1.11
  * @example 
  * keyring.lookup("foo", "myid").then(function(password) {
- *     io.print("password: " + password);
+ *     io.out("password: " + password);
  * });
  *
  * @param {String} keyring  
@@ -4572,33 +5500,33 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
  *      cacheStdout : true, 
  *      cacheStderr : true, 
  *      onFinished : function(result) {
- *          io.print("Process terminated with status " + result.status);
- *          io.print("Stdout is :" + result.stdout);
- *          io.print("Stderr is :" + result.stderr);
+ *          io.out("Process terminated with status " + result.status);
+ *          io.out("Stdout is :" + result.stdout);
+ *          io.out("Stderr is :" + result.stderr);
  *      }
  * });
  * // Equivalently using the deferred
  * system.spawn("foo", { cacheStdout : true, cacheStderr : true }).always(function(result) {
- *      io.print("Process terminated with status " + result.status);
- *      io.print("Stdout is :" + result.stdout);
- *      io.print("Stderr is :" + result.stderr);
+ *      io.out("Process terminated with status " + result.status);
+ *      io.out("Stdout is :" + result.stdout);
+ *      io.out("Stderr is :" + result.stderr);
  * });
  * // Only use stdout if the process terminates successfully
  * system.spawn("foo", { cacheStdout : true }).done(function(result) {
- *     io.print(result.stdout);
+ *     io.out(result.stdout);
  * });
  * // Only use stderr if the process terminates with an error
  * system.spawn("foo", { cacheStderr : true }).fail(function(result) {
- *     io.print(result.stderr);
+ *     io.out(result.stderr);
  * });
  * // Using environment variables with automatic caching
  * system.spawn('sh -c "echo $foo"', {
  *      onStdout : function(stdout) {
- *          io.print("stdout: " + stdout);
+ *          io.out("stdout: " + stdout);
  *      },
  *      environment : { foo : "bar" }
  * }).then(function(result) { 
- *      io.print(result.stdout); 
+ *      io.out(result.stdout); 
  * });
  *
  *
@@ -5190,88 +6118,108 @@ error_out:
     return JSValueMakeBoolean(ctx, ret);
 }/*}}}*/
 
-/* io_print {{{*/
-/** 
- * Print messages to stdout or stderr
- *
- * @name print
- * @memberOf io
- * @function
- *
- * @param {String}  text  The text to print
- * @param {String} [stream] The stream, either <i>"stdout"</i> or <i>"stderr"</i>, default <i>"stdout"</i>
- * */
+
 static JSValueRef 
-io_print(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) 
-        return UNDEFINED;
-
-    FILE *stream = stdout;
-    if (argc >= 2) 
-    {
-        if (js_string_equals(ctx, argv[1], "stderr"))
-            stream = stderr;
-    }
-
+term_print(JSContextRef ctx, FILE *stream, size_t argc, const JSValueRef argv[], JSValueRef *exc) {
+    if (argc == 0)
+        return NULL;
     char *out = NULL;
     double dout;
     char *json = NULL;
-    int type = JSValueGetType(ctx, argv[0]);
-    switch (type) 
-    {
-        case kJSTypeString : 
-            out = js_value_to_char(ctx, argv[0], -1, exc);
-            if (out != NULL) 
-            { 
-                if (!isatty(fileno(stream)))
-                {
-                    GRegex *regex = g_regex_new("\e\\[\\d+(?>(;\\d+)*)m", 0, 0, NULL);
-                    char *tmp = out;
+    int type = 0;
+    for (size_t i = 0; i < argc; i++) {
+        type = JSValueGetType(ctx, argv[i]);
+        switch (type) 
+        {
+            case kJSTypeString : 
+                out = js_value_to_char(ctx, argv[i], -1, exc);
+                if (out != NULL) 
+                { 
+                    if (!isatty(fileno(stream)))
+                    {
+                        GRegex *regex = g_regex_new("\e\\[\\d+(?>(;\\d+)*)m", 0, 0, NULL);
+                        char *tmp = out;
 
-                    out = g_regex_replace(regex, tmp, -1, 0, "", 0, NULL);
-                    g_regex_unref(regex);
+                        out = g_regex_replace(regex, tmp, -1, 0, "", 0, NULL);
+                        g_regex_unref(regex);
 
-                    g_free(tmp);
-                    if (out == NULL)
-                        return UNDEFINED;
+                        g_free(tmp);
+                        if (out == NULL)
+                            return UNDEFINED;
+                    }
+                    fprintf(stream, "%s", out);
+                    g_free(out);
                 }
-                fprintf(stream, "%s\n", out);
-                g_free(out);
-            }
-            break;
-        case kJSTypeBoolean : 
-            fprintf(stream, "%s\n", JSValueToBoolean(ctx, argv[0]) ? "true" : "false");
-            break;
-        case kJSTypeNumber : 
-            dout = JSValueToNumber(ctx, argv[0], exc);
-            if (!isnan(dout)) 
-                if ((int)dout == dout) 
-                    fprintf(stream, "%d\n", (int)dout);
+                break;
+            case kJSTypeBoolean : 
+                fprintf(stream, "%s", JSValueToBoolean(ctx, argv[i]) ? "true" : "false");
+                break;
+            case kJSTypeNumber : 
+                dout = JSValueToNumber(ctx, argv[i], exc);
+                if (!isnan(dout)) 
+                    if ((int)dout == dout) 
+                        fprintf(stream, "%d\n", (int)dout);
+                    else 
+                        fprintf(stream, "%f\n", dout);
                 else 
-                    fprintf(stream, "%f\n", dout);
-            else 
-                fprintf(stream, "NAN\n");
-            break;
-        case kJSTypeUndefined : 
-            fprintf(stream, "undefined\n");
-            break;
-        case kJSTypeNull : 
-            fprintf(stream, "null\n");
-            break;
-        case kJSTypeObject : 
-            json = js_value_to_json(ctx, argv[0], -1, NULL);
-            if (json != NULL) 
-            {
-                fprintf(stream, "%s\n", json);
-                g_free(json);
-            }
-            break;
-        default : break;
+                    fprintf(stream, "NAN");
+                break;
+            case kJSTypeUndefined : 
+                fprintf(stream, "undefined");
+                break;
+            case kJSTypeNull : 
+                fprintf(stream, "null");
+                break;
+            case kJSTypeObject : 
+                json = js_value_to_json(ctx, argv[i], -1, argc == 1 ? 2 : 0,  NULL);
+                if (json != NULL) 
+                {
+                    fprintf(stream, "%s", json);
+                    g_free(json);
+                }
+                break;
+            default : break;
+        }
+        fputs(i < argc - 1 ? ", " : "\n", stream);
     }
-    return UNDEFINED;
+    return NULL;
+}
+/* io_print {{{*/
+/** 
+ * Print messages to stdout
+ *
+ * @name out
+ * @memberOf io
+ * @function
+ *
+ * @param {String}  text  
+ *      The text to print
+ * @param {String}  ...   
+ * 
+ * */
+static JSValueRef 
+io_out(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    return term_print(ctx, stdout, argc, argv, exc);
 }/*}}}*/
 /*}}}*/
+/** 
+ * Print messages to stderr
+ *
+ * @name err
+ * @memberOf io
+ * @function
+ *
+ * @param {String}  text  
+ *      The text to print
+ * @param {String}  ...   
+ * 
+ * */
+static JSValueRef 
+io_err(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
+{
+    return term_print(ctx, stderr, argc, argv, exc);
+}/*}}}*/
 
 static JSObjectRef 
 hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
@@ -5543,7 +6491,7 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
 }
 /**
  * Called when a menu item was activated that was added to the popup menu,
- * <i>this</i> will refer to the GtkMenuItem.
+ * <span class="ilkw">this</span> will refer to the GtkMenuItem.
  *
  * @callback GtkMenu~onMenuActivate
  * */
@@ -6454,23 +7402,14 @@ scripts_emit(ScriptSignal *sig)
 
 /* OBJECTS {{{*/
 /* make_object {{{*/
-static void 
-object_destroy_cb(JSObjectRef o) 
-{
-    EXEC_LOCK;
-
-    JSObjectSetPrivate(o, NULL);
-    JSValueUnprotect(s_ctx->global_context, o);
-
-    EXEC_UNLOCK;
-}
 
 static JSObjectRef 
-make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect) 
+make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
 {
     JSObjectRef retobj = g_object_get_qdata(o, s_ctx->ref_quark);
-    if (retobj != NULL)
+    if (retobj != NULL) {
         return retobj;
+    }
 
     retobj = JSObjectMake(ctx, class, o);
     if (protect) 
@@ -6497,6 +7436,20 @@ make_boxed(gpointer boxed, JSClassRef klass)
 }
 
 static JSObjectRef 
+make_dom_object(JSContextRef ctx, GObject *o) {
+    if (WEBKIT_DOM_IS_HTML_COLLECTION(o)) {
+        return dom_make_collection(ctx, WEBKIT_DOM_HTML_COLLECTION(o), NULL);
+    }
+    if (WEBKIT_DOM_IS_NODE_LIST(o)) {
+        return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(o), NULL);
+    }
+    ref_count++;
+    printf("%d\n", ref_count);
+    JSObjectRef result =  make_object_for_class(ctx, s_ctx->classes[CLASS_DOM_OBJECT], o, true);
+    g_object_weak_ref(o, (GWeakNotify)object_destroy_weak_cb, result);
+    return result;
+}
+static JSObjectRef 
 make_object(JSContextRef ctx, GObject *o) 
 {
     if (o == NULL) 
@@ -6504,6 +7457,7 @@ make_object(JSContextRef ctx, GObject *o)
         JSValueRef v = NIL;
         return JSValueToObject(ctx, v, NULL);
     }
+    JSObjectRef result;
     JSClassRef class;
     if (WEBKIT_IS_WEB_VIEW(o)) 
         class = s_ctx->classes[CLASS_WEBVIEW];
@@ -6525,20 +7479,26 @@ make_object(JSContextRef ctx, GObject *o)
         o = g_object_ref(o);
     }
 #endif
+    else if (WEBKIT_IS_DOM_OBJECT(o)) {
+        return make_dom_object(ctx, o);
+    }
     else 
         class = s_ctx->classes[CLASS_GOBJECT];
-    return make_object_for_class(ctx, class, o, true);
+
+    result =  make_object_for_class(ctx, class, o, true);
+
+    return result;
 }/*}}}*/
 
 /** 
- * Callback called for GObject signals, <b>this</b> will refer to the object
+ * Callback called for GObject signals, <span class="ilkw">this</span> will refer to the object
  * that connected to the signal
  * @callback GObject~connectCallback
  *
  * @param {...Object} varargs
  *      Variable number of additional arguments, see the correspondent
  *      gtk/glib/webkit documentation. Note that the first argument is omitted and
- *      <i>this</i> will correspond to the first parameter and that only
+ *      <span class="ilkw">this</span> will correspond to the first parameter and that only
  *      arguments of basic type and arguments derived from GObject are converted
  *      to the corresponding javascript object, otherwise the argument will be
  *      undefined (e.g.  GBoxed types and structs).
@@ -6623,7 +7583,7 @@ on_disconnect_object(SSignal *sig, GClosure *closure)
     ssignal_free(sig);
 }
 /** 
- * Called when a property of an object changes, <b>this</b> will refer to the object
+ * Called when a property of an object changes, <span class="ilkw">this</span> will refer to the object
  * that connected to the signal.
  * @callback GObject~notifyCallback
  *
@@ -6825,7 +7785,7 @@ set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, 
 }/*}}}*/
 
 /* create_class {{{*/
-static JSClassRef 
+JSClassRef 
 create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[], JSObjectGetPropertyCallback get_property_cb) 
 {
     JSClassDefinition cd = kJSClassDefinitionEmpty;
@@ -6846,33 +7806,6 @@ create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSClassAttrib
     JSValueProtect(ctx, ret);
     return ret;
 }/*}}}*/
-
-static void 
-finalize(JSObjectRef o)
-{
-    GObject *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        g_object_steal_qdata(ob, s_ctx->ref_quark);
-    }
-}
-static void 
-finalize_headers(JSObjectRef o)
-{
-    SoupMessageHeaders *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        soup_message_headers_free(ob);
-    }
-}
-static void 
-finalize_gtimer(JSObjectRef o) {
-    GTimer *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        g_timer_destroy(ob);
-    }
-}
 
 /* set_property {{{*/
 static bool
@@ -6960,7 +7893,9 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
     g_free(name);
 
     GObject *o = JSObjectGetPrivate(jsobj);
-    g_return_val_if_fail(o != NULL, NULL);
+    if (o == NULL) {
+        return NULL;
+    }
 
     GObjectClass *class = G_OBJECT_GET_CLASS(o);
     if (class == NULL || !G_IS_OBJECT_CLASS(class))
@@ -7018,6 +7953,7 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
     return ret;
 }/*}}}*/
 
+/* get_property {{{*/
 static JSObjectRef
 create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallAsConstructorCallback cb, JSValueRef *exc)
 {
@@ -7143,7 +8079,6 @@ create_global_object()
     s_ctx->namespaces[NAMESPACE_NET] = create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
     JSClassRelease(class);
 
-
     /**
      * Object that can be used to get dwb's settings, to set dwb's settings use
      * {@link execute}
@@ -7173,7 +8108,8 @@ create_global_object()
      * */
 
     JSStaticFunction io_functions[] = { 
-        { "print",     io_print,            kJSDefaultAttributes },
+        { "out",       io_out,              kJSDefaultAttributes },
+        { "err",       io_err,              kJSDefaultAttributes },
         { "prompt",    io_prompt,           kJSDefaultAttributes },
         { "confirm",   io_confirm,          kJSDefaultAttributes },
         { "read",      io_read,             kJSDefaultAttributes },
@@ -7295,11 +8231,11 @@ create_global_object()
      *
      * // Connect the current tab to an event
      * tabs.current.onButtonPress = function(webview, result, event) {
-     *      io.print(event);
+     *      io.out(event);
      * }
      * // Connect the current tab once to an event
      * tabs.current.onceDocumentLoaded = function(wv) {
-     *      io.print("document load finished");
+     *      io.out("document load finished");
      * }
      *
      *
@@ -7368,9 +8304,9 @@ create_global_object()
      * 
      * // creates a new keyring if it doesn't exist and saves a new password
      * keyring.create(collection).then(function(status) {
-     *     keyring.store(collection, "foobar", id, "secret").then(function() {
-     *         io.print("password saved");
-     *     });;
+     *     return keyring.store(collection, "foobar", id, "secret");
+     * }).then(function(status) {
+     *     io.notify("Password saved");
      * });
      *
      * */
@@ -7479,6 +8415,7 @@ create_global_object()
      * @class GtkWidget that shows webcontent
      * @borrows WebKitWebFrame#inject as prototype.inject
      * @borrows WebKitWebFrame#loadString as prototype.loadString
+     * @borrows WebKitWebFrame#document as prototype.document
      * */
     JSStaticFunction wv_functions[] = { 
         { "loadUri",         wv_load_uri,             kJSDefaultAttributes },
@@ -7537,6 +8474,7 @@ create_global_object()
     };
     JSStaticValue frame_values[] = {
         { "host", frame_get_host, NULL, kJSDefaultAttributes }, 
+        { "document", frame_get_document, NULL, kJSDefaultAttributes }, 
         { "domain", frame_get_domain, NULL, kJSDefaultAttributes }, 
         { 0, 0, 0, 0 }, 
     };
@@ -7671,7 +8609,7 @@ create_global_object()
      *     return d;
      * }
      * function onResponse(response) {
-     *     io.print(response);
+     *     io.out(response);
      * }
      *
      * // Will print "rejected" after 2 and 4 seconds
@@ -7880,6 +8818,80 @@ create_global_object()
     cd.finalize = cookie_finalize;
     s_ctx->classes[CLASS_COOKIE] = JSClassCreate(&cd);
     s_ctx->constructors[CONSTRUCTOR_COOKIE] = create_constructor(ctx, "Cookie", s_ctx->classes[CLASS_COOKIE], cookie_constructor_cb, NULL);
+
+    /** 
+     * @class
+     * @classdesc
+     * Classes that represent DOMElements. The implemented methods are only a
+     * small subset of methods implemented in the DOM context of a site.
+     * DOMObjects are mainly usefull for simple DOM manipulations and listening
+     * to DOM events since event listeners in injected scripts cannot create a
+     * callback in the scripting context. 
+     * Not all methods listed below are implemented by all DOMObjects, see the method
+     * descriptions for details.
+     *
+     * DOMObjects are destroyed every time a new document is loaded, so it must be
+     * taken care not to hold references to DOMObjects that persist during a
+     * pageload or frameload, otherwise those objects will leak memory. 
+     *
+     * Note that some element properties differ from the original property name.
+     * Properties of DOMObjects don't have successive uppercase letters, e.g. 
+     * <i>element.innerHTML</i> can be get or set with <i>element.innerHtml</i>.
+     *    
+     * @name DOMObject
+     * @since 1.12
+     * @example 
+     * //!javascript
+     *
+     * Signal.connect("documentLoaded", function(wv, frame) {
+     *    var doc = frame.document;
+     *    var imageLinks = doc.query("img").reduce(function(last, img) {
+     *        return last + img.src + "\n";
+     *    }, "");
+     *    io.out(imageLinks);
+     * });
+     *
+     *
+     * */
+    JSStaticFunction dom_functions[] = {
+        { "querySelectorAll",              dom_query,       kJSDefaultAttributes },
+        { "getComputedStyle",              dom_computed_style,       kJSDefaultAttributes },
+        { "querySelector",         dom_query_first,       kJSDefaultAttributes },
+        { "evaluate",           dom_evaluate,       kJSDefaultAttributes },
+        { "asString",           dom_as_string,       kJSDefaultAttributes },
+        { "checkType",          dom_check_type,       kJSDefaultAttributes },
+        { "createElement",      dom_create_element, kJSDefaultAttributes },
+        { "createTextNode",      dom_create_text_node,      kJSDefaultAttributes },
+        { "insertBefore",       dom_insert_before, kJSDefaultAttributes },
+        { "replaceChild",       dom_replace_child, kJSDefaultAttributes },
+        { "appendChild",        dom_append_child, kJSDefaultAttributes },
+        { "removeChild",        dom_remove_child, kJSDefaultAttributes },
+        { "_dispose",           dom_dispose, kJSDefaultAttributes },
+        { "isSameNode",         dom_is_same_node, kJSDefaultAttributes },
+        { "isEqualNode",      dom_is_equal_node, kJSDefaultAttributes },
+        { "contains",           dom_contains, kJSDefaultAttributes },
+        { "matches",           dom_matches, kJSDefaultAttributes },
+        { "preventDefault",     dom_prevent_default, kJSDefaultAttributes },
+        { "stopPropagation",     dom_stop_propagation, kJSDefaultAttributes },
+        { "focus",              dom_element_focus, kJSDefaultAttributes },
+        { "blur",               dom_element_blur, kJSDefaultAttributes },
+        { "on",                 dom_on,       kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "DOMObject";
+    cd.staticFunctions = dom_functions;
+    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
+    s_ctx->classes[CLASS_DOM_OBJECT] = JSClassCreate(&cd);
+
+    JSStaticFunction dom_event_functions[] = {
+        { "remove",              dom_event_remove,       kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    cd = kJSClassDefinitionEmpty;
+    cd.className = "DWBDOMEvent";
+    cd.staticFunctions = dom_event_functions;
+    s_ctx->classes[CLASS_DOM_EVENT] = JSClassCreate(&cd);
 
     /** 
      * Represents a SoupMessage header

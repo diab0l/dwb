@@ -2,12 +2,12 @@
 .\"     Title: dwb-js
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 02/25/2014
+.\"      Date: 06/20/2014
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "DWB\-JS" "7" "02/25/2014" "\ \&" "\ \&"
+.TH "DWB\-JS" "7" "06/20/2014" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -614,6 +614,27 @@ An array with the directory names
 .nr an-break-flag 1
 .br
 .ps +1
+\fBvoid io.err(String text, [String \&...])\fR
+.RS 4
+.sp
+Print text to stderr
+.PP
+\fItext\fR
+.RS 4
+The text to print
+.RE
+.PP
+\&...
+.RS 4
+Additional arguments, will be printed comma sperated
+.RE
+.RE
+.sp
+.it 1 an-trap
+.nr an-no-space-flag 1
+.nr an-break-flag 1
+.br
+.ps +1
 \fBvoid io.error(String text)\fR
 .RS 4
 .sp
@@ -646,19 +667,19 @@ The message to show
 .nr an-break-flag 1
 .br
 .ps +1
-\fBvoid io.print(String text, [String stream])\fR
+\fBvoid io.out(String text, [String \&...])\fR
 .RS 4
 .sp
-Print text to stdout or stderr
+Print text to stdout
 .PP
 \fItext\fR
 .RS 4
-the text to print
+The text to print
 .RE
 .PP
-\fIstream\fR
+\&...
 .RS 4
-pass "stderr" to print to stderr, optional
+Additional arguments, will be printed comma sperated
 .RE
 .RE
 .sp
@@ -2044,10 +2065,10 @@ function loadUri(uri) {
 
 loadUri("http://www\&.example\&.com")\&.then(
     function(response) {
-        io\&.print(response); // Finished
+        io\&.out(response); // Finished
     },
     function(response) {
-        io\&.print(response); // Failed
+        io\&.out(response); // Failed
     }
 );
 .fi
@@ -2072,7 +2093,7 @@ function foo()
 
 function onResponse(response)
 {
-    io\&.print(response);
+    io\&.out(response);
 }
 
 // Will print "rejected" twice to stdout after 2 seconds
@@ -2101,7 +2122,7 @@ function foo()
 
 function onResponse(response)
 {
-    io\&.print(response);
+    io\&.out(response);
 }
 
 // Only the fail will be executed
@@ -2129,14 +2150,14 @@ function foo(message)
 }
 function callback1(response)
 {
-    io\&.print(response); // Prints "foo" after 2 seconds
+    io\&.out(response); // Prints "foo" after 2 seconds
 
     // Return a new Deferred, will replace the old one\&.
     return foo("bar");
 }
 function callback2(response)
 {
-    io\&.print(response); // Prints "bar" after 4 seconds
+    io\&.out(response); // Prints "bar" after 4 seconds
 }
 
 foo("foo")\&.done(callback1)\&.done(callback2);
@@ -4933,15 +4954,15 @@ Since all scripts share the same execution context, they are encapsulated in a f
 
 // not allowed, the global object is readonly
 number = 0;
-io\&.print(number);     // undefined
+io\&.out(number);     // undefined
 
 var number2 = 0;
-io\&.print(number2);    // 0
+io\&.out(number2);    // 0
 
 // not allowed
 foo = function()
 {
-  io\&.print("foo");
+  io\&.out("foo");
 }
 foo();  // fails
 .fi
@@ -5084,12 +5105,12 @@ With modules it is possible to share objects between scripts\&. Modules are defi
 provide("myModule", {
   foo : 37,
   doBar : function() {
-    io\&.print("bar");
+    io\&.out("bar");
   }
 });
 provide("myOtherModule", {
   act : function (arg) {
-    io\&.print(arg);
+    io\&.out(arg);
   }
 });
 .fi
@@ -5144,7 +5165,7 @@ It is also possible to specify a path in the name array\&. The name then follows
 #!javascript
 
 require(["foo!/path/to/foo"], function(foo) {
-  io\&.print(foo\&.bar); // 37
+  io\&.out(foo\&.bar); // 37
 });
 .fi
 .if n \{\
@@ -5172,7 +5193,7 @@ The resolution chain is as follows, first all modules defined with \fBprovide\fR
 #!javascript
 
 require(["foo!/path/to/foo"], function(foo) {
-  io\&.print(foo\&.bar); // 42
+  io\&.out(foo\&.bar); // 42
 });
 provide("foo", { bar : 42 });
 .fi
@@ -5187,12 +5208,12 @@ provide("foo", { bar : 42 });
 #!javascript
 
 require(["foo"], function(foo) {
-  io\&.print(foo); // undefined
+  io\&.out(foo); // undefined
 });
 require(["foo!/path/to/foo"]);
 
 require(["foo"], function(foo) {
-  io\&.print(foo); // { bar : 37 }
+  io\&.out(foo); // { bar : 37 }
 });
 .fi
 .if n \{\

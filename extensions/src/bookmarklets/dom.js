@@ -42,7 +42,6 @@ DOMUtil = {
     function createWithParent(parent, type, props) {
         var e = createElement(parent, "td");
         var ret = createElement(e, type, props);
-        ret.setAttribute("tabindex", 1);
         return ret;
     }
 

@@ -51,7 +51,7 @@ double  js_val_get_double_property(JSContextRef ctx, JSValueRef arg, const char 
 JSObjectRef js_create_object(WebKitWebFrame *, const char *);
 char * js_call_as_function(WebKitWebFrame *, JSObjectRef, const char *string, const char *args, JSType, char **char_ret);
 JSValueRef js_char_to_value(JSContextRef ctx, const char *text);
-char * js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc);
+char * js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, int indent, JSValueRef *exc);
 JSValueRef js_execute(JSContextRef ctx, const char *, JSValueRef *exc);
 gboolean js_print_exception(JSContextRef ctx, JSValueRef exception, char *buffer, size_t bs, int starting_line, int *line);
 JSObjectRef js_make_function(JSContextRef ctx, const char *script, const char *path, int line);
@@ -69,6 +69,7 @@ void js_property_iterator_init(JSContextRef ctx, js_property_iterator *iter, JSO
 JSValueRef js_property_iterator_next(js_property_iterator *iter, JSStringRef *jsname, char **name, JSValueRef *exc);
 void js_property_iterator_finish(js_property_iterator *iter);
 gboolean js_string_equals(JSContextRef, JSValueRef, const char *);
+void * js_get_private(JSContextRef ctx, JSValueRef v, JSValueRef *exc);
 
 
 #define  JS_STRING_MAX 1024

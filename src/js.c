@@ -174,7 +174,7 @@ js_string_to_char(JSContextRef ctx, JSStringRef jsstring, size_t size)
 JSValueRef 
 js_context_change(JSContextRef source_ctx, JSContextRef dest_ctx, JSValueRef val, JSValueRef *exc) 
 {
-    char *c_val = js_value_to_json(source_ctx, val, -1, exc);
+    char *c_val = js_value_to_json(source_ctx, val, -1, 0, exc);
     if (c_val == NULL)
         return JSValueMakeNull(dest_ctx);
 
@@ -351,11 +351,11 @@ js_make_function(JSContextRef ctx, const char *script, const char *sourceurl, in
 }
 
 char *
-js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, JSValueRef *exc) 
+js_value_to_json(JSContextRef ctx, JSValueRef value, size_t limit, int indent, JSValueRef *exc) 
 {
     if (value == NULL)
         return NULL;
-    JSStringRef js_json = JSValueCreateJSONString(ctx, value, 2, exc);
+    JSStringRef js_json = JSValueCreateJSONString(ctx, value, indent, exc);
     if (js_json == NULL)
         return NULL;
     char *json = js_string_to_char(ctx, js_json, limit);
@@ -466,6 +466,14 @@ js_value_to_function(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
     JSObjectRef ret = JSValueToObject(ctx, val, exc);
     if (ret != NULL && JSObjectIsFunction(ctx, ret))
         return ret;
+    return NULL;
+}
+void *
+js_get_private(JSContextRef ctx, JSValueRef v, JSValueRef *exc) {
+    JSObjectRef o = JSValueToObject(ctx, v, exc);
+    if (o != NULL) {
+        return JSObjectGetPrivate(o);
+    }
     return NULL;
 }
 

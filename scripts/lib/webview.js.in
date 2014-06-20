@@ -446,6 +446,11 @@
                 {
                     return this.mainFrame.loadString.apply(this.mainFrame, arguments);
                 }
+            }, 
+            document : {
+                get : function() {
+                    return this.mainFrame.document;
+                }
             }
     });
 })();

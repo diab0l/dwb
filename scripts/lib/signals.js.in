@@ -99,11 +99,11 @@
                              *
                              * @example 
                              * function a() {
-                             *      io.print("Calling from a");
+                             *      io.out("Calling from a");
                              *      this.callback = b;
                              * }
                              * function b() { 
-                             *      io.print("Calling from b");
+                             *      io.out("Calling from b");
                              *      this.callback = a;
                              * }
                              * var s = new Signal("createTab", a).connect();
