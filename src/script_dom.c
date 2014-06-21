@@ -266,12 +266,9 @@ dom_evaluate(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, 
         js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
         goto error_out;
     }
+
     gulong l = webkit_dom_xpath_result_get_snapshot_length(xpath, &e);
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        goto error_out;
-    }
-    items = g_malloc_n(l, sizeof(JSValueRef));
+    items = g_try_malloc_n(l, sizeof(JSValueRef));
     if (items == NULL) {
         goto error_out;
     }
@@ -293,6 +290,7 @@ error_out:
         result = JSObjectMakeArray(ctx, l, items, exc);
         g_free(items);
     }
+    g_free(selector);
     return result;
 
 }
