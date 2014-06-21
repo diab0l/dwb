@@ -17,7 +17,7 @@
  */
 
 #include "private.h"
-#include "deferred.h"
+#include "ns_deferred.h"
 
 typedef struct SpawnData_s {
     GIOChannel *channel;
