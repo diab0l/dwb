@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "script_private.h"
+#include "private.h"
 
 /** 
  * Profile which will be <i>default</i> unless another profile is specified on command line

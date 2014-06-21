@@ -19,7 +19,7 @@
 #define _XOPEN_SOURCE 600
 #define _POSIX_C_SOURCE 200112L
 
-#include "script_private.h"
+#include "scripts/private.h"
 
 #define API_VERSION 1.11
 

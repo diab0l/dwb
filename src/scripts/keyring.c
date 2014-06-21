@@ -18,7 +18,7 @@
 
 #ifdef WITH_LIBSECRET
 
-#include "script_private.h"
+#include "private.h"
 
 void
 on_keyring_no_val(int status, void *unused, JSObjectRef d) {

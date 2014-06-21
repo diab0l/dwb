@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "script_private.h"
+#include "private.h"
 
 static void 
 set_request(JSContextRef ctx, SoupMessage *msg, JSValueRef val, JSValueRef *exc)

@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "script_private.h"
+#include "private.h"
 
 static JSValueRef 
 term_print(JSContextRef ctx, FILE *stream, size_t argc, const JSValueRef argv[], JSValueRef *exc) {

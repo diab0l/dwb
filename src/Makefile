@@ -9,6 +9,11 @@ LICENSE="GNU General Public License, version 3 or later"
 include $(BASEDIR)/config.mk
 include config.mk
 
+SCRIPTDIR = scripts
+
+SRCSCRIPTS = $(wildcard $(SCRIPTDIR)/*.c)
+OBJSCRIPTS = ${SRCSCRIPTS:.c=.o}
+
 CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_EXAR)
 CFLAGS+=-I$(BASEDIR)/$(DWB_LIB_DIR_RC)
 
@@ -22,6 +27,7 @@ DEPS=$(patsubst %.o, %.d, $(OBJ))
 
 OBJ += $(BASEDIR)/$(OBJEXAR)
 OBJ += $(BASEDIR)/$(OBJRC)
+OBJ += $(OBJSCRIPTS)
 
 all: $(TARGET)
 
@@ -62,5 +68,6 @@ cgdb: debug
 clean:
 	$(RM) *.o  *.do $(TARGET) $(DTARGET) *.d
 	$(RM) tlds.h
+	$(RM) $(OBJSCRIPTS)
 
 .PHONY: clean all cgdb deps 

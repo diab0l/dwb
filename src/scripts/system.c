@@ -16,9 +16,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "script_private.h"
-
-#include "script_deferred.h"
+#include "private.h"
+#include "deferred.h"
 
 typedef struct SpawnData_s {
     GIOChannel *channel;
