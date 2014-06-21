@@ -3657,7 +3657,7 @@ create_global_object()
     s_ctx->namespaces[NAMESPACE_CLIPBOARD]  = clipboard_initialize(s_ctx->global_context);
     s_ctx->namespaces[NAMESPACE_NET]        = net_initialize(s_ctx->global_context);
 #ifdef WITH_LIBSECRET
-    s_ctx->namespaces[NAMESPACE_KEYRING]    = net_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_KEYRING]    = keyring_initialize(s_ctx->global_context);
 #endif
 
     /**

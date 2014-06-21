@@ -42,6 +42,7 @@ typedef struct ScriptContext_s ScriptContext;
 #include "script_clipboard.h"
 #include "script_dom.h"
 #include "script_net.h"
+#include "script_keyring.h"
 
 
 enum {
