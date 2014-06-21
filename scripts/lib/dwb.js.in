@@ -468,10 +468,12 @@
 
                 }
                 else {
-                if (!_initialized) 
-                    _callbacks.push({callback : callback, names : names});
-                else 
-                    _applyRequired(names, callback);
+                    if (!_initialized) {
+                        _callbacks.push({callback : callback, names : names});
+                    }
+                    else {
+                        _applyRequired(names, callback);
+                    }
                 }
             }
         },

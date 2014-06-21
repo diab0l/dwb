@@ -19,33 +19,7 @@
 #define _XOPEN_SOURCE 600
 #define _POSIX_C_SOURCE 200112L
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
-#include <math.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <inttypes.h>
-#include <errno.h>
-#include <JavaScriptCore/JavaScript.h>
-#include <glib.h>
-#include <cairo.h>
-#include <exar.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include "dwb.h"
-#include "scripts.h" 
-#include "session.h" 
-#include "util.h" 
-#include "js.h" 
-#include "soup.h" 
-#include "domain.h" 
-#include "application.h" 
-#include "completion.h" 
-#include "entry.h" 
-#include "secret.h" 
-static int ref_count = 0;
+#include "script_private.h"
 
 #define API_VERSION 1.11
 
@@ -72,20 +46,14 @@ static int ref_count = 0;
 #define SCRIPT_TEMPLATE_XINCLUDE SCRIPT_TEMPLATE_XSTART SCRIPT_TEMPLATE_END
 
 #define SCRIPT_WEBVIEW(o) (WEBVIEW(((GList*)JSObjectGetPrivate(o))))
-#define EXCEPTION(X)   "DWB EXCEPTION : "X
 #define PROP_LENGTH 128
-#define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
 
 #define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) == 0)
 #define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
 #define EXEC_LOCK if (TRY_CONTEXT_LOCK) { if (s_ctx != NULL && s_ctx->global_context != NULL) { 
 #define EXEC_UNLOCK } CONTEXT_UNLOCK; }
 #define EXEC_LOCK_RETURN(result) if (!TRY_CONTEXT_LOCK) return result; { if (s_ctx != NULL && s_ctx->global_context != NULL) { 
-#define EXEC_UNLOCK } CONTEXT_UNLOCK; }
 
-#define IS_KEY_EVENT(X) (((int)(X)) == GDK_KEY_PRESS || ((int)(X)) == GDK_KEY_RELEASE)
-#define IS_BUTTON_EVENT(X) (((int)(X)) == GDK_BUTTON_PRESS || ((int)(X)) == GDK_BUTTON_RELEASE \
-                            || ((int)(X)) == GDK_2BUTTON_PRESS || ((int)(X)) == GDK_3BUTTON_PRESS)
 
 #define BOXED_GET_CHAR(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
 {\
@@ -172,35 +140,7 @@ struct _SSignal {
     JSObjectRef object;
     JSObjectRef func;
 };
-typedef struct DeferredPriv_s 
-{
-    JSObjectRef reject;
-    JSObjectRef resolve;
-    JSObjectRef next;
-    gboolean is_fulfilled;
-} DeferredPriv;
-typedef struct PathCallback_s 
-{
-    JSObjectRef callback; 
-    gboolean dir_only;
-} PathCallback;
 
-typedef struct SpawnData_s {
-    GIOChannel *channel;
-    JSObjectRef callback;
-    JSObjectRef deferred;
-    int status; 
-    int finished;
-} SpawnData;
-#define SPAWN_FINISHED 0x1
-#define SPAWN_CLOSED 0x2
-
-#define SPAWN_DATA_INIT(_data, _channel, _callback, _deferred) do { \
-    _data->channel = _channel; \
-    _data->callback = _callback; \
-    _data->deferred = _deferred; \
-    _data->status = 0; \
-    _data->finished = 0; } while (0)
 
 
 #define S_SIGNAL(X) ((SSignal*)X->data)
@@ -240,110 +180,18 @@ static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
     [SCRIPTS_SIG_READY]             = "ready", 
 };
 
-enum {
-    CONSTRUCTOR_DEFAULT = 0,
-    CONSTRUCTOR_WEBVIEW,
-    CONSTRUCTOR_DOWNLOAD,
-    CONSTRUCTOR_WIDGET,
-    CONSTRUCTOR_FRAME,
-    CONSTRUCTOR_SOUP_MESSAGE,
-    CONSTRUCTOR_HISTORY_LIST,
-    CONSTRUCTOR_DEFERRED,
-    CONSTRUCTOR_HIDDEN_WEB_VIEW,
-    CONSTRUCTOR_SOUP_HEADERS,
-    CONSTRUCTOR_COOKIE,
-    CONSTRUCTOR_MENU,
-    CONSTRUCTOR_ARRAY,
-    CONSTRUCTOR_TIMER, 
-    CONSTRUCTOR_LAST,
-};
-
-enum {
-    NAMESPACE_CLIPBOARD, 
-    NAMESPACE_CONSOLE, 
-    NAMESPACE_DATA, 
-    NAMESPACE_EXTENSIONS, 
-    NAMESPACE_GUI, 
-    NAMESPACE_IO, 
-    NAMESPACE_NET, 
-    NAMESPACE_SIGNALS, 
-    NAMESPACE_SYSTEM, 
-    NAMESPACE_TABS, 
-    NAMESPACE_TIMER, 
-    NAMESPACE_UTIL, 
-#ifdef WITH_LIBSECRET
-    NAMESPACE_KEYRING, 
-#endif
-    NAMESPACE_LAST,
-};
-enum {
-    SELECTION_PRIMARY = 1,
-    SELECTION_CLIPBOARD = 2
-};
-enum {
-    CLASS_GOBJECT,
-    CLASS_WEBVIEW, 
-    CLASS_FRAME, 
-    CLASS_DOWNLOAD, 
-    CLASS_WIDGET, 
-    CLASS_MENU, 
-    CLASS_SECURE_WIDGET, 
-    CLASS_HIDDEN_WEBVIEW, 
-    CLASS_MESSAGE, 
-    CLASS_DEFERRED, 
-    CLASS_HISTORY,
-    CLASS_SOUP_HEADER, 
-    CLASS_COOKIE,
-#if WEBKIT_CHECK_VERSION(1, 10, 0)
-    CLASS_FILE_CHOOSER,
-#endif
-    CLASS_DOM_OBJECT, 
-    CLASS_DOM_EVENT, 
-    CLASS_TIMER,
-    CLASS_LAST,
-};
 
 static void callback(CallbackData *c);
 static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception);
 static JSObjectRef make_object(JSContextRef ctx, GObject *o);
-static JSObjectRef make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean);
 static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
-static JSValueRef do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc);
-static JSClassRef create_class(const char *name, JSStaticFunction [], JSStaticValue [], JSObjectGetPropertyCallback );
-static JSObjectRef make_dom_object(JSContextRef ctx, GObject *o);
 
-typedef struct ScriptContext_s {
-    JSGlobalContextRef global_context;
-
-    JSObjectRef sig_objects[SCRIPTS_SIG_LAST];
-
-    GSList *script_list;
-    GSList *autoload;
-    GSList *timers;
-    GSList *created_widgets;
-    GPtrArray *gobject_signals;
-    GHashTable *exports;
-
-    JSClassRef classes[CLASS_LAST];
-    JSObjectRef constructors[CONSTRUCTOR_LAST];
-    JSValueRef namespaces[NAMESPACE_LAST];
-
-    JSObjectRef session;
-
-    JSObjectRef init_before;
-    JSObjectRef init_after;
-
-    JSObjectRef complete;
-
-    GQuark ref_quark;
-    gboolean keymap_dirty;
-} ScriptContext; 
 
 /* Static variables */
 static ScriptContext *s_ctx;
 static GSList *s_autoloaded_extensions;
 static uint64_t s_signal_locks;
-static JSValueRef UNDEFINED, NIL;
+static JSValueRef UNDEFINED, s_nil;
 
 /* Only defined once */
 
@@ -375,8 +223,10 @@ uncamelize(char *uncamel, const char *camel, char rep, size_t length)
     return ret;
 }/*}}}*/
 
-static char * 
-get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc)
+
+
+char * 
+scripts_get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc)
 {
     char *sfunc = NULL, *result = NULL;
     const char *start, *end;
@@ -421,6 +271,11 @@ script_context_new() {
     ctx->ref_quark = g_quark_from_static_string("dwb_js_ref");
 
     return ctx;
+}
+
+JSValueRef 
+scripts_get_nil() {
+    return s_nil;
 }
 void 
 script_context_free(ScriptContext *ctx) {
@@ -476,7 +331,7 @@ script_context_free(ScriptContext *ctx) {
             UNPROTECT_0(ctx->global_context, ctx->init_before);
             UNPROTECT_0(ctx->global_context, ctx->init_after);
             UNPROTECT_0(ctx->global_context, ctx->session);
-            UNPROTECT_0(ctx->global_context, NIL);
+            UNPROTECT_0(ctx->global_context, s_nil);
             UNPROTECT_0(ctx->global_context, UNDEFINED);
             JSGlobalContextRelease(s_ctx->global_context);
             s_ctx->global_context = NULL;
@@ -484,19 +339,26 @@ script_context_free(ScriptContext *ctx) {
         g_free(ctx);
     }
 }
-
-
-static void 
-object_destroy_weak_cb(JSObjectRef jsobj, GObject *domobj) {
-    EXEC_LOCK;
-    ref_count--;
-    printf("%d\n", ref_count);
-    if (JSObjectGetPrivate(jsobj) != NULL) {
-        JSObjectSetPrivate(jsobj, NULL);
-        JSValueUnprotect(s_ctx->global_context, jsobj);
-    }
-    EXEC_UNLOCK;
+ScriptContext *
+scripts_get_context() {
+    return s_ctx;
 }
+JSContextRef 
+scripts_get_global_context() {
+    if (pthread_rwlock_tryrdlock(&s_context_lock) == 0) {
+        if (s_ctx != NULL) {
+            return s_ctx->global_context;
+        }
+        pthread_rwlock_unlock(&s_context_lock);
+    }
+    return NULL;
+}
+void
+scripts_release_global_context() {
+    pthread_rwlock_unlock(&s_context_lock);
+}
+
+
 static void 
 object_destroy_cb(JSObjectRef o) 
 {
@@ -536,11 +398,8 @@ finalize_gtimer(JSObjectRef o) {
 }
 
 
-
-
-
-static JSValueRef 
-call_as_function_debug(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
+JSValueRef 
+scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
 {
     char path[PATH_MAX] = {0};
     int line = -1;
@@ -559,18 +418,18 @@ inject_api_callback(JSContextRef ctx, JSObjectRef function, JSObjectRef this, si
     JSObjectRef api_function = NULL;
     if (argc > 0 && (api_function = js_value_to_function(ctx, argv[0], exc)))
     {
-        char *body = get_body(ctx, api_function, exc);
+        char *body = scripts_get_body(ctx, api_function, exc);
         if (body == NULL)
             return NULL; 
         EXEC_LOCK;
         if (argc > 1)
         {
             JSValueRef args [] = { js_context_change(ctx, s_ctx->global_context, argv[1], exc) };
-            do_include(s_ctx->global_context, "local", body, false, false, 1, args, NULL);
+            scripts_include(s_ctx->global_context, "local", body, false, false, 1, args, NULL);
         }
         else 
         {
-            do_include(s_ctx->global_context, "local", body, false, false, 0, NULL, NULL);
+            scripts_include(s_ctx->global_context, "local", body, false, false, 0, NULL, NULL);
         }
         EXEC_UNLOCK;
         g_free(body);
@@ -609,7 +468,7 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
 
     if (JSValueIsObject(ctx, argv[0]) && (f = js_value_to_function(ctx, argv[0], exc)) != NULL)
     {
-        body = get_body(ctx, f, exc);
+        body = scripts_get_body(ctx, f, exc);
         name = js_get_string_property(ctx, f, "name");
     }
     else 
@@ -671,250 +530,6 @@ inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef th
 /*}}}*/
 
 /* Deferred {{{*/
-void 
-deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
-{
-    g_return_if_fail(this != NULL);
-
-    if (priv == NULL)
-        priv = JSObjectGetPrivate(this);
-
-    if (priv->resolve)
-        JSValueUnprotect(ctx, priv->resolve);
-    if (priv->reject)
-        JSValueUnprotect(ctx, priv->reject);
-    if (priv->next)
-        JSValueUnprotect(ctx, priv->next);
-
-    JSObjectSetPrivate(this, NULL);
-
-    g_free(priv);
-
-    JSValueUnprotect(ctx, this);
-}
-
-static JSObjectRef
-deferred_new(JSContextRef ctx) 
-{
-    DeferredPriv *priv = g_malloc(sizeof(DeferredPriv));
-    priv->resolve = priv->reject = priv->next = NULL;
-
-    JSObjectRef ret = JSObjectMake(ctx, s_ctx->classes[CLASS_DEFERRED], priv);
-    JSValueProtect(ctx, ret);
-    priv->is_fulfilled = false;
-
-    return ret;
-}
-static PathCallback * 
-path_callback_new(JSContextRef ctx, JSObjectRef object, gboolean dir_only)
-{
-    g_return_val_if_fail(object != NULL, NULL);
-    PathCallback *pc = g_malloc(sizeof(PathCallback));
-    pc->callback = object;
-    JSValueProtect(ctx, object);
-    pc->dir_only = dir_only;
-    return pc;
-}
-static void
-path_callback_free(PathCallback *pc)
-{
-    g_return_if_fail(pc != NULL);
-
-    EXEC_LOCK;
-    JSValueUnprotect(s_ctx->global_context, pc->callback);
-    EXEC_UNLOCK;
-
-    g_free(pc);
-}
-/** 
- * Registers functions for the done and fail chain
- *
- * @name then
- * @memberOf Deferred.prototype
- * @function
- *
- *
- * @param {Deferred~resolveCallback} ondone
- *      A callback function that will be called when the deferred is resolved.
- *      If the function returns a deferred the original deferred will be
- *      replaced with the new deferred.
-
- * @param {Deferred~rejectCallback} onfail
- *      A callback function that will be called when the deferred is rejected.
- *      If the function returns a deferred the original deferred will be
- *      replaced with the new deferred.
- * @returns {Deferred}
- *      A new deferred that can be used to chain callbacks.
- * */
-/** 
- * Called when a Deferred is resolved
- * @callback Deferred~resolveCallback
- * @param {...Object} arguments 
- *      Variable number of arguments passed to Deferred.resolve
- * */
-/** 
- * Called when a Deferred is rejected
- * @callback Deferred~rejectCallback
- * @param {...Object} arguments 
- *      Variable number of arguments passed to Deferred.reject
- * */
-static JSValueRef 
-deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL) 
-        return NIL;
-
-    if (argc > 0)
-    {
-        priv->resolve = js_value_to_function(ctx, argv[0], NULL);
-        JSValueProtect(ctx, priv->resolve);
-    }
-    if (argc > 1) 
-    {
-        priv->reject = js_value_to_function(ctx, argv[1], NULL);
-        JSValueProtect(ctx, priv->reject);
-    }
-
-    priv->next = deferred_new(ctx);
-    JSValueProtect(ctx, priv->next);
-
-    return priv->next;
-}
-static DeferredPriv * 
-deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
-{
-    DeferredPriv *opriv = JSObjectGetPrivate(old);
-    DeferredPriv *npriv = JSObjectGetPrivate(new);
-
-    npriv->resolve = opriv->resolve;
-    if (npriv->resolve)
-        JSValueProtect(ctx, npriv->resolve);
-    npriv->reject = opriv->reject;
-    if (npriv->reject)
-        JSValueProtect(ctx, npriv->reject);
-    npriv->next = opriv->next;
-    if (npriv->next)
-        JSValueProtect(ctx, npriv->next);
-
-    deferred_destroy(ctx, old, opriv);
-    return npriv;
-}
-/**
- * Resolves a deferred, the done-chain is called when a deferred is resolved
- *
- * @name resolve
- * @memberOf Deferred.prototype
- * @function
- *
- * @param {...Object} arguments Arguments passed to the <i>done</i> callbacks
- */
-static JSValueRef 
-deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NULL;
-
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL || priv->is_fulfilled)
-        return UNDEFINED;
-
-    if (priv->resolve) 
-        ret = JSObjectCallAsFunction(ctx, priv->resolve, this, argc, argv, exc);
-
-    priv->is_fulfilled = true;
-
-    JSObjectRef next = priv->next;
-    deferred_destroy(ctx, this, priv);
-
-    if (next) 
-    {
-        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_ctx->classes[CLASS_DEFERRED]) ) 
-        {
-            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
-            deferred_transition(ctx, next, o)->reject = NULL;
-        }
-        else 
-        {
-            if (ret && !JSValueIsUndefined(ctx, ret))
-            {
-                JSValueRef args[] = { ret };
-                deferred_resolve(ctx, f, next, 1, args, exc);
-            }
-            else 
-                deferred_resolve(ctx, f, next, argc, argv, exc);
-
-        }
-    }
-    return UNDEFINED;
-}
-/**
- * Rejects a deferred, the fail-chain is called when a deferred is resolved
- *
- * @name reject
- * @memberOf Deferred.prototype
- * @function
- *
- * @param {...Object} arguments Arguments passed to the <i>fail</i> callbacks
- */
-static JSValueRef 
-deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NULL;
-
-    DeferredPriv *priv = JSObjectGetPrivate(this);
-    if (priv == NULL || priv->is_fulfilled)
-        return UNDEFINED;
-
-    if (priv->reject) 
-        ret = JSObjectCallAsFunction(ctx, priv->reject, this, argc, argv, exc);
-
-    priv->is_fulfilled = true;
-
-    JSObjectRef next = priv->next;
-    deferred_destroy(ctx, this, priv);
-
-    if (next) 
-    {
-        if ( ret && JSValueIsObjectOfClass(ctx, ret, s_ctx->classes[CLASS_DEFERRED]) ) 
-        {
-            JSObjectRef o = JSValueToObject(ctx, ret, NULL);
-            deferred_transition(ctx, next, o)->resolve = NULL;
-        }
-        else 
-        {
-            if (ret && !JSValueIsUndefined(ctx, ret))
-            {
-                JSValueRef args[] = { ret };
-                deferred_reject(ctx, f, next, 1, args, exc);
-            }
-            else 
-                deferred_reject(ctx, f, next, argc, argv, exc);
-        }
-    }
-    return UNDEFINED;
-}/*}}}*/
-/** 
- * Wether this Deferred was resolved or rejected.
- *
- * @name isFulfilled
- * @memberOf Deferred.prototype
- * @type Boolean
- * @readonly
- * */
-
-static gboolean 
-deferred_fulfilled(JSObjectRef deferred) {
-    DeferredPriv *priv = JSObjectGetPrivate(deferred); 
-    if (priv != NULL) {
-        return priv->is_fulfilled;
-    }
-    return true;
-}
-static JSValueRef 
-deferred_is_fulfilled(JSContextRef ctx, JSObjectRef this, JSStringRef js_name, JSValueRef* exception) 
-{
-    return JSValueMakeBoolean(ctx, deferred_fulfilled(this));
-}
 
 void
 sigdata_append(gulong sigid, GObject *instance)
@@ -1051,7 +666,7 @@ callback(CallbackData *c)
     gboolean ret = false;
     EXEC_LOCK;
     JSValueRef val[] = { c->object != NULL ? c->object : NIL };
-    JSValueRef jsret = call_as_function_debug(s_ctx->global_context, c->callback, c->callback, 1, val);
+    JSValueRef jsret = scripts_call_as_function(s_ctx->global_context, c->callback, c->callback, 1, val);
     if (JSValueIsBoolean(s_ctx->global_context, jsret))
         ret = JSValueToBoolean(s_ctx->global_context, jsret);
     if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
@@ -1064,68 +679,6 @@ callback(CallbackData *c)
 /*}}}*/
 
 /* TABS {{{*/
-/* tabs_current {{{*/
-/**
- * The currently focused webview
- *
- * @name current 
- * @memberOf tabs
- * @type WebKitWebView
- * */
-static JSValueRef 
-tabs_current(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
-{
-    if (dwb.state.fview && CURRENT_VIEW()->script_wv) 
-        return CURRENT_VIEW()->script_wv;
-    else 
-        return NIL;
-}/*}}}*/
-
-/* tabs_number {{{*/
-/**
- * The number of the currently focused webview
- *
- * @name number 
- * @memberOf tabs
- * @type Number
- * */
-static JSValueRef 
-tabs_number(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
-{
-    return JSValueMakeNumber(ctx, g_list_position(dwb.state.views, dwb.state.fview));
-}/*}}}*/
-
-/* tabs_length {{{*/
-/**
- * Total number of tabs
- *
- * @name length 
- * @memberOf tabs
- * @type Number
- * */
-static JSValueRef 
-tabs_length(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) 
-{
-    return JSValueMakeNumber(ctx, g_list_length(dwb.state.views));
-}/*}}}*/
-
-/* tabs_get{{{*/
-static JSValueRef 
-tabs_get(JSContextRef ctx, JSObjectRef this, JSStringRef name, JSValueRef* exc) {
-    JSValueRef v = JSValueMakeString(ctx, name);
-    double n = JSValueToNumber(ctx, v, exc);
-    if (!isnan(n)) {
-        GList *nth = g_list_nth(dwb.state.views, (int)n);
-        if (nth != NULL) {
-            return VIEW(nth)->script_wv;
-        }
-        else {
-            return NIL;
-        }
-    }
-    return NULL;
-}
-/*}}}*/
 
 /* WEBVIEW {{{*/
 
@@ -2283,7 +1836,7 @@ scripts_eval_key(KeyMap *m, Arg *arg)
                     CHAR, "arg", arg->p);
 
         JSValueRef argv[] = { js_json_to_value(s_ctx->global_context, json) };
-        call_as_function_debug(s_ctx->global_context, arg->js, arg->js, 1, argv);
+        scripts_call_as_function(s_ctx->global_context, arg->js, arg->js, 1, argv);
     }
 
     g_free(json);
@@ -2311,148 +1864,6 @@ scripts_clear_keymap() {
 }
 
 
-/* global_unbind{{{*/
-/** 
- * Unbind a shortcut previously bound with <b>bind</b>
- * @name unbind 
- * @function
- *
- * @param {Number|String|bindCallback} id|command|callback 
- *      Either the handle id returned from bind or the function or the command passed to {@link bind}
- *
- * @returns {Boolean}
- *      Whether the shortcut was found and unbound
- *
- * */
-static JSValueRef 
-global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-#define KEYMAP_MAP(l) (((KeyMap*)((l)->data))->map)
-    if (argc == 0) 
-        return JSValueMakeBoolean(ctx, false);
-
-    GList *l = NULL;
-    if (JSValueIsNumber(ctx, argv[0])) {
-        int id = (int)JSValueToNumber(ctx, argv[0], exc);
-        for (l = dwb.keymap; l; l=l->next)
-            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && KEYMAP_MAP(l)->arg.i == id) {
-                break;
-            }
-    }
-    else if (JSValueIsString(ctx, argv[0])) 
-    {
-        char *name = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-        for (l = dwb.keymap; l; l=l->next)
-            if (KEYMAP_MAP(l)->prop & CP_SCRIPT && g_strcmp0(KEYMAP_MAP(l)->n.first, name)) {
-                break;
-            }
-        g_free(name);
-    }
-    else if (JSValueIsObject(ctx, argv[0])) 
-    {
-        for (l = dwb.keymap; l; l=l->next)
-            if ( KEYMAP_MAP(l)->arg.js && 
-                    JSValueIsEqual(ctx, argv[0], KEYMAP_MAP(l)->arg.js, exc) )
-                break;
-    }
-    if (l != NULL) 
-    {
-        // don't free it yet, if unbind is called from inside a bind
-        // callback parse_command_line and eval_key would use an invalid keymap
-        KEYMAP_MAP(l)->arg.i = 0;
-        s_ctx->keymap_dirty = true;
-
-        for (GList *gl = dwb.override_keys; gl; gl=gl->next)
-        {
-            KeyMap *m = gl->data;
-            if (m->map->prop & CP_SCRIPT) 
-                dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
-        }
-        return JSValueMakeBoolean(ctx, true);
-    }
-    return JSValueMakeBoolean(ctx, false);
-#undef KEYMAP_MAP
-}/*}}}*/
-/** 
- * For internal usage only
- *
- * @name _bind
- * @function
- * @private
- *
- * */
-/* global_bind {{{*/
-static JSValueRef 
-global_bind(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    static int id;
-    int ret = -1;
-
-    gchar *keystr, *callback_name;
-    char *name = NULL, *callback = NULL;
-    guint option = CP_DONT_SAVE | CP_SCRIPT | CP_DONT_CLEAN;
-    gboolean override = false;
-
-    if (argc < 2) 
-        return JSValueMakeBoolean(ctx, false);
-
-    keystr = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-
-    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
-    if (func == NULL)
-        goto error_out;
-
-    if (argc > 2) 
-    {
-        if (JSValueIsNumber(ctx, argv[2]) )
-        {
-            double additional_option = JSValueToNumber(ctx, argv[2], exc);
-            if (!isnan(additional_option) && (int) additional_option & CP_OVERRIDE)
-            {
-                option |= (int)additional_option & CP_OVERRIDE;
-                override = true;
-            }
-        }
-        else 
-        {
-            name = js_value_to_char(ctx, argv[2], JS_STRING_MAX, exc);
-            if (name != NULL) 
-            { 
-                option |= CP_COMMANDLINE;
-                callback_name = js_get_string_property(ctx, func, "name");
-                callback = g_strdup_printf("JavaScript: %s", callback_name == NULL || *callback_name == 0 ? "[anonymous]" : callback_name);
-                g_free(callback_name);
-            }
-        }
-    }
-    if (keystr == NULL && name == NULL) 
-        goto error_out;
-
-    JSValueProtect(ctx, func);
-
-    ret = ++id;
-    Arg a = { .js = func, .i = ret };
-    KeyMap *map = dwb_add_key(keystr, name, callback, (Func)scripts_eval_key, option, &a);
-    if (override)
-        dwb.override_keys = g_list_prepend(dwb.override_keys, map);
-
-error_out:
-    g_free(keystr);
-    return JSValueMakeNumber(ctx, ret);
-}/*}}}*/
-
-/** 
- * Refers to the global object
- * @name global 
- * @type Object
- * @readonly
- *
- * */
-static JSValueRef 
-global_get(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return JSContextGetGlobalObject(ctx);
-}
 /** 
  * The webkit session
  *
@@ -2468,104 +1879,6 @@ net_get_webkit_session(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
     return s_ctx->session;
 }
 /* global_execute {{{*/
-/** 
- * Executes a command, note that execute cannot be called in the global scope of
- * a script or in a function that is called from the global scope of the
- * script, i.e. it can only be called from functions that aren't executed when
- * the script is first executed like signal callbacks or bind callbacks. If it
- * is required call execute directly after dwb has been initialized the
- * <b>ready</b> signal can be used.
- * @name execute 
- * @function
- * @example 
- * bind("Control x", function() {
- *      execute("tabopen www.example.com");
- * });
- *
- * // Calling execute on startup
- * Signal.connect("ready", function() {
- *      execute("tabopen example.com");
- * });
- *
- * @param {String} name 
- *      A command, the command syntax is the same as the syntax on dwb's
- *      commandline
- *
- * @returns {Boolean}
- *      true if execution was successful
- *
- *
- * */
-static JSValueRef 
-global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    DwbStatus status = STATUS_ERROR;
-    if (argc < 1) 
-        return JSValueMakeBoolean(ctx, false);
-    if (!dwb.state.views || !dwb.state.fview) {
-        js_make_exception(ctx, exc, EXCEPTION("execute can only be called after dwb has been initialized"));
-        return JSValueMakeBoolean(ctx, false);
-    }
-
-    char *command = js_value_to_char(ctx, argv[0], -1, exc);
-    if (command != NULL) 
-    {
-        status = dwb_parse_command_line(command);
-        g_free(command);
-    }
-    if (status == STATUS_END)
-        exit(0);
-    return JSValueMakeBoolean(ctx, status == STATUS_OK);
-}/*}}}*/
-static JSValueRef 
-global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    static const char *mapping[] = {
-        [NAMESPACE_CLIPBOARD]   = "clipboard",
-        [NAMESPACE_CONSOLE]     = "console",
-        [NAMESPACE_DATA]        = "data",
-        [NAMESPACE_EXTENSIONS]  = "extensions",
-        [NAMESPACE_GUI]         = "gui",
-        [NAMESPACE_IO]          = "io",
-        [NAMESPACE_NET]         = "net",
-        [NAMESPACE_SIGNALS]     = "signals",
-        [NAMESPACE_SYSTEM]      = "system",
-        [NAMESPACE_TABS]        = "tabs",
-        [NAMESPACE_TIMER]       = "timer",
-        [NAMESPACE_UTIL]        = "util",
-#ifdef WITH_LIBSECRET
-        [NAMESPACE_KEYRING]     = "keyring"
-#endif
-    };
-    JSValueRef ret = NULL;
-    if (argc > 0) {
-        JSStringRef name = JSValueToStringCopy(ctx, argv[0], exc);
-        if (name != NULL) {
-            for (int i=0; i<NAMESPACE_LAST; i++) {
-                if (JSStringIsEqualToUTF8CString(name, mapping[i])) {
-                    ret = s_ctx->namespaces[i];
-                    break;
-                }
-            } 
-        }
-        JSStringRelease(name);
-    }
-    return ret;
-}
-
-/** 
- * Exit dwb
- * @name exit 
- * @function
- *
- * */
-/* global_exit {{{*/
-static JSValueRef 
-global_exit(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    dwb_end(0);
-    exit(EXIT_SUCCESS);
-    return 0;
-}/*}}}*/
 
 /*{{{*/
 static JSValueRef
@@ -2599,7 +1912,7 @@ settings_get(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
 /*}}}*/
 
 JSValueRef 
-do_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc)
+scripts_include(JSContextRef ctx, const char *path, const char *script, gboolean global, gboolean is_archive, size_t argc, const JSValueRef *argv, JSValueRef *exc)
 {
     JSStringRef js_script;
     JSValueRef ret = NIL;
@@ -2628,289 +1941,8 @@ do_include(JSContextRef ctx, const char *path, const char *script, gboolean glob
     return ret;
 }
 /* global_include {{{*/
-/** 
- * Includes a file. 
- * Note that included files are not visible in other scripts unless they are
- * explicitly injected into the global scope. To use functions or variables from
- * an included script the script can either return an object containing the
- * public functions/variables or {@link provide} can be called in the included
- * script. 
- *
- * @name include 
- * @function
- * @param {String} path 
- *      The path to the script
- * @param {Boolean} global
- *      Whether the script should be included into the global scope.
- *
- * @return {Object}
- *      The object returned from the included script 
- *      
- * @example
- * // included script 
- * function foo()
- * {
- *     io.out("bar");
- * }
- * return {
- *      foo : foo
- * }
- *
- * // including script
- * var x = include("/path/to/script"); 
- * x.foo();
- *
- *
- * // included script
- * provide("foo", {
- *      foo : function() 
- *      {
- *          io.out("bar");
- *      }
- * });
- *
- * // including script
- * include("/path/to/script");
- * require(["foo"], function(foo) {
- *      foo.foo();
- * });
- * */
-
-static JSObjectRef
-get_exports(JSContextRef ctx, const char *path)
-{
-    JSObjectRef ret = g_hash_table_lookup(s_ctx->exports, path);
-    if (ret == NULL)
-    {
-        ret = JSObjectMake(ctx, NULL, NULL);
-        JSValueProtect(ctx, ret);
-        g_hash_table_insert(s_ctx->exports, g_strdup(path), ret);
-    }
-    return ret;
-}
 
 
-static JSValueRef 
-global_include(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NIL;
-    gboolean global = false;
-    char *path = NULL, *content = NULL, *econtent = NULL; 
-    const char *script;
-    JSValueRef exports[1];
-    gboolean is_archive = false;
-
-    if (argc < 1) 
-        return NIL;
-
-    if (argc > 1 && JSValueIsBoolean(ctx, argv[1])) 
-        global = JSValueToBoolean(ctx, argv[1]);
-
-    if ( (path = js_value_to_char(ctx, argv[0], PATH_MAX, exc)) == NULL) 
-        goto error_out;
-
-    if (exar_check_version(path) == 0)
-    {
-        econtent = (char*) exar_search_extract(path, "main.js", NULL);
-        if (econtent == NULL)
-        {
-            js_make_exception(ctx, exc, EXCEPTION("include: main.js was not found in %s."), path);
-            goto error_out;
-        }
-        exports[0] = get_exports(ctx, path);
-        is_archive = true;
-        script = econtent;
-    }
-    else if ( (content = util_get_file_content(path, NULL)) != NULL) 
-    {
-        script = content;
-        exports[0] = JSValueMakeNull(ctx);
-    }
-    else {
-        js_make_exception(ctx, exc, EXCEPTION("include: reading %s failed."), path);
-        goto error_out;
-    }
-
-    if (*script == '#') 
-    {
-        do {
-            script++;
-        } while(*script && *script != '\n');
-        script++;
-    }
-
-    ret = do_include(ctx, path, script, global, is_archive, 1, exports, exc);
-
-error_out: 
-    g_free(content);
-    exar_free(econtent);
-    g_free(path);
-    return ret;
-}/*}}}*/
-
-
-static char * 
-xextract(JSContextRef ctx, size_t argc, const JSValueRef argv[], char **archive, off_t *fs, JSValueRef *exc)
-{
-    char *content = NULL, *larchive = NULL, *path = NULL;
-    if (argc < 2) 
-        return NULL;
-    if ((larchive = js_value_to_char(ctx, argv[0], -1, exc)) == NULL)
-        goto error_out;
-    if ((path = js_value_to_char(ctx, argv[1], -1, exc)) == NULL)
-        goto error_out;
-    if (*path == '~') {
-        content = (char*)exar_search_extract(larchive, path + 1, fs);
-    }
-    else {
-        content = (char*)exar_extract(larchive, path, fs);
-    }
-error_out: 
-    if (archive != NULL) 
-        *archive = larchive;
-    else 
-        g_free(larchive);
-    g_free(path);
-    return content;
-}
-/** 
- * Same as {@link provide}, but can only be called from an archive. The module
- * can only be required by the same archive in which the module was provided.
- *
- * @name xprovide
- * @function
- * @param {String} name The name of the module
- * @param {Object} module The module
- * @param {Boolean} [overwrite]
- *      Whether to overwrite existing module with
- *      the same name, default false
- * */
-/** 
- * Same as {@link require}, but can only be called from an archive and xrequire
- * is always synchronous. Only modules provided in the same archive can be
- * loaded with xrequire.
- *
- * @name xrequire
- * @function
- * @param {String} name The name of the module
- *
- * @returns {Object} 
- *      The module
- * */
-/** 
- * Load a textfile from an archive. This function can only be called from scripts
- * inside an archive.
- *
- * @name xgettext
- * @function
- * @param {String} path
- *      Path of the file in the archive, if the path starts with a ~ dwb
- *      searches for the file in the archive, i.e. it doesn't have to be an
- *      absolute archive path but the filename has to be unique
- * @returns {String} 
- *      The content of the file
- *
- * @example
- * // Archive structure
- * //
- * // content/main.js
- * // content/bar.html
- * // content/foo.html
- * var bar = xgettext("content/bar.html"); 
- * var foo = xgettext("~foo.html"); 
- * 
- * */
-static JSValueRef
-global_xget_text(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *content = NULL;
-    JSValueRef ret = NIL;
-    off_t fs;
-
-    content = xextract(ctx, argc, argv, NULL, &fs, exc);
-    if (content != NULL) {
-        ret = js_char_to_value(ctx, content);
-    }
-    exar_free(content);
-    return ret;
-}
-/** 
- * Include scripts from an archive.
- *
- * Same as {@link include} but this function can only be called from scripts
- * inside an archive, so this is mostly useful in extensions. However it is
- * possible to include scripts from an archive calling the internal function
- * _xinclude which takes two parameters, the path of the archive and the path of
- * the included file in the archive.
- * All scripts in an archive share an object <b>exports</b> which can be used
- * to share data between scripts in an archive, all exports objects have a
- * readonly property <b>id</b> which is unique to all archives, it can be used
- * together with require/provide to define unique module names.
- *
- * Unlike {@link include} included archive-scripts cannot be included into the
- * global scope. 
- *
- * @name xinclude
- * @function
- * @param {String} path
- *      Path of the file in the archive, if the path starts with a ~ dwb
- *      searches for the file in the archive, i.e. it doesn't have to be an
- *      absolute archive path but the filename has to be unique
- *
- * @returns {Object}
- *      The object returned from the included file.
- *
- * @example
- * // Archive structure
- * //
- * // main.js
- * // content/foo.js
- * // content/bar.js
- *
- * // main.js
- * xinclude("content/foo.js");
- * // searches for bar.js in the archive
- * xinclude("~bar.js");
- *
- * // content/foo.js
- * function getFoo() {
- *      return 37;
- * }
- * exports.getFoo = getFoo;
- *
- * // content/bar.js
- * var x = exports.getFoo();
- *
- * // using require/provide
- * // main.js
- * require(["foo" + exports.id], function(foo) {
- *      io.out(foo.bar);
- * });
- * xinclude("content/foo.js");
- *
- * // content/foo.js
- * provide("foo" + exports.id, {
- *     bar : 37
- * }); 
- *
- * */
-static JSValueRef
-global_xinclude(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *content = NULL, *archive = NULL;
-    JSValueRef ret = NIL;
-    off_t fs;
-
-    content = xextract(ctx, argc, argv, &archive, &fs, exc);
-    if (content != NULL)
-    {
-        JSValueRef exports[] = { get_exports(ctx, archive) };
-        ret = do_include(ctx, archive, content, false, true, 1, exports, exc);
-    }
-    g_free(archive);
-    exar_free(content);
-    return ret;
-}
 
 
 /* global_send_request {{{*/
@@ -2963,7 +1995,7 @@ request_callback(SoupSession *session, SoupMessage *message, JSObjectRef functio
     {
         JSValueRef o = get_message_data(message);
         JSValueRef vals[] = { o, make_object(s_ctx->global_context, G_OBJECT(message))  };
-        call_as_function_debug(s_ctx->global_context, function, function, 2, vals);
+        scripts_call_as_function(s_ctx->global_context, function, function, 2, vals);
     }
     JSValueUnprotect(s_ctx->global_context, function);
     EXEC_UNLOCK;
@@ -3091,105 +2123,7 @@ net_send_request_sync(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, s
     JSStringRelease(js_key);
     return o;
 }
-/* timeout_callback {{{*/
-/**
- * @callback timer~startCallback
- * @returns {Boolean}
- *      Return true to stop the timer
- * */
-static gboolean
-timeout_callback(JSObjectRef obj) 
-{
-    gboolean ret = false;
-    EXEC_LOCK_RETURN(false);
-    JSValueRef val = call_as_function_debug(s_ctx->global_context, obj, obj, 0, NULL);
-    if (val == NULL)
-        ret = false;
-    else 
-        ret = !JSValueIsBoolean(s_ctx->global_context, val) || JSValueToBoolean(s_ctx->global_context, val);
-    EXEC_UNLOCK;
 
-    return ret;
-}/*}}}*/
-
-/* global_timer_stop {{{*/
-
-/** 
- * For internal usage only
- *
- * @name _stop
- * @memberOf timer
- * @function
- * @private
- * */
-/**
- * Stops a timer started by {@link timerStart}
- * @name stop 
- * @memberOf timer
- * @function
- * 
- * @param {Number} id 
- *      A timer handle retrieved from {@link timer.start|start}
- *
- * @returns {Boolean}
- *      true if the timer was stopped
- * */
-static JSValueRef 
-timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("timerStop: missing argument."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    gdouble sigid = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(sigid)) 
-    {
-        gboolean ret = g_source_remove((int)sigid);
-        GSList *source = g_slist_find(s_ctx->timers, GINT_TO_POINTER(sigid));
-        if (source)
-            s_ctx->timers = g_slist_delete_link(s_ctx->timers, source);
-
-        return JSValueMakeBoolean(ctx, ret);
-    }
-    return JSValueMakeBoolean(ctx, false);
-}/*}}}*/
-
-/** 
- * For internal usage only
- *
- * @name _start
- * @memberOf timer
- * @function
- * @private
- * */
-/* global_timer_start {{{*/
-static JSValueRef 
-timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 2) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("timerStart: missing argument."));
-        return JSValueMakeNumber(ctx, -1);
-    }
-    double msec = JSValueToNumber(ctx, argv[0], exc);
-
-    if (isnan(msec))
-        return JSValueMakeNumber(ctx, -1);
-
-    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
-    if (func == NULL)
-        return JSValueMakeNumber(ctx, -1);
-
-    JSValueProtect(ctx, func);
-
-    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)scripts_unprotect);
-    s_ctx->timers = g_slist_prepend(s_ctx->timers, GINT_TO_POINTER(ret));
-    return JSValueMakeNumber(ctx, ret);
-}/*}}}*/
-/*}}}*/
-
-/* UTIL {{{*/
 /* net_domain_from_host {{{*/
 /**
  * Gets the base domain name from a hostname where the base domain name is the
@@ -3305,1402 +2239,11 @@ scripts_completion_activate(void)
     JSValueRef val[] = { js_char_to_value(s_ctx->global_context, text) };
     completion_clean_completion(false);
     dwb_change_mode(NORMAL_MODE, true);
-    call_as_function_debug(s_ctx->global_context, s_ctx->complete, s_ctx->complete, 1, val);
+    scripts_call_as_function(s_ctx->global_context, s_ctx->complete, s_ctx->complete, 1, val);
     EXEC_UNLOCK;
-}
-static JSObjectRef
-dom_make_node_array(JSContextRef ctx, GObject *list, JSValueRef *exc, gulong (*getlength)(GObject *item), 
-        WebKitDOMNode * (*getitem)(GObject *, gulong)) {
-    if (list == NULL) 
-        return JSObjectMakeArray(ctx, 0, NULL, exc);
-
-    g_return_val_if_fail(list, JSObjectMakeArray(ctx, 0, NULL, exc));
-
-    JSObjectRef result = NULL;
-    JSValueRef *argv;
-    WebKitDOMNode *node;
-
-    gulong n = getlength(list);
-
-    if (n > 0) {
-        argv = g_try_malloc_n(n, sizeof(JSValueRef));
-        if (argv != NULL) {
-            for (gulong i=0; i<n; i++) {
-                node = getitem(list, i);
-                argv[i] = make_dom_object(ctx, G_OBJECT(node));
-            }
-            result = JSObjectMakeArray(ctx, n, argv, exc);
-            g_free(argv);
-        }
-    }
-    if (result == NULL) {
-        result = JSObjectMakeArray(ctx, 0, NULL, exc);
-    }
-    return result;
-}
-
-static JSObjectRef
-dom_make_collection(JSContextRef ctx, WebKitDOMHTMLCollection *list, JSValueRef *exc) {
-    return dom_make_node_array(ctx, G_OBJECT(list), exc, (gulong (*)(GObject *))webkit_dom_html_collection_get_length, 
-            (WebKitDOMNode * (*)(GObject *, gulong)) webkit_dom_html_collection_item);
-}
-static JSObjectRef
-dom_make_node_list(JSContextRef ctx, WebKitDOMNodeList *list, JSValueRef *exc) {
-    return dom_make_node_array(ctx, G_OBJECT(list), exc, (gulong (*)(GObject *))webkit_dom_node_list_get_length, 
-            (WebKitDOMNode * (*)(GObject *, gulong)) webkit_dom_node_list_item);
-}
-// dom functions
-#define DOM_CAST__DOC_OR_ELEMENT GObject * (*)(GObject *, const char *, GError **)
-static GObject *
-selector_exec(JSContextRef ctx, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef *exc, 
-        GObject * (*fel)(GObject *, const char *, GError **), GObject *(fdoc)(GObject *, const char *, GError **)) {
-    if (argc == 0) 
-        return NULL;
-
-    GError *e = NULL;
-    GObject *result = NULL;
-    GObject *o = JSObjectGetPrivate(self);
-    char *selector = NULL;
-    if (o == NULL) 
-        return NULL;
-
-    gboolean is_element = WEBKIT_DOM_IS_ELEMENT(o);
-    gboolean is_document = WEBKIT_DOM_IS_DOCUMENT(o);
-
-    if (!(is_document || is_element)) 
-        return NULL;
-    selector = js_value_to_char(ctx, argv[0], -1, NULL);
-    if (selector == NULL) 
-        return NULL;
-
-    if (is_element) {
-        result = fel(o, selector, &e);
-    }
-    else {
-        result = fdoc(o, selector, &e);
-    }
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        result = NULL;
-    }
-    g_free(selector);
-    return result;
-}
-/** 
- * Queries for elements, this method is the equivalent to
- * element.querySelectorAll. This method is only implemented by <span class="iltype">DOMDocument</span> and
- * <span class="iltype">Element</span> (ie. nodes with nodeType == 1 or nodeType == 9).
- *
- * @name querySelectorAll
- * @memberOf DOMObject.prototype
- * @since 1.12
- * @function
- * @example 
- * var doc = tabs.current.document;
- *
- * var nodeList = doc.evaluate("[href], [src]");
- * 
- * @param {String} selector 
- *      The DOM selector
- *
- * @returns {Array[DOMObject]}
- *      The result of the query. Unlike the result of element.querySelectorAll the result is converted to a real array.
- * */
-static JSValueRef 
-dom_query(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    GObject *list = selector_exec(ctx, self, argc, argv, exc, 
-            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_element_query_selector_all, 
-            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_document_query_selector_all);
-    if (list != NULL) {
-        return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(list), exc);
-    }
-    return NIL;
-
-}
-/** 
- * Gets the computed style of an element, this is only implemented by <span class="iltype">DOMWindow</span>. 
- * Unlike a CSSStyleDeclaration in the webcontext the properties of the style
- * declaration can only be get by parsing the cssText-property. 
- *
- * @name getComputedStyle
- * @memberOf DOMObject.prototype
- * @since 1.12
- * @function
- * 
- * @param {DOMElement} element 
- *      An element 
- *
- * @returns {CSSStyleDeclaration}
- * */
-static JSValueRef 
-dom_computed_style(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    if (argc == 0) 
-        return NIL;
-    GObject *o = JSObjectGetPrivate(self);
-    GObject *e = js_get_private(ctx, argv[0], exc);
-    if (o == NULL || e == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, WEBKIT_TYPE_DOM_DOM_WINDOW) || !G_TYPE_CHECK_INSTANCE_TYPE(e, WEBKIT_TYPE_DOM_ELEMENT)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return NIL;
-    }
-    WebKitDOMCSSStyleDeclaration *style = webkit_dom_dom_window_get_computed_style(WEBKIT_DOM_DOM_WINDOW(o), WEBKIT_DOM_ELEMENT(e), NULL);
-    if (style == NULL)
-        return NIL;
-    return make_dom_object(ctx, G_OBJECT(style));
-}
-/** 
- * Queries for an element, this method is the equivalent to
- * element.querySelector. This method is only implemented by <span class="iltype">DOMDocument</span> and
- * <span class="iltype">Element</span> (ie. nodes with nodeType == 1 or nodeType == 9).
- *
- * @name querySelector
- * @memberOf DOMObject.prototype
- * @since 1.12
- * @function
- * @example 
- * var doc = tabs.current.document;
- *
- * var nodeList = doc.evaluate("[href], [src]");
- * 
- * @param {String} selector 
- *      The DOM selector
- *
- * @returns {DOMObject}
- *      The result of the query. 
- * */
-static JSValueRef 
-dom_query_first(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    GObject *element = selector_exec(ctx, self, argc, argv, exc, 
-            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_element_query_selector, 
-            (DOM_CAST__DOC_OR_ELEMENT)webkit_dom_document_query_selector);
-    if (element != NULL) {
-        return make_dom_object(ctx, element);
-    }
-    return NIL;
-}
-/** 
- * Queries for nodes using XPath, this method is the equivalent to
- * document.evaluate. This method is only implemented by <span class="iltype">DOMDocument</span>.
- *
- * @name evaluate
- * @memberOf DOMObject.prototype
- * @since 1.12
- * @function
- * @example 
- * var doc = tabs.current.document;
- *
- * var nodeList = doc.evaluate(doc.body, "//div/input");
- * 
- * @param {Node}  refnode
- *      The reference node
- * @param {String} selector 
- *      The DOM selector
- *
- * @returns {Array[DOMObject]}
- *      The result of the query. Unlink the result of document.evaluate the
- *      result is converted to a real array.
- * */
-static JSValueRef 
-dom_evaluate(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    if (argc < 2) {
-        return NIL;
-    }
-    JSValueRef result = NIL;
-    GError *e = NULL;
-    JSValueRef *items = NULL;
-    GObject *o = JSObjectGetPrivate(self);
-    GObject *refNode = js_get_private(ctx, argv[0], exc);
-
-
-    if (o == NULL || !WEBKIT_DOM_IS_DOCUMENT(o) || refNode == NULL || !WEBKIT_DOM_IS_NODE(refNode)) 
-        return NIL;
-
-    char *selector = js_value_to_char(ctx, argv[1], -1, NULL);
-    if (selector == NULL) 
-        return NIL;
-
-    WebKitDOMXPathResult *xpath = webkit_dom_document_evaluate(WEBKIT_DOM_DOCUMENT(o), selector, WEBKIT_DOM_NODE(refNode), NULL, 7, NULL, &e);
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        goto error_out;
-    }
-    gulong l = webkit_dom_xpath_result_get_snapshot_length(xpath, &e);
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        goto error_out;
-    }
-    items = g_malloc_n(l, sizeof(JSValueRef));
-    if (items == NULL) {
-        goto error_out;
-    }
-    for (gulong i = 0; i<l; i++) {
-        WebKitDOMNode *node = webkit_dom_xpath_result_snapshot_item(xpath, i, &e);
-        if (e != NULL) {
-            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-            g_free(items);
-            items = NULL;
-            goto error_out;
-        }
-        items[i] = make_dom_object(ctx, G_OBJECT(node));
-    }
-error_out:
-    if (items == NULL) {
-        result = JSObjectMakeArray(ctx, 0, NULL, exc);
-    }
-    else {
-        result = JSObjectMakeArray(ctx, l, items, exc);
-        g_free(items);
-    }
-    return result;
-
-}
-/** 
- * Returns the real class name of a DOMObject, opposed to element.toString()
- * which always returns <i>[object DOMObject]</i>.
- * 
- *
- * @name asString
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @example 
- * var doc = tabs.current.document
- *
- * io.out(doc.body.asString()); // -> [object HTMLBodyElement]
- * io.out(doc.body.toString()); // -> [object DOMObject]
- *
- * @returns {String}
- *      The classname
- * */
-static JSValueRef 
-dom_as_string(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    const char *name; 
-    char buffer[256];
-    GObject *o = NULL;
-
-    o = JSObjectGetPrivate(self); 
-    if (o == NULL) {
-        return NULL;
-    }
-
-    name = G_OBJECT_TYPE_NAME(o);
-    g_return_val_if_fail(name != NULL, NULL);
-
-    if (g_str_has_prefix(name, "WebKitDOM")) 
-        name += 9;
-    
-    snprintf(buffer, 256, "[object %s]", name);
-    return js_char_to_value(ctx, buffer);
-}
-/** 
- * Checks if the DOMObject is derived from some type
- * 
- *
- * @name checkType
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @example 
- * var doc = tabs.current.document
- *
- * io.out(doc.checkType("EventTarget"));  // -> true
- * io.out(doc.checkType("Element"));      // -> false
- *
- * @returns {boolean}
- *      true is the object is derived from the given type
- * */
-static JSValueRef 
-dom_check_type(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    gboolean is_type = false;
-    if (argc == 0) {
-        return JSValueMakeBoolean(ctx, false);
-    }
-    GObject *o = JSObjectGetPrivate(self);
-    char *name = js_value_to_char(ctx, argv[0], 128, exc);
-    char typename[256];
-    if (o != NULL && typename != NULL) {
-        snprintf(typename, 256, "WebKitDOM%s", name);
-        GType type = g_type_from_name(typename);
-        is_type = G_TYPE_CHECK_INSTANCE_TYPE(o, type);
-    }
-    g_free(name);
-    return JSValueMakeBoolean(ctx, is_type);
-    
-}
-#define DOM_CAST_VOID__SELF  void (*)(GObject *)
-static JSValueRef
-dom_void__self(JSContextRef ctx, JSObjectRef self, void (*func)(GObject *), size_t argc, const JSValueRef argv[], JSValueRef *exc, GType ts) {
-    GObject *o = JSObjectGetPrivate(self);
-    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type Error"));
-    }
-    else {
-        func(o);
-    }
-    return NULL;
-}
-#define DOM_CAST_BOOL__CHAR_E  gboolean (*)(GObject *, const char *, GError **)
-static JSValueRef
-dom_bool__char_e(JSContextRef ctx, JSObjectRef self, gboolean (*func)(GObject *, const char *, GError **), 
-        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts) {
-    GError *e = NULL;
-    gboolean result = false;
-
-    if (argc == 0) 
-        return JSValueMakeBoolean(ctx, false);
-
-    GObject *o = JSObjectGetPrivate(self);
-    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    char *val = js_value_to_char(ctx, argv[0], -1, exc);
-    if (val != NULL) {
-        result = func(o, val, &e);
-        if (e != NULL) {
-            result = false;
-            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-            g_error_free(e);
-        }
-        g_free(val);
-    }
-    return JSValueMakeBoolean(ctx, result);
-
-}
-#define DOM_CAST_OBJ__CHAR_E  GObject * (*)(GObject *, const char *, GError **)
-JSValueRef
-dom_obj__char_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, const char *, GError **), 
-        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts) {
-    GError *e = NULL;
-    JSValueRef ret = NIL;
-    if (argc == 0) 
-        return NIL;
-    GObject *o = JSObjectGetPrivate(self);
-    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return UNDEFINED;
-    }
-    char *val = js_value_to_char(ctx, argv[0], -1, exc);
-    if (val != NULL) {
-        GObject *go = func(o, val, &e);
-        if (e != NULL) {
-            js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-            g_error_free(e);
-        }
-        else {
-            ret = make_dom_object(ctx, go);
-        }
-        g_free(val);
-    }
-    return ret;
-
-}
-
-#define DOM_CAST_OBJ__OBJ_OBJ_E  GObject * (*)(GObject *, GObject *, GObject *, GError **)
-JSValueRef
-dom_obj__obj_obj_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, GObject *, GObject *, GError **),
-        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1, GType t2) {
-    GError *e = NULL;
-    JSValueRef ret = NIL;
-    if (argc < 2) 
-        return NIL;
-    GObject *o = JSObjectGetPrivate(self);
-    if (o == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts))
-        return NIL;
-    GObject *a1 = js_get_private(ctx, argv[0], exc);
-    GObject *a2 = js_get_private(ctx, argv[1], exc);
-    if (o == NULL || a1 == NULL || a2 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || 
-            !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1) || !G_TYPE_CHECK_INSTANCE_TYPE(a2, t2)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return UNDEFINED;
-    }
-    GObject *go = func(o, a1, a2, &e);
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        g_error_free(e);
-    }
-    else {
-        ret = make_dom_object(ctx, go);
-    }
-    return ret;
-}
-#define DOM_CAST_BOOL__OBJ gboolean (*)(GObject *, GObject *)
-JSValueRef
-dom_bool__obj(JSContextRef ctx, JSObjectRef self, gboolean (*func)(GObject *, GObject *),
-        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1) {
-    if (argc == 0) 
-        return JSValueMakeBoolean(ctx, false);
-
-    GObject *o = JSObjectGetPrivate(self);
-    GObject *a1 = js_get_private(ctx, argv[0], exc);
-
-    if (o == NULL || a1 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || 
-            !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return UNDEFINED;
-    }
-    return JSValueMakeBoolean(ctx, func(o, a1));
-}
-#define DOM_CAST_OBJ__OBJ_E  GObject * (*)(GObject *, GObject *, GError **)
-JSObjectRef 
-dom_obj__obj_e(JSContextRef ctx, JSObjectRef self, GObject * (*func)(GObject *, GObject *, GError **),
-        size_t argc, const JSValueRef argv[], JSValueRef* exc, GType ts, GType t1) {
-    GError *e = NULL;
-    JSObjectRef ret = NULL;
-    if (argc < 1) 
-        return NULL;
-    GObject *o = JSObjectGetPrivate(self);
-    GObject *a1 = js_get_private(ctx, argv[0], exc);
-    if (o == NULL || a1 == NULL || !G_TYPE_CHECK_INSTANCE_TYPE(o, ts) || !G_TYPE_CHECK_INSTANCE_TYPE(a1, t1)) {
-        js_make_exception(ctx, exc, EXCEPTION("Type error"));
-        return NULL;
-    }
-    GObject *go = func(o, a1, &e);
-    if (e != NULL) {
-        js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
-        g_error_free(e);
-    }
-    else {
-        ret = make_dom_object(ctx, go);
-    }
-    return ret;
-}
-/** 
- * Creates a new Element. Only implemented by <span class="iltype">DOMDocument</span>
- * 
- *
- * @name createElement
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @param {String} tagname
- *      The element type
- * @example 
- * var doc = tabs.current.document
- *
- * var div = doc.createElement("div");
- *
- * @returns {Element}
- *      The new element
- * */
-static JSValueRef 
-dom_create_element(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__char_e(ctx, self, (DOM_CAST_OBJ__CHAR_E)webkit_dom_document_create_element, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_DOCUMENT);
-}
-/** 
- * Creates a Textnode. Only implemented by <span class="iltype">DOMDocument</span>
- * 
- *
- * @name createTextNode
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @param {String} tagname
- *      The element type
- *
- * @returns {Node}
- *      The text node
- * */
-static JSValueRef 
-dom_create_text_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__char_e(ctx, self, (DOM_CAST_OBJ__CHAR_E)webkit_dom_document_create_text_node, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_DOCUMENT);
-}
-/** 
- * Inserts a node as a child of a node. Implemented by <span class="iltype">Node</span>
- * 
- *
- * @name insertBefore
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} newNode
- *      The new element
- * @param {Node} refNode
- *      The new element
- *
- * @returns {Node}
- *      The inserted node
- * */
-static JSValueRef 
-dom_insert_before(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__obj_obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_OBJ_E)webkit_dom_node_insert_before, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-/** 
- * Replaces a child of a node with a new node. Implemented by <span class="iltype">Node</span>
- * 
- *
- * @name replaceChild
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} newNode
- *      The new node
- * @param {Node} oldNode
- *      The old node
- *
- * @returns {Node}
- *      The replaced node
- * */
-static JSValueRef 
-dom_replace_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__obj_obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_OBJ_E)webkit_dom_node_replace_child, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-/** 
- * Appends a node to end of the node. Implemented by <span class="iltype">Node</span>
- *
- * @name appendChild
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} newNode
- *      The new node
- *
- * @returns {Node}
- *      The child node
- * */
-static JSValueRef 
-dom_append_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_E)webkit_dom_node_append_child, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-
-/** 
- * Removes a node from the DOM. Implemented by <span class="iltype">Node</span>
- *
- * @name removeChild
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @example
- * var doc = tabs.current.document;
- *
- * doc.documentElement.removeChild(doc.body);
- *
- * @param {Node} node
- *      The node to remove
- *
- * @returns {Node}
- *      The removed node
- * */
-static JSValueRef 
-dom_remove_child(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_obj__obj_e(ctx, self, (DOM_CAST_OBJ__OBJ_E)webkit_dom_node_remove_child, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-// XXX This is only a workaround, any nodes created will never be released by
-// webkitgtk, so we release them manually
-static JSValueRef 
-dom_dispose(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    GObject *o = JSObjectGetPrivate(self);
-    if (o != NULL) {
-        g_object_run_dispose(o);
-    }
-    return NULL;
-}
-/** 
- * Tests if two nodes reference the same node. Implemented by <span class="iltype">Node</span>
- *
- * @name isSameNode
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} node
- *      The node to test
- *
- * @returns {Boolean}
- * */
-static JSValueRef 
-dom_is_same_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_is_same_node, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-/** 
- * Tests two nodes are equal. Implemented by <span class="iltype">Node</span>
- *
- * @name isEqualNode
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} node
- *      The node to test
- *
- * @returns {Boolean}
- * */
-static JSValueRef 
-dom_is_equal_node(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_is_equal_node, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-/** 
- * Tests whether a node is a descendant of a node. Implemented by <span class="iltype">Node</span>
- *
- * @name contains
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- *
- * @param {Node} node
- *      The node to test
- *
- * @returns {Boolean}
- * */
-static JSValueRef 
-dom_contains(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_bool__obj(ctx, self, (DOM_CAST_BOOL__OBJ)webkit_dom_node_contains, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_NODE, WEBKIT_TYPE_DOM_NODE);
-}
-/** 
- * Tests if a node matches a given selector, equivalent to webkitMatchesSelector. Implemented by <span class="iltype">Element</span>
- *
- * @name matches
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @example 
- * var doc = tabs.current.document;
- *
- * var isBody = doc.body.matches("body"); 
- * var matchesId = doc.body.matches("#someid"); // true if body has id 'someid'
- *
- * @param {String} selector
- *      A css selector
- *
- * @returns {Boolean}
- * */
-static JSValueRef 
-dom_matches(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_bool__char_e(ctx, self, (DOM_CAST_BOOL__CHAR_E)webkit_dom_element_webkit_matches_selector, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_ELEMENT);
-}
-/** 
- * Only implemented by <span class="iltype">Event</span>.
- * @name stopPropagation
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- */
-static JSValueRef 
-dom_stop_propagation(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_event_stop_propagation, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_EVENT);
-}
-/** 
- * Only implemented by <span class="iltype">Event</span>.
- * @name stopPropagation
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- */
-static JSValueRef 
-dom_prevent_default(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_event_prevent_default, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_EVENT);
-}
-/** 
- * Only implemented by <span class="iltype">Element</span>.
- * @name focus
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- */
-static JSValueRef 
-dom_element_focus(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_element_focus, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_ELEMENT);
-}
-/** 
- * Only implemented by <span class="iltype">Element</span>.
- * @name blur
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- */
-static JSValueRef 
-dom_element_blur(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    return dom_void__self(ctx, self, (DOM_CAST_VOID__SELF)webkit_dom_element_blur, argc, argv, exc, 
-            WEBKIT_TYPE_DOM_ELEMENT);
-}
-
-/**
- * Callback called for DOM events. <span class="ilkw">this</span> refers to the element that connected to
- * the event.
- *
- * @callback DOMObject~onEvent
- *
- * @param {Event}  event 
- *      The event
- *
- * @returns {Boolean}
- *      If the callback returns true event.preventDefault() and
- *      event.stopPropagation() are called on event.
- * */
-static gboolean 
-dom_event_callback(WebKitDOMElement *element, WebKitDOMEvent *event, JSObjectRef cb) {
-    gboolean result = false;
-    EXEC_LOCK_RETURN(false);
-
-    JSObjectRef jselement = make_dom_object(s_ctx->global_context, G_OBJECT(element));
-    JSObjectRef jsevent = make_dom_object(s_ctx->global_context, G_OBJECT(event));
-
-    // e.target isn't exposed, so we set at least the target property 
-    WebKitDOMEventTarget *target = webkit_dom_event_get_target(WEBKIT_DOM_EVENT(event));
-    JSObjectRef jstarget = make_dom_object(s_ctx->global_context, G_OBJECT(target));
-    js_set_property(s_ctx->global_context, jsevent, "target", jstarget, 0, NULL);
-
-    JSValueRef argv[] = { jsevent };
-    JSValueRef ret = call_as_function_debug(s_ctx->global_context, cb, jselement, 1, argv);
-    if (JSValueIsBoolean(s_ctx->global_context, ret)) {
-        result = JSValueToBoolean(s_ctx->global_context, ret);
-        if (result) {
-            webkit_dom_event_prevent_default(event);
-            webkit_dom_event_stop_propagation(event);
-        }
-    }
-
-    EXEC_UNLOCK;
-    return result;
-}
-void 
-dom_event_destroy_cb(JSObjectRef func, GClosure *closure) {
-    EXEC_LOCK;
-    JSValueUnprotect(s_ctx->global_context, func);
-    EXEC_UNLOCK;
-}
-static JSValueRef 
-dom_event_remove(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    GClosure *closure = JSObjectGetPrivate(self);
-    if (closure != NULL) {
-        g_closure_invalidate(closure);
-        g_closure_unref(closure);
-        JSObjectSetPrivate(self, NULL);
-
-        JSStringRef propname = JSStringCreateWithUTF8CString("callback");
-
-        JSValueRef cb = JSObjectGetProperty(ctx, self, propname, exc);
-        JSObjectDeleteProperty(ctx, self, propname, exc);
-
-        JSStringRelease(propname);
-        JSValueUnprotect(ctx, cb);
-    }
-    return NULL;
-}
-/** 
- * Connects an element to a DOM-Event, equivalent to element.addEventListener().
- * Implemented by <span class="iltype">EventTarget</span>.
- *
- * @name on
- * @memberOf DOMObject.prototype
- * @function
- * @since 1.12
- * @example
- * var doc = tabs.current.document;
- * var win = doc.defaultView;
- * 
- * var handle = win.on("click", function(e) {
- *     this.stop();
- *     io.out(e.target.nodeName + " was clicked");
- *     handle.remove();
- * });
- *
- * @param {String} event
- *      The DOM event
- * @param {DOMObject~onEvent} callback
- *      The callback function
- * @param {Boolean} [capture]
- *      Pass true to initiate capture, default false.
- *
- * @returns {Object}
- *      An object which implements a remove function to disconnect the
- *      event handler.
- * */
-static JSValueRef 
-dom_on(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    if (argc < 2) 
-        return NULL;
-    char *event = NULL;
-    JSValueRef ret = NIL;
-    gboolean capture = false;
-    
-    GObject *o = JSObjectGetPrivate(self);
-    if (o == NULL || !WEBKIT_DOM_IS_EVENT_TARGET(o)) 
-       goto error_out;
-
-    JSObjectRef cb = js_value_to_function(ctx, argv[1], exc);
-    if (cb == NULL) 
-       goto error_out;
-
-    JSValueProtect(ctx, cb);
-    event = js_value_to_char(ctx, argv[0], 128, exc);
-    if (event == NULL) 
-       goto error_out;
-
-    if (argc > 2) 
-       capture = JSValueToBoolean(ctx, argv[2]);
-
-    GClosure *closure = g_cclosure_new((GCallback)dom_event_callback, cb, (GClosureNotify)dom_event_destroy_cb);
-    g_object_watch_closure(o, closure);
-
-    if (webkit_dom_event_target_add_event_listener_with_closure(WEBKIT_DOM_EVENT_TARGET(o), event, closure, capture)) {
-        JSObjectRef retobj = JSObjectMake(ctx, s_ctx->classes[CLASS_DOM_EVENT], closure);
-        js_set_property(ctx, retobj, "callback", cb, kJSPropertyAttributeDontEnum, exc);
-        ret = retobj;
-
-    }
-    /*g_object_unref(o);*/
-    /*result = webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(o), event, (GCallback)dom_event_callback, capture, cb);*/
-    g_free(event);
-error_out:
-    return ret;
-}
-/** 
- * Initializes tab completion.
- * @name tabComplete
- * @memberOf util
- * @function
- * 
- * @param {String} label 
- *      The command line label
- * @param {Array[Object]} items[] 
- *      An array of labels, 
- * @param {String} items[].left
- *      Left completion label
- * @param {String} items[].right
- *      Right completion label
- * @param {util~onTabComplete} callback Callback function, the first argument will be the
- *                            returned string from the url bar.
- * @param {Boolean} [readonly] Whether the items are readonly, default false 
- *
- * */
-static JSValueRef 
-sutil_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 3 || !JSValueIsInstanceOfConstructor(ctx, argv[1], s_ctx->constructors[CONSTRUCTOR_ARRAY], exc)) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("tabComplete: invalid argument."));
-        return UNDEFINED;
-    }
-    s_ctx->complete = js_value_to_function(ctx, argv[2], exc);
-    if (s_ctx->complete == NULL)
-        return UNDEFINED;
-
-    dwb.state.script_comp_readonly = false;
-    if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
-    {
-        dwb.state.script_comp_readonly = JSValueToBoolean(ctx, argv[3]);
-    }
-
-    char *left, *right, *label;
-    js_array_iterator iter;
-    JSValueRef val;
-    JSObjectRef cur = NULL;
-    Navigation *n;
-
-    label = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-    JSObjectRef o = JSValueToObject(ctx, argv[1], exc);
-    js_array_iterator_init(ctx, &iter, o);
-    while((val = js_array_iterator_next(&iter, exc))) 
-    {
-        cur = JSValueToObject(ctx, val, exc);
-        if (cur == NULL)
-            goto error_out;
-        left = js_get_string_property(ctx, cur, "left");
-        right = js_get_string_property(ctx, cur, "right");
-        n = g_malloc(sizeof(Navigation));
-        n->first = left; 
-        n->second = right;
-        dwb.state.script_completion = g_list_prepend(dwb.state.script_completion, n);
-    }
-    dwb.state.script_completion = g_list_reverse(dwb.state.script_completion);
-    dwb_set_status_bar_text(dwb.gui.lstatus, label, NULL, NULL, true);
-
-    entry_focus();
-    completion_complete(COMP_SCRIPT, false);
-
-error_out:
-    js_array_iterator_finish(&iter);
-
-    for (GList *l = dwb.state.script_completion; l; l=l->next) 
-    {
-        n = l->data;
-        g_free(n->first); 
-        g_free(n->second);
-        g_free(n);
-    }
-    g_free(label);
-    g_list_free(dwb.state.script_completion);
-    dwb.state.script_completion = NULL;
-    return UNDEFINED;
-}
-/**
- * Callback that will be called when <i>Return</i> or <i>Escape</i> was pressed after {@link util.pathComplete} was invoked.
- *
- * @callback util~onPathComplete 
- *
- * @param {String} path The path or <i>null</i> if <i>Escape</i> was pressed.
- *
- * @since 1.3
- * */
-gboolean 
-path_completion_callback(GtkEntry *entry, GdkEventKey *e, PathCallback *pc)
-{
-    gboolean evaluate = false, clear = false;
-    if (e->keyval == GDK_KEY_Escape)
-    {
-        clear = true;
-        goto finish;
-    }
-    else if (IS_RETURN_KEY(e))
-    {
-        evaluate = clear = true;
-        goto finish;
-    }
-    else if (DWB_TAB_KEY(e))
-    {
-        completion_complete_path(e->state & GDK_SHIFT_MASK, pc->dir_only);
-        return true;
-    }
-    else if (dwb_eval_override_key(e, CP_OVERRIDE_ENTRY))
-        return true;
-finish: 
-    completion_clean_path_completion();
-    if (clear)
-    {
-        JSValueRef argv[1];
-        if (TRY_CONTEXT_LOCK)
-        {
-            if (s_ctx->global_context != NULL)
-            {
-                if (evaluate)
-                {
-                    const char *text = GET_TEXT();
-                    argv[0] = js_char_to_value(s_ctx->global_context, text);
-                }
-                else 
-                    argv[0] = NIL;
-
-                call_as_function_debug(s_ctx->global_context, pc->callback, pc->callback, 1, argv);
-            }
-            else 
-            {
-                g_free(pc);
-            }
-            CONTEXT_UNLOCK;
-        }
-        entry_snoop_end(G_CALLBACK(path_completion_callback), pc);
-        path_callback_free(pc);
-    }
-    return false;
-}
-/** 
- * Initializes filename completion.
- * @name pathComplete
- * @memberOf util
- * @function
- * 
- * @param {util~onPathComplete} callback 
- *       Callback function called when a path was chosen or escape was pressed
- * @param {String} [label]
- *      The command line label
- * @param {String} [initialPath]
- *      The initial path, defaults to the current working directory
- * @param {Boolean} [dirOnly]
- *      Whether to complete only directories, default false.
- *
- * @since 1.3
- * */
-static JSValueRef 
-sutil_path_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *status_text = NULL, 
-         *initial_path = NULL;
-    gboolean dir_only = false;
-
-    if (argc == 0)
-        return UNDEFINED;
-
-    JSObjectRef callback = js_value_to_function(ctx, argv[0], exc);
-    if (callback == NULL)
-        return UNDEFINED;
-
-    if (argc > 1)
-    {
-        status_text = js_value_to_char(ctx, argv[1], -1, exc);
-        if (status_text != NULL)
-        {
-            dwb_set_status_bar_text(dwb.gui.lstatus, status_text, NULL, NULL, true);
-        }
-    }
-    if (argc > 2)
-        initial_path = js_value_to_char(ctx, argv[2], -1, exc);
-
-    if (argc > 3)
-    {
-        dir_only = JSValueToBoolean(ctx, argv[3]);
-    }
-    
-    PathCallback *pc = path_callback_new(ctx, callback, dir_only);
-
-    if (initial_path == NULL)
-    {
-        initial_path = g_get_current_dir();
-    }
-    entry_snoop(G_CALLBACK(path_completion_callback), pc);
-    entry_set_text(initial_path ? initial_path : "/");
-
-    g_free(status_text);
-    g_free(initial_path);
-    return UNDEFINED;
-}
-/**
- * Escapes text for usage with pango markup
- *
- * @name markupEscape 
- * @memberOf util 
- * @function
- *
- * @param {String} text The text to escape
- *
- * @returns {String} The escaped text or null
- *
- * */
-static JSValueRef 
-sutil_markup_escape(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *string = NULL, *escaped = NULL;
-    if (argc > 0) 
-    {
-        string = js_value_to_char(ctx, argv[0], -1, exc);
-        if (string != NULL) 
-        {
-            escaped = g_markup_escape_text(string, -1);
-            g_free(string);
-            if (escaped != NULL) 
-            {
-                JSValueRef ret = js_char_to_value(ctx, escaped);
-                g_free(escaped);
-                return ret;
-            }
-        }
-    }
-    return NIL;
 }
 /* global_checksum {{{*/
-/** 
- * Computes a checksum of a string
- * @name checksum 
- * @memberOf util
- * @function
- *
- * @param {String} data The data 
- * @param {ChecksumType} [type] The {@link Enums and Flags.ChecksumType|ChecksumType}, defaults to sha256
- * @returns {Boolean} Whether the shortcut was unbound
- *
- * */
-static JSValueRef 
-sutil_checksum(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *checksum = NULL;
-    guchar *original = NULL;
-    JSValueRef ret;
 
-    if (argc < 1) 
-        return NIL;
-
-    original = (guchar*)js_value_to_char(ctx, argv[0], -1, exc);
-    if (original == NULL)
-        return NIL;
-
-    double dtype;
-    GChecksumType type = G_CHECKSUM_SHA256;
-    if (argc > 1) 
-    {
-        dtype = JSValueToNumber(ctx, argv[1], exc);
-        if (isnan(dtype)) 
-        {
-            ret = NIL;
-            goto error_out;
-        }
-        type = MIN(MAX((GChecksumType)dtype, G_CHECKSUM_MD5), G_CHECKSUM_SHA256);
-    }
-    checksum = g_compute_checksum_for_data(type, original, -1);
-
-    ret = js_char_to_value(ctx, checksum);
-
-error_out:
-    g_free(original);
-    g_free(checksum);
-    return ret;
-}/*}}}*/
-
-/** 
- * Change the mode, changeable modes are Modes.NormalMode, Modes.InsertMode and
- * Modes.CaretMode
- *
- * @name changeMode
- * @memberOf util
- * @function
- *
- * @param {Modes} mode The new mode
- * */
-
-static JSValueRef 
-sutil_change_mode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0)
-        return UNDEFINED;
-    double mode = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(mode))
-    {
-        if ((int) mode == NORMAL_MODE)
-        {
-            dwb_change_mode(NORMAL_MODE, true);
-        }
-        else if ((int)mode & (INSERT_MODE | CARET_MODE))
-        {
-            dwb_change_mode((int)mode);
-        }
-    }
-    return UNDEFINED;
-}
-
-
-/** 
- * For internal usage only 
- *
- * @name _base64Encode
- * @memberOf util
- * @function
- * @private
- * */
-static JSValueRef 
-sutil_base64_encode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSStringRef string;
-    gsize length;
-    const JSChar *chars;
-    guchar *data; 
-    char *base64; 
-    JSValueRef ret;
-
-    if (argc == 0)
-        return NIL;
-    string = JSValueToStringCopy(ctx, argv[0], exc);
-    if (string == NULL)
-        return NIL;
-
-    length = JSStringGetLength(string);
-    chars = JSStringGetCharactersPtr(string);
-    data = g_malloc0(length * sizeof(guchar));
-
-    for (guint i=0; i<length; i++)
-    {
-        data[i] = chars[i] & 0xff;
-    }
-    base64 = g_base64_encode(data, length);
-    ret = js_char_to_value(ctx, base64);
-
-    g_free(base64);
-    g_free(data);
-    JSStringRelease(string);
-
-    return ret;
-}
-
-/** 
- * For internal usage only 
- *
- * @name _base64Decode
- * @memberOf util
- * @function
- * @private
- * */
-static JSValueRef 
-sutil_base64_decode(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    gsize length;
-    gchar *base64; 
-    guchar *data;
-    gushort *js_data;
-    JSStringRef string;
-    JSValueRef ret;
-
-    if (argc == 0)
-        return NIL;
-    base64 = js_value_to_char(ctx, argv[0], -1, exc);
-    if (base64 == NULL)
-        return NIL;
-    data = g_base64_decode(base64, &length);
-    js_data = g_malloc0(length * sizeof(gushort));
-    for (guint i=0; i<length; i++)
-    {
-        js_data[i] = data[i];
-    }
-    string = JSStringCreateWithCharacters(js_data, length);
-    ret = JSValueMakeString(ctx, string);
-
-    g_free(base64);
-    g_free(data);
-    g_free(js_data);
-    JSStringRelease(string);
-
-    return ret;
-}
-
-/**
- * Gets the current mode 
- *
- * @name getMode 
- * @memberOf util 
- * @function 
- *
- * @returns {Enums and Flags.Modes} The current mode
- * */
-static JSValueRef 
-sutil_get_mode(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return JSValueMakeNumber(ctx, BASIC_MODES(dwb.state.mode));
-}
-
-/** 
- * Gets the body of a function, useful for injecting scripts
- *
- * @name getBody
- * @memberOf util
- * @function 
- * 
- * @param {Function} function A function
- *
- * @returns {String} The body of the function
- * */
-static JSValueRef 
-sutil_get_body(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0)
-        return NIL;
-    JSValueRef ret = NIL;
-    JSObjectRef func = js_value_to_function(ctx, argv[0], exc);
-    char *body = get_body(ctx, func, exc);
-    if (body != NULL)
-    {
-        ret = js_char_to_value(ctx, body);
-        g_free(body);
-    }
-    return ret;
-}
-/** 
- * Dispatches a keyboard or button event
- *
- * @name dispatchEvent
- * @memberOf util
- * @function 
- * 
- * @param {Object} event 
- *      Event details, see {@link signals~onButtonPress|buttonPress}, 
- *      {@link signals~onButtonRelease|buttonRelease}, 
- *      {@link signals~onKeyPress|keyPress} or 
- *      {@link signals~onKeyRelease|keyRelease} 
- *      for details.
- * @param {Number} event.type
- *      Type of the event, can be either buttonpress (4), doubleclick (5),
- *      tripleclick (6), buttonrelease (7), keypress (8) or keyrelease
- *      (9).
- *
- * @returns {Boolean} Whether the event was dispatched
- * */
-static JSValueRef 
-sutil_dispatch_event(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    gboolean result = false;
-    if (argc < 1)
-        return JSValueMakeBoolean(ctx, false);
-    double type = js_val_get_double_property(ctx, argv[0], "type", exc);
-    if (isnan(type) || (!(IS_KEY_EVENT(type)) && !(IS_BUTTON_EVENT(type))))
-        return JSValueMakeBoolean(ctx, false);
-
-    double state = js_val_get_double_property(ctx, argv[0], "state", exc);
-    if (isnan(state))
-        state = 0;
-    GdkEvent *event = gdk_event_new(type);
-    if (IS_KEY_EVENT(type)) 
-    {
-        double keyval = js_val_get_double_property(ctx, argv[0], "keyVal", exc);
-        if (isnan(keyval))
-            goto error_out;
-        event->key.window = g_object_ref(gtk_widget_get_window(dwb.gui.window));
-        event->key.keyval = keyval;
-        event->key.state = state;
-        GdkKeymapKey *key; 
-        gint n;
-        if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyval, &key, &n))
-        {
-            event->key.hardware_keycode = key[0].keycode;
-            g_free(key);
-        }
-        gtk_main_do_event(event);
-        result = true;
-    }
-    else if (IS_BUTTON_EVENT(type))
-    {
-        double button = js_val_get_double_property(ctx, argv[0], "button", exc);
-        if (isnan(button))
-            goto error_out;
-
-        event->button.button = button;
-        event->button.window = g_object_ref(gtk_widget_get_window(VIEW(dwb.state.fview)->web));
-        event->button.state = state;
-
-        double x = js_val_get_double_property(ctx, argv[0], "x", exc);
-        event->button.x = isnan(x) ? 0 : x;
-
-        double y = js_val_get_double_property(ctx, argv[0], "y", exc);
-        event->button.y = isnan(y) ? 0 : y;
-        
-        double x_root = js_val_get_double_property(ctx, argv[0], "xRoot", exc);
-        double y_root = js_val_get_double_property(ctx, argv[0], "yRoot", exc);
-        if (isnan(x_root)  || isnan(y_root))
-        {
-            GdkDisplay *dpy = gdk_display_open(NULL);
-            int cx, cy;
-            gdk_display_get_pointer(dpy, NULL, &cx, &cy, NULL);
-            if (isnan(x_root))
-                x_root = cx;
-            if (isnan(y_root))
-                y_root = cy;
-            gdk_display_close(dpy);
-        }
-        event->button.x_root = x_root;
-        event->button.y_root = y_root;
-
-        double time = js_val_get_double_property(ctx, argv[0], "time", exc);
-        event->button.time = isnan(time) ? 0 : time;
-        gtk_main_do_event(event);
-        result = true;
-    }
-error_out:
-    gdk_event_free(event);
-    return JSValueMakeBoolean(ctx, result);
-}
-static GdkAtom 
-atom_from_jsvalue(JSContextRef ctx, JSValueRef val, JSValueRef *exc)
-{
-    double type = JSValueToNumber(ctx, val, exc);
-    if (isnan(type))
-        return NULL;
-    if ((int)type == SELECTION_PRIMARY)
-        return GDK_SELECTION_PRIMARY;
-    else if ((int)type == SELECTION_CLIPBOARD)
-        return GDK_NONE;
-    else
-        return NULL;
-}
 
 #ifdef WITH_LIBSECRET
 void
@@ -4948,96 +2491,6 @@ error_out:
 }
 #endif // WITH_LIBSECRET
 
-/**
- * Sets content of the system clipboard
- * @name set
- * @memberOf clipboard
- * @function 
- *
- * @param {Selection} selection The {@link Enums and Flags.Selection|Selection} to set
- * @param {String} text The text to set
- *
- * */
-static JSValueRef 
-clipboard_set(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 2)
-        return UNDEFINED;
-    GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
-    if (atom == NULL)
-        atom = GDK_NONE;
-    char *text = js_value_to_char(ctx, argv[1], -1, exc);
-    if (text != NULL)
-    {
-        GtkClipboard *cb = gtk_clipboard_get(atom);
-        gtk_clipboard_set_text(cb, text, -1);
-        g_free(text);
-    }
-    return UNDEFINED;
-}
-/** 
- * Callback called when the clipboard was received
- * @callback clipboard~onGotClipboard
- *
- * @param {String} text 
- *      The text content of the clipboard
- * */
-static void
-got_clipboard(GtkClipboard *cb, const char *text, JSObjectRef callback)
-{
-    EXEC_LOCK;
-    JSValueRef args[] = { text == NULL ? NIL : js_char_to_value(s_ctx->global_context, text) };
-    call_as_function_debug(s_ctx->global_context, callback, callback, 1, args);
-    JSValueUnprotect(s_ctx->global_context, callback);
-    EXEC_UNLOCK;
-}
-/**
- * Gets content of the system clipboard
- * @name get
- * @memberOf clipboard
- * @function 
- *
- * @param {Selection} selection 
- *      The {@Link Enums and Flags.Selection|Selection} to get
- * @param {clipboard~onGotClipboard} [callback] 
- *      A callback function that is called when the clipboard content was
- *      retrieved, if a callback function is used the clipboard will be fetched
- *      asynchronously, otherwise it will be fetched synchronously
- *
- * @returns {String|undefined}
- *      The content of the clipboard or undefined if a callback function is used
- * */
-static JSValueRef 
-clipboard_get(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1)
-        return NIL;
-    GdkAtom atom = atom_from_jsvalue(ctx, argv[0], exc);
-    if (atom == NULL)
-        atom = GDK_NONE;
-    GtkClipboard *clipboard = gtk_clipboard_get(atom);
-    if (argc > 1) 
-    {
-        JSObjectRef callback = js_value_to_function(ctx, argv[1], exc);
-        if (callback != NULL)
-        {
-            JSValueProtect(ctx, callback);
-            gtk_clipboard_request_text(clipboard, (GtkClipboardTextReceivedFunc)got_clipboard, callback);
-        }
-    }
-    else 
-    {
-        JSValueRef ret = NIL;
-        char *text = gtk_clipboard_wait_for_text(clipboard);
-        if (text != NULL)
-        {
-            ret = js_char_to_value(ctx, text);
-            g_free(text);
-        }
-        return ret;
-    }
-    return NIL;
-}
 
 /** 
  * Get a history item 
@@ -5098,1128 +2551,21 @@ history_forward_length(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
 
 /* DATA {{{*/
 /* data_get_profile {{{*/
-/** 
- * Profile which will be <i>default</i> unless another profile is specified on command line
- *
- * @name profile 
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_profile(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return js_char_to_value(ctx, dwb.misc.profile);
-}/*}}}*/
-
-/** 
- * The current session name, if 'save-session' is disabled and no session name
- * is given on commandline it will always be "default"
- *
- * @name sessionName
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_session_name(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return js_char_to_value(ctx, session_get_name());
-}/*}}}*/
-
-/* data_get_cache_dir {{{*/
-/** 
- * The cache directory used by dwb
- *
- * @name cacheDir 
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_cache_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return js_char_to_value(ctx, dwb.files[FILES_CACHEDIR]);
-}/*}}}*/
-
-/* data_get_config_dir {{{*/
-/** 
- * The configuration diretory
- *
- * @name configDir 
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_config_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    char *dir = util_build_path();
-    if (dir == NULL) 
-        return NIL;
-
-    JSValueRef ret = js_char_to_value(ctx, dir);
-    g_free(dir);
-    return ret;
-}/*}}}*/
-
-/* data_get_system_data_dir {{{*/
-/** 
- * The system data dir, for a default installation it is /usr/share/dwb
- *
- * @name systemDataDir 
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_system_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    char *dir = util_get_system_data_dir(NULL);
-    if (dir == NULL) 
-        return NIL;
-
-    JSValueRef ret = js_char_to_value(ctx, dir);
-    g_free(dir);
-    return ret;
-}/*}}}*/
-
-/* data_get_user_data_dir {{{*/
-/** 
- * The user data dir, in most cases it will be ~/.local/share/dwb
- *
- * @name userDataDir 
- * @memberOf data
- * @readonly
- * @type String
- * */
-static JSValueRef 
-data_get_user_data_dir(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    char *dir = util_get_user_data_dir(NULL);
-    if (dir == NULL) 
-        return NIL;
-
-    JSValueRef ret = js_char_to_value(ctx, dir);
-    g_free(dir);
-    return ret;
-}/*}}}*/
 /*}}}*/
 
 /* SYSTEM {{{*/
-/* system_get_env {{{*/
-/** 
- * Gets an environment variable
- * 
- * @name getEnv 
- * @memberOf system
- * @function 
- *
- * @param {String} name The name of the environment variable
- *
- * @returns {String}
- *      The environment variable or <i>null</i> if the variable wasn't found
- * */
-static JSValueRef 
-system_get_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-        return NIL;
-
-    char *name = js_value_to_char(ctx, argv[0], -1, exc);
-    if (name == NULL) 
-        return NIL;
-
-    const char *env = g_getenv(name);
-    g_free(name);
-
-    if (env == NULL)
-        return NIL;
-
-    return js_char_to_value(ctx, env);
-}/*}}}*/
 
 /* SYSTEM {{{*/
-/* system_set_env {{{*/
-/** 
- * Sets an environment variable
- * 
- * @name setEnv 
- * @memberOf system
- * @function 
- *
- * @param {String} name         The name of the environment variable
- * @param {String} value        The value of the environment variable
- * @param {String} [overwrite]  Whether to overwrite the variable if it exists, default true
- *
- * */
-static JSValueRef 
-system_set_env(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 2) 
-        return UNDEFINED;
-
-    char *name = js_value_to_char(ctx, argv[0], -1, exc);
-    char *value = js_value_to_char(ctx, argv[1], -1, exc);
-    gboolean overwrite = true;
-    if (name == NULL || value == NULL) 
-        goto error_out;
-
-    if (argc > 2) {
-        overwrite = JSValueToBoolean(ctx, argv[2]);
-    }
-    g_setenv(name, value, overwrite);
-
-error_out:
-    g_free(name);
-    g_free(value);
-
-    return UNDEFINED;
-}/*}}}*/
-
-
-/** 
- * Gets the process if of the dwb instance
- * 
- * @name getPid 
- * @memberOf system
- * @function 
- *
- * @returns {Number}
- *      The process id of the dwb instance 
- * */
-static JSValueRef 
-system_get_pid(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return JSValueMakeNumber(ctx, getpid());
-}
 
 /* spawn_output {{{*/
-static gboolean
-spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data) 
-{
-    char *content = NULL; 
-    gboolean result = true;
-    gsize length;
-    int fd, status;
-
-    if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
-    {
-        data->finished |= SPAWN_CLOSED;
-        fd = g_io_channel_unix_get_fd(channel);
-        g_io_channel_shutdown(channel, true, NULL);
-        g_io_channel_unref(channel);
-        data->channel = NULL;
-        close(fd);
-        result = false;
-    }
-    else 
-    {
-        status = g_io_channel_read_line(channel, &content, &length, NULL, NULL);
-        if (status == G_IO_STATUS_AGAIN || status == G_IO_STATUS_EOF)
-        {
-            result = true;
-        }
-        else if (status == G_IO_STATUS_NORMAL)
-        {
-            if (content != NULL) {
-                EXEC_LOCK;
-                JSValueRef arg = js_char_to_value(s_ctx->global_context, content);
-                if (arg != NULL)
-                {
-                    JSValueRef argv[] = { arg };
-                    call_as_function_debug(s_ctx->global_context, data->callback, data->callback, 1, argv);
-                }
-                EXEC_UNLOCK;
-            }
-        }
-        g_free(content);
-    }
-    return result;
-}/*}}}*/
-
-static char **
-get_environment(JSContextRef ctx, JSValueRef v, JSValueRef *exc)
-{
-    js_property_iterator iter;
-    char *name = NULL, *value = NULL;
-    JSValueRef current;
-
-    char **envp = g_get_environ();
-    if (JSValueIsNull(ctx, v) || JSValueIsUndefined(ctx, v))
-        return envp;
-    JSObjectRef o = JSValueToObject(ctx, v, exc);
-    if (o)
-    {
-        js_property_iterator_init(ctx, &iter, o);
-        while ((current = js_property_iterator_next(&iter, NULL, &name, exc)) != NULL)
-        {
-            if (name) 
-            {
-                value = js_value_to_char(ctx, current, -1, exc);
-                if (value)
-                {
-                    envp = g_environ_setenv(envp, name, value, true);
-                    g_free(value);
-                }
-                g_free(name);
-            }
-        }
-        js_property_iterator_finish(&iter);
-    }
-    return envp;
-}
-
-/* {{{*/
-
-/** 
- * Spawn a process synchronously. This function should be used with care. The
- * execution is single threaded so longer running processes will block the whole
- * execution
- * 
- * @name spawnSync 
- * @memberOf system
- * @function 
- *
- * @param {String} command The command to execute
- * @param {Object}   [environ] Object that can be used to add environment
- *                             variables to the childs environment
- *
- * @returns {Object}
- *      An object that contains <i>stdout</i>, <i>stderr</i> and the <i>status</i> code.
- * */
-static JSValueRef 
-system_spawn_sync(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc<1) 
-        return NIL;
-
-    JSObjectRef ret = NULL;
-    int srgc, status;
-    char **srgv = NULL, *command = NULL, *out, *err;
-    char **envp = NULL;
-
-    command = js_value_to_char(ctx, argv[0], -1, exc);
-    if (command == NULL) 
-        return NIL;
-    if (argc > 1)
-        envp = get_environment(ctx, argv[1], exc);
-
-    if (g_shell_parse_argv(command, &srgc, &srgv, NULL) && 
-            g_spawn_sync(NULL, srgv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, &out, &err, &status, NULL)) 
-    {
-        ret = JSObjectMake(ctx, NULL, NULL);
-        js_set_object_property(ctx, ret, "stdout", out, exc);
-        js_set_object_property(ctx, ret, "stderr", err, exc);
-        js_set_object_number_property(ctx, ret, "status", status, exc);
-    }
-    g_free(command);
-    g_strfreev(srgv);
-    g_strfreev(envp);
-
-    if (ret == NULL)
-        return NIL;
-
-    return ret;
-}/*}}}*/
-
-void 
-spawn_finish_data(JSContextRef ctx, SpawnData *data, int status)
-{
-    if (data != NULL)
-    {
-        data->finished |= SPAWN_FINISHED;
-        data->status = status;
-        if (data->callback != NULL) {
-            JSValueUnprotect(ctx, data->callback);
-        }
-        if (data->finished & SPAWN_CLOSED)
-            g_free(data);
-        else if (data->channel != NULL) {
-            g_io_channel_flush(data->channel, NULL);
-        }
-    }
-}
-void 
-watch_spawn(GPid pid, gint status, SpawnData **data)
-{
-    int fail = 0;
-
-    if (WIFEXITED(status) != 0) 
-        fail = WEXITSTATUS(status);
-    else if (WIFSIGNALED(status))
-        fail = WTERMSIG(status);
-    else if (WIFSTOPPED(status)) 
-        fail = WSTOPSIG(status);
-    g_spawn_close_pid(pid);
-
-    if (data[0] != NULL && fail == 0) {
-        if (!deferred_fulfilled(data[0]->deferred)) {
-            EXEC_LOCK;
-            JSValueRef argv[] = { JSValueMakeNumber(s_ctx->global_context, fail) };
-            deferred_resolve(s_ctx->global_context, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
-            EXEC_UNLOCK;
-        }
-    }
-    else if (data[1] != NULL && fail != 0) {
-        if (!deferred_fulfilled(data[1]->deferred)) {
-            EXEC_LOCK;
-            JSValueRef argv[] = { JSValueMakeNumber(s_ctx->global_context, fail) };
-            deferred_reject(s_ctx->global_context, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
-            EXEC_UNLOCK;
-        }
-    }
-    EXEC_LOCK;
-    spawn_finish_data(s_ctx->global_context, data[0], fail);
-    spawn_finish_data(s_ctx->global_context, data[1], fail);
-    EXEC_UNLOCK;
-
-    g_free(data);
-}
-
-/* system_spawn {{{*/
-/**  
- * For internal usage only
- *
- * @name _spawn
- * @memberOf system
- * @function
- * @private
- * */
-/** 
- * Spawn a process asynchronously
- * 
- * @name spawn 
- * @memberOf system
- * @function 
- * @example 
- * // Simple spawning without using stdout/stderr
- * system.spawn("foo");
- * // Using stdout/stderr
- * system.spawn("foo", {
- *      cacheStdout : true, 
- *      cacheStderr : true, 
- *      onFinished : function(result) {
- *          io.out("Process terminated with status " + result.status);
- *          io.out("Stdout is :" + result.stdout);
- *          io.out("Stderr is :" + result.stderr);
- *      }
- * });
- * // Equivalently using the deferred
- * system.spawn("foo", { cacheStdout : true, cacheStderr : true }).always(function(result) {
- *      io.out("Process terminated with status " + result.status);
- *      io.out("Stdout is :" + result.stdout);
- *      io.out("Stderr is :" + result.stderr);
- * });
- * // Only use stdout if the process terminates successfully
- * system.spawn("foo", { cacheStdout : true }).done(function(result) {
- *     io.out(result.stdout);
- * });
- * // Only use stderr if the process terminates with an error
- * system.spawn("foo", { cacheStderr : true }).fail(function(result) {
- *     io.out(result.stderr);
- * });
- * // Using environment variables with automatic caching
- * system.spawn('sh -c "echo $foo"', {
- *      onStdout : function(stdout) {
- *          io.out("stdout: " + stdout);
- *      },
- *      environment : { foo : "bar" }
- * }).then(function(result) { 
- *      io.out(result.stdout); 
- * });
- *
- *
- * @param {String} command The command to execute
- * @param {Object} [options] 
- * @param {Function} [options.onStdout] 
- *     A callback function that is called when a line from
- *     stdout was read. The function takes one parameter, the line that has been read.
- *     To get the complete stdout use either <b>onFinished</b> or the
- *     Deferred returned from <i>system.spawn</i>.
- * @param {Boolean} [options.cacheStdout] 
- *     Whether stdout should be cached. If <b>onStdout</b> is defined
- *     stdout will be cached automatically. If it isn't defined and stdout is
- *     required in <b>onFinished</b> or in the Deferred's resolve
- *     function cacheStdout must be set to true, default: false.
- * @param {Function} [options.onStderr] 
- *     A callback function that is called when a line from
- *     stderr was read. The function takes one parameter, the line that has been read. 
- *     To get the complete stderr use either <b>onFinished</b> or the
- *     Deferred returned from <i>system.spawn</i>.
- * @param {Boolean} [options.cacheStderr] 
- *     Whether stderr should be cached. If <b>onStderr</b> is defined
- *     stderr will be cached automatically. If it isn't defined and stderr is
- *     required in <b>onFinished</b> or in the Deferred's reject
- *     function cacheStderr must be set to true, default: false.
- * @param {Function} [options.onFinished] 
- *     A callback that will be called when the child process has terminated. The
- *     callback takes one argument, an object that contains stdout if caching of
- *     stdout is enabled (see <b>cacheStdout</b>), stderr if caching of stderr
- *     is enabled (see <b>cacheStderr</b>) and status, i.e. the return code of
- *     the child process.
- * @param {String} [options.stdin] 
- *     String that will be piped to stdin of the child process. 
- * @param {Object} [options.environment] 
- *     Hash of environment variables that will be set in the childs environment
- *
- * @returns {Deferred}
- *      A deferred, it will be resolved if the child exits normally, it will be
- *      rejected if the child process exits abnormally. The argument passed to
- *      resolve and reject is an Object containing stdout if caching of stdout
- *      is enabled (see <b>cacheStdout</b>), stderr if caching of stderr is enabled (see 
-        <b>cacheStderr</b>) and status, i.e. the return code of the child process.
- * */
-static JSValueRef 
-system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NIL; 
-    int outfd, errfd, infd = -1;
-    char **srgv = NULL, *cmdline = NULL;
-    char **envp = NULL;
-    int srgc;
-    GIOChannel *out_channel = NULL, *err_channel = NULL;
-    JSObjectRef oc = NULL, ec = NULL;
-    SpawnData *out_data = NULL, *err_data = NULL;
-    GPid pid;
-    char *pipe_stdin = NULL;
-    gint spawn_options = G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD;
-
-
-    if (argc == 0) 
-        return NIL;
-
-    if (!TRY_CONTEXT_LOCK)
-        return NIL;
-
-    if (s_ctx->global_context == NULL)
-        goto error_out;
-
-    cmdline = js_value_to_char(ctx, argv[0], -1, exc);
-    if (cmdline == NULL) 
-        goto error_out;
-
-    if (argc > 1 && !JSValueIsNull(ctx, argv[1])) 
-        oc = js_value_to_function(ctx, argv[1], NULL);
-    
-    if (argc > 2 && !JSValueIsNull(ctx, argv[2])) 
-        ec = js_value_to_function(ctx, argv[2], NULL);
-
-    if (argc > 3)
-        pipe_stdin = js_value_to_char(ctx, argv[3], -1, exc);
-
-    if (argc > 4)
-        envp = get_environment(ctx, argv[4], exc);
-
-    if (oc == NULL) {
-        spawn_options |= G_SPAWN_STDOUT_TO_DEV_NULL;
-    }
-    if (ec == NULL) {
-        spawn_options |= G_SPAWN_STDERR_TO_DEV_NULL;
-    }
-
-    if (!g_shell_parse_argv(cmdline, &srgc, &srgv, NULL) || 
-            !g_spawn_async_with_pipes(NULL, srgv, envp, spawn_options,
-                NULL, NULL, &pid,  
-                //NULL,
-                pipe_stdin != NULL ? &infd : NULL,
-                oc != NULL ? &outfd : NULL, 
-                ec != NULL ? &errfd : NULL, NULL)) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("spawning %s failed."), cmdline);
-        goto error_out;
-    }
-
-    JSObjectRef deferred = deferred_new(s_ctx->global_context);
-
-    out_data = g_malloc(sizeof(SpawnData));
-    if (oc != NULL) 
-    {
-        out_channel = g_io_channel_unix_new(outfd);
-
-        SPAWN_DATA_INIT(out_data, out_channel, oc, deferred);
-
-        JSValueProtect(ctx, oc);
-        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, out_data);
-        g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_channel_set_close_on_unref(out_channel, true);
-    }
-    else {
-        SPAWN_DATA_INIT(out_data, NULL, NULL, deferred);
-    }
-
-    err_data = g_malloc(sizeof(SpawnData));
-    if (ec != NULL) 
-    {
-        err_channel = g_io_channel_unix_new(errfd);
-
-        SPAWN_DATA_INIT(err_data, err_channel, ec, deferred);
-
-        JSValueProtect(ctx, ec);
-        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err_data);
-        g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_channel_set_close_on_unref(err_channel, true);
-    }
-    else {
-        SPAWN_DATA_INIT(err_data, NULL, NULL, deferred);
-    }
-
-    if (pipe_stdin != NULL && infd != -1)
-    {
-        if (write(infd, pipe_stdin, strlen(pipe_stdin)) == -1 || write(infd, "\n", 1) == -1)
-            perror("system.spawn");
-    }
-    if (infd != -1)
-        close(infd);
-
-    SpawnData **data = g_malloc_n(2, sizeof(SpawnData*));
-    data[0] = out_data;
-    data[1] = err_data;
-    g_child_watch_add(pid, (GChildWatchFunc)watch_spawn, data);
-    ret = deferred;
-
-error_out:
-    CONTEXT_UNLOCK;
-    g_free(pipe_stdin);
-    g_strfreev(envp);
-    g_free(cmdline);
-    g_strfreev(srgv);
-    return ret;
-}/*}}}*/
 
 /* system_file_test {{{*/
-/** 
- * Checks for existence of a file or directory
- * 
- * @name fileTest 
- * @memberOf system
- * @function 
- *
- * @param {String} path Path to a file to check
- * @param {FileTest} flags 
- *      Bitmask of {@link Enums and Flags.FileTest|FileTest} flags
- *
- * @returns {Boolean}
- *      <i>true</i> if any of the flags is set
- * */
-static JSValueRef 
-system_file_test(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 2) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("system.fileTest needs an argument."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    char *path = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
-    if (path == NULL) 
-        return JSValueMakeBoolean(ctx, false);
 
-    double test = JSValueToNumber(ctx, argv[1], exc);
-    if (isnan(test) || ! ( (((guint)test) & G_FILE_TEST_VALID) == (guint)test) ) 
-        return JSValueMakeBoolean(ctx, false);
 
-    gboolean ret = g_file_test(path, (GFileTest) test);
-    g_free(path);
-    return JSValueMakeBoolean(ctx, ret);
-}/*}}}*/
-
-/** 
- * Creates a directory and all parent directories
- * 
- * @name mkdir 
- * @memberOf system
- * @function 
- *
- * @param {Path} path Path to create
- * @param {Number} mode The permissions the directory will get
- *
- * @returns {Boolean}
- *      <i>true</i> if creation was successful or if the diretory already
- *      existed
- * */
-/* system_mkdir {{{*/
-static JSValueRef 
-system_mkdir(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char expanded[4096];
-    gboolean ret = false;
-    if (argc < 2) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("system.mkdir needs an argument."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-    char *path = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
-    double mode = JSValueToNumber(ctx, argv[1], exc);
-    if (path != NULL && !isnan(mode)) 
-    {
-        if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
-        {
-            js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
-            goto error_out;
-        }
-
-        ret = g_mkdir_with_parents(expanded, (gint)mode) == 0;
-    }
-error_out:
-    g_free(path);
-    return JSValueMakeBoolean(ctx, ret);
-
-}/*}}}*/
-
-/**
- * Quotes a string for usage with a shell
- *
- * @name shellQuote
- * @memberOf system
- * @function
- * @since 1.11
- *
- * @param {String} unquoted An unquoted String.
- *
- * @returns {String} 
- *      The quoted string
- * */
-static JSValueRef 
-system_shell_quote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NIL;
-    char *unquoted = NULL, *quoted = NULL;
-    if (argc > 0) {
-        unquoted = js_value_to_char(ctx, argv[0], -1, exc);
-        if (unquoted != NULL) {
-            quoted = g_shell_quote(unquoted);
-            ret = js_char_to_value(ctx, quoted);
-
-            g_free(quoted);
-            g_free(unquoted);
-        }
-    }
-    return ret;
-}
-/**
- * Unquotes a quoted string as /bin/sh would unquote it.
- *
- * @name shellUnquote
- * @memberOf system
- * @function
- * @since 1.11
- *
- * @param {String} quoted A quoted String.
- *
- * @returns {String} 
- *      The unquoted string
- * */
-static JSValueRef 
-system_shell_unquote(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    JSValueRef ret = NIL;
-    char *unquoted = NULL, *quoted = NULL;
-    if (argc > 0) {
-        quoted = js_value_to_char(ctx, argv[0], -1, exc);
-        if (quoted != NULL) {
-            unquoted = g_shell_unquote(quoted, NULL);
-            if (unquoted != NULL) {
-                ret = js_char_to_value(ctx, unquoted);
-                g_free(unquoted);
-            }
-            g_free(quoted);
-        }
-    }
-    return ret;
-}
 
 /*}}}*/
 
 /* IO {{{*/
-/* io_prompt {{{*/
-/**
- * Gets user input synchronously
- *
- * @name prompt 
- * @memberOf io
- * @function 
- *
- * @param {String} prompt The prompt message
- * @param {Boolean} [visible] Whether the chars should be visible, pass false
- *                            for a password prompt, default true.
- *
- * @returns {String}
- *      The user response
- * */
-
-static JSValueRef 
-io_prompt(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *prompt = NULL;
-    gboolean visibility = true;
-    if (argc > 0) 
-        prompt = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-
-    if (argc > 1 && JSValueIsBoolean(ctx, argv[1])) 
-        visibility = JSValueToBoolean(ctx, argv[1]);
-
-    char *response = dwb_prompt(visibility, prompt);
-    g_free(prompt);
-
-    if (response == NULL)
-        return NIL;
-
-    JSValueRef result = js_char_to_value(ctx, response);
-
-    sec_memset(response, 0, strlen(response));
-    g_free(response);
-    return result;
-}/*}}}*/
-
-/**
- * Shows a confirmation prompt
- *
- * @name confirm 
- * @memberOf io
- * @function 
- *
- * @param {String} prompt The prompt message
- *
- * @returns {Boolean}
- *      True if <i>y</i> was pressed, false if <i>n</i> or escape was pressed
- * */
-static JSValueRef 
-io_confirm(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char *prompt = NULL;
-    gboolean result = false;
-    
-    if (argc > 0)
-        prompt = js_value_to_char(ctx, argv[0], JS_STRING_MAX, exc);
-
-    entry_hide();
-
-    result = dwb_confirm(dwb.state.fview, prompt ? prompt : "");
-    g_free(prompt);
-    return JSValueMakeBoolean(ctx, result);
-}
-
-/**
- * Read from a file 
- *
- * @name read 
- * @memberOf io
- * @function 
- *
- * @param {String} path A path to a file
- *
- * @returns {String}
- *      The file content
- * */
-/* io_read {{{*/
-static JSValueRef 
-io_read(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char expanded[4096];
-    JSValueRef ret = NULL;
-    char *path = NULL, *content = NULL;
-    if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("io.read needs an argument."));
-        return NIL;
-    }
-    if ( (path = js_value_to_char(ctx, argv[0], PATH_MAX, exc) ) == NULL )
-        goto error_out;
-
-    if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
-    {
-        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
-        goto error_out;
-    }
-    if ( (content = util_get_file_content(expanded, NULL) ) == NULL ) 
-        goto error_out;
-
-    ret = js_char_to_value(ctx, content);
-
-error_out:
-    g_free(path);
-    g_free(content);
-    if (ret == NULL)
-        return NIL;
-    return ret;
-
-}/*}}}*/
-
-/* io_notify {{{*/
-/**
- * Show a notification in the browser window
- *
- * @name notify 
- * @memberOf io
- * @function 
- *
- * @param {String} message The message
- * */
-
-static JSValueRef 
-io_notify(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-        return UNDEFINED;
-
-    char *message = js_value_to_char(ctx, argv[0], -1, exc);
-    if (message != NULL) 
-    {
-        message = util_strescape_char(message, '%', '%');
-        dwb_set_normal_message(dwb.state.fview, true, message);
-        g_free(message);
-    }
-    return UNDEFINED;
-}/*}}}*/
-
-/**
- * Show an error message in the browser window
- *
- * @name error 
- * @memberOf io
- * @function 
- *
- * @param {String} message The error message
- * */
-/* io_error {{{*/
-static JSValueRef 
-io_error(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-        return UNDEFINED;
-
-    char *message = js_value_to_char(ctx, argv[0], -1, exc);
-    if (message != NULL) 
-    {
-        message = util_strescape_char(message, '%', '%');
-        dwb_set_error_message(dwb.state.fview, message);
-        g_free(message);
-    }
-    return UNDEFINED;
-}/*}}}*/
-
-/**
- * Get directory entries
- *
- * @name dirnames 
- * @memberOf io
- * @function 
- *
- * @param {String} path A path to a directory
- *
- * @returns {Array[String]}
- *      An array of file names
- * */
-static JSValueRef 
-io_dir_names(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-        return NIL;
-
-    char expanded[4096];
-    JSValueRef ret = NIL;
-    GDir *dir;
-    char *dir_name = js_value_to_char(ctx, argv[0], PATH_MAX, exc);
-    const char *name;
-
-    if (dir_name == NULL)
-        return NIL;
-    if (util_expand_home(expanded, dir_name, sizeof(expanded)) == NULL)
-    {
-        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
-        goto error_out;
-    }
-
-    if ((dir = g_dir_open(expanded, 0, NULL)) != NULL) 
-    {
-        GSList *list = NULL;
-        while ((name = g_dir_read_name(dir)) != NULL) 
-        {
-            list = g_slist_prepend(list, (gpointer)js_char_to_value(ctx, name));
-        }
-        g_dir_close(dir);
-
-        JSValueRef args[g_slist_length(list)];
-
-        int i=0;
-        for (GSList *l = list; l; l=l->next, i++) 
-            args[i] = l->data;
-
-        ret = JSObjectMakeArray(ctx, i, args, exc);
-        g_slist_free(list);
-    }
-    else 
-        ret = NIL;
-
-error_out:
-    g_free(dir_name);
-    return ret;
-}
-/* io_write {{{*/
-/** 
- * Write to a file 
- *
- * @name write
- * @memberOf io
- * @function
- *
- * @param {String} path Path to a file to write to
- * @param {String} mode Either <i>"a"</i> to append or <i>"w"</i> to strip the file
- * @param {String} text The text that should be written to the file
- *
- * @returns {Boolean}
- *      true if writing was successful
- * */
-static JSValueRef 
-io_write(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    char expanded[4096];
-    gboolean ret = false;
-    FILE *f;
-    char *path = NULL, *content = NULL, *mode = NULL;
-    if (argc < 3) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("io.write needs 3 arguments."));
-        return JSValueMakeBoolean(ctx, false);
-    }
-
-    if ( (path = js_value_to_char(ctx, argv[0], PATH_MAX, exc)) == NULL )
-        goto error_out;
-
-    if ( (mode = js_value_to_char(ctx, argv[1], -1, exc)) == NULL )
-        goto error_out;
-
-    if (g_strcmp0(mode, "w") && g_strcmp0(mode, "a")) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("io.write: invalid mode."));
-        goto error_out;
-    }
-    if ( (content = js_value_to_char(ctx, argv[2], -1, exc)) == NULL ) 
-        goto error_out;
-
-    if (util_expand_home(expanded, path, sizeof(expanded)) == NULL)
-    {
-        js_make_exception(ctx, exc, EXCEPTION("Filename too long"));
-        goto error_out;
-    }
-    if ( (f = fopen(expanded, mode)) != NULL) 
-    {
-        fputs(content, f);
-        fclose(f);
-        ret = true;
-    }
-    else 
-        js_make_exception(ctx, exc, EXCEPTION("io.write: cannot open %s for writing."), path);
-
-error_out:
-    g_free(path);
-    g_free(mode);
-    g_free(content);
-    return JSValueMakeBoolean(ctx, ret);
-}/*}}}*/
-
-
-static JSValueRef 
-term_print(JSContextRef ctx, FILE *stream, size_t argc, const JSValueRef argv[], JSValueRef *exc) {
-    if (argc == 0)
-        return NULL;
-    char *out = NULL;
-    double dout;
-    char *json = NULL;
-    int type = 0;
-    for (size_t i = 0; i < argc; i++) {
-        type = JSValueGetType(ctx, argv[i]);
-        switch (type) 
-        {
-            case kJSTypeString : 
-                out = js_value_to_char(ctx, argv[i], -1, exc);
-                if (out != NULL) 
-                { 
-                    if (!isatty(fileno(stream)))
-                    {
-                        GRegex *regex = g_regex_new("\e\\[\\d+(?>(;\\d+)*)m", 0, 0, NULL);
-                        char *tmp = out;
-
-                        out = g_regex_replace(regex, tmp, -1, 0, "", 0, NULL);
-                        g_regex_unref(regex);
-
-                        g_free(tmp);
-                        if (out == NULL)
-                            return UNDEFINED;
-                    }
-                    fprintf(stream, "%s", out);
-                    g_free(out);
-                }
-                break;
-            case kJSTypeBoolean : 
-                fprintf(stream, "%s", JSValueToBoolean(ctx, argv[i]) ? "true" : "false");
-                break;
-            case kJSTypeNumber : 
-                dout = JSValueToNumber(ctx, argv[i], exc);
-                if (!isnan(dout)) 
-                    if ((int)dout == dout) 
-                        fprintf(stream, "%d\n", (int)dout);
-                    else 
-                        fprintf(stream, "%f\n", dout);
-                else 
-                    fprintf(stream, "NAN");
-                break;
-            case kJSTypeUndefined : 
-                fprintf(stream, "undefined");
-                break;
-            case kJSTypeNull : 
-                fprintf(stream, "null");
-                break;
-            case kJSTypeObject : 
-                json = js_value_to_json(ctx, argv[i], -1, argc == 1 ? 2 : 0,  NULL);
-                if (json != NULL) 
-                {
-                    fprintf(stream, "%s", json);
-                    g_free(json);
-                }
-                break;
-            default : break;
-        }
-        fputs(i < argc - 1 ? ", " : "\n", stream);
-    }
-    return NULL;
-}
-/* io_print {{{*/
-/** 
- * Print messages to stdout
- *
- * @name out
- * @memberOf io
- * @function
- *
- * @param {String}  text  
- *      The text to print
- * @param {String}  ...   
- * 
- * */
-static JSValueRef 
-io_out(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return term_print(ctx, stdout, argc, argv, exc);
-}/*}}}*/
-/*}}}*/
-/** 
- * Print messages to stderr
- *
- * @name err
- * @memberOf io
- * @function
- *
- * @param {String}  text  
- *      The text to print
- * @param {String}  ...   
- * 
- * */
-static JSValueRef 
-io_err(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return term_print(ctx, stderr, argc, argv, exc);
-}/*}}}*/
 
 static JSObjectRef 
 hwv_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
@@ -6500,7 +2846,7 @@ menu_callback(GtkMenuItem *item, JSObjectRef callback)
 {
     EXEC_LOCK;
     JSObjectRef this =  make_object_for_class(s_ctx->global_context, s_ctx->classes[CLASS_WIDGET], G_OBJECT(item), true);
-    call_as_function_debug(s_ctx->global_context, callback, this, 0, NULL);
+    scripts_call_as_function(s_ctx->global_context, callback, this, 0, NULL);
     EXEC_UNLOCK;
 }
 JSValueRef
@@ -7128,151 +3474,6 @@ cookie_finalize(JSObjectRef o)
     }
 }
 /* gui {{{*/
-/** 
- * The main window
- * @name window
- * @memberOf gui
- * @type GtkWindow
- * */
-static JSValueRef
-gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.window), true);
-}
-/** 
- * The main container. Child of window
- * @name mainBox
- * @memberOf gui
- * @type GtkBox
- * */
-static JSValueRef
-gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.vbox), true);
-}
-/** 
- * The box used for tab labels. Child of mainBox
- * @name tabBox
- * @memberOf gui
- * @type GtkBox
- * */
-static JSValueRef
-gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-#if _HAS_GTK3
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.tabbox), true);
-#else
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.tabcontainer), true);
-#endif
-}
-/** 
- * The box used for the main content. Child of mainBox
- * @name contentBox
- * @memberOf gui
- * @type GtkBox
- * */
-static JSValueRef
-gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.mainbox), true);
-}
-/** 
- * The outmost statusbar widget, used for setting the statusbars colors, child of mainBox.
- * @name statusWidget
- * @memberOf gui
- * @type GtkEventBox
- * */
-static JSValueRef
-gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.statusbox), true);
-}
-/** 
- * Used for the statusbar alignment, child of statusWidget.
- * @name statusAlignment
- * @memberOf gui
- * @type GtkAlignment
- * */
-static JSValueRef
-gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.alignment), true);
-}
-/** 
- * The box that contains the statusbar widgets, grandchild of statusAlignment
- * @name statusBox
- * @memberOf gui
- * @type GtkBox
- * */
-static JSValueRef
-gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.status_hbox), true);
-}
-/** 
- * Label used for notifications, first child of statusBox
- * @name messageLabel
- * @memberOf gui
- * @type GtkLabel
- * */
-static JSValueRef
-gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.lstatus), true);
-}
-/** 
- * The entry, second child of statusBox
- * @name entry
- * @memberOf gui
- * @type GtkEntry
- * */
-static JSValueRef
-gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.entry), true);
-}
-/** 
- * The uri label, third child of statusBox
- * @name uriLabel
- * @memberOf gui
- * @type GtkLabel
- * */
-static JSValueRef
-gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.urilabel), true);
-}
-/** 
- * Label used for status information, fourth child of statusBox
- * @name statusLabel
- * @memberOf gui
- * @type GtkLabel
- * */
-static JSValueRef
-gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) 
-{
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.rstatus), true);
-}
-/*}}}*/
-/** 
- * Height of the tabbar, favicons will be rescaled to fit into the tab
- * @name tabBarHeight 
- * @memberOf gui
- * @type Number
- * */
-static JSValueRef
-gui_get_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    return JSValueMakeNumber(ctx, dwb.misc.tabbar_height);
-}
-static bool 
-gui_set_tabbar_height(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
-    double bar_height = JSValueToNumber(ctx, value, exception);
-    if (!isnan(bar_height)) {
-        dwb.misc.tabbar_height = (int) bar_height;
-        return true;
-    }
-    return false;
-}/*}}}*/
 
 /* SIGNALS {{{*/
 /* signal_set {{{*/
@@ -7387,7 +3588,7 @@ scripts_emit(ScriptSignal *sig)
         }
     }
 
-    JSValueRef js_ret = call_as_function_debug(s_ctx->global_context, function, function, numargs, val);
+    JSValueRef js_ret = scripts_call_as_function(s_ctx->global_context, function, function, numargs, val);
 
     if (JSValueIsBoolean(s_ctx->global_context, js_ret)) 
         ret = JSValueToBoolean(s_ctx->global_context, js_ret);
@@ -7403,7 +3604,7 @@ scripts_emit(ScriptSignal *sig)
 /* OBJECTS {{{*/
 /* make_object {{{*/
 
-static JSObjectRef 
+JSObjectRef 
 make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
 {
     JSObjectRef retobj = g_object_get_qdata(o, s_ctx->ref_quark);
@@ -7435,20 +3636,6 @@ make_boxed(gpointer boxed, JSClassRef klass)
     return ret;
 }
 
-static JSObjectRef 
-make_dom_object(JSContextRef ctx, GObject *o) {
-    if (WEBKIT_DOM_IS_HTML_COLLECTION(o)) {
-        return dom_make_collection(ctx, WEBKIT_DOM_HTML_COLLECTION(o), NULL);
-    }
-    if (WEBKIT_DOM_IS_NODE_LIST(o)) {
-        return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(o), NULL);
-    }
-    ref_count++;
-    printf("%d\n", ref_count);
-    JSObjectRef result =  make_object_for_class(ctx, s_ctx->classes[CLASS_DOM_OBJECT], o, true);
-    g_object_weak_ref(o, (GWeakNotify)object_destroy_weak_cb, result);
-    return result;
-}
 static JSObjectRef 
 make_object(JSContextRef ctx, GObject *o) 
 {
@@ -7568,7 +3755,7 @@ apply:
         argv[i] = cur;
     }
 #undef CHECK_NUMBER
-    JSValueRef ret = call_as_function_debug(s_ctx->global_context, sig->func, sig->object, sig->query->n_params, argv);
+    JSValueRef ret = scripts_call_as_function(s_ctx->global_context, sig->func, sig->object, sig->query->n_params, argv);
     if (JSValueIsBoolean(s_ctx->global_context, ret)) 
     {
         result = JSValueToBoolean(s_ctx->global_context, ret);
@@ -7593,7 +3780,7 @@ notify_callback(GObject *o, GParamSpec *param, SSignal *sig)
 {
     EXEC_LOCK;
     g_signal_handlers_block_by_func(o, G_CALLBACK(notify_callback), sig);
-    call_as_function_debug(s_ctx->global_context, sig->func, make_object(s_ctx->global_context, o), 0, NULL);
+    scripts_call_as_function(s_ctx->global_context, sig->func, make_object(s_ctx->global_context, o), 0, NULL);
     g_signal_handlers_unblock_by_func(o, G_CALLBACK(notify_callback), sig);
     EXEC_UNLOCK;
 }
@@ -7779,14 +3966,12 @@ gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
 
 /* set_property_cb {{{*/
 static bool
-set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) 
-{
+set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
     return true;
 }/*}}}*/
 
-/* create_class {{{*/
 JSClassRef 
-create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[], JSObjectGetPropertyCallback get_property_cb) 
+scripts_create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[], JSObjectGetPropertyCallback get_property_cb) 
 {
     JSClassDefinition cd = kJSClassDefinitionEmpty;
     cd.className = name;
@@ -7795,11 +3980,11 @@ create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue
     cd.setProperty = set_property_cb;
     cd.getProperty = get_property_cb;
     return JSClassCreate(&cd);
-}/*}}}*/
+}
 
-/* create_object {{{*/
-static JSObjectRef 
-create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSClassAttributes attr, const char *name, void *private) 
+/* scripts_create_object {{{*/
+JSObjectRef 
+scripts_create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSClassAttributes attr, const char *name, void *private) 
 {
     JSObjectRef ret = JSObjectMake(ctx, class, private);
     js_set_property(ctx, obj, name, ret, attr, NULL);
@@ -7965,6 +4150,19 @@ create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallA
     return constructor;
 
 }
+JSObjectRef
+scripts_get_exports(JSContextRef ctx, const char *path)
+{
+    ScriptContext *sctx = scripts_get_context();
+    JSObjectRef ret = g_hash_table_lookup(sctx->exports, path);
+    if (ret == NULL)
+    {
+        ret = JSObjectMake(ctx, NULL, NULL);
+        JSValueProtect(ctx, ret);
+        g_hash_table_insert(sctx->exports, g_strdup(path), ret);
+    }
+    return ret;
+}
 /* create_global_object {{{*/
 static void  
 create_global_object() 
@@ -7974,44 +4172,13 @@ create_global_object()
     pthread_rwlock_wrlock(&s_context_lock);
     JSClassDefinition cd; 
     s_ctx->ref_quark = g_quark_from_static_string("dwb_js_ref");
-    JSGlobalContextRef ctx;
 
-    JSStaticValue global_values[] = {
-        { "global",       global_get, NULL,   kJSDefaultAttributes },
-        { 0, 0, 0, 0 }, 
-    };
+    JSClassRef class;
 
-    JSStaticFunction global_functions[] = { 
-        { "namespace",        global_namespace,         kJSDefaultAttributes },
-        { "execute",          global_execute,         kJSDefaultAttributes },
-        { "exit",             global_exit,            kJSDefaultAttributes },
-        { "_bind",             global_bind,            kJSDefaultAttributes },
-        { "unbind",           global_unbind,          kJSDefaultAttributes },
-        { "include",            global_include,         kJSDefaultAttributes },
-        { "_xinclude",          global_xinclude,       kJSDefaultAttributes },
-        { "_xgettext",          global_xget_text,       kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
+    JSGlobalContextRef ctx = global_initialize();
+    s_ctx->global_context = ctx;
+    JSObjectRef global_object = JSContextGetGlobalObject(s_ctx->global_context);
 
-    JSClassRef class = create_class("dwb", global_functions, global_values, NULL);
-    ctx = JSGlobalContextCreate(class);
-    JSClassRelease(class);
-
-
-    /** 
-     * Get internally used data like configuration files
-     * 
-     * @namespace
-     *      Get internally used data like configuration files
-     * @name data
-     * @static 
-     *
-     * @example 
-     * //!javascript
-     *
-     * var data = namespace("data");
-     * */
-    JSObjectRef global_object = JSContextGetGlobalObject(ctx);
     /**
      * The api-version
      * @name version 
@@ -8020,39 +4187,16 @@ create_global_object()
      * */
     js_set_object_number_property(ctx, global_object, "version", API_VERSION, NULL);
 
-    JSStaticValue data_values[] = {
-        { "profile",        data_get_profile, NULL, kJSDefaultAttributes },
-        { "sessionName",    data_get_session_name, NULL, kJSDefaultAttributes },
-        { "cacheDir",       data_get_cache_dir, NULL, kJSDefaultAttributes },
-        { "configDir",      data_get_config_dir, NULL, kJSDefaultAttributes },
-        { "systemDataDir",  data_get_system_data_dir, NULL, kJSDefaultAttributes },
-        { "userDataDir",    data_get_user_data_dir, NULL, kJSDefaultAttributes },
-        { 0, 0, 0,  0 }, 
-    };
-    class = create_class("data", NULL, data_values, NULL);
-    s_ctx->namespaces[NAMESPACE_DATA] = create_object(ctx, class, global_object, kJSDefaultAttributes, "data", NULL);
-    JSClassRelease(class);
+    s_ctx->namespaces[NAMESPACE_DATA]   = data_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_TIMER]  = timer_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_SYSTEM] = system_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_IO]     = io_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_GUI]    = gui_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_TABS]   = gui_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_UTIL]   = util_initialize(s_ctx->global_context);
+    s_ctx->namespaces[NAMESPACE_CLIPBOARD]   = clipboard_initialize(s_ctx->global_context);
 
-    /**
-     * Static object for timed execution 
-     * @namespace 
-     *      Static object for timed execution 
-     * @name timer
-     * @static
-     * @example
-     * //!javascript
-     *
-     * var timer = namespace("timer");
-     * */
-    JSStaticFunction timer_functions[] = { 
-        { "_start",         timer_start,         kJSDefaultAttributes },
-        // FIXME: wrapper isn't really necessary
-        { "_stop",        timer_stop,         kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    class = create_class("timer", timer_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_TIMER] = create_object(ctx, class, global_object, kJSDefaultAttributes, "timer", NULL);
-    JSClassRelease(class);
+
     /**
      * @namespace 
      *      Static object for network related tasks
@@ -8075,8 +4219,8 @@ create_global_object()
         { "allCookies",       net_all_cookies,         kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("net", net_functions, net_values, NULL);
-    s_ctx->namespaces[NAMESPACE_NET] = create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
+    class = scripts_create_class("net", net_functions, net_values, NULL);
+    s_ctx->namespaces[NAMESPACE_NET] = scripts_create_object(ctx, class, global_object, kJSDefaultAttributes, "net", NULL);
     JSClassRelease(class);
 
     /**
@@ -8092,96 +4236,9 @@ create_global_object()
     cd.getProperty = settings_get;
     cd.setProperty = set_property_cb;
     class = JSClassCreate(&cd);
-    create_object(ctx, class, global_object, kJSDefaultAttributes, "settings", NULL);
-    JSClassRelease(class);
-    /**
-     * Static object for input and output
-     *
-     * @namespace 
-     *      Static object for input and output and file operations
-     * @name io
-     * @static
-     * @example
-     * //!javascript
-     *
-     * var io = namespace("io");
-     * */
-
-    JSStaticFunction io_functions[] = { 
-        { "out",       io_out,              kJSDefaultAttributes },
-        { "err",       io_err,              kJSDefaultAttributes },
-        { "prompt",    io_prompt,           kJSDefaultAttributes },
-        { "confirm",   io_confirm,          kJSDefaultAttributes },
-        { "read",      io_read,             kJSDefaultAttributes },
-        { "write",     io_write,            kJSDefaultAttributes },
-        { "dirNames",  io_dir_names,        kJSDefaultAttributes },
-        { "notify",    io_notify,           kJSDefaultAttributes },
-        { "error",     io_error,            kJSDefaultAttributes },
-        { 0,           0,           0 },
-    };
-    class = create_class("io", io_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_IO] = create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "io", NULL);
+    scripts_create_object(ctx, class, global_object, kJSDefaultAttributes, "settings", NULL);
     JSClassRelease(class);
 
-    /**
-     * Static object for system functions
-     * 
-     * @namespace 
-     *      Static object for system functions such as spawning processes,
-     *      getting environment variables
-     * @name system
-     * @static
-     * @example 
-     * //!javascript
-     *
-     * var system = namespace("system");
-     * */
-    JSStaticFunction system_functions[] = { 
-        { "_spawn",          system_spawn,           kJSDefaultAttributes },
-        { "spawnSync",       system_spawn_sync,        kJSDefaultAttributes },
-        { "getEnv",          system_get_env,           kJSDefaultAttributes },
-        { "setEnv",          system_set_env,           kJSDefaultAttributes },
-        { "getPid",          system_get_pid,           kJSDefaultAttributes },
-        { "fileTest",        system_file_test,        kJSDefaultAttributes },
-        { "mkdir",           system_mkdir,            kJSDefaultAttributes },
-        { "shellQuote",      system_shell_quote,      kJSDefaultAttributes },
-        { "shellUnquote",    system_shell_unquote,      kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    class = create_class("system", system_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_SYSTEM] = create_object(ctx, class, global_object, kJSDefaultAttributes, "system", NULL);
-    JSClassRelease(class);
-
-    JSStaticValue tab_values[] = { 
-        { "current",      tabs_current, NULL,   kJSDefaultAttributes },
-        { "number",       tabs_number,  NULL,   kJSDefaultAttributes },
-        { "length",       tabs_length,  NULL,   kJSDefaultAttributes },
-        { 0, 0, 0, 0 }, 
-    };
-
-    /**
-     * tabs is an array like object that can be used to get webviews. tabs also
-     * implements all ECMAScript 5 array functions like forEach, map, filter, ...
-     *
-     * @namespace 
-     *      Static object that can be used to get webviews
-     * @name tabs 
-     * @static 
-     * @example
-     * //!javascript
-     *
-     * var tabs = namespace("tabs");
-     * // get the second tab
-     * var secondTab = tabs[1];
-     *
-     * // iterate over all tabs
-     * tabs.forEach(function(tab) {
-     *      ...
-     * });
-     * */
-    class = create_class("tabs", NULL, tab_values, tabs_get);
-    s_ctx->namespaces[NAMESPACE_TABS] = create_object(ctx, class, global_object, kJSDefaultAttributes, "tabs", NULL);
-    JSClassRelease(class);
 
     /**
      * Execute code on certain events. dwb emits some signals, e.g. before a new
@@ -8249,41 +4306,12 @@ create_global_object()
     JSValueProtect(ctx, s_ctx->namespaces[NAMESPACE_SIGNALS]);
     JSClassRelease(class);
 
-    class = create_class("extensions", NULL, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_EXTENSIONS] = create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
+    class = scripts_create_class("extensions", NULL, NULL, NULL);
+    s_ctx->namespaces[NAMESPACE_EXTENSIONS] = scripts_create_object(ctx, class, global_object, kJSDefaultAttributes, "extensions", NULL);
     JSClassRelease(class);
 
-    class = create_class("Signal", NULL, NULL, NULL);
-    create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "Signal", NULL);
-    JSClassRelease(class);
-
-    /**
-     * Utility functions
-     *
-     * @namespace 
-     *      Miscellaneous utility functions
-     * @name util 
-     * @static 
-     * @example
-     * //!javascript
-     *
-     * var util = namespace("util");
-     * */
-    JSStaticFunction util_functions[] = { 
-        { "markupEscape",     sutil_markup_escape,         kJSDefaultAttributes },
-        { "getMode",          sutil_get_mode,         kJSDefaultAttributes },
-        { "getBody",          sutil_get_body,         kJSDefaultAttributes },
-        { "dispatchEvent",    sutil_dispatch_event,         kJSDefaultAttributes },
-        { "tabComplete",      sutil_tab_complete,         kJSDefaultAttributes },
-        { "pathComplete",     sutil_path_complete,    kJSDefaultAttributes },
-        { "checksum",         sutil_checksum,         kJSDefaultAttributes },
-        { "changeMode",       sutil_change_mode,      kJSDefaultAttributes }, 
-        { "_base64Encode",    sutil_base64_encode,    kJSDefaultAttributes },
-        { "_base64Decode",    sutil_base64_decode,    kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    class = create_class("util", util_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_UTIL] = create_object(ctx, class, global_object, kJSDefaultAttributes, "util", NULL);
+    class = scripts_create_class("Signal", NULL, NULL, NULL);
+    scripts_create_object(ctx, class, global_object, kJSPropertyAttributeDontDelete, "Signal", NULL);
     JSClassRelease(class);
 
     /**
@@ -8320,32 +4348,10 @@ create_global_object()
         { "lookup",                  keyring_lookup,      kJSDefaultAttributes },
         { 0, 0, 0 }, 
     };
-    class = create_class("keyring", keyring_functions, NULL, NULL);
+    class = scripts_create_class("keyring", keyring_functions, NULL, NULL);
     s_ctx->namespaces[NAMESPACE_KEYRING] = JSObjectMake(ctx, class, NULL);
     JSClassRelease(class);
 #endif
-
-    /**
-     * Access to the system clipboard
-     * @namespace 
-     *      Accessing the system clipboard
-     * @name clipboard 
-     * @static 
-     * @example
-     * //!javascript
-     *
-     * var clipboard = namespace("clipboard");
-     *
-     * */
-    JSStaticFunction clipboard_functions[] = { 
-        { "get",     clipboard_get,         kJSDefaultAttributes },
-        { "set",     clipboard_set,         kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    class = create_class("clipboard", clipboard_functions, NULL, NULL);
-    s_ctx->namespaces[NAMESPACE_CLIPBOARD] = create_object(ctx, class, global_object, kJSDefaultAttributes, "clipboard", NULL);
-    JSClassRelease(class);
-
 
     /**
      * Wrapped namespace for the console in the webcontext, will print
@@ -8361,7 +4367,7 @@ create_global_object()
      *
      * var console = namespace("console");
      * */
-    s_ctx->namespaces[NAMESPACE_CONSOLE] = create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
+    s_ctx->namespaces[NAMESPACE_CONSOLE] = scripts_create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
 
     /** 
      * Base class for webkit/gtk objects
@@ -8705,44 +4711,6 @@ create_global_object()
     s_ctx->classes[CLASS_MENU] = JSClassCreate(&cd);
 
     /** 
-     * Static object that holds dwb's GtkWidgets
-     *
-     * @namespace 
-     *      Static object that holds dwb's GtkWidgets. Most widgets can be accessed
-     *      directly from scripts
-     *      see <a>http://portix.bitbucket.org/dwb/resources/layout.html</a> for an
-     *      overview of all widgets.
-     * @name gui
-     * @static
-     * @example
-     * //!javascript
-     *
-     * var gui = namespace("gui");
-     *
-     * */
-    JSStaticValue gui_values[] = {
-        { "window",           gui_get_window, NULL, kJSDefaultAttributes }, 
-        { "mainBox",          gui_get_main_box, NULL, kJSDefaultAttributes }, 
-        { "tabBox",           gui_get_tab_box, NULL, kJSDefaultAttributes }, 
-        { "contentBox",       gui_get_content_box, NULL, kJSDefaultAttributes }, 
-        { "statusWidget",     gui_get_status_widget, NULL, kJSDefaultAttributes }, 
-        { "statusAlignment",  gui_get_status_alignment, NULL, kJSDefaultAttributes }, 
-        { "statusBox",        gui_get_status_box, NULL, kJSDefaultAttributes }, 
-        { "messageLabel",     gui_get_message_label, NULL, kJSDefaultAttributes }, 
-        { "entry",            gui_get_entry, NULL, kJSDefaultAttributes }, 
-        { "uriLabel",         gui_get_uri_label, NULL, kJSDefaultAttributes }, 
-        { "statusLabel",      gui_get_status_label, NULL, kJSDefaultAttributes }, 
-        { "tabBarHeight",     gui_get_tabbar_height, gui_set_tabbar_height, kJSPropertyAttributeDontDelete|kJSPropertyAttributeDontEnum }, 
-        { 0, 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "gui";
-    cd.staticValues = gui_values;
-    class = JSClassCreate(&cd);
-    s_ctx->namespaces[NAMESPACE_GUI] = create_object(ctx, class, global_object, kJSDefaultAttributes, "gui", NULL);
-    JSClassRelease(class);
-
-    /** 
      * Constructs a new download
      *
      * @class 
@@ -8819,79 +4787,8 @@ create_global_object()
     s_ctx->classes[CLASS_COOKIE] = JSClassCreate(&cd);
     s_ctx->constructors[CONSTRUCTOR_COOKIE] = create_constructor(ctx, "Cookie", s_ctx->classes[CLASS_COOKIE], cookie_constructor_cb, NULL);
 
-    /** 
-     * @class
-     * @classdesc
-     * Classes that represent DOMElements. The implemented methods are only a
-     * small subset of methods implemented in the DOM context of a site.
-     * DOMObjects are mainly usefull for simple DOM manipulations and listening
-     * to DOM events since event listeners in injected scripts cannot create a
-     * callback in the scripting context. 
-     * Not all methods listed below are implemented by all DOMObjects, see the method
-     * descriptions for details.
-     *
-     * DOMObjects are destroyed every time a new document is loaded, so it must be
-     * taken care not to hold references to DOMObjects that persist during a
-     * pageload or frameload, otherwise those objects will leak memory. 
-     *
-     * Note that some element properties differ from the original property name.
-     * Properties of DOMObjects don't have successive uppercase letters, e.g. 
-     * <i>element.innerHTML</i> can be get or set with <i>element.innerHtml</i>.
-     *    
-     * @name DOMObject
-     * @since 1.12
-     * @example 
-     * //!javascript
-     *
-     * Signal.connect("documentLoaded", function(wv, frame) {
-     *    var doc = frame.document;
-     *    var imageLinks = doc.query("img").reduce(function(last, img) {
-     *        return last + img.src + "\n";
-     *    }, "");
-     *    io.out(imageLinks);
-     * });
-     *
-     *
-     * */
-    JSStaticFunction dom_functions[] = {
-        { "querySelectorAll",              dom_query,       kJSDefaultAttributes },
-        { "getComputedStyle",              dom_computed_style,       kJSDefaultAttributes },
-        { "querySelector",         dom_query_first,       kJSDefaultAttributes },
-        { "evaluate",           dom_evaluate,       kJSDefaultAttributes },
-        { "asString",           dom_as_string,       kJSDefaultAttributes },
-        { "checkType",          dom_check_type,       kJSDefaultAttributes },
-        { "createElement",      dom_create_element, kJSDefaultAttributes },
-        { "createTextNode",      dom_create_text_node,      kJSDefaultAttributes },
-        { "insertBefore",       dom_insert_before, kJSDefaultAttributes },
-        { "replaceChild",       dom_replace_child, kJSDefaultAttributes },
-        { "appendChild",        dom_append_child, kJSDefaultAttributes },
-        { "removeChild",        dom_remove_child, kJSDefaultAttributes },
-        { "_dispose",           dom_dispose, kJSDefaultAttributes },
-        { "isSameNode",         dom_is_same_node, kJSDefaultAttributes },
-        { "isEqualNode",      dom_is_equal_node, kJSDefaultAttributes },
-        { "contains",           dom_contains, kJSDefaultAttributes },
-        { "matches",           dom_matches, kJSDefaultAttributes },
-        { "preventDefault",     dom_prevent_default, kJSDefaultAttributes },
-        { "stopPropagation",     dom_stop_propagation, kJSDefaultAttributes },
-        { "focus",              dom_element_focus, kJSDefaultAttributes },
-        { "blur",               dom_element_blur, kJSDefaultAttributes },
-        { "on",                 dom_on,       kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "DOMObject";
-    cd.staticFunctions = dom_functions;
-    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
-    s_ctx->classes[CLASS_DOM_OBJECT] = JSClassCreate(&cd);
 
-    JSStaticFunction dom_event_functions[] = {
-        { "remove",              dom_event_remove,       kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "DWBDOMEvent";
-    cd.staticFunctions = dom_event_functions;
-    s_ctx->classes[CLASS_DOM_EVENT] = JSClassCreate(&cd);
+    dom_initialize(s_ctx);
 
     /** 
      * Represents a SoupMessage header
@@ -8958,7 +4855,7 @@ apply_scripts()
         path = js_get_string_property(s_ctx->global_context, l->data, "path");
         if (path != NULL)
         {
-            exports[0] = get_exports(s_ctx->global_context, path);
+            exports[0] = scripts_get_exports(s_ctx->global_context, path);
             argc = 1;
         }
 
@@ -9041,7 +4938,7 @@ exec_namespace_function(JSContextRef ctx, const char *namespace_name, const char
 
     g_return_val_if_fail(function != NULL, NULL);
 
-    return call_as_function_debug(ctx, function, function, argc, argv);
+    return scripts_call_as_function(ctx, function, function, argc, argv);
 }
 
 gboolean
@@ -9273,8 +5170,8 @@ scripts_init(gboolean force)
 
     UNDEFINED = JSValueMakeUndefined(s_ctx->global_context);
     JSValueProtect(s_ctx->global_context, UNDEFINED);
-    NIL = JSValueMakeNull(s_ctx->global_context);
-    JSValueProtect(s_ctx->global_context, NIL);
+    s_nil = JSValueMakeNull(s_ctx->global_context);
+    JSValueProtect(s_ctx->global_context, s_nil);
 
     s_ctx->init_before = get_private(s_ctx->global_context, "_initBefore");
     s_ctx->init_after = get_private(s_ctx->global_context, "_initAfter");
