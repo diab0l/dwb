@@ -16,10 +16,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __DWB_SCRIPT_DATA_H__
-#define __DWB_SCRIPT_DATA_H__
+#ifndef __DWB_SCRIPT_NET_H__
+#define __DWB_SCRIPT_NET_H__
 
 JSObjectRef
-data_initialize(JSContextRef ctx);
+net_initialize(JSContextRef ctx);
 
 #endif

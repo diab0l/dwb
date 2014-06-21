@@ -41,6 +41,7 @@ typedef struct ScriptContext_s ScriptContext;
 #include "script_global.h"
 #include "script_clipboard.h"
 #include "script_dom.h"
+#include "script_net.h"
 
 
 enum {
@@ -164,10 +165,14 @@ scripts_include(JSContextRef, const char *, const char *, gboolean, gboolean , s
 JSObjectRef
 scripts_get_exports(JSContextRef ctx, const char *path);
 
+JSObjectRef 
+suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception);
+
 #define NIL (scripts_get_nil())
 
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
 
+#define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #endif
