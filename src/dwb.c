@@ -3849,6 +3849,8 @@ dwb_clean_up()
 {
     for (GList *gl = dwb.state.views; gl; gl=gl->next) 
         view_clean(gl);
+    g_list_free(dwb.state.views);
+    dwb.state.views = NULL;
     scripts_end(true);
     
 #ifndef DISABLE_HSTS

@@ -3398,14 +3398,10 @@ scripts_end(gboolean clean_all)
         }
         dwb.misc.script_signals = 0;
 
-        // Only destroy webviews references if the a new context will be
-        // created, if dwb is closed the references will be freed by view_clean.
-        if (!clean_all) {
-            for (GList *gl = dwb.state.views; gl; gl=gl->next) {
-                if (VIEW(gl)->script_wv != NULL) {
-                    JSValueUnprotect(s_ctx->global_context, VIEW(gl)->script_wv);
-                    VIEW(gl)->script_wv = NULL;
-                }
+        for (GList *gl = dwb.state.views; gl; gl=gl->next) {
+            if (VIEW(gl)->script_wv != NULL) {
+                JSValueUnprotect(s_ctx->global_context, VIEW(gl)->script_wv);
+                VIEW(gl)->script_wv = NULL;
             }
         }
 
