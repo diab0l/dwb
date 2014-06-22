@@ -29,6 +29,8 @@ OBJ += $(BASEDIR)/$(OBJEXAR)
 OBJ += $(BASEDIR)/$(OBJRC)
 OBJ += $(OBJSCRIPTS)
 
+DOBJ := $(OBJ:.o=.do)
+
 all: $(TARGET)
 
 $(TARGET): $(OBJ) 
@@ -53,9 +55,9 @@ deps.d: %.c %.h
 	@echo "${CC} $<"
 	@$(CC) -c -o $@ $< $(DCFLAGS) 
 
-$(DTARGET): $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o
+$(DTARGET): $(DOBJ)
 	@echo "$(CC) $@"
-	@$(CC) $(DOBJ) ../exar/exar.o ../dwbremote/dwbremote.o -o $(DTARGET) $(LDFLAGS) 
+	@$(CC) $(DOBJ) -o $(DTARGET) $(LDFLAGS) 
 
 dependencies: $(DEPS)
 

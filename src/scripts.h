@@ -69,22 +69,34 @@ typedef struct _ScriptSignal {
 } ScriptSignal;
 
 gboolean scripts_emit(ScriptSignal *);
+
 void scripts_create_tab(GList *gl);
 void scripts_remove_tab(JSObjectRef );
+
+void scripts_check_syntax(char **scripts);
 void scripts_end(gboolean);
+
+gboolean scripts_init(gboolean);
 void scripts_init_script(const char *, const char *);
 void scripts_init_archive(const char *, const char *);
-gboolean scripts_init(gboolean);
-void scripts_unprotect(JSObjectRef);
-DwbStatus scripts_eval_key(KeyMap *m, Arg *arg);
 gboolean scripts_execute_one(const char *script);
-void scripts_completion_activate(void);
-void scripts_reapply(void);
-void scripts_check_syntax(char **scripts);
-JSObjectRef scripts_make_cookie(SoupCookie *cookie);
 gboolean scripts_load_chrome(JSObjectRef,  const char *);
-void scripts_load_extension(const char *);
+void scripts_reapply(void);
+
+void scripts_unprotect(JSObjectRef);
+
 void scripts_clear_keymap(void);
+DwbStatus scripts_eval_key(KeyMap *m, Arg *arg);
+
+void scripts_completion_activate(void);
+JSObjectRef scripts_make_cookie(SoupCookie *cookie);
+
+void scripts_load_extension(const char *);
+
+JSValueRef
+inject(JSContextRef, JSContextRef, JSObjectRef, JSObjectRef, size_t, const JSValueRef [], JSValueRef*);
+
+
 
 #define EMIT_SCRIPT(sig)  ((dwb.misc.script_signals & (1ULL<<SCRIPTS_SIG_##sig)))
 #define SCRIPTS_EMIT_RETURN(signal, json, val) G_STMT_START  \

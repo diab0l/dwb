@@ -1814,6 +1814,7 @@ view_clean(GList *gl)
     g_slist_free_full(v->status->frames, (GDestroyNotify)util_free_weak_ref);
 
     scripts_remove_tab(v->script_wv);
+    v->script_wv = NULL;
 
 
     if (v->status->exc_style) 

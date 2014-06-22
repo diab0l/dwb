@@ -32,7 +32,6 @@ typedef struct ScriptContext_s ScriptContext;
 #include "../scripts.h"
 #include "ns_util.h"
 #include "ns_system.h"
-#include "ns_deferred.h"
 #include "ns_tabs.h"
 #include "ns_data.h"
 #include "ns_io.h"
@@ -40,9 +39,13 @@ typedef struct ScriptContext_s ScriptContext;
 #include "ns_timer.h"
 #include "ns_global.h"
 #include "ns_clipboard.h"
-#include "ns_dom.h"
 #include "ns_net.h"
 #include "ns_keyring.h"
+#include "cl_deferred.h"
+#include "cl_gobject.h"
+#include "cl_webview.h"
+#include "cl_dom.h"
+#include "callback.h"
 
 
 enum {
@@ -169,11 +172,27 @@ scripts_get_exports(JSContextRef ctx, const char *path);
 JSObjectRef 
 suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception);
 
+void 
+sigdata_append(gulong sigid, GObject *instance);
+void 
+sigdata_remove(gulong sigid, GObject *instance);
+
+JSObjectRef 
+scripts_create_constructor(JSContextRef, char *, JSClassRef, JSObjectCallAsConstructorCallback, JSValueRef *);
+
+JSObjectRef 
+scripts_make_object(JSContextRef ctx, GObject *o);
+
+char *
+uncamelize(char *uncamel, const char *camel, char rep, size_t length);
+
 #define NIL (scripts_get_nil())
 
 #define EXCEPTION(X)   "DWB EXCEPTION : "X
 
 #define kJSDefaultProperty  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
+
+#define PROP_LENGTH 128
 
 #endif

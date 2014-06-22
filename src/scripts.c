@@ -20,6 +20,7 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "scripts/private.h"
+#include "scripts/cl_deferred.h"
 
 #define API_VERSION 1.11
 
@@ -44,7 +45,6 @@
 #define SCRIPT_TEMPLATE_XINCLUDE SCRIPT_TEMPLATE_XSTART SCRIPT_TEMPLATE_END
 
 #define SCRIPT_WEBVIEW(o) (WEBVIEW(((GList*)JSObjectGetPrivate(o))))
-#define PROP_LENGTH 128
 
 #define TRY_CONTEXT_LOCK (pthread_rwlock_tryrdlock(&s_context_lock) == 0)
 #define CONTEXT_UNLOCK (pthread_rwlock_unlock(&s_context_lock))
@@ -122,27 +122,6 @@ typedef struct SigData_s {
     GObject *instance;
 } SigData;
 
-typedef struct _CallbackData CallbackData;
-typedef struct _SSignal SSignal;
-typedef gboolean (*StopCallbackNotify)(CallbackData *);
-
-struct _CallbackData {
-    GObject *gobject;
-    JSObjectRef object;
-    JSObjectRef callback;
-    StopCallbackNotify notify;
-};
-struct _SSignal {
-    int id;
-    GSignalQuery *query;
-    JSObjectRef object;
-    JSObjectRef func;
-};
-
-
-
-#define S_SIGNAL(X) ((SSignal*)X->data)
-
 static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
     [SCRIPTS_SIG_NAVIGATION]        = "navigation", 
     [SCRIPTS_SIG_LOAD_STATUS]       = "loadStatus", 
@@ -179,9 +158,6 @@ static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
 };
 
 
-static void callback(CallbackData *c);
-static void make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception);
-static JSObjectRef make_object(JSContextRef ctx, GObject *o);
 static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
 
 
@@ -195,7 +171,7 @@ static JSValueRef UNDEFINED, s_nil;
 
 /* MISC {{{*/
 /* uncamelize {{{*/
-static char *
+char *
 uncamelize(char *uncamel, const char *camel, char rep, size_t length) 
 {
     char *ret = uncamel;
@@ -369,15 +345,6 @@ object_destroy_cb(JSObjectRef o)
 }
 
 static void 
-finalize(JSObjectRef o)
-{
-    GObject *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        g_object_steal_qdata(ob, s_ctx->ref_quark);
-    }
-}
-static void 
 finalize_headers(JSObjectRef o)
 {
     SoupMessageHeaders *ob = JSObjectGetPrivate(o);
@@ -437,7 +404,7 @@ inject_api_callback(JSContextRef ctx, JSObjectRef function, JSObjectRef this, si
 }
 
 /* inject {{{*/
-static JSValueRef
+JSValueRef
 inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     JSValueRef ret = NIL;
@@ -553,710 +520,6 @@ sigdata_remove(gulong sigid, GObject *instance)
     }
 }
 
-/* CALLBACK {{{*/
-/* callback_data_new {{{*/
-static CallbackData * 
-callback_data_new(GObject *gobject, JSObjectRef object, JSObjectRef callback, StopCallbackNotify notify)  
-{
-    CallbackData *c = NULL;
-    if (!TRY_CONTEXT_LOCK)
-        return c;
-    if (s_ctx->global_context == NULL)
-        goto error_out;
-
-    c = g_malloc(sizeof(CallbackData));
-    c->gobject = gobject != NULL ? g_object_ref(gobject) : NULL;
-    if (object != NULL) 
-    {
-        JSValueProtect(s_ctx->global_context, object);
-        c->object = object;
-    }
-    if (object != NULL) 
-    {
-        JSValueProtect(s_ctx->global_context, callback);
-        c->callback = callback;
-    }
-    c->notify = notify;
-error_out:
-    CONTEXT_UNLOCK;
-    return c;
-}/*}}}*/
-
-/* callback_data_free {{{*/
-static void
-callback_data_free(CallbackData *c) 
-{
-    if (c != NULL) 
-    {
-        if (c->gobject != NULL) 
-            g_object_unref(c->gobject);
-
-        EXEC_LOCK;
-        if (c->object != NULL) 
-            JSValueUnprotect(s_ctx->global_context, c->object);
-        if (c->callback != NULL) 
-            JSValueUnprotect(s_ctx->global_context, c->callback);
-        EXEC_UNLOCK;
-
-        g_free(c);
-    }
-}/*}}}*/
-
-static void 
-ssignal_free(SSignal *sig) 
-{
-    if (sig != NULL) 
-    {
-        EXEC_LOCK;
-        if (sig->func)
-            JSValueUnprotect(s_ctx->global_context, sig->func);
-        if (sig->object)
-            JSValueUnprotect(s_ctx->global_context, sig->object);
-        EXEC_UNLOCK;
-        if (sig->query)
-            g_free(sig->query);
-        g_free(sig);
-    }
-}
-
-static SSignal * 
-ssignal_new()
-{
-    SSignal *sig = g_malloc(sizeof(SSignal)); 
-    sig->query = g_malloc(sizeof(GSignalQuery));
-    sig->func = NULL;
-    sig->object = NULL;
-    return sig;
-}
-static SSignal * 
-ssignal_new_with_query(guint signal_id)
-{
-    SSignal *s = ssignal_new();
-    if (s)
-    {
-        g_signal_query(signal_id, s->query);
-    }
-    return s;
-}
-
-/* make_callback {{{*/
-static void 
-make_callback(JSContextRef ctx, JSObjectRef this, GObject *gobject, const char *signalname, JSValueRef value, StopCallbackNotify notify, JSValueRef *exception) 
-{
-    JSObjectRef func = js_value_to_function(ctx, value, exception);
-    if (func != NULL) 
-    {
-        CallbackData *c = callback_data_new(gobject, this, func, notify);
-        if (c != NULL)
-            g_signal_connect_swapped(gobject, signalname, G_CALLBACK(callback), c);
-    }
-}/*}}}*/
-
-/* callback {{{*/
-/** 
- * @callback WebKitDownload~statusCallback
- * @param {WebKitDownload} download 
- *      The download
- * */
-static void 
-callback(CallbackData *c) 
-{
-    gboolean ret = false;
-    EXEC_LOCK;
-    JSValueRef val[] = { c->object != NULL ? c->object : NIL };
-    JSValueRef jsret = scripts_call_as_function(s_ctx->global_context, c->callback, c->callback, 1, val);
-    if (JSValueIsBoolean(s_ctx->global_context, jsret))
-        ret = JSValueToBoolean(s_ctx->global_context, jsret);
-    if (ret || (c != NULL && c->gobject != NULL && c->notify != NULL && c->notify(c))) 
-    {
-        g_signal_handlers_disconnect_by_func(c->gobject, callback, c);
-        callback_data_free(c);
-    }
-    EXEC_UNLOCK;
-}/*}}}*/
-/*}}}*/
-
-/* TABS {{{*/
-
-/* WEBVIEW {{{*/
-
-static GList *
-find_webview(JSObjectRef o) 
-{
-    g_return_val_if_fail(dwb.state.fview != NULL, NULL);
-
-    for (GList *r = dwb.state.fview; r; r=r->next)
-        if (VIEW(r)->script_wv == o)
-            return r;
-    for (GList *r = dwb.state.fview->prev; r; r=r->prev)
-        if (VIEW(r)->script_wv == o)
-            return r;
-    return NULL;
-}
-/* wv_status_cb {{{*/
-/** 
- * Callback that will be called if the load-status changes, return true to stop
- * the emission
- *
- * @callback WebKitWebView#loadUriCallback 
- * @param {WebKitWebView} wv The webview which loaded the uri
- * */
-static gboolean 
-wv_status_cb(CallbackData *c) 
-{
-    WebKitLoadStatus status = webkit_web_view_get_load_status(WEBKIT_WEB_VIEW(c->gobject));
-    if (status == WEBKIT_LOAD_FINISHED || status == WEBKIT_LOAD_FAILED) 
-        return true;
-    return false;
-}/*}}}*/
-
-/* wv_load_uri {{{*/
-/**
- * Load an uri in a webview
- * @name loadUri
- * @memberOf WebKitWebView.prototype
- * @function 
- *
- * @param {String} uri 
- *      The uri to load
- * @param {WebKitWebView#loadUriCallback} [callback] 
- *      A callback function that will be called when the load status changes,
- *      return true to stop the emission
- *
- * @returns {Boolean}
- *      true if the uri was loaded
- * */
-static JSValueRef 
-wv_load_uri(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) 
-        return JSValueMakeBoolean(ctx, false);
-
-    WebKitWebView *wv = JSObjectGetPrivate(this);
-    if (wv != NULL) 
-    {
-        char *uri = js_value_to_char(ctx, argv[0], -1, exc);
-        if (uri == NULL)
-            return false;
-        webkit_web_view_load_uri(wv, uri);
-        g_free(uri);
-        if (argc > 1)  
-            make_callback(ctx, this, G_OBJECT(wv), "notify::load-status", argv[1], wv_status_cb, exc);
-
-        return JSValueMakeBoolean(ctx, true);
-    }
-    return JSValueMakeBoolean(ctx, false);
-}/*}}}*/
-
-/**
- * Stops any ongoing loading
- *
- * @name stopLoading
- * @memberOf WebKitWebView.prototype
- * @function 
- *
- * */
-static JSValueRef 
-wv_stop_loading(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(this);;
-    if (wv != NULL)
-        webkit_web_view_stop_loading(wv);
-    return UNDEFINED;
-}
-
-/**
- * Loads a history item, can be used to navigate forward/backwards in history
- *
- * @name history
- * @memberOf WebKitWebView.prototype
- * @function 
- *
- * @param {Number} steps 
- *      Number of steps, pass a negative value to go back in history
- * */
-/* wv_history {{{*/
-static JSValueRef 
-wv_history(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc < 1) 
-    {
-        js_make_exception(ctx, exc, EXCEPTION("webview.history: missing argument."));
-        return UNDEFINED;
-    }
-    double steps = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(steps)) {
-        WebKitWebView *wv = JSObjectGetPrivate(this);
-        if (wv != NULL)
-            webkit_web_view_go_back_or_forward(wv, (int)steps);
-    }
-    return UNDEFINED;
-}/*}}}*/
-
-/**
- * Reloads the current site
- *
- * @name reload
- * @memberOf WebKitWebView.prototype
- * @function 
- *
- * */
-/* wv_reload {{{*/
-static JSValueRef 
-wv_reload(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(this);
-    if (wv != NULL)
-        webkit_web_view_reload(wv);
-    return UNDEFINED;
-}/*}}}*/
-
-/* wv_inject {{{*/
-static JSValueRef 
-wv_inject(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(this);
-    if (wv != NULL) 
-    {
-        JSContextRef wctx = webkit_web_frame_get_global_context(webkit_web_view_get_main_frame(wv));
-        return inject(ctx, wctx, function, this, argc, argv, exc);
-    }
-    return NIL;
-}/*}}}*/
-#if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
-
-cairo_surface_t *
-wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSValueRef *argv, JSValueRef *exc)
-{
-    cairo_surface_t *sf, *scaled_surface = NULL; 
-    cairo_t *cr;
-    int w, h; 
-    gboolean keep_aspect = false;
-    double aspect, new_width, new_height, width, height;
-    double sw, sh;
-
-    if (argc > 1)
-    {
-        width = JSValueToNumber(ctx, argv[0], exc);
-        height = JSValueToNumber(ctx, argv[1], exc);
-        if (!isnan(width) && !isnan(height)) 
-        {
-            if (argc > 2 && JSValueIsBoolean(ctx, argv[2])) 
-                keep_aspect = JSValueToBoolean(ctx, argv[2]);
-
-            if (keep_aspect && (width <= 0 || height <= 0))
-                return NULL;
-
-            sf = webkit_web_view_get_snapshot(wv);
-            w = cairo_image_surface_get_width(sf);
-            h = cairo_image_surface_get_height(sf);
-
-            aspect = (double)w/h;
-            new_width = width;
-            new_height = height;
-
-            if (width <= 0 || keep_aspect)
-                new_width = height * aspect;
-            if ((width > 0 && height <= 0) || keep_aspect)
-                new_height = width / aspect;
-            if (keep_aspect) 
-            {
-                if (new_width > width) 
-                {
-                    new_width = width;
-                    new_height = new_width / aspect;
-                }
-                else if (new_height > height) 
-                {
-                    new_height = height;
-                    new_width = new_height * aspect;
-                }
-            }
-
-            if (width <= 0 || height <= 0)
-                sw = sh = MIN(width / w, height / h);
-            else 
-            {
-                sw = width / w;
-                sh = height / h;
-            }
-
-            scaled_surface = cairo_surface_create_similar_image(sf, CAIRO_FORMAT_RGB24, new_width, new_height);
-            cr = cairo_create(scaled_surface);
-
-            cairo_save(cr);
-            cairo_scale(cr, sw, sh);
-
-            cairo_set_source_surface(cr, sf, 0, 0);
-            cairo_paint(cr);
-            cairo_restore(cr);
-
-            cairo_destroy(cr);
-            cairo_surface_destroy(sf);
-        }
-    }
-    else 
-    {
-        scaled_surface = webkit_web_view_get_snapshot(wv);
-    }
-    return scaled_surface;
-}
-
-cairo_status_t 
-write_png64(GString *buffer, const unsigned char *data, unsigned int length)
-{
-    char *base64 = g_base64_encode(data, length);
-    if (base64 != NULL)
-    {
-        g_string_append(buffer, base64);
-        g_free(base64);
-        return CAIRO_STATUS_SUCCESS;
-    }
-    return CAIRO_STATUS_WRITE_ERROR;
-}
-/** 
- * Renders a webview to a base64 encoded png
- *
- * @name toPng64
- * @memberOf WebKitWebView.prototype
- * @function 
- * @type String
- * @requires webkitgtk >= 1.10
- * @example
- * var png = tabs.current.toPng64(250, 250, true); 
- * tabs.current.inject(function() {
- *     var img = document.createElement("img");
- *     img.src = "data:image/png;base64," + arguments[0];
- *     document.body.appendChild(img);
- * }, png);
- *
- *
- * @param {Number} width
- *      The width of the png, if width is < 0 and height is > 0 the image will have the same aspect ratio as the original webview, optional.
- * @param {Number} height
- *      The height of the png, if height is < 0 and width is > 0 the image will have the same aspect ratio as the original webview, optional, mandatory if width is set.
- * @param {Boolean} keepAspect
- *      Whether to keep the ascpect ratio, if set to true the new image will have the same aspect ratio as the original webview, width and height are taken as maximum sizes and must both be > 0, optional.
- *
- * @returns A base64 encoded png-String
- *
- * */
-static JSValueRef 
-wv_to_png64(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    WebKitWebView *wv;
-    cairo_status_t status = -1;
-    cairo_surface_t *scaled_surface;
-    JSValueRef result = NIL;
-
-    wv = JSObjectGetPrivate(this);
-    g_return_val_if_fail(wv != NULL, NIL);
-
-    scaled_surface = wv_to_surface(ctx, wv, argc, argv, exc);
-    if (scaled_surface != NULL)
-    {
-        GString *s = g_string_new(NULL);
-        status = cairo_surface_write_to_png_stream(scaled_surface, (cairo_write_func_t)write_png64, s);
-        cairo_surface_destroy(scaled_surface);
-
-        if (status == CAIRO_STATUS_SUCCESS)
-            result = js_char_to_value(ctx, s->str);
-        g_string_free(s, true);
-    }
-    return result;
-}
-/** 
- * Renders a webview to a png file
- *
- * @name toPng
- * @memberOf WebKitWebView.prototype
- * @function 
- * @type Number
- * @requires webkitgtk >= 1.10
- *
- *
- * @param {String} filename
- *      The filename for the png.
- * @param {Number} width
- *      The width of the png, if width is < 0 and height is > 0 the image will have the same aspect ratio as the original webview, optional.
- * @param {Number} height
- *      The height of the png, if height is < 0 and width is > 0 the image will have the same aspect ratio as the original webview, optional, mandatory if width is set.
- * @param {Boolean} keepAspect
- *      Whether to keep the ascpect ratio, if set to true the new image will have the same aspect ratio as the original webview, width and height are taken as maximum sizes and must both be > 0, optional.
- *
- * @returns A cairo_status_t, 0 on success, -1 if an error occured
- * */
-static JSValueRef 
-wv_to_png(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    WebKitWebView *wv;
-    cairo_status_t status = -1;
-    cairo_surface_t *scaled_surface;
-    char *filename;
-    if (argc < 1 || (wv = JSObjectGetPrivate(this)) == NULL || (JSValueIsNull(ctx, argv[0])) || (filename = js_value_to_char(ctx, argv[0], -1, NULL)) == NULL) 
-    {
-        return JSValueMakeNumber(ctx, status);
-    }
-    scaled_surface = wv_to_surface(ctx, wv, argc-1, argc > 1 ? argv + 1 : NULL, exc);
-    if (scaled_surface != NULL)
-    {
-        status = cairo_surface_write_to_png(scaled_surface, filename);
-        cairo_surface_destroy(scaled_surface);
-    }
-    else 
-    {
-        return JSValueMakeNumber(ctx, -1);
-    }
-    return JSValueMakeNumber(ctx, status);
-}
-#endif
-/** 
- * Whether text is selected in the webview
- *
- * @name hasSelection
- * @memberOf WebKitWebView.prototype
- * @type Boolean
- * */
-static JSValueRef 
-wv_has_selection(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(object);
-    if (wv != NULL) 
-    {
-        return JSValueMakeBoolean(ctx, webkit_web_view_has_selection(wv));
-    }
-    return JSValueMakeBoolean(ctx, false);
-}/*}}}*/
-/** 
- * The last search string of the webview
- *
- * @name lastSearch
- * @memberOf WebKitWebView.prototype
- * @type String
- * */
-static JSValueRef 
-wv_last_search(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl != NULL) {
-        if (VIEW(gl)->status->search_string != NULL) {
-            JSValueRef val = js_char_to_value(ctx, VIEW(gl)->status->search_string);
-            return val;
-        }
-    }
-    return NIL;
-}/*}}}*/
-/** 
- * Whether the webview has already loaded the first site. loadDeferred can only
- * be false if 'load-on-focus' is set to true
- *
- * @name loadDeferred
- * @memberOf WebKitWebView.prototype
- * @type Boolean
- * */
-static JSValueRef 
-wv_load_deferred(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) {
-    GList *gl = find_webview(object);
-    gboolean deferred = false;
-    if (gl != NULL) {
-        deferred = VIEW(gl)->status->deferred;
-    }
-    return JSValueMakeBoolean(ctx, deferred);
-}
-/* wv_get_main_frame {{{*/
-/** 
- * The main frame
- *
- * @name mainFrame
- * @memberOf WebKitWebView.prototype
- * @type WebKitWebFrame
- * */
-static JSValueRef 
-wv_get_main_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(object);
-    if (wv != NULL) 
-    {
-        WebKitWebFrame *frame = webkit_web_view_get_main_frame(wv);
-        return make_object(ctx, G_OBJECT(frame));
-    }
-    return NIL;
-}/*}}}*/
-
-/** 
- * The focused frame
- *
- * @name focusedFrame
- * @memberOf WebKitWebView.prototype
- * @type WebKitWebFrame
- * */
-/* wv_get_focused_frame {{{*/
-static JSValueRef 
-wv_get_focused_frame(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(object);
-    if (wv != NULL) 
-    {
-        WebKitWebFrame *frame = webkit_web_view_get_focused_frame(wv);
-        return make_object(ctx, G_OBJECT(frame));
-    }
-    return NIL;
-}/*}}}*/
-
-/* wv_get_all_frames {{{*/
-/** 
- * All frames of a webview, including the main frame
- *
- * @name allFrames
- * @memberOf WebKitWebView.prototype
- * @type Array[{@link WebKitWebFrame}]
- * */
-static JSValueRef 
-wv_get_all_frames(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    JSValueRef ret = NIL;
-    int argc = 0, n = 0;
-    GSList *frames = NULL;
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    for (GSList *l = VIEW(gl)->status->frames; l; l=l->next) {
-        WebKitWebFrame *frame = g_weak_ref_get(l->data);
-        if (frame != NULL) {
-            frames = g_slist_append(frames, frame);
-            argc++;
-        }
-    }
-
-    if (argc > 0) {
-        JSValueRef argv[argc];
-
-        for (GSList *sl = frames; sl; sl=sl->next) {
-            WebKitWebFrame *frame = sl->data;
-            if (frame != NULL) {
-                argv[n++] = make_object(ctx, G_OBJECT(sl->data));
-            }
-        }
-        ret = JSObjectMakeArray(ctx, argc, argv, exception);
-    }
-    g_slist_free_full(frames, (GDestroyNotify)g_object_unref);
-
-    return ret;
-}/*}}}*/
-
-/** 
- * The tabnumber of the webview, starting at 0
- * 
- * @name number
- * @memberOf WebKitWebView.prototype
- * @type Number
- *
- * */
-/* wv_get_number {{{*/
-static JSValueRef 
-wv_get_number(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = dwb.state.views;
-    for (int i=0; gl; i++, gl=gl->next) 
-    {
-        if (object == VIEW(gl)->script_wv) 
-            return JSValueMakeNumber(ctx, i); 
-    }
-    return JSValueMakeNumber(ctx, -1); 
-}/*}}}*/
-
-/** 
- * The main widget for tab labels, used for coloring tabs, child of gui.tabBox.
- *
- * @name tabWidget
- * @memberOf WebKitWebView.prototype
- * @type GtkEventBox
- * */
-static JSValueRef 
-wv_get_tab_widget(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabevent), true);
-}
-/** 
- * Horizontal box, child of wv.tabWidget.
- *
- * @name tabBox
- * @memberOf WebKitWebView.prototype
- * @type GtkBox
- * */
-static JSValueRef 
-wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabbox), true);
-}
-/** 
- * Text label of a tab, child of wv.tabBox.
- *
- * @name tabLabel
- * @memberOf WebKitWebView.prototype
- * @type GtkLabel
- * */
-static JSValueRef 
-wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tablabel), true);
-}
-/** 
- * Favicon widget, child of wv.tabBox
- *
- * @name tabIcon
- * @memberOf WebKitWebView.prototype
- * @type GtkImage
- * */
-static JSValueRef 
-wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabicon), true);
-}
-
-/** 
- * The parent widget of every webview, it is used for scrolling the webview
- *
- * @name scrolledWindow
- * @memberOf WebKitWebView.prototype
- * @type GtkScrolledWindow
- * */
-static JSValueRef 
-wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    GList *gl = find_webview(object);
-    if (gl == NULL)
-        return NIL;
-    return make_object_for_class(ctx, s_ctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->scroll), true);
-}
-
-/** 
- * The history of the webview
- *
- * @name historyList
- * @memberOf WebKitWebView.prototype
- * @type WebKitWebBackForwardList
- * */
-static JSValueRef 
-wv_get_history_list(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    WebKitWebView *wv = JSObjectGetPrivate(object);
-    if (wv == NULL)
-        return NIL;
-    return make_object(ctx, G_OBJECT(webkit_web_view_get_back_forward_list(wv)));
-}
 
 JSObjectRef 
 suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception)
@@ -1585,7 +848,7 @@ frame_get_document(JSContextRef ctx, JSObjectRef self, JSStringRef js_name, JSVa
     if (frame == NULL)
         return NIL;
     WebKitDOMDocument *doc = webkit_web_frame_get_dom_document(frame);
-    return make_object(ctx, G_OBJECT(doc));
+    return scripts_make_object(ctx, G_OBJECT(doc));
     
 }
 
@@ -1976,7 +1239,7 @@ history_get_item(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
         WebKitWebBackForwardList *list = JSObjectGetPrivate(this);
         g_return_val_if_fail(list != NULL, NIL);
 
-        return make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
+        return scripts_make_object(ctx, G_OBJECT(webkit_web_back_forward_list_get_nth_item(list, n)));
     }
     return NIL;
 }
@@ -2248,7 +1511,7 @@ widget_get_children(JSContextRef ctx, JSObjectRef function, JSObjectRef this, si
     else {
         JSValueRef js_children[n_children];
         for (GList *l=children; l; l = l->next, i++) {
-            js_children[i] = make_object(ctx, G_OBJECT(l->data));
+            js_children[i] = scripts_make_object(ctx, G_OBJECT(l->data));
         }
         result = JSObjectMakeArray(ctx, n_children, js_children, exc);
     }
@@ -2291,7 +1554,7 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
         }
         GtkWidget *widget = gtk_widget_new(type, NULL);
         s_ctx->created_widgets = g_slist_prepend(s_ctx->created_widgets, widget);
-        return make_object(ctx, G_OBJECT(widget));
+        return scripts_make_object(ctx, G_OBJECT(widget));
     }
     return JSValueToObject(ctx, NIL, NULL);
 }
@@ -3027,7 +2290,7 @@ scripts_emit(ScriptSignal *sig)
     for (int j=0; j<sig->numobj; j++) 
     {
         if (sig->objects[j] != NULL) 
-            val[i++] = make_object(s_ctx->global_context, G_OBJECT(sig->objects[j]));
+            val[i++] = scripts_make_object(s_ctx->global_context, G_OBJECT(sig->objects[j]));
         else 
             val[i++] = NIL;
     }
@@ -3062,7 +2325,7 @@ scripts_emit(ScriptSignal *sig)
 /*}}}*/
 
 /* OBJECTS {{{*/
-/* make_object {{{*/
+/* scripts_make_object {{{*/
 
 JSObjectRef 
 make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
@@ -3096,8 +2359,8 @@ make_boxed(gpointer boxed, JSClassRef klass)
     return ret;
 }
 
-static JSObjectRef 
-make_object(JSContextRef ctx, GObject *o) 
+JSObjectRef 
+scripts_make_object(JSContextRef ctx, GObject *o) 
 {
     if (o == NULL) 
     {
@@ -3137,292 +2400,6 @@ make_object(JSContextRef ctx, GObject *o)
     return result;
 }/*}}}*/
 
-/** 
- * Callback called for GObject signals, <span class="ilkw">this</span> will refer to the object
- * that connected to the signal
- * @callback GObject~connectCallback
- *
- * @param {...Object} varargs
- *      Variable number of additional arguments, see the correspondent
- *      gtk/glib/webkit documentation. Note that the first argument is omitted and
- *      <span class="ilkw">this</span> will correspond to the first parameter and that only
- *      arguments of basic type and arguments derived from GObject are converted
- *      to the corresponding javascript object, otherwise the argument will be
- *      undefined (e.g.  GBoxed types and structs).
- *
- * @returns {Boolean} 
- *      Return true to stop the emission. Note that this signal handler is
- *      connected after dwb's default handler so it will not prevent dwb's
- *      handlers to be executed
- * */
-static gboolean 
-connect_callback(SSignal *sig, ...) 
-{
-    va_list args;
-    JSValueRef cur;
-    JSValueRef argv[sig->query->n_params];
-    gboolean result = false;
-
-    if (!TRY_CONTEXT_LOCK)
-        return result;
-    if (s_ctx->global_context == NULL)
-        goto error_out;
-
-    va_start(args, sig);
-#define CHECK_NUMBER(GTYPE, TYPE) G_STMT_START if (gtype == G_TYPE_##GTYPE) { \
-    TYPE MM_value = va_arg(args, TYPE); \
-    cur = JSValueMakeNumber(s_ctx->global_context, MM_value); goto apply;} G_STMT_END
-    for (guint i=0; i<sig->query->n_params; i++) 
-    {
-        GType gtype = sig->query->param_types[i], act;
-        while ((act = g_type_parent(gtype))) 
-            gtype = act;
-        CHECK_NUMBER(INT, gint);
-        CHECK_NUMBER(UINT, guint);
-        CHECK_NUMBER(LONG, glong);
-        CHECK_NUMBER(ULONG, gulong);
-        CHECK_NUMBER(FLOAT, gdouble);
-        CHECK_NUMBER(DOUBLE, gdouble);
-        CHECK_NUMBER(ENUM, gint);
-        CHECK_NUMBER(INT64, gint64);
-        CHECK_NUMBER(UINT64, guint64);
-        CHECK_NUMBER(FLAGS, guint);
-        if (sig->query->param_types[i] == G_TYPE_BOOLEAN) 
-        {
-            gboolean value = va_arg(args, gboolean);
-            cur = JSValueMakeBoolean(s_ctx->global_context, value);
-        }
-        else if (sig->query->param_types[i] == G_TYPE_STRING) 
-        {
-            char *value = va_arg(args, char *);
-            cur = js_char_to_value(s_ctx->global_context, value);
-        }
-        else if (G_TYPE_IS_CLASSED(gtype)) 
-        {
-            GObject *value = va_arg(args, gpointer);
-            if (value != NULL) // avoid conversion to JSObjectRef
-                cur = make_object(s_ctx->global_context, value);
-            else 
-                cur = NIL;
-        }
-        else 
-        {
-            va_arg(args, void*);
-            cur = UNDEFINED;
-        }
-
-apply:
-        argv[i] = cur;
-    }
-#undef CHECK_NUMBER
-    JSValueRef ret = scripts_call_as_function(s_ctx->global_context, sig->func, sig->object, sig->query->n_params, argv);
-    if (JSValueIsBoolean(s_ctx->global_context, ret)) 
-    {
-        result = JSValueToBoolean(s_ctx->global_context, ret);
-    }
-error_out:
-    CONTEXT_UNLOCK;
-    return result;
-}
-static void
-on_disconnect_object(SSignal *sig, GClosure *closure)
-{
-    ssignal_free(sig);
-}
-/** 
- * Called when a property of an object changes, <span class="ilkw">this</span> will refer to the object
- * that connected to the signal.
- * @callback GObject~notifyCallback
- *
- * */
-static void
-notify_callback(GObject *o, GParamSpec *param, SSignal *sig)
-{
-    EXEC_LOCK;
-    g_signal_handlers_block_by_func(o, G_CALLBACK(notify_callback), sig);
-    scripts_call_as_function(s_ctx->global_context, sig->func, make_object(s_ctx->global_context, o), 0, NULL);
-    g_signal_handlers_unblock_by_func(o, G_CALLBACK(notify_callback), sig);
-    EXEC_UNLOCK;
-}
-/**
- * Connect to a GObject-signal. Note that all signals are connected using the
- * signal::- or with notify::-prefix. If connecting to a signal the
- * signal::-prefix must be omitted. The callback function will have the same
- * parameters as the GObject signal callback without the first parameter,
- * however some parameters may be undefined if they cannot be converted to
- * javascript objects. All signal handlers are executed after dwb’s default
- * handler.
- *
- * @memberOf GObject.prototype
- * @name connect 
- * @function
- *
- * @param {String} name The signal name.
- * @param {GObject~connectCallback} callback Callback that will be called when the signal is emitted.
- * @param {Boolean} [after] Whether to connect after the default signal handler.
- *
- * @returns {Number} The signal id of this signal
- * */
-static JSValueRef 
-gobject_connect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    GConnectFlags flags = 0;
-    gulong id = 0;
-    SSignal *sig;
-    char *name = NULL;
-    guint signal_id;
-
-    if (argc < 2) 
-        return JSValueMakeNumber(ctx, 0);
-
-    name = js_value_to_char(ctx, argv[0], PROP_LENGTH, exc);
-    if (name == NULL) 
-        goto error_out;
-
-    JSObjectRef func = js_value_to_function(ctx, argv[1], exc);
-    if (func == NULL) 
-        goto error_out;
-
-    GObject *o = JSObjectGetPrivate(this);
-    if (o == NULL)
-        goto error_out;
-
-    if (argc > 2 && JSValueIsBoolean(ctx, argv[2]) && JSValueToBoolean(ctx, argv[2]))
-        flags |= G_CONNECT_AFTER;
-
-    if (strncmp(name, "notify::", 8) == 0) 
-    {
-        JSValueProtect(ctx, func);
-        SSignal *sig = ssignal_new();
-        sig->func = func;
-        id = g_signal_connect_data(o, name, G_CALLBACK(notify_callback), sig, (GClosureNotify)on_disconnect_object, flags);
-        if (id > 0)
-        {
-            sig->id = id;
-            sigdata_append(sig->id, o); 
-        }
-        else 
-            ssignal_free(sig);
-    }
-    else
-    {
-        signal_id = g_signal_lookup(name, G_TYPE_FROM_INSTANCE(o));
-
-        flags |= G_CONNECT_SWAPPED;
-
-        if (signal_id == 0)
-            goto error_out;
-
-        sig = ssignal_new_with_query(signal_id);
-        if (sig == NULL) 
-            goto error_out;
-
-        if (sig->query == NULL || sig->query->signal_id == 0) 
-        {
-            ssignal_free(sig);
-            goto error_out;
-        }
-
-        sig->func = func;
-        JSValueProtect(ctx, func);
-
-        id = g_signal_connect_data(o, name, G_CALLBACK(connect_callback), sig, (GClosureNotify)on_disconnect_object, flags);
-        if (id > 0) 
-        {
-            sig->id = id;
-            JSValueProtect(ctx, this);
-            sig->object = this;
-            sigdata_append(id, o);
-        }
-        else 
-            ssignal_free(sig);
-    }
-
-error_out: 
-    g_free(name);
-    return JSValueMakeNumber(ctx, id);
-}
-/** 
- * Blocks emission of a signal
- *
- * @name blockSignal 
- * @memberOf GObject.prototype
- * @function
- *
- * @param {Number} id The signal id retrieved from GObject#connect
- * */
-
-static JSValueRef 
-gobject_block_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) {
-        return UNDEFINED;
-    }
-    double sigid = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(sigid)) 
-    {
-        GObject *o = JSObjectGetPrivate(this);
-        if (o != NULL)
-            g_signal_handler_block(o, (int)sigid);
-    }
-    return UNDEFINED;
-}
-/** 
- * Unblocks a signal that was blocked with GObject#blockSignal
- *
- * @name unblockSignal 
- * @memberOf GObject.prototype
- * @function
- *
- * @param {Number} id The signal id retrieved from GObject#connect
- * */
-static JSValueRef 
-gobject_unblock_signal(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) {
-        return UNDEFINED;
-    }
-
-    double sigid = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(sigid))
-    {
-        GObject *o = JSObjectGetPrivate(this);
-        if (o != NULL)
-            g_signal_handler_unblock(o, (int)sigid);
-    }
-    return UNDEFINED;
-}
-/**
- * Disconnects from a signal
- *
- * @name disconnect
- * @memberOf GObject.prototype
- * @function
- *
- * @param {Number} id The signal id retrieved from {@link GObject.connect}
- *
- * @returns {Boolean}
- *      Whether a signal was found and disconnected
- * */
-static JSValueRef 
-gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0) {
-        return JSValueMakeBoolean(ctx, false);
-    }
-    int id = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(id))
-    {
-        GObject *o = JSObjectGetPrivate(this);
-        if (o != NULL && g_signal_handler_is_connected(o, id)) 
-        {
-            sigdata_remove(id, o);
-            g_signal_handler_disconnect(o, id);
-            return JSValueMakeBoolean(ctx, true);
-        }
-    }
-    return JSValueMakeBoolean(ctx, false);
-}
 
 /* set_property_cb {{{*/
 static bool
@@ -3453,154 +2430,12 @@ scripts_create_object(JSContextRef ctx, JSClassRef class, JSObjectRef obj, JSCla
 }/*}}}*/
 
 /* set_property {{{*/
-static bool
-set_property(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef jsvalue, JSValueRef* exception) 
-{
-    char buf[PROP_LENGTH];
-    char *name = js_string_to_char(ctx, js_name, -1);
-    if (name == NULL)
-        return false;
-
-    uncamelize(buf, name, '-', PROP_LENGTH);
-    g_free(name);
-
-    GObject *o = JSObjectGetPrivate(object);
-    g_return_val_if_fail(o != NULL, false);
-
-    GObjectClass *class = G_OBJECT_GET_CLASS(o);
-    if (class == NULL || !G_IS_OBJECT_CLASS(class))
-        return false;
-
-    GParamSpec *pspec = g_object_class_find_property(class, buf);
-    if (pspec == NULL)
-        return false;
-
-    if (! (pspec->flags & G_PARAM_WRITABLE))
-        return false;
-
-    int jstype = JSValueGetType(ctx, jsvalue);
-    GType gtype = G_TYPE_IS_FUNDAMENTAL(pspec->value_type) ? pspec->value_type : g_type_parent(pspec->value_type);
-
-    if (jstype == kJSTypeNumber && 
-            (gtype == G_TYPE_INT || gtype == G_TYPE_UINT || gtype == G_TYPE_LONG || gtype == G_TYPE_ULONG ||
-             gtype == G_TYPE_FLOAT || gtype == G_TYPE_DOUBLE || gtype == G_TYPE_ENUM || gtype == G_TYPE_INT64 ||
-             gtype == G_TYPE_UINT64 || gtype == G_TYPE_FLAGS))  
-    {
-        double value = JSValueToNumber(ctx, jsvalue, exception);
-        if (!isnan(value))
-        {
-            switch (gtype) 
-            {
-                case G_TYPE_ENUM :
-                case G_TYPE_FLAGS :
-                case G_TYPE_INT : g_object_set(o, buf, (gint)value, NULL); break;
-                case G_TYPE_UINT : g_object_set(o, buf, (guint)value, NULL); break;
-                case G_TYPE_LONG : g_object_set(o, buf, (long)value, NULL); break;
-                case G_TYPE_ULONG : g_object_set(o, buf, (gulong)value, NULL); break;
-                case G_TYPE_FLOAT : g_object_set(o, buf, (gfloat)value, NULL); break;
-                case G_TYPE_DOUBLE : g_object_set(o, buf, (gdouble)value, NULL); break;
-                case G_TYPE_INT64 : g_object_set(o, buf, (gint64)value, NULL); break;
-                case G_TYPE_UINT64 : g_object_set(o, buf, (guint64)value, NULL); break;
-
-            }
-            return true;
-        }
-        return false;
-    }
-    else if (jstype == kJSTypeBoolean && gtype == G_TYPE_BOOLEAN) 
-    {
-        bool value = JSValueToBoolean(ctx, jsvalue);
-        g_object_set(o, buf, value, NULL);
-        return true;
-    }
-    else if (jstype == kJSTypeString && gtype == G_TYPE_STRING) 
-    {
-        char *value = js_value_to_char(ctx, jsvalue, -1, exception);
-        g_object_set(o, buf, value, NULL);
-        g_free(value);
-        return true;
-    }
-    return false;
-}/*}}}*/
 
 /* get_property {{{*/
-static JSValueRef
-get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRef *exception) 
-{
-    char buf[PROP_LENGTH];
-    JSValueRef ret = NULL;
-
-    char *name = js_string_to_char(ctx, js_name, -1);
-    if (name == NULL)
-        return NULL;
-
-    uncamelize(buf, name, '-', PROP_LENGTH);
-    g_free(name);
-
-    GObject *o = JSObjectGetPrivate(jsobj);
-    if (o == NULL) {
-        return NULL;
-    }
-
-    GObjectClass *class = G_OBJECT_GET_CLASS(o);
-    if (class == NULL || !G_IS_OBJECT_CLASS(class))
-        return NULL;
-
-    GParamSpec *pspec = g_object_class_find_property(class, buf);
-    if (pspec == NULL)
-        return NULL;
-
-    if (! (pspec->flags & G_PARAM_READABLE))
-        return NULL;
-
-    GType gtype = pspec->value_type, act; 
-    while ((act = g_type_parent(gtype))) 
-        gtype = act;
-
-#define CHECK_NUMBER(GTYPE, TYPE) G_STMT_START if (gtype == G_TYPE_##GTYPE) { \
-    TYPE value; g_object_get(o, buf, &value, NULL); return JSValueMakeNumber(ctx, (double)value); \
-}    G_STMT_END
-        CHECK_NUMBER(INT, gint);
-        CHECK_NUMBER(UINT, guint);
-        CHECK_NUMBER(LONG, glong);
-        CHECK_NUMBER(ULONG, gulong);
-        CHECK_NUMBER(FLOAT, gfloat);
-        CHECK_NUMBER(DOUBLE, gdouble);
-        CHECK_NUMBER(ENUM, gint);
-        CHECK_NUMBER(INT64, gint64);
-        CHECK_NUMBER(UINT64, guint64);
-        CHECK_NUMBER(FLAGS, guint);
-#undef CHECK_NUMBER
-    if (pspec->value_type == G_TYPE_BOOLEAN) 
-    {
-        gboolean bval;
-        g_object_get(o, buf, &bval, NULL);
-        ret = JSValueMakeBoolean(ctx, bval);
-    }
-    else if (pspec->value_type == G_TYPE_STRING) 
-    {
-        char *value;
-        g_object_get(o, buf, &value, NULL);
-        ret = js_char_to_value(ctx, value);
-        g_free(value);
-    }
-    else if (G_TYPE_IS_CLASSED(gtype)) 
-    {
-        GObject *object;
-        g_object_get(o, buf, &object, NULL);
-        if (object == NULL)
-            return NULL;
-    
-        JSObjectRef retobj = make_object(ctx, object);
-        g_object_unref(object);
-        ret = retobj;
-    }
-    return ret;
-}/*}}}*/
 
 /* get_property {{{*/
-static JSObjectRef
-create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallAsConstructorCallback cb, JSValueRef *exc)
+JSObjectRef
+scripts_create_constructor(JSContextRef ctx, char *name, JSClassRef class, JSObjectCallAsConstructorCallback cb, JSValueRef *exc)
 {
     JSObjectRef constructor = JSObjectMakeConstructor(ctx, class, cb);
     JSStringRef js_name = JSStringCreateWithUTF8CString(name);
@@ -3768,98 +2603,9 @@ create_global_object()
      * */
     s_ctx->namespaces[NAMESPACE_CONSOLE] = scripts_create_object(ctx, NULL, global_object, kJSDefaultAttributes, "console", NULL);
 
-    /** 
-     * Base class for webkit/gtk objects
-     *
-     * @name GObject
-     * @property {Object}  ... 
-     *      Variable number of properties, See the corresponding
-     *      gtk/webkitgtk/libsoup documentation for a list of properties, All
-     *      properties can be used in camelcase. 
-     *
-     * @class 
-     *      Base class for webkit/gtk objects, all objects derived from GObject
-     *      correspond to the original GObjects. They have the same properties,
-     *      but javascript properties can also be used in camelcase. 
-     *      It is discouraged from settting own properties directly on objects derived
-     *      from GObject since these objects are shared between all scripts, use 
-     *      {@link script.setPrivate} and {@link script.getPrivate} instead
-     * @example 
-     * //!javascript
-     *
-     * var tabs = namespace("tabs");
-     *
-     * tabs.current["zoom-level"] = 2;
-     * //  is equivalent to 
-     * tabs.current.zoomLevel = 2; 
-     *
-     * */
-    JSStaticFunction default_functions[] = { 
-        { "connect",            gobject_connect,                kJSDefaultAttributes },
-        { "blockSignal",        gobject_block_signal,                kJSDefaultAttributes },
-        { "unblockSignal",      gobject_unblock_signal,                kJSDefaultAttributes },
-        { "disconnect",         gobject_disconnect,             kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "GObject";
-    cd.staticFunctions = default_functions;
-    cd.getProperty = get_property;
-    cd.setProperty = set_property;
-    cd.finalize = finalize;
-    s_ctx->classes[CLASS_GOBJECT] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_DEFAULT] = create_constructor(ctx, "GObject", s_ctx->classes[CLASS_GOBJECT], NULL, NULL);
-
-    /* Webview */
-    /**
-     * A GtkWidget that shows the webcontent
-     *
-     * @name WebKitWebView
-     * @augments GObject
-     * @class GtkWidget that shows webcontent
-     * @borrows WebKitWebFrame#inject as prototype.inject
-     * @borrows WebKitWebFrame#loadString as prototype.loadString
-     * @borrows WebKitWebFrame#document as prototype.document
-     * */
-    JSStaticFunction wv_functions[] = { 
-        { "loadUri",         wv_load_uri,             kJSDefaultAttributes },
-        { "stopLoading",         wv_stop_loading,        kJSDefaultAttributes },
-        { "history",         wv_history,             kJSDefaultAttributes },
-        { "reload",          wv_reload,             kJSDefaultAttributes },
-        { "inject",          wv_inject,             kJSDefaultAttributes },
-#if WEBKIT_CHECK_VERSION(1, 10, 0) && CAIRO_VERSION >= CAIRO_VERSION_ENCODE(1, 12, 0)
-        { "toPng",           wv_to_png,             kJSDefaultAttributes },
-        { "toPng64",         wv_to_png64,             kJSDefaultAttributes },
-#endif
-        { 0, 0, 0 }, 
-    };
-    JSStaticValue wv_values[] = {
-        { "loadDeferred",  wv_load_deferred, NULL, kJSDefaultAttributes }, 
-        { "lastSearch",    wv_last_search, NULL, kJSDefaultAttributes }, 
-        { "hasSelection",  wv_has_selection, NULL, kJSDefaultAttributes }, 
-        { "mainFrame",     wv_get_main_frame, NULL, kJSDefaultAttributes }, 
-        { "focusedFrame",  wv_get_focused_frame, NULL, kJSDefaultAttributes }, 
-        { "allFrames",     wv_get_all_frames, NULL, kJSDefaultAttributes }, 
-        { "number",        wv_get_number, NULL, kJSDefaultAttributes }, 
-        { "tabWidget",     wv_get_tab_widget, NULL, kJSDefaultAttributes }, 
-        { "tabBox",        wv_get_tab_box, NULL, kJSDefaultAttributes }, 
-        { "tabLabel",      wv_get_tab_label, NULL, kJSDefaultAttributes }, 
-        { "tabIcon",       wv_get_tab_icon, NULL, kJSDefaultAttributes }, 
-        { "historyList",    wv_get_history_list, NULL, kJSDefaultAttributes }, 
-        { "scrolledWindow",wv_get_scrolled_window, NULL, kJSDefaultAttributes }, 
-        { 0, 0, 0, 0 }, 
-    };
-
-    cd.className = "WebKitWebView";
-    cd.staticFunctions = wv_functions;
-    cd.staticValues = wv_values;
-    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
-    s_ctx->classes[CLASS_WEBVIEW] = JSClassCreate(&cd);
-
-
-    s_ctx->constructors[CONSTRUCTOR_WEBVIEW] = create_constructor(ctx, "WebKitWebView", s_ctx->classes[CLASS_WEBVIEW], NULL, NULL);
-
+    gobject_initialize(s_ctx);
+    webview_initialize(s_ctx);
 
     /* Frame */
     /** 
@@ -3891,7 +2637,7 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
     s_ctx->classes[CLASS_FRAME] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_FRAME] = create_constructor(ctx, "WebKitWebFrame", s_ctx->classes[CLASS_FRAME], NULL, NULL);
+    s_ctx->constructors[CONSTRUCTOR_FRAME] = scripts_create_constructor(ctx, "WebKitWebFrame", s_ctx->classes[CLASS_FRAME], NULL, NULL);
 
     /* SoupMessage */ 
     /**
@@ -3925,7 +2671,7 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
     s_ctx->classes[CLASS_MESSAGE] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_SOUP_MESSAGE] = create_constructor(ctx, "SoupMessage", s_ctx->classes[CLASS_MESSAGE], NULL, NULL);
+    s_ctx->constructors[CONSTRUCTOR_SOUP_MESSAGE] = scripts_create_constructor(ctx, "SoupMessage", s_ctx->classes[CLASS_MESSAGE], NULL, NULL);
 
     /** 
      * Constructs a new Timer.
@@ -3954,7 +2700,7 @@ create_global_object()
     cd.staticValues = gtimer_values;
     cd.finalize = finalize_gtimer;
     s_ctx->classes[CLASS_TIMER] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_TIMER] = create_constructor(ctx, "Timer", s_ctx->classes[CLASS_TIMER], gtimer_construtor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_TIMER] = scripts_create_constructor(ctx, "Timer", s_ctx->classes[CLASS_TIMER], gtimer_construtor_cb, NULL);
 
     /**
      * The history of a webview
@@ -3980,7 +2726,7 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
     s_ctx->classes[CLASS_HISTORY] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_HISTORY_LIST] = create_constructor(ctx, "WebKitWebBackForwardList", s_ctx->classes[CLASS_HISTORY], NULL, NULL);
+    s_ctx->constructors[CONSTRUCTOR_HISTORY_LIST] = scripts_create_constructor(ctx, "WebKitWebBackForwardList", s_ctx->classes[CLASS_HISTORY], NULL, NULL);
 
     /**
      * Constructs a new Deferred
@@ -4038,7 +2784,7 @@ create_global_object()
     cd.staticFunctions = deferred_functions;
     cd.staticValues = deferred_values;
     s_ctx->classes[CLASS_DEFERRED] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_DEFERRED] = create_constructor(ctx, "Deferred", s_ctx->classes[CLASS_DEFERRED], deferred_constructor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_DEFERRED] = scripts_create_constructor(ctx, "Deferred", s_ctx->classes[CLASS_DEFERRED], deferred_constructor_cb, NULL);
 
     /** 
      * Constructs a new GtkWidget
@@ -4081,7 +2827,7 @@ create_global_object()
     cd.staticFunctions = widget_functions;
     cd.parentClass = s_ctx->classes[CLASS_SECURE_WIDGET];
     s_ctx->classes[CLASS_WIDGET] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_WIDGET] = create_constructor(ctx, "GtkWidget", s_ctx->classes[CLASS_WIDGET], widget_constructor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_WIDGET] = scripts_create_constructor(ctx, "GtkWidget", s_ctx->classes[CLASS_WIDGET], widget_constructor_cb, NULL);
 
     cd = kJSClassDefinitionEmpty;
     cd.className = "HiddenWebView";
@@ -4089,7 +2835,7 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_WEBVIEW];
     s_ctx->classes[CLASS_HIDDEN_WEBVIEW] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = create_constructor(ctx, "HiddenWebView", s_ctx->classes[CLASS_HIDDEN_WEBVIEW], hwv_constructor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_HIDDEN_WEB_VIEW] = scripts_create_constructor(ctx, "HiddenWebView", s_ctx->classes[CLASS_HIDDEN_WEBVIEW], hwv_constructor_cb, NULL);
 
     /**
      * @class 
@@ -4136,7 +2882,7 @@ create_global_object()
     cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
     s_ctx->classes[CLASS_DOWNLOAD] = JSClassCreate(&cd);
 
-    s_ctx->constructors[CONSTRUCTOR_DOWNLOAD] = create_constructor(ctx, "WebKitDownload", s_ctx->classes[CLASS_DOWNLOAD], download_constructor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_DOWNLOAD] = scripts_create_constructor(ctx, "WebKitDownload", s_ctx->classes[CLASS_DOWNLOAD], download_constructor_cb, NULL);
 
 #if WEBKIT_CHECK_VERSION(1, 10, 0)
     JSStaticFunction file_chooser_functions[] = { 
@@ -4184,7 +2930,7 @@ create_global_object()
     cd.staticFunctions = cookie_functions;
     cd.finalize = cookie_finalize;
     s_ctx->classes[CLASS_COOKIE] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_COOKIE] = create_constructor(ctx, "Cookie", s_ctx->classes[CLASS_COOKIE], cookie_constructor_cb, NULL);
+    s_ctx->constructors[CONSTRUCTOR_COOKIE] = scripts_create_constructor(ctx, "Cookie", s_ctx->classes[CLASS_COOKIE], cookie_constructor_cb, NULL);
 
 
     dom_initialize(s_ctx);
@@ -4286,7 +3032,7 @@ scripts_create_tab(GList *gl)
         apply_scripts();
         applied = true;
     }
-    JSObjectRef o = make_object(s_ctx->global_context, G_OBJECT(VIEW(gl)->web));
+    JSObjectRef o = scripts_make_object(s_ctx->global_context, G_OBJECT(VIEW(gl)->web));
 
     JSValueProtect(s_ctx->global_context, o);
     VIEW(gl)->script_wv = o;
@@ -4520,7 +3266,7 @@ scripts_reapply()
     {
         for (GList *gl = dwb.state.views; gl; gl=gl->next)
         {
-            JSObjectRef o = make_object(s_ctx->global_context, G_OBJECT(VIEW(gl)->web));
+            JSObjectRef o = scripts_make_object(s_ctx->global_context, G_OBJECT(VIEW(gl)->web));
             JSValueProtect(s_ctx->global_context, o);
             VIEW(gl)->script_wv = o;
         }
@@ -4534,8 +3280,7 @@ scripts_reapply()
 
 /* scripts_init {{{*/
 gboolean 
-scripts_init(gboolean force) 
-{
+scripts_init(gboolean force) {
     dwb.misc.script_signals = 0;
     if (s_ctx == NULL) 
     {
@@ -4653,10 +3398,14 @@ scripts_end(gboolean clean_all)
         }
         dwb.misc.script_signals = 0;
 
-        for (GList *gl = dwb.state.views; gl; gl=gl->next) {
-            if (VIEW(gl)->script_wv != NULL) {
-                JSValueUnprotect(s_ctx->global_context, VIEW(gl)->script_wv);
-                VIEW(gl)->script_wv = NULL;
+        // Only destroy webviews references if the a new context will be
+        // created, if dwb is closed the references will be freed by view_clean.
+        if (!clean_all) {
+            for (GList *gl = dwb.state.views; gl; gl=gl->next) {
+                if (VIEW(gl)->script_wv != NULL) {
+                    JSValueUnprotect(s_ctx->global_context, VIEW(gl)->script_wv);
+                    VIEW(gl)->script_wv = NULL;
+                }
             }
         }
 
