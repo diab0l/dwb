@@ -30,6 +30,7 @@ typedef struct ScriptContext_s ScriptContext;
 #include "../entry.h" 
 #include "../secret.h" 
 #include "../scripts.h"
+#include "shared.h"
 #include "ns_util.h"
 #include "ns_system.h"
 #include "ns_tabs.h"
@@ -46,6 +47,8 @@ typedef struct ScriptContext_s ScriptContext;
 #include "cl_webview.h"
 #include "cl_dom.h"
 #include "cl_frame.h"
+#include "cl_message.h"
+#include "cl_gtimer.h"
 #include "callback.h"
 
 
@@ -155,9 +158,6 @@ scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, s
 JSValueRef 
 scripts_get_nil(void);
 
-JSObjectRef 
-make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect);
-
 JSClassRef 
 scripts_create_class(const char *name, JSStaticFunction [], JSStaticValue [], JSObjectGetPropertyCallback );
 
@@ -195,5 +195,54 @@ uncamelize(char *uncamel, const char *camel, char rep, size_t length);
 #define kJSDefaultAttributes  (kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly )
 
 #define PROP_LENGTH 128
+
+#define BOXED_GET_CHAR(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
+{\
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        const char *value = getter(priv); \
+        if (priv != NULL) \
+            return js_char_to_value(ctx, value); \
+    } \
+    return NIL; \
+}
+#define BOXED_GET_BOOLEAN(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
+{\
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        return JSValueMakeBoolean(ctx, getter(priv)); \
+    } \
+    return JSValueMakeBoolean(ctx, false); \
+}
+#define BOXED_SET_CHAR(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        char *value = js_value_to_char(ctx, js_value, -1, exception); \
+        if (value != NULL) \
+        {\
+            setter(priv, value); \
+            g_free(value);\
+            return true;\
+        }\
+    } \
+    return false;\
+}
+#define BOXED_SET_BOOLEAN(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        gboolean value = JSValueToBoolean(ctx, js_value); \
+        setter(priv, value); \
+        return true;\
+    } \
+    return false;\
+}
+
+#define BOXED_DEF_VOID(Boxed, name, func) static JSValueRef name(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) { \
+    Boxed *priv = JSObjectGetPrivate(this); \
+    if (priv != NULL) { \
+        func(priv); \
+    } \
+    return NULL; \
+}
 
 #endif

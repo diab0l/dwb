@@ -20,7 +20,6 @@
 #define _POSIX_C_SOURCE 200112L
 
 #include "scripts/private.h"
-#include "scripts/cl_deferred.h"
 
 #define API_VERSION 1.11
 
@@ -53,54 +52,6 @@
 #define EXEC_LOCK_RETURN(result) if (!TRY_CONTEXT_LOCK) return result; { if (s_ctx != NULL && s_ctx->global_context != NULL) { 
 
 
-#define BOXED_GET_CHAR(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
-{\
-    Boxed *priv = JSObjectGetPrivate(this); \
-    if (priv != NULL) { \
-        const char *value = getter(priv); \
-        if (priv != NULL) \
-            return js_char_to_value(ctx, value); \
-    } \
-    return NIL; \
-}
-#define BOXED_GET_BOOLEAN(name, getter, Boxed) static JSValueRef name(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  \
-{\
-    Boxed *priv = JSObjectGetPrivate(this); \
-    if (priv != NULL) { \
-        return JSValueMakeBoolean(ctx, getter(priv)); \
-    } \
-    return JSValueMakeBoolean(ctx, false); \
-}
-#define BOXED_SET_CHAR(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
-    Boxed *priv = JSObjectGetPrivate(this); \
-    if (priv != NULL) { \
-        char *value = js_value_to_char(ctx, js_value, -1, exception); \
-        if (value != NULL) \
-        {\
-            setter(priv, value); \
-            g_free(value);\
-            return true;\
-        }\
-    } \
-    return false;\
-}
-#define BOXED_SET_BOOLEAN(name, setter, Boxed)  static bool name(JSContextRef ctx, JSObjectRef this, JSStringRef propertyName, JSValueRef js_value, JSValueRef* exception) { \
-    Boxed *priv = JSObjectGetPrivate(this); \
-    if (priv != NULL) { \
-        gboolean value = JSValueToBoolean(ctx, js_value); \
-        setter(priv, value); \
-        return true;\
-    } \
-    return false;\
-}
-
-#define BOXED_DEF_VOID(Boxed, name, func) static JSValueRef name(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) { \
-    Boxed *priv = JSObjectGetPrivate(this); \
-    if (priv != NULL) { \
-        func(priv); \
-    } \
-    return UNDEFINED; \
-}
 
 #define UNPROTECT_0(ctx, o) ((o) = (o) == NULL ? NULL : (JSValueUnprotect((ctx), (o)), NULL))
 
@@ -334,17 +285,6 @@ scripts_release_global_context() {
 
 
 static void 
-object_destroy_cb(JSObjectRef o) 
-{
-    EXEC_LOCK;
-
-    JSObjectSetPrivate(o, NULL);
-    JSValueUnprotect(s_ctx->global_context, o);
-
-    EXEC_UNLOCK;
-}
-
-static void 
 finalize_headers(JSObjectRef o)
 {
     SoupMessageHeaders *ob = JSObjectGetPrivate(o);
@@ -353,15 +293,6 @@ finalize_headers(JSObjectRef o)
         soup_message_headers_free(ob);
     }
 }
-static void 
-finalize_gtimer(JSObjectRef o) {
-    GTimer *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        g_timer_destroy(ob);
-    }
-}
-
 
 JSValueRef 
 scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
@@ -495,274 +426,7 @@ sigdata_remove(gulong sigid, GObject *instance)
 }
 
 
-JSObjectRef 
-suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception)
-{
-    JSObjectRef o = JSObjectMake(ctx, NULL, NULL);
-    js_set_object_property(ctx, o, "scheme", uri->scheme, exception);
-    js_set_object_property(ctx, o, "user", uri->user, exception);
-    js_set_object_property(ctx, o, "password", uri->password, exception);
-    js_set_object_property(ctx, o, "host", uri->host, exception);
-    js_set_object_number_property(ctx, o, "port", uri->port, exception);
-    js_set_object_property(ctx, o, "path", uri->path, exception);
-    js_set_object_property(ctx, o, "query", uri->query, exception);
-    js_set_object_property(ctx, o, "fragment", uri->fragment, exception);
-    return o;
-}
 
-/*}}}*/
-
-/* SOUP_MESSAGE {{{*/
-/** 
- * A SoupUri
- *
- * @class
- * @name SoupUri
- * */
- /**
-  * The scheme part of the uri
-  * @name scheme 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The user part of the uri
-  * @name user 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The password part of the uri
-  * @name password 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The host part of the uri
-  * @name host 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The port of the uri
-  * @name port 
-  * @memberOf SoupUri.prototype 
-  * @type Number
-  * @readonly
-  * */
- /**
-  * The path part of the uri
-  * @name path
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The query part of the uri
-  * @name query 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
- /**
-  * The fragment part of the uri
-  * @name fragment 
-  * @memberOf SoupUri.prototype 
-  * @type String
-  * @readonly
-  * */
-static JSValueRef 
-get_soup_uri(JSContextRef ctx, JSObjectRef object, SoupURI * (*func)(SoupMessage *), JSValueRef *exception)
-{
-    SoupMessage *msg = JSObjectGetPrivate(object);
-    if (msg == NULL)
-        return NIL;
-
-    SoupURI *uri = func(msg);
-    if (uri == NULL)
-        return NIL;
-    return suri_to_object(ctx, uri, exception);
-}
-
-/* message_get_uri {{{*/
-/**
- * The uri of a message
- *
- * @name uri
- * @memberOf SoupMessage.prototype
- * @type SoupUri
- * */
-static JSValueRef 
-message_get_uri(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return get_soup_uri(ctx, object, soup_message_get_uri, exception);
-}/*}}}*/
-
-/* message_get_first_party {{{*/
-/**
- * The first party uri of a message
- *
- * @name firstParty
- * @memberOf SoupMessage.prototype
- * @type SoupUri
- * */
-static JSValueRef 
-message_get_first_party(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    return get_soup_uri(ctx, object, soup_message_get_first_party, exception);
-}/*}}}*/
-/**
- * The request headers of a message
- *
- * @name requestHeaders
- * @memberOf SoupMessage.prototype
- * @type SoupHeaders
- *
- * @since 1.1
- * */
-static JSValueRef 
-message_get_request_headers(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    SoupMessage *msg = JSObjectGetPrivate(object);
-    if (msg != NULL)
-    {
-        SoupMessageHeaders *headers;
-        g_object_get(msg, "request-headers", &headers, NULL);
-        return JSObjectMake(ctx, s_ctx->classes[CLASS_SOUP_HEADER], headers);
-    }
-    return NIL;
-}/*}}}*/
-/**
- * The response headers of a message
- *
- * @name responseHeaders
- * @memberOf SoupMessage.prototype
- * @type SoupHeaders
- *
- * @since 1.1
- * */
-static JSValueRef 
-message_get_response_headers(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    SoupMessage *msg = JSObjectGetPrivate(object);
-    if (msg != NULL)
-    {
-        SoupMessageHeaders *headers;
-        g_object_get(msg, "response-headers", &headers, NULL);
-        return JSObjectMake(ctx, s_ctx->classes[CLASS_SOUP_HEADER], headers);
-    }
-    return NIL;
-}/*}}}*/
-// TODO: Documentation
-static JSValueRef 
-message_set_status(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0)
-        return UNDEFINED;
-    double status = JSValueToNumber(ctx, argv[0], exc);
-    if (!isnan(status))
-    {
-        SoupMessage *msg = JSObjectGetPrivate(this);
-        g_return_val_if_fail(msg != NULL, UNDEFINED);
-        soup_message_set_status(msg, (int)status);
-    }
-    return UNDEFINED;
-}
-// TODO: Documentation
-static JSValueRef 
-message_set_response(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0)
-        return UNDEFINED;
-    char *content_type = NULL;
-    char *response = js_value_to_char(ctx, argv[0], -1, exc);
-    if (response != NULL)
-    {
-        SoupMessage *msg = JSObjectGetPrivate(this);
-        g_return_val_if_fail(msg != NULL, UNDEFINED);
-        if (argc > 1)
-            content_type = js_value_to_char(ctx, argv[1], -1, exc);
-
-        soup_message_set_response(msg, content_type ? content_type : "text/html", SOUP_MEMORY_TAKE, response, strlen(response));
-        g_free(content_type);
-    }
-    return UNDEFINED;
-}
-
-/** 
- * The elapsed time since the timer was started, or if the timer is stopped the
- * elapsed time between last start and last stop.
- *
- * @name elapsed
- * @memberOf Timer.prototype
- * @type Object 
- * @property {Number} seconds   The elapsed seconds with fractional part
- * @property {Number} micro     The the fractional part in microseconds
- * @since 1.10
- * */
-static JSValueRef 
-gtimer_elapsed(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
-{
-    gdouble elapsed = 0;
-    gulong micro = 0;
-    GTimer *timer = JSObjectGetPrivate(object);
-    if (timer != NULL) {
-        elapsed = g_timer_elapsed(timer, &micro);
-        JSObjectRef value = JSObjectMake(ctx, NULL, NULL);
-        js_set_object_number_property(ctx, value, "seconds", elapsed, exception);
-        js_set_object_number_property(ctx, value, "micro", micro, exception);
-        return value;
-    }
-    return NIL;
-}/*}}}*/
-
-/** 
- * Starts the timer
- *
- * @name start
- * @memberOf Timer.prototype
- * @function 
- * @since 1.10
- * */
-BOXED_DEF_VOID(GTimer, gtimer_start, g_timer_start);
-/** 
- * Stops the timer
- *
- * @name stop
- * @memberOf Timer.prototype
- * @function 
- * @since 1.10
- * */
-BOXED_DEF_VOID(GTimer, gtimer_stop, g_timer_stop);
-/** 
- * Continues the timer if the timer has been stopped
- *
- * @name continue
- * @memberOf Timer.prototype
- * @function 
- * @since 1.10
- * */
-BOXED_DEF_VOID(GTimer, gtimer_continue, g_timer_continue);
-/** 
- * Resets the timer
- *
- * @name reset
- * @memberOf Timer.prototype
- * @function
- * @since 1.10
- * */
-BOXED_DEF_VOID(GTimer, gtimer_reset, g_timer_reset);
-
-static JSObjectRef 
-gtimer_construtor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
-{
-    GTimer *timer = g_timer_new();
-    return JSObjectMake(ctx, s_ctx->classes[CLASS_TIMER], timer);
-}
 /* FRAMES {{{*/
 
 
@@ -2043,26 +1707,6 @@ scripts_emit(ScriptSignal *sig)
 /* OBJECTS {{{*/
 /* scripts_make_object {{{*/
 
-JSObjectRef 
-make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
-{
-    JSObjectRef retobj = g_object_get_qdata(o, s_ctx->ref_quark);
-    if (retobj != NULL) {
-        return retobj;
-    }
-
-    retobj = JSObjectMake(ctx, class, o);
-    if (protect) 
-    {
-        g_object_set_qdata_full(o, s_ctx->ref_quark, retobj, (GDestroyNotify)object_destroy_cb);
-        JSValueProtect(ctx, retobj);
-    }
-    else 
-        g_object_set_qdata_full(o, s_ctx->ref_quark, retobj, NULL);
-
-    return retobj;
-}
-
 static JSObjectRef 
 make_boxed(gpointer boxed, JSClassRef klass)
 {
@@ -2323,69 +1967,11 @@ create_global_object()
     webview_initialize(s_ctx);
     frame_initialize(s_ctx);
     deferred_initialize(s_ctx);
+    message_initialize(s_ctx);
+    cltimer_initilize(s_ctx);
 
     /* SoupMessage */ 
-    /**
-     * Represents a SoupMessage 
-     *
-     * @name SoupMessage
-     * @augments GObject 
-     * @class 
-     *      Represents a SoupMessage. Can be used to inspect information about a
-     *      request
-     *
-     * @returns undefined
-     * */
-    JSStaticValue message_values[] = {
-        { "uri",                message_get_uri, NULL, kJSDefaultAttributes }, 
-        { "firstParty",         message_get_first_party, NULL, kJSDefaultAttributes }, 
-        { "requestHeaders",     message_get_request_headers, NULL, kJSDefaultAttributes }, 
-        { "responseHeaders",    message_get_response_headers, NULL, kJSDefaultAttributes }, 
-        { 0, 0, 0, 0 }, 
-    };
-    JSStaticFunction message_functions[] = {
-        { "setStatus",       message_set_status, kJSDefaultAttributes }, 
-        { "setResponse",     message_set_response, kJSDefaultAttributes }, 
-        { 0, 0, 0 }, 
-    };
 
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "SoupMessage";
-    cd.staticFunctions = message_functions;
-    cd.staticValues = message_values;
-    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
-    s_ctx->classes[CLASS_MESSAGE] = JSClassCreate(&cd);
-
-    s_ctx->constructors[CONSTRUCTOR_SOUP_MESSAGE] = scripts_create_constructor(ctx, "SoupMessage", s_ctx->classes[CLASS_MESSAGE], NULL, NULL);
-
-    /** 
-     * Constructs a new Timer.
-     *
-     * @name Timer
-     * @class 
-     *      A timer object for measuring time, e.g. for debugging purposes
-     * @since 1.10
-     * */
-
-    JSStaticValue gtimer_values[] = {
-        { "elapsed",                 gtimer_elapsed,        NULL, kJSDefaultAttributes }, 
-        { 0, 0, 0, 0 }, 
-    };
-    JSStaticFunction gtimer_functions[] = {
-        { "start",              gtimer_start,       kJSDefaultAttributes }, 
-        { "stop",               gtimer_stop,        kJSDefaultAttributes }, 
-        { "continue",           gtimer_continue,    kJSDefaultAttributes }, 
-        { "reset",              gtimer_reset,       kJSDefaultAttributes }, 
-        { 0, 0, 0 }, 
-    };
-
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "Timer";
-    cd.staticFunctions = gtimer_functions;
-    cd.staticValues = gtimer_values;
-    cd.finalize = finalize_gtimer;
-    s_ctx->classes[CLASS_TIMER] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_TIMER] = scripts_create_constructor(ctx, "Timer", s_ctx->classes[CLASS_TIMER], gtimer_construtor_cb, NULL);
 
     /**
      * The history of a webview
