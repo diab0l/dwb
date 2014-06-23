@@ -45,7 +45,7 @@ object_destroy_cb(JSObjectRef o)
 }
 
 JSObjectRef 
-make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
+make_object_for_class(JSContextRef ctx, int iclass, GObject *o, gboolean protect)
 {
     ScriptContext *sctx = scripts_get_context();
     JSObjectRef retobj = g_object_get_qdata(o, sctx->ref_quark);
@@ -53,7 +53,7 @@ make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean p
         return retobj;
     }
 
-    retobj = JSObjectMake(ctx, class, o);
+    retobj = JSObjectMake(ctx, sctx->classes[iclass], o);
     if (protect) 
     {
         g_object_set_qdata_full(o, sctx->ref_quark, retobj, (GDestroyNotify)object_destroy_cb);

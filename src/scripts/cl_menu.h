@@ -16,19 +16,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __DWB_SCRIPT_SHARED_H__
-#define __DWB_SCRIPT_SHARED_H__
+#ifndef __DWB_SCRIPT_MENU_H__
+#define __DWB_SCRIPT_MENU_H__
 
-JSObjectRef 
-suri_to_object(JSContextRef ctx, SoupURI *uri, JSValueRef *exception);
-
-JSObjectRef 
-make_object_for_class(JSContextRef ctx, int iclass, GObject *o, gboolean protect);
-
-bool
-set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception);
-
-JSValueRef 
-scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[]);
-
+void 
+menu_initialize(ScriptContext *sctx);
 #endif

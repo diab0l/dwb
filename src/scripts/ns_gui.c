@@ -26,8 +26,7 @@
  * */
 static JSValueRef
 gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.window), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.window), true);
 }
 /** 
  * The main container. Child of window
@@ -37,8 +36,7 @@ gui_get_window(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSVal
  * */
 static JSValueRef
 gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.vbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.vbox), true);
 }
 /** 
  * The box used for tab labels. Child of mainBox
@@ -48,11 +46,10 @@ gui_get_main_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSV
  * */
 static JSValueRef
 gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
 #if _HAS_GTK3
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.tabbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.tabbox), true);
 #else
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.tabcontainer), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.tabcontainer), true);
 #endif
 }
 /** 
@@ -63,8 +60,7 @@ gui_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSVa
  * */
 static JSValueRef
 gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.mainbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.mainbox), true);
 }
 /** 
  * The outmost statusbar widget, used for setting the statusbars colors, child of mainBox.
@@ -74,8 +70,7 @@ gui_get_content_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, 
  * */
 static JSValueRef
 gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.statusbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.statusbox), true);
 }
 /** 
  * Used for the statusbar alignment, child of statusWidget.
@@ -85,8 +80,7 @@ gui_get_status_widget(JSContextRef ctx, JSObjectRef object, JSStringRef property
  * */
 static JSValueRef
 gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.alignment), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.alignment), true);
 }
 /** 
  * The box that contains the statusbar widgets, grandchild of statusAlignment
@@ -96,8 +90,7 @@ gui_get_status_alignment(JSContextRef ctx, JSObjectRef object, JSStringRef prope
  * */
 static JSValueRef
 gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.status_hbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.status_hbox), true);
 }
 /** 
  * Label used for notifications, first child of statusBox
@@ -107,8 +100,7 @@ gui_get_status_box(JSContextRef ctx, JSObjectRef object, JSStringRef property, J
  * */
 static JSValueRef
 gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.lstatus), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.lstatus), true);
 }
 /** 
  * The entry, second child of statusBox
@@ -118,8 +110,7 @@ gui_get_message_label(JSContextRef ctx, JSObjectRef object, JSStringRef property
  * */
 static JSValueRef
 gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.entry), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.entry), true);
 }
 /** 
  * The uri label, third child of statusBox
@@ -129,8 +120,7 @@ gui_get_entry(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValu
  * */
 static JSValueRef
 gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.urilabel), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.urilabel), true);
 }
 /** 
  * Label used for status information, fourth child of statusBox
@@ -140,8 +130,7 @@ gui_get_uri_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JS
  * */
 static JSValueRef
 gui_get_status_label(JSContextRef ctx, JSObjectRef object, JSStringRef property, JSValueRef* exception) {
-    ScriptContext *sctx = scripts_get_context();
-    return make_object_for_class(ctx, sctx->classes[CLASS_SECURE_WIDGET], G_OBJECT(dwb.gui.rstatus), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(dwb.gui.rstatus), true);
 }
 /*}}}*/
 /** 

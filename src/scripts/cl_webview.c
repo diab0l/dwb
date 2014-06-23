@@ -516,7 +516,7 @@ wv_get_tab_widget(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSV
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, scripts_get_context()->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabevent), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(VIEW(gl)->tabevent), true);
 }
 /** 
  * Horizontal box, child of wv.tabWidget.
@@ -531,7 +531,7 @@ wv_get_tab_box(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValu
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, scripts_get_context()->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabbox), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(VIEW(gl)->tabbox), true);
 }
 /** 
  * Text label of a tab, child of wv.tabBox.
@@ -546,7 +546,7 @@ wv_get_tab_label(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVa
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, scripts_get_context()->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tablabel), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(VIEW(gl)->tablabel), true);
 }
 /** 
  * Favicon widget, child of wv.tabBox
@@ -561,7 +561,7 @@ wv_get_tab_icon(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSVal
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, scripts_get_context()->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->tabicon), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(VIEW(gl)->tabicon), true);
 }
 
 /** 
@@ -577,7 +577,7 @@ wv_get_scrolled_window(JSContextRef ctx, JSObjectRef object, JSStringRef js_name
     GList *gl = find_webview(object);
     if (gl == NULL)
         return NIL;
-    return make_object_for_class(ctx, scripts_get_context()->classes[CLASS_SECURE_WIDGET], G_OBJECT(VIEW(gl)->scroll), true);
+    return make_object_for_class(ctx, CLASS_SECURE_WIDGET, G_OBJECT(VIEW(gl)->scroll), true);
 }
 
 /** 
@@ -646,4 +646,5 @@ webview_initialize(ScriptContext *sctx) {
     sctx->classes[CLASS_WEBVIEW] = JSClassCreate(&cd);
 
     sctx->constructors[CONSTRUCTOR_WEBVIEW] = scripts_create_constructor(sctx->global_context, "WebKitWebView", sctx->classes[CLASS_WEBVIEW], NULL, NULL);
+
 }

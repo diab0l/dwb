@@ -49,6 +49,10 @@ typedef struct ScriptContext_s ScriptContext;
 #include "cl_frame.h"
 #include "cl_message.h"
 #include "cl_gtimer.h"
+#include "cl_history.h"
+#include "cl_widget.h"
+#include "cl_menu.h"
+#include "cl_download.h"
 #include "callback.h"
 
 

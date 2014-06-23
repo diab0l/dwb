@@ -86,11 +86,9 @@ request_callback(SoupSession *session, SoupMessage *message, JSObjectRef functio
 {
     JSContextRef ctx = scripts_get_global_context();
     if (ctx != NULL) {
-        if (message->response_body->data != NULL) 
-        {
-            ScriptContext *sctx = scripts_get_context();
+        if (message->response_body->data != NULL) {
             JSValueRef o = get_message_data(message);
-            JSValueRef vals[] = { o, make_object_for_class(ctx, sctx->classes[CLASS_GOBJECT], G_OBJECT(message), true)  };
+            JSValueRef vals[] = { o, make_object_for_class(ctx, CLASS_GOBJECT, G_OBJECT(message), true)  };
             scripts_call_as_function(ctx, function, function, 2, vals);
         }
         JSValueUnprotect(ctx, function);

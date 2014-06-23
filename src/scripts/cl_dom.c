@@ -85,10 +85,9 @@ make_dom_object(JSContextRef ctx, GObject *o) {
     if (WEBKIT_DOM_IS_NODE_LIST(o)) {
         return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(o), NULL);
     }
-    ScriptContext *sctx = scripts_get_context();
     ref_count++;
     printf("%d\n", ref_count);
-    JSObjectRef result =  make_object_for_class(ctx, sctx->classes[CLASS_DOM_OBJECT], o, true);
+    JSObjectRef result =  make_object_for_class(ctx, CLASS_DOM_OBJECT, o, true);
     g_object_weak_ref(o, (GWeakNotify)object_destroy_weak_cb, result);
     return result;
 }
