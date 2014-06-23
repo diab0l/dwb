@@ -18,27 +18,18 @@
 
 #include "private.h"
 
-static DeferredPriv * 
-deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
+/**
+ * Constructs a new Deferred.
+ * @memberOf Deferred.prototype
+ * @constructor 
+ */
+static JSObjectRef 
+deferred_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
 {
-    DeferredPriv *opriv = JSObjectGetPrivate(old);
-    DeferredPriv *npriv = JSObjectGetPrivate(new);
-
-    npriv->resolve = opriv->resolve;
-    if (npriv->resolve)
-        JSValueProtect(ctx, npriv->resolve);
-    npriv->reject = opriv->reject;
-    if (npriv->reject)
-        JSValueProtect(ctx, npriv->reject);
-    npriv->next = opriv->next;
-    if (npriv->next)
-        JSValueProtect(ctx, npriv->next);
-
-    deferred_destroy(ctx, old, opriv);
-    return npriv;
+    return deferred_new(ctx);
 }
 
-void 
+static void 
 deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv) 
 {
     g_return_if_fail(this != NULL);
@@ -59,6 +50,27 @@ deferred_destroy(JSContextRef ctx, JSObjectRef this, DeferredPriv *priv)
 
     JSValueUnprotect(ctx, this);
 }
+
+static DeferredPriv * 
+deferred_transition(JSContextRef ctx, JSObjectRef old, JSObjectRef new)
+{
+    DeferredPriv *opriv = JSObjectGetPrivate(old);
+    DeferredPriv *npriv = JSObjectGetPrivate(new);
+
+    npriv->resolve = opriv->resolve;
+    if (npriv->resolve)
+        JSValueProtect(ctx, npriv->resolve);
+    npriv->reject = opriv->reject;
+    if (npriv->reject)
+        JSValueProtect(ctx, npriv->reject);
+    npriv->next = opriv->next;
+    if (npriv->next)
+        JSValueProtect(ctx, npriv->next);
+
+    deferred_destroy(ctx, old, opriv);
+    return npriv;
+}
+
 
 JSObjectRef
 deferred_new(JSContextRef ctx) 
@@ -117,7 +129,7 @@ deferred_fulfilled(JSObjectRef deferred) {
  * @param {...Object} arguments 
  *      Variable number of arguments passed to Deferred.reject
  * */
-JSValueRef 
+static JSValueRef 
 deferred_then(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     DeferredPriv *priv = JSObjectGetPrivate(this);
@@ -244,8 +256,68 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
  * @type Boolean
  * @readonly
  * */
-JSValueRef 
+static JSValueRef 
 deferred_is_fulfilled(JSContextRef ctx, JSObjectRef self, JSStringRef js_name, JSValueRef* exception) 
 {
     return JSValueMakeBoolean(ctx, deferred_fulfilled(self));
+}
+void 
+deferred_initialize(ScriptContext *sctx) {
+    /**
+     * Constructs a new Deferred
+     *
+     * @class 
+     *      Deferred objects can be used to manage asynchronous operations. It
+     *      can trigger a callback function when an asynchrounous operation has
+     *      finished, and allows chaining of callbacks. Deferred basically has 2
+     *      callback chains, a done-chain and a fail-chain. If a asynchronous
+     *      operation is successful the deferred should be resolved and the done
+     *      callback chain of the deferred is called. If a asynchronous
+     *      operation fails the deferred should be rejected and the fail
+     *      callback chain of the deferred is called.
+     * @name Deferred
+     * @constructs Deferred
+     * @example
+     * system.spawn("command").then(
+     *      function() {
+     *          // called when execution was  successful 
+     *      },
+     *      function(errorcode) {
+     *          // called when execution wasn't successful 
+     *      }
+     * );
+     *
+     * function foo() {
+     *     var d = new Deferred();
+     *     timerStart(2000, function() {
+     *         d.reject("rejected");
+     *     });
+     *     return d;
+     * }
+     * function onResponse(response) {
+     *     io.out(response);
+     * }
+     *
+     * // Will print "rejected" after 2 and 4 seconds
+     * foo().fail(onResponse).fail(onResponse);
+     *
+     * @returns A Deferred
+     *
+     * */
+    JSStaticFunction deferred_functions[] = { 
+        { "then",             deferred_then,         kJSDefaultAttributes },
+        { "resolve",          deferred_resolve,         kJSDefaultAttributes },
+        { "reject",           deferred_reject,         kJSDefaultAttributes },
+        { 0, 0, 0 }, 
+    };
+    JSStaticValue deferred_values[] = {
+        { "isFulfilled",     deferred_is_fulfilled, NULL, kJSDefaultAttributes }, 
+        { 0, 0, 0, 0 }, 
+    };
+    JSClassDefinition cd = kJSClassDefinitionEmpty;
+    cd.className = "Deferred"; 
+    cd.staticFunctions = deferred_functions;
+    cd.staticValues = deferred_values;
+    sctx->classes[CLASS_DEFERRED] = JSClassCreate(&cd);
+    sctx->constructors[CONSTRUCTOR_DEFERRED] = scripts_create_constructor(sctx->global_context, "Deferred", sctx->classes[CLASS_DEFERRED], deferred_constructor_cb, NULL);
 }

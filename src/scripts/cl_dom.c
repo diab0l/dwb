@@ -735,7 +735,7 @@ dom_stop_propagation(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_
 }
 /** 
  * Only implemented by <span class="iltype">Event</span>.
- * @name stopPropagation
+ * @name preventDefault
  * @memberOf DOMObject.prototype
  * @function
  * @since 1.12

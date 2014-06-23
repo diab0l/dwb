@@ -16,31 +16,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __DWB_SCRIPT_DEFERRED_H__
-#define __DWB_SCRIPT_DEFERRED_H__
-
-typedef struct DeferredPriv_s 
-{
-    JSObjectRef reject;
-    JSObjectRef resolve;
-    JSObjectRef next;
-    gboolean is_fulfilled;
-} DeferredPriv;
-
-JSObjectRef
-deferred_new(JSContextRef ctx);
-
-
-gboolean 
-deferred_fulfilled(JSObjectRef deferred);
-
-JSValueRef 
-deferred_resolve(JSContextRef, JSObjectRef f, JSObjectRef , size_t argc, const JSValueRef argv[], JSValueRef* exc);
-
-JSValueRef 
-deferred_reject(JSContextRef, JSObjectRef f, JSObjectRef, size_t argc, const JSValueRef argv[], JSValueRef* exc);
+#ifndef __DWB_SCRIPT_FRAME_H__
+#define __DWB_SCRIPT_FRAME_H__
 
 void 
-deferred_initialize(ScriptContext *sctx);
-
+frame_initialize(ScriptContext *sctx);
 #endif
+

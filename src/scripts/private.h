@@ -45,6 +45,7 @@ typedef struct ScriptContext_s ScriptContext;
 #include "cl_gobject.h"
 #include "cl_webview.h"
 #include "cl_dom.h"
+#include "cl_frame.h"
 #include "callback.h"
 
 
