@@ -294,20 +294,6 @@ finalize_headers(JSObjectRef o)
     }
 }
 
-JSValueRef 
-scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
-{
-    char path[PATH_MAX] = {0};
-    int line = -1;
-    JSValueRef exc = NULL;
-    JSValueRef ret = JSObjectCallAsFunction(ctx, func, this, argc, argv, &exc);
-    if (exc != NULL) 
-    {
-        js_print_exception(ctx, exc, path, PATH_MAX, 0, &line);
-    }
-    return ret;
-}
-
 /* inject {{{*/
 JSValueRef
 inject(JSContextRef ctx, JSContextRef wctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
@@ -1760,12 +1746,6 @@ scripts_make_object(JSContextRef ctx, GObject *o)
     return result;
 }/*}}}*/
 
-
-/* set_property_cb {{{*/
-static bool
-set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
-    return true;
-}/*}}}*/
 
 JSClassRef 
 scripts_create_class(const char *name, JSStaticFunction staticFunctions[], JSStaticValue staticValues[], JSObjectGetPropertyCallback get_property_cb) 

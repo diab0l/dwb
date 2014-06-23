@@ -44,7 +44,6 @@ object_destroy_cb(JSObjectRef o)
     }
 }
 
-
 JSObjectRef 
 make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean protect)
 {
@@ -64,5 +63,24 @@ make_object_for_class(JSContextRef ctx, JSClassRef class, GObject *o, gboolean p
         g_object_set_qdata_full(o, sctx->ref_quark, retobj, NULL);
 
     return retobj;
+}
+
+bool
+set_property_cb(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName, JSValueRef value, JSValueRef* exception) {
+    return true;
+}
+
+JSValueRef 
+scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[])
+{
+    char path[PATH_MAX] = {0};
+    int line = -1;
+    JSValueRef exc = NULL;
+    JSValueRef ret = JSObjectCallAsFunction(ctx, func, this, argc, argv, &exc);
+    if (exc != NULL) 
+    {
+        js_print_exception(ctx, exc, path, PATH_MAX, 0, &line);
+    }
+    return ret;
 }
 

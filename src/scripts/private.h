@@ -153,9 +153,6 @@ void
 scripts_release_global_context();
 
 JSValueRef 
-scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, size_t argc, const JSValueRef argv[]);
-
-JSValueRef 
 scripts_get_nil(void);
 
 JSClassRef 
