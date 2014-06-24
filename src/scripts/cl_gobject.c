@@ -209,18 +209,6 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
     return ret;
 }
 
-static void 
-gobject_finalize(JSObjectRef o)
-{
-    GObject *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        ScriptContext *sctx = scripts_get_context();
-        g_object_steal_qdata(ob, sctx->ref_quark);
-    }
-}
-
-
 /** 
  * Callback called for GObject signals, <span class="ilkw">this</span> will refer to the object
  * that connected to the signal
@@ -508,7 +496,7 @@ gobject_disconnect(JSContextRef ctx, JSObjectRef function, JSObjectRef this, siz
     return JSValueMakeBoolean(ctx, false);
 }
 
-void 
+static void 
 finalize(JSObjectRef o)
 {
     GObject *ob = JSObjectGetPrivate(o);
@@ -559,7 +547,7 @@ gobject_initialize(ScriptContext *sctx) {
     cd.staticFunctions = default_functions;
     cd.getProperty = get_property;
     cd.setProperty = set_property;
-    cd.finalize = gobject_finalize;
+    cd.finalize = finalize;
     sctx->classes[CLASS_GOBJECT] = JSClassCreate(&cd);
 
     sctx->constructors[CONSTRUCTOR_DEFAULT] = scripts_create_constructor(sctx->global_context, "GObject", sctx->classes[CLASS_GOBJECT], NULL, NULL);

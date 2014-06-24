@@ -169,8 +169,11 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef self, size_t a
 #define KEYMAP_MAP(l) (((KeyMap*)((l)->data))->map)
     if (argc == 0) 
         return JSValueMakeBoolean(ctx, false);
+    gboolean result = false;
 
     ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) 
+        return JSValueMakeBoolean(ctx, false);
     GList *l = NULL;
     if (JSValueIsNumber(ctx, argv[0])) {
         int id = (int)JSValueToNumber(ctx, argv[0], exc);
@@ -208,9 +211,10 @@ global_unbind(JSContextRef ctx, JSObjectRef function, JSObjectRef self, size_t a
             if (m->map->prop & CP_SCRIPT) 
                 dwb.override_keys = g_list_delete_link(dwb.override_keys, l);
         }
-        return JSValueMakeBoolean(ctx, true);
+        result = true;
     }
-    return JSValueMakeBoolean(ctx, false);
+    scripts_release_context();
+    return JSValueMakeBoolean(ctx, result);
 #undef KEYMAP_MAP
 }/*}}}*/
 /** 
@@ -333,6 +337,8 @@ global_execute(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, s
 static JSValueRef 
 global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
     ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) 
+        return NULL;
     static const char *mapping[] = {
         [NAMESPACE_CLIPBOARD]   = "clipboard",
         [NAMESPACE_CONSOLE]     = "console",
@@ -363,6 +369,7 @@ global_namespace(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject,
         }
         JSStringRelease(name);
     }
+    scripts_release_context();
     return ret;
 }
 

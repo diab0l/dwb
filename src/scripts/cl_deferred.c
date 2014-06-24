@@ -77,12 +77,19 @@ deferred_new(JSContextRef ctx)
 {
     DeferredPriv *priv = g_malloc(sizeof(DeferredPriv));
     priv->resolve = priv->reject = priv->next = NULL;
+    JSObjectRef ret = NULL;
 
     ScriptContext *sctx = scripts_get_context();
+    if (sctx != NULL) {
 
-    JSObjectRef ret = JSObjectMake(ctx, sctx->classes[CLASS_DEFERRED], priv);
-    JSValueProtect(ctx, ret);
-    priv->is_fulfilled = false;
+        ret = JSObjectMake(ctx, sctx->classes[CLASS_DEFERRED], priv);
+        JSValueProtect(ctx, ret);
+        priv->is_fulfilled = false;
+        scripts_release_context();
+    }
+    else {
+        ret = JSValueToObject(ctx, NIL, NULL);
+    }
 
     return ret;
 }
@@ -165,11 +172,14 @@ JSValueRef
 deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     JSValueRef ret = NULL;
-    ScriptContext *sctx = scripts_get_context();
 
     DeferredPriv *priv = JSObjectGetPrivate(this);
     if (priv == NULL || priv->is_fulfilled)
         return NULL;
+    ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) {
+        return NULL;
+    }
 
     if (priv->resolve) 
         ret = JSObjectCallAsFunction(ctx, priv->resolve, this, argc, argv, exc);
@@ -198,6 +208,7 @@ deferred_resolve(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc,
 
         }
     }
+    scripts_release_context();
     return NULL;
 }
 /**
@@ -213,10 +224,13 @@ JSValueRef
 deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
     JSValueRef ret = NULL;
-    ScriptContext *sctx = scripts_get_context();
 
     DeferredPriv *priv = JSObjectGetPrivate(this);
     if (priv == NULL || priv->is_fulfilled)
+        return NULL;
+
+    ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) 
         return NULL;
 
     if (priv->reject) 
@@ -245,6 +259,7 @@ deferred_reject(JSContextRef ctx, JSObjectRef f, JSObjectRef this, size_t argc, 
                 deferred_reject(ctx, f, next, argc, argv, exc);
         }
     }
+    scripts_release_context();
     return NULL;
 }/*}}}*/
 

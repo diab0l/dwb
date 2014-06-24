@@ -261,9 +261,11 @@ widget_destroy(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t 
     GtkWidget *widget = JSObjectGetPrivate(this);
     g_return_val_if_fail(widget != NULL, NULL);
     ScriptContext *sctx = scripts_get_context();
-
-    sctx->created_widgets = g_slist_remove_all(sctx->created_widgets, widget);
-    gtk_widget_destroy(widget);
+    if (sctx != NULL) {
+        sctx->created_widgets = g_slist_remove_all(sctx->created_widgets, widget);
+        gtk_widget_destroy(widget);
+        scripts_release_context();
+    }
     return NULL;
 }
 
@@ -274,6 +276,8 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
     if (argc > 0)
     {
         ScriptContext *sctx = scripts_get_context();
+        if (sctx == NULL) 
+            return JSValueToObject(ctx, NIL, exception);
         char *stype = js_value_to_char(ctx, argv[0], 128, exception);
         if (stype == NULL)
             return JSValueToObject(ctx, NIL, NULL);
@@ -285,7 +289,9 @@ widget_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, co
         }
         GtkWidget *widget = gtk_widget_new(type, NULL);
         sctx->created_widgets = g_slist_prepend(sctx->created_widgets, widget);
-        return scripts_make_object(ctx, G_OBJECT(widget));
+        JSObjectRef ret = scripts_make_object(ctx, G_OBJECT(widget));
+        scripts_release_context();
+        return ret;
     }
     return JSValueToObject(ctx, NIL, NULL);
 }

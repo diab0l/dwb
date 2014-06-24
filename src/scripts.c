@@ -116,7 +116,7 @@ static JSObjectRef make_boxed(gpointer boxed, JSClassRef klass);
 static ScriptContext *s_ctx;
 static GSList *s_autoloaded_extensions;
 static uint64_t s_signal_locks;
-static JSValueRef UNDEFINED, s_nil;
+static JSValueRef s_nil;
 
 /* Only defined once */
 
@@ -257,16 +257,23 @@ script_context_free(ScriptContext *ctx) {
             UNPROTECT_0(ctx->global_context, ctx->init_after);
             UNPROTECT_0(ctx->global_context, ctx->session);
             UNPROTECT_0(ctx->global_context, s_nil);
-            UNPROTECT_0(ctx->global_context, UNDEFINED);
             JSGlobalContextRelease(s_ctx->global_context);
-            s_ctx->global_context = NULL;
+            ctx->global_context = NULL;
         }
         g_free(ctx);
     }
 }
 ScriptContext *
+scripts_get_context_unlocked() {
+    return s_ctx;
+}
+ScriptContext *
 scripts_get_context() {
     return s_ctx;
+}
+void 
+scripts_release_context() {
+    /*pthread_rwlock_unlock(&s_context_lock);*/
 }
 JSContextRef 
 scripts_get_global_context() {
@@ -283,16 +290,6 @@ scripts_release_global_context() {
     pthread_rwlock_unlock(&s_context_lock);
 }
 
-
-static void 
-finalize_headers(JSObjectRef o)
-{
-    SoupMessageHeaders *ob = JSObjectGetPrivate(o);
-    if (ob != NULL)
-    {
-        soup_message_headers_free(ob);
-    }
-}
 
 /* inject {{{*/
 JSValueRef
@@ -483,19 +480,21 @@ scripts_eval_key(KeyMap *m, Arg *arg)
 
 void 
 scripts_clear_keymap() {
-    if (s_ctx != NULL && s_ctx->keymap_dirty) {
-        EXEC_LOCK;
-        GList *l, *next = dwb.keymap;
-        KeyMap *km;
-        while (next) {
-            l = next;
-            next = next->next;
-            km = l->data;
-            if (km->map->prop & CP_SCRIPT && km->map->arg.i == 0) {
-                unbind_free_keymap(s_ctx->global_context, l);
+    JSContextRef ctx = scripts_get_global_context();
+    if (ctx != NULL) {
+        if (s_ctx->keymap_dirty) {
+            GList *l, *next = dwb.keymap;
+            KeyMap *km;
+            while (next) {
+                l = next;
+                next = next->next;
+                km = l->data;
+                if (km->map->prop & CP_SCRIPT && km->map->arg.i == 0) {
+                    unbind_free_keymap(s_ctx->global_context, l);
+                }
             }
         }
-        EXEC_UNLOCK;
+        scripts_release_global_context();
         s_ctx->keymap_dirty = false;
     }
 }
@@ -561,12 +560,6 @@ scripts_include(JSContextRef ctx, const char *path, const char *script, gboolean
     JSStringRelease(js_script);
     return ret;
 }
-/* global_include {{{*/
-
-
-
-
-/* global_send_request {{{*/
 
 /**
  * Callback that will be called when <i>Return</i> was pressed after {@link util.tabComplete} was invoked.
@@ -578,374 +571,22 @@ scripts_include(JSContextRef ctx, const char *path, const char *script, gboolean
 void 
 scripts_completion_activate(void) 
 {
-    EXEC_LOCK;
-    const char *text = GET_TEXT();
-    JSValueRef val[] = { js_char_to_value(s_ctx->global_context, text) };
-    completion_clean_completion(false);
-    dwb_change_mode(NORMAL_MODE, true);
-    scripts_call_as_function(s_ctx->global_context, s_ctx->complete, s_ctx->complete, 1, val);
-    EXEC_UNLOCK;
-}
-
-JSValueRef
-soup_header_get_function(JSContextRef ctx, const char * (*func)(SoupMessageHeaders *, const char *name), 
-        JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef *exc)
-{
-    JSValueRef result = NIL;
-    if (argc > 0)
-    {
-        SoupMessageHeaders *hdrs = JSObjectGetPrivate(this);
-        char *name = js_value_to_char(ctx, argv[0], -1, exc);
-        if (name != NULL)
-        {
-            const char *value = func(hdrs, name);
-            if (value)
-            {
-                result = js_char_to_value(ctx, value);
-            }
-            g_free(name);
-        }
-    }
-    return result;
-}
-void
-soup_header_set_function(JSContextRef ctx, void (*func)(SoupMessageHeaders *, const char *name, const char *value), 
-        JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef *exc)
-{
-    if (argc > 1)
-    {
-        SoupMessageHeaders *hdrs = JSObjectGetPrivate(this);
-        char *name = js_value_to_char(ctx, argv[0], -1, exc);
-        if (name != NULL)
-        {
-            char *value = js_value_to_char(ctx, argv[1], -1, exc);
-            if (value)
-            {
-                func(hdrs, name, value);
-                g_free(value);
-            }
-            g_free(name);
-        }
+    ScriptContext *sctx = scripts_get_context();
+    if (sctx != NULL) {
+        const char *text = GET_TEXT();
+        JSValueRef val[] = { js_char_to_value(s_ctx->global_context, text) };
+        completion_clean_completion(false);
+        dwb_change_mode(NORMAL_MODE, true);
+        scripts_call_as_function(sctx->global_context, sctx->complete, sctx->complete, 1, val);
+        scripts_release_context();
     }
 }
-/** 
- * Gets a header 
- *
- * @name getOne
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @param {String} name Name of the header
- *
- * @returns {String}
- *      The header or <i>null</i>.
- *
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_get_one(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return soup_header_get_function(ctx, soup_message_headers_get_one, this, argc, argv, exc);
-}
-/** 
- * Gets a comma seperated header list
- *
- * @name getList
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @param {String} name Name of the header list
- *
- * @returns {String}
- *      A comma seperated header list or <i>null</i>.
- *
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_get_list(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    return soup_header_get_function(ctx, soup_message_headers_get_list, this, argc, argv, exc);
-}
-/** 
- * Appends a value to a header
- *
- * @name append
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @param {String} name 
- *      Name of the header
- * @param {String} value 
- *      Value of the header
- *
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_append(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    soup_header_set_function(ctx, soup_message_headers_append, this, argc, argv, exc);
-    return UNDEFINED;
-}
-/** 
- * Replaces a header
- *
- * @name replace
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @param {String} name 
- *      Name of the header
- * @param {String} value
- *      New value of the header
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_replace(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    soup_header_set_function(ctx, soup_message_headers_replace, this, argc, argv, exc);
-    return UNDEFINED;
-}
-/** 
- * Removes a header
- *
- * @name remove
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @param {String} name 
- *      Name of the header
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_remove(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc > 0)
-    {
-        SoupMessageHeaders *hdrs = JSObjectGetPrivate(this);
-        char *name = js_value_to_char(ctx, argv[0], -1, exc);
-        if (name != NULL)
-        {
-            soup_message_headers_remove(hdrs, name);
-            g_free(name);
-        }
-    }
-    return UNDEFINED;
-}
-/** 
- * Removes all headers
- *
- * @name clear
- * @memberOf SoupHeaders.prototype
- * @function
- *
- * @since 1.1
- * */
-static JSValueRef 
-soup_headers_clear(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    SoupMessageHeaders *hdrs = JSObjectGetPrivate(this);
-    soup_message_headers_clear(hdrs);
-    return UNDEFINED;
-}
-
-/* DOWNLOAD {{{*/
-#if WEBKIT_CHECK_VERSION(1, 10, 0)
-/*}}}*/
-static JSValueRef 
-file_chooser_select(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
-    if (argc == 0) {
-        return UNDEFINED;
-    }
-    WebKitFileChooserRequest *request = JSObjectGetPrivate(this);
-    if (request == NULL) {
-        return UNDEFINED;
-    }
-    char **files = g_malloc0_n(argc, sizeof(char *));
-
-    for (size_t i=0; i<argc; i++) {
-        files[i] = js_value_to_char(ctx, argv[i], -1, exc);
-        if (files[i] == NULL) {
-            goto error_out;
-        }
-    }
-    webkit_file_chooser_request_select_files(request, (const gchar * const *)files);
-
-error_out:
-    if (request != NULL) {
-        g_object_unref(request);
-    }
-    g_strfreev(files);
-
-    return UNDEFINED;
-}
-#endif
-
 
 JSObjectRef 
 scripts_make_cookie(SoupCookie *cookie)
 {
     g_return_val_if_fail(cookie != NULL || s_ctx != NULL, NULL);
     return make_boxed(cookie, s_ctx->classes[CLASS_COOKIE]);
-}
-static JSObjectRef 
-cookie_constructor_cb(JSContextRef ctx, JSObjectRef constructor, size_t argc, const JSValueRef argv[], JSValueRef* exception) 
-{
-    g_return_val_if_fail(s_ctx != NULL, NULL);
-    SoupCookie *cookie = soup_cookie_new("", "", "", "", 0);
-    return JSObjectMake(ctx, s_ctx->classes[CLASS_COOKIE], cookie);
-}
-
-/**
- * Sets the maximum age of a cookie
- *
- * @name setMaxAge
- * @memberOf Cookie.prototype
- * @function
- * @since 1.5
- *
- * @param {Number} seconds 
- *      The number of seconds until the cookie expires, if set to -1 it is a
- *      session cookie
- * */
-static JSValueRef 
-cookie_set_max_age(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    if (argc == 0)
-        return UNDEFINED;
-    SoupCookie *cookie = JSObjectGetPrivate(this);
-    if (cookie != NULL )
-    {
-        double value = JSValueToNumber(ctx, argv[0], exc);
-        if (!isnan(value))
-        {
-            soup_cookie_set_max_age(cookie, (int) value);
-        }
-    }
-    return UNDEFINED;
-}
-/**
- * Deletes the cookie from the jar
- *
- * @name delete
- * @memberOf Cookie.prototype
- * @function
- * @since 1.5
- *
- * */
-static JSValueRef 
-cookie_delete(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    SoupCookie *cookie = JSObjectGetPrivate(this);
-    if (cookie != NULL)
-        dwb_soup_cookie_delete(cookie);
-    return UNDEFINED;
-}
-/**
- * Saves the cookie to the jar
- *
- * @name save
- * @memberOf Cookie.prototype
- * @function
- * @since 1.5
- *
- * */
-static JSValueRef 
-cookie_save(JSContextRef ctx, JSObjectRef function, JSObjectRef this, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
-{
-    SoupCookie *cookie = JSObjectGetPrivate(this);
-    if (cookie != NULL)
-        dwb_soup_cookie_save(cookie);
-    return UNDEFINED;
-}
-/** 
- * The cookie name
- * @name name
- * @memberOf Cookie.prototype
- * @type String
- * @since 1.5
- * */
-BOXED_GET_CHAR(cookie_get_name, soup_cookie_get_name, SoupCookie);
-BOXED_SET_CHAR(cookie_set_name, soup_cookie_set_name, SoupCookie);
-/** 
- * The cookie value
- * @name value
- * @memberOf Cookie.prototype
- * @type String
- * @since 1.5
- * */
-BOXED_GET_CHAR(cookie_get_value, soup_cookie_get_value, SoupCookie);
-BOXED_SET_CHAR(cookie_set_value, soup_cookie_set_value, SoupCookie);
-/** 
- * The cookie domain
- * @name domain
- * @memberOf Cookie.prototype
- * @type String
- * @since 1.5
- * */
-BOXED_GET_CHAR(cookie_get_domain, soup_cookie_get_domain, SoupCookie);
-BOXED_SET_CHAR(cookie_set_domain, soup_cookie_set_domain, SoupCookie);
-/** 
- * The cookie path
- * @name path
- * @memberOf Cookie.prototype
- * @type String
- * @since 1.5
- * */
-BOXED_GET_CHAR(cookie_get_path, soup_cookie_get_path, SoupCookie);
-BOXED_SET_CHAR(cookie_set_path, soup_cookie_set_path, SoupCookie);
-/** 
- * If the cookie should only be transferred over ssl
- * @name secure
- * @memberOf Cookie.prototype
- * @type boolean
- * @since 1.5
- * */
-BOXED_GET_BOOLEAN(cookie_get_secure, soup_cookie_get_secure, SoupCookie);
-BOXED_SET_BOOLEAN(cookie_set_secure, soup_cookie_set_secure, SoupCookie);
-/** 
- * If the cookie should not be exposed to scripts
- * @name httpOnly
- * @memberOf Cookie.prototype
- * @type String
- * @since 1.5
- * */
-BOXED_GET_BOOLEAN(cookie_get_http_only, soup_cookie_get_http_only, SoupCookie);
-BOXED_SET_BOOLEAN(cookie_set_http_only, soup_cookie_set_http_only, SoupCookie);
-
-/** 
- * The cookie expiration time
- * @name expires
- * @memberOf Cookie.prototype
- * @type Date
- * @readonly
- * @since 1.5
- * */
-static JSValueRef 
-cookie_get_expires(JSContextRef ctx, JSObjectRef this, JSStringRef property, JSValueRef* exception)  
-{
-    JSValueRef ret = NIL;
-    SoupCookie *cookie = JSObjectGetPrivate(this);
-    if (cookie != NULL)
-    {
-        SoupDate *date = soup_cookie_get_expires(cookie);
-        if (date == NULL)
-            return NIL;
-        char *date_str = soup_date_to_string(date, SOUP_DATE_HTTP);
-        JSValueRef argv[] = { js_char_to_value(ctx, date_str) };
-        g_free(date_str);
-        ret  = JSObjectMakeDate(ctx, 1, argv, exception);
-    }
-    return ret;
-}
-
-static void 
-cookie_finalize(JSObjectRef o)
-{
-    SoupCookie *cookie = JSObjectGetPrivate(o);
-    if (cookie != NULL)
-    {
-        soup_cookie_free(cookie);
-    }
 }
 /* gui {{{*/
 
@@ -1338,87 +979,16 @@ create_global_object()
     widget_initialize(s_ctx);
     menu_initialize(s_ctx);
     dom_initialize(s_ctx);
-
-
+    download_initialize(s_ctx);
 #if WEBKIT_CHECK_VERSION(1, 10, 0)
-    JSStaticFunction file_chooser_functions[] = { 
-        { "selectFiles",          file_chooser_select,        kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "WebKitFileChooserRequest";
-    cd.staticFunctions = file_chooser_functions;
-    cd.parentClass = s_ctx->classes[CLASS_GOBJECT];
-    s_ctx->classes[CLASS_FILE_CHOOSER] = JSClassCreate(&cd);
+    filechooser_initialize(s_ctx);
 #endif
+    cookie_initialize(s_ctx);
+    header_initialize(s_ctx);
 
-    /** 
-     * Constructs a new cookie
-     *
-     * @class 
-     *    A cookie
-     * @name Cookie
-     * @since 1.5
-     *
-     * @constructs Cookie 
-     *
-     * @returns Cookie
-     * */
-    /* download */
-    JSStaticValue cookie_values[] = {
-        { "name",           cookie_get_name, cookie_set_name, kJSPropertyAttributeDontDelete }, 
-        { "value",          cookie_get_value, cookie_set_value, kJSPropertyAttributeDontDelete }, 
-        { "domain",         cookie_get_domain, cookie_set_domain, kJSPropertyAttributeDontDelete }, 
-        { "path",           cookie_get_path, cookie_set_path, kJSPropertyAttributeDontDelete }, 
-        { "expires",        cookie_get_expires, NULL, kJSPropertyAttributeReadOnly }, 
-        { "secure",         cookie_get_secure, cookie_set_secure, kJSPropertyAttributeDontDelete }, 
-        { "httpOnly",       cookie_get_http_only, cookie_set_http_only, kJSPropertyAttributeDontDelete }, 
-        { 0, 0, 0, 0 }, 
-    };
-    JSStaticFunction cookie_functions[] = {
-        { "save",               cookie_save, kJSDefaultAttributes }, 
-        { "delete",             cookie_delete, kJSDefaultAttributes },
-        { "setMaxAge",          cookie_set_max_age, kJSDefaultAttributes }, 
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.staticValues = cookie_values;
-    cd.staticFunctions = cookie_functions;
-    cd.finalize = cookie_finalize;
-    s_ctx->classes[CLASS_COOKIE] = JSClassCreate(&cd);
-    s_ctx->constructors[CONSTRUCTOR_COOKIE] = scripts_create_constructor(ctx, "Cookie", s_ctx->classes[CLASS_COOKIE], cookie_constructor_cb, NULL);
-
-
-
-    /** 
-     * Represents a SoupMessage header
-     *
-     * @class 
-     *    Represents a {@link SoupMessage} header.
-     * @name SoupHeaders
-     * @augments Object
-     *
-     * @since 1.1
-     * */
-    JSStaticFunction header_functions[] = { 
-        { "getOne",                soup_headers_get_one,       kJSDefaultAttributes },
-        { "getList",                soup_headers_get_list,       kJSDefaultAttributes },
-        { "append",                soup_headers_append,       kJSDefaultAttributes },
-        { "replace",                soup_headers_replace,       kJSDefaultAttributes },
-        { "remove",                soup_headers_remove,       kJSDefaultAttributes },
-        { "clear",                soup_headers_clear,       kJSDefaultAttributes },
-        { 0, 0, 0 }, 
-    };
-    cd = kJSClassDefinitionEmpty;
-    cd.className = "SoupHeaders";
-    cd.staticFunctions = header_functions;
-    cd.finalize = finalize_headers;
-    s_ctx->classes[CLASS_SOUP_HEADER] = JSClassCreate(&cd);
-    
     s_ctx->session = make_object_for_class(ctx, CLASS_GOBJECT, G_OBJECT(webkit_get_default_session()), false);
     JSValueProtect(ctx, s_ctx->session);
-
-    s_ctx->global_context = ctx;
+    
 
     pthread_rwlock_unlock(&s_context_lock);
 }/*}}}*/
@@ -1766,9 +1336,6 @@ scripts_init(gboolean force) {
         g_free(dir);
     }
 
-
-    UNDEFINED = JSValueMakeUndefined(s_ctx->global_context);
-    JSValueProtect(s_ctx->global_context, UNDEFINED);
     s_nil = JSValueMakeNull(s_ctx->global_context);
     JSValueProtect(s_ctx->global_context, s_nil);
 
@@ -1859,12 +1426,6 @@ scripts_end(gboolean clean_all)
                 VIEW(gl)->script_wv = NULL;
             }
         }
-
-        if (s_ctx->global_context != NULL) {
-            JSValueUnprotect(s_ctx->global_context, UNDEFINED);
-            JSValueUnprotect(s_ctx->global_context, NIL);
-        }
-
         script_context_free(s_ctx);
         s_ctx = NULL;
     }

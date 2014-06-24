@@ -53,6 +53,11 @@ typedef struct ScriptContext_s ScriptContext;
 #include "cl_widget.h"
 #include "cl_menu.h"
 #include "cl_download.h"
+#include "cl_cookie.h"
+#include "cl_header.h"
+#if WEBKIT_CHECK_VERSION(1, 10, 0)
+#include "cl_filechooser.h"
+#endif
 #include "callback.h"
 
 
@@ -149,6 +154,9 @@ scripts_get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc);
 
 ScriptContext *
 scripts_get_context();
+
+void
+scripts_release_context();
 
 JSContextRef 
 scripts_get_global_context();

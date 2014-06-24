@@ -76,11 +76,15 @@ timer_stop(JSContextRef ctx, JSObjectRef f, JSObjectRef self, size_t argc, const
     if (!isnan(sigid)) 
     {
         ScriptContext *sctx = scripts_get_context();
+        if (sctx == NULL) 
+            return JSValueMakeBoolean(ctx, false);
+
         gboolean ret = g_source_remove((int)sigid);
         GSList *source = g_slist_find(sctx->timers, GINT_TO_POINTER(sigid));
         if (source)
             sctx->timers = g_slist_delete_link(sctx->timers, source);
 
+        scripts_release_context();
         return JSValueMakeBoolean(ctx, ret);
     }
     return JSValueMakeBoolean(ctx, false);
@@ -104,6 +108,7 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef self, size_t argc, cons
         return JSValueMakeNumber(ctx, -1);
     }
     double msec = JSValueToNumber(ctx, argv[0], exc);
+    int ret = -1;
 
     if (isnan(msec))
         return JSValueMakeNumber(ctx, -1);
@@ -115,9 +120,11 @@ timer_start(JSContextRef ctx, JSObjectRef f, JSObjectRef self, size_t argc, cons
     JSValueProtect(ctx, func);
 
     ScriptContext *sctx = scripts_get_context();
-
-    int ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)scripts_unprotect);
-    sctx->timers = g_slist_prepend(sctx->timers, GINT_TO_POINTER(ret));
+    if (sctx != NULL) {
+        ret = g_timeout_add_full(G_PRIORITY_DEFAULT, (int)msec, (GSourceFunc)timeout_callback, func, (GDestroyNotify)scripts_unprotect);
+        sctx->timers = g_slist_prepend(sctx->timers, GINT_TO_POINTER(ret));
+        scripts_release_context();
+    }
     return JSValueMakeNumber(ctx, ret);
 }
 

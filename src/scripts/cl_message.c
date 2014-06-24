@@ -136,12 +136,17 @@ static JSValueRef
 message_get_request_headers(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     SoupMessage *msg = JSObjectGetPrivate(object);
+    JSValueRef ret = NIL;
     if (msg != NULL)
     {
         ScriptContext *sctx = scripts_get_context();
-        SoupMessageHeaders *headers;
-        g_object_get(msg, "request-headers", &headers, NULL);
-        return JSObjectMake(ctx, sctx->classes[CLASS_SOUP_HEADER], headers);
+        if (sctx != NULL) {
+
+            SoupMessageHeaders *headers;
+            g_object_get(msg, "request-headers", &headers, NULL);
+            ret = JSObjectMake(ctx, sctx->classes[CLASS_SOUP_HEADER], headers);
+            scripts_release_context();
+        }
     }
     return NIL;
 }/*}}}*/
@@ -158,14 +163,18 @@ static JSValueRef
 message_get_response_headers(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
     SoupMessage *msg = JSObjectGetPrivate(object);
+    JSValueRef ret = NIL;
     if (msg != NULL)
     {
         ScriptContext *sctx = scripts_get_context();
-        SoupMessageHeaders *headers;
-        g_object_get(msg, "response-headers", &headers, NULL);
-        return JSObjectMake(ctx, sctx->classes[CLASS_SOUP_HEADER], headers);
+        if (sctx != NULL) {
+            SoupMessageHeaders *headers;
+            g_object_get(msg, "response-headers", &headers, NULL);
+            ret = JSObjectMake(ctx, sctx->classes[CLASS_SOUP_HEADER], headers);
+            scripts_release_context();
+        }
     }
-    return NIL;
+    return ret;
 }/*}}}*/
 // TODO: Documentation
 static JSValueRef 

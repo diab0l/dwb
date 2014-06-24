@@ -895,9 +895,12 @@ dom_on(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const 
 
     if (webkit_dom_event_target_add_event_listener_with_closure(WEBKIT_DOM_EVENT_TARGET(o), event, closure, capture)) {
         ScriptContext *sctx = scripts_get_context();
-        JSObjectRef retobj = JSObjectMake(ctx, sctx->classes[CLASS_DOM_EVENT], closure);
-        js_set_property(ctx, retobj, "callback", cb, kJSPropertyAttributeDontEnum, exc);
-        ret = retobj;
+        if (sctx != NULL) {
+            JSObjectRef retobj = JSObjectMake(ctx, sctx->classes[CLASS_DOM_EVENT], closure);
+            js_set_property(ctx, retobj, "callback", cb, kJSPropertyAttributeDontEnum, exc);
+            ret = retobj;
+            scripts_release_context();
+        }
 
     }
     /*g_object_unref(o);*/

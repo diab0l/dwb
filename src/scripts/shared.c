@@ -48,9 +48,12 @@ JSObjectRef
 make_object_for_class(JSContextRef ctx, int iclass, GObject *o, gboolean protect)
 {
     ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) 
+        return JSValueToObject(ctx, NIL, NULL);
+
     JSObjectRef retobj = g_object_get_qdata(o, sctx->ref_quark);
     if (retobj != NULL) {
-        return retobj;
+        goto finish;
     }
 
     retobj = JSObjectMake(ctx, sctx->classes[iclass], o);
@@ -62,6 +65,8 @@ make_object_for_class(JSContextRef ctx, int iclass, GObject *o, gboolean protect
     else 
         g_object_set_qdata_full(o, sctx->ref_quark, retobj, NULL);
 
+finish:
+    scripts_release_context();
     return retobj;
 }
 

@@ -108,7 +108,13 @@ request_callback(SoupSession *session, SoupMessage *message, JSObjectRef functio
 static JSValueRef 
 net_get_webkit_session(JSContextRef ctx, JSObjectRef object, JSStringRef js_name, JSValueRef* exception) 
 {
-    return scripts_get_context()->session;
+    ScriptContext *sctx = scripts_get_context();
+    JSValueRef ret = NULL;
+    if (sctx != NULL) {
+        ret = scripts_get_context()->session;
+        scripts_release_context();
+    }
+    return ret;
 }
 
 /** 

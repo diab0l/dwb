@@ -129,16 +129,18 @@ finish:
 static JSValueRef 
 sutil_tab_complete(JSContextRef ctx, JSObjectRef f, JSObjectRef thisObject, size_t argc, const JSValueRef argv[], JSValueRef* exc) 
 {
-    ScriptContext *s_ctx = scripts_get_context();
+    ScriptContext *sctx = scripts_get_context();
+    if (sctx == NULL) 
+        return NULL;
 
-    if (argc < 3 || !JSValueIsInstanceOfConstructor(ctx, argv[1], s_ctx->constructors[CONSTRUCTOR_ARRAY], exc)) 
+    if (argc < 3 || !JSValueIsInstanceOfConstructor(ctx, argv[1], sctx->constructors[CONSTRUCTOR_ARRAY], exc)) 
     {
         js_make_exception(ctx, exc, EXCEPTION("tabComplete: invalid argument."));
-        return NULL;
+        goto release_ctx;
     }
-    s_ctx->complete = js_value_to_function(ctx, argv[2], exc);
-    if (s_ctx->complete == NULL)
-        return NULL;
+    sctx->complete = js_value_to_function(ctx, argv[2], exc);
+    if (sctx->complete == NULL)
+        goto release_ctx;
 
     dwb.state.script_comp_readonly = false;
     if (argc > 3 && JSValueIsBoolean(ctx, argv[3])) 
@@ -186,6 +188,8 @@ error_out:
     g_free(label);
     g_list_free(dwb.state.script_completion);
     dwb.state.script_completion = NULL;
+release_ctx: 
+    scripts_release_context();
     return NULL;
 }
 /**
