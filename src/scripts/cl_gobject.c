@@ -154,12 +154,14 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
     }
 
     GObjectClass *class = G_OBJECT_GET_CLASS(o);
-    if (class == NULL || !G_IS_OBJECT_CLASS(class))
+    if (class == NULL || !G_IS_OBJECT_CLASS(class)) {
         return NULL;
+    }
 
     GParamSpec *pspec = g_object_class_find_property(class, buf);
-    if (pspec == NULL)
+    if (pspec == NULL) {
         return NULL;
+    }
 
     if (! (pspec->flags & G_PARAM_READABLE))
         return NULL;
@@ -195,7 +197,7 @@ get_property(JSContextRef ctx, JSObjectRef jsobj, JSStringRef js_name, JSValueRe
         ret = js_char_to_value(ctx, value);
         g_free(value);
     }
-    else if (G_TYPE_IS_CLASSED(gtype)) 
+    else if (G_TYPE_IS_CLASSED(gtype) || G_TYPE_IS_DERIVABLE(gtype)) 
     {
         GObject *object;
         g_object_get(o, buf, &object, NULL);

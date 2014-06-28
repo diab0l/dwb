@@ -793,11 +793,6 @@ dom_event_callback(WebKitDOMElement *element, WebKitDOMEvent *event, JSObjectRef
     JSObjectRef jselement = make_dom_object(ctx, G_OBJECT(element));
     JSObjectRef jsevent = make_dom_object(ctx, G_OBJECT(event));
 
-    // e.target isn't exposed, so we set at least the target property 
-    WebKitDOMEventTarget *target = webkit_dom_event_get_target(WEBKIT_DOM_EVENT(event));
-    JSObjectRef jstarget = make_dom_object(ctx, G_OBJECT(target));
-    js_set_property(ctx, jsevent, "target", jstarget, 0, NULL);
-
     JSValueRef argv[] = { jsevent };
     JSValueRef ret = scripts_call_as_function(ctx, cb, jselement, 1, argv);
     if (JSValueIsBoolean(ctx, ret)) {
