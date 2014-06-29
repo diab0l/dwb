@@ -42,7 +42,7 @@ get_message_data(SoupMessage *msg)
     const char *name, *value;
     SoupMessageHeadersIter iter;
     JSObjectRef o = NULL, ho;
-    JSValueRef ret = NIL;
+    JSValueRef ret;
     JSStringRef s;
 
     JSContextRef ctx = scripts_get_global_context();

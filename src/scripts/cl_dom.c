@@ -18,18 +18,12 @@
 
 #include "private.h"
 
-static int ref_count = 0;
-
-
 static void 
 object_destroy_weak_cb(JSObjectRef jsobj, GObject *domobj) {
     JSContextRef ctx = scripts_get_global_context();
     if (ctx == NULL) 
         return;
 
-
-    ref_count--;
-    printf("%d\n", ref_count);
     if (JSObjectGetPrivate(jsobj) != NULL) {
         JSObjectSetPrivate(jsobj, NULL);
         JSValueUnprotect(ctx, jsobj);
@@ -85,8 +79,6 @@ make_dom_object(JSContextRef ctx, GObject *o) {
     if (WEBKIT_DOM_IS_NODE_LIST(o)) {
         return dom_make_node_list(ctx, WEBKIT_DOM_NODE_LIST(o), NULL);
     }
-    ref_count++;
-    printf("%d\n", ref_count);
     JSObjectRef result =  make_object_for_class(ctx, CLASS_DOM_OBJECT, o, true);
     g_object_weak_ref(o, (GWeakNotify)object_destroy_weak_cb, result);
     return result;
@@ -246,7 +238,7 @@ dom_evaluate(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, 
     if (argc < 2) {
         return NIL;
     }
-    JSValueRef result = NIL;
+    JSValueRef result;
     GError *e = NULL;
     JSValueRef *items = NULL;
     GObject *o = JSObjectGetPrivate(self);

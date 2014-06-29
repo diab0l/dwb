@@ -148,7 +148,7 @@ message_get_request_headers(JSContextRef ctx, JSObjectRef object, JSStringRef js
             scripts_release_context();
         }
     }
-    return NIL;
+    return ret;
 }/*}}}*/
 /**
  * The response headers of a message
