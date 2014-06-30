@@ -79,7 +79,9 @@ enum {
     CLASS_FILE_CHOOSER,
 #endif
     CLASS_DOM_OBJECT, 
+#if WEBKIT_CHECK_VERSION(2, 4, 0)
     CLASS_DOM_EVENT, 
+#endif
     CLASS_TIMER,
     CLASS_LAST,
 };

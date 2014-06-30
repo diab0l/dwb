@@ -761,6 +761,7 @@ dom_element_blur(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t ar
             WEBKIT_TYPE_DOM_ELEMENT);
 }
 
+#if WEBKIT_CHECK_VERSION(2, 4, 0) 
 /**
  * Callback called for DOM events. <span class="ilkw">this</span> refers to the element that connected to
  * the event.
@@ -826,7 +827,7 @@ dom_event_remove(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t ar
 }
 /** 
  * Connects an element to a DOM-Event, equivalent to element.addEventListener().
- * Implemented by <span class="iltype">EventTarget</span>.
+ * Implemented by <span class="iltype">EventTarget</span>. Requires webkitgtk >= 2.6
  *
  * @name on
  * @memberOf DOMObject.prototype
@@ -890,12 +891,11 @@ dom_on(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const 
         }
 
     }
-    /*g_object_unref(o);*/
-    /*result = webkit_dom_event_target_add_event_listener(WEBKIT_DOM_EVENT_TARGET(o), event, (GCallback)dom_event_callback, capture, cb);*/
     g_free(event);
 error_out:
     return ret;
 }
+#endif
 
 void
 dom_initialize(ScriptContext *sctx) {
@@ -955,7 +955,9 @@ dom_initialize(ScriptContext *sctx) {
         { "stopPropagation",     dom_stop_propagation, kJSDefaultAttributes },
         { "focus",              dom_element_focus, kJSDefaultAttributes },
         { "blur",               dom_element_blur, kJSDefaultAttributes },
+#if WEBKIT_CHECK_VERSION(2, 4, 0) 
         { "on",                 dom_on,       kJSDefaultAttributes },
+#endif
         { 0, 0, 0 }, 
     };
     JSClassDefinition cd = kJSClassDefinitionEmpty;
@@ -964,6 +966,8 @@ dom_initialize(ScriptContext *sctx) {
     cd.parentClass = sctx->classes[CLASS_GOBJECT];
     sctx->classes[CLASS_DOM_OBJECT] = JSClassCreate(&cd);
 
+
+#if WEBKIT_CHECK_VERSION(2, 4, 0) 
     JSStaticFunction dom_event_functions[] = {
         { "remove",              dom_event_remove,       kJSDefaultAttributes },
         { 0, 0, 0 }, 
@@ -973,4 +977,5 @@ dom_initialize(ScriptContext *sctx) {
     cd.className = "DWBDOMEvent";
     cd.staticFunctions = dom_event_functions;
     sctx->classes[CLASS_DOM_EVENT] = JSClassCreate(&cd);
+#endif
 }
