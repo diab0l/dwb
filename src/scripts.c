@@ -105,6 +105,7 @@ static const char  *s_sigmap[SCRIPTS_SIG_LAST] = {
     [SCRIPTS_SIG_FOLLOW]            = "followHint", 
     [SCRIPTS_SIG_ADD_COOKIE]        = "addCookie", 
     [SCRIPTS_SIG_FILE_CHOOSER]      = "chooseFile", 
+    [SCRIPTS_SIG_NEW_WEBVIEW]       = "newWebView", 
     [SCRIPTS_SIG_READY]             = "ready", 
 };
 

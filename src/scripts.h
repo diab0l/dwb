@@ -54,7 +54,8 @@
 #define SCRIPTS_SIG_ADD_COOKIE          29
 #define SCRIPTS_SIG_READY               30
 #define SCRIPTS_SIG_FILE_CHOOSER        31
-#define SCRIPTS_SIG_LAST                32
+#define SCRIPTS_SIG_NEW_WEBVIEW         32
+#define SCRIPTS_SIG_LAST                33
 
 
 #define SCRIPT_MAX_SIG_OBJECTS 8

@@ -490,6 +490,29 @@ new_window_cb(WebKitWebView *web, WebKitWebFrame *frame, WebKitNetworkRequest *r
 static WebKitWebView * 
 view_create_web_view_cb(WebKitWebView *web, WebKitWebFrame *frame, GList *gl) 
 {
+    /**
+     * Emitted when creation of a new webview is requested, corresponds to the
+     * create-web-view signal of WebKitWebView
+     *
+     * @event newWebView
+     * @memberOf signals
+     * @param {signals~onNewWebView} callback
+     *      Callback function that will be called when the signal is emitted
+     * */
+    /**
+     * Callback called when creation of a new webview is requested
+     * @callback signals~onNewWebView
+     * @param {WebKitWebView}  webview 
+     *      The webview that requested the new webview
+     * @param {WebKitWebFrame} frame 
+     *      The frame that requested the new webview
+     * */
+    if (EMIT_SCRIPT(NEW_WEBVIEW)) {
+        ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, NEW_WEBVIEW, 1) };
+        if (scripts_emit(&signal)) {
+            return NULL;
+        }
+    }
     if (dwb.misc.tabbed_browsing) 
     {
         GList *gl = view_add(NULL, dwb.state.background_tabs); 
