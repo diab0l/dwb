@@ -496,16 +496,21 @@ view_create_web_view_cb(WebKitWebView *web, WebKitWebFrame *frame, GList *gl)
      *
      * @event newWebView
      * @memberOf signals
+     * @since 1.13
      * @param {signals~onNewWebView} callback
      *      Callback function that will be called when the signal is emitted
      * */
     /**
      * Callback called when creation of a new webview is requested
      * @callback signals~onNewWebView
+     * @since 1.13
      * @param {WebKitWebView}  webview 
      *      The webview that requested the new webview
      * @param {WebKitWebFrame} frame 
      *      The frame that requested the new webview
+     *
+     * @returns {Boolean}
+     *      If the callback returns true no new webview will be created
      * */
     if (EMIT_SCRIPT(NEW_WEBVIEW)) {
         ScriptSignal signal = { SCRIPTS_WV(gl), .objects = { G_OBJECT(frame) }, SCRIPTS_SIG_META(NULL, NEW_WEBVIEW, 1) };
