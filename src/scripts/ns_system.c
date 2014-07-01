@@ -153,7 +153,7 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
             JSContextRef ctx = scripts_get_global_context();
             if (ctx != NULL) {
                 JSValueRef argv[] = { JSValueMakeNumber(ctx, fail) };
-                deferred_resolve(ctx, data[0]->deferred, data[1]->deferred, 1, argv, NULL);
+                deferred_resolve(ctx, data[0]->deferred, data[0]->deferred, 1, argv, NULL);
                 scripts_release_global_context();
             }
         }
