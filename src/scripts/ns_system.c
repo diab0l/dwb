@@ -27,6 +27,7 @@ typedef struct SpawnData_s {
     JSObjectRef deferred;
     GMutex mutex;
     int type;
+    guint source;
 } SpawnData;
 
 #define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
@@ -66,43 +67,31 @@ static gboolean
 spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data) 
 {
     char *content = NULL; 
-    gboolean result = true;
     gsize length;
     int status;
 
     if (!g_mutex_trylock(&data->mutex)) {
         return true;
     }
-    if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
+    status = g_io_channel_read_line(channel, &content, &length, NULL, NULL);
+    if (status == G_IO_STATUS_NORMAL)
     {
-        result = false;
-    }
-    else 
-    {
-        status = g_io_channel_read_line(channel, &content, &length, NULL, NULL);
-        if (status == G_IO_STATUS_AGAIN || status == G_IO_STATUS_EOF)
-        {
-            result = true;
-        }
-        else if (status == G_IO_STATUS_NORMAL)
-        {
-            if (content != NULL) {
-                JSContextRef ctx = scripts_get_global_context();
-                if (ctx != NULL) {
-                    JSValueRef arg = js_char_to_value(ctx, content);
-                    if (arg != NULL)
-                    {
-                        JSValueRef argv[] = { arg };
-                        scripts_call_as_function(ctx, data->callback, data->callback, 1, argv);
-                    }
-                    scripts_release_global_context();
+        if (content != NULL) {
+            JSContextRef ctx = scripts_get_global_context();
+            if (ctx != NULL) {
+                JSValueRef arg = js_char_to_value(ctx, content);
+                if (arg != NULL)
+                {
+                    JSValueRef argv[] = { arg };
+                    scripts_call_as_function(ctx, data->callback, data->callback, 1, argv);
                 }
+                scripts_release_global_context();
             }
         }
-        g_free(content);
     }
+    g_free(content);
     g_mutex_unlock(&data->mutex);
-    return result;
+    return true;
 }
 
 
@@ -141,7 +130,9 @@ spawn_finish_data(SpawnData *data, int success)
     }
 
     if (data->channel != NULL) {
-        g_source_remove_by_user_data(data);
+        if (data->source != 0) {
+            g_source_remove(data->source);
+        }
         g_io_channel_shutdown(data->channel, true, NULL);
         g_io_channel_unref(data->channel);
     }
@@ -182,13 +173,14 @@ initialize_channel(JSContextRef ctx, JSObjectRef callback, JSObjectRef deferred,
         JSValueProtect(ctx, callback);
 
         data->channel = g_io_channel_unix_new(fd);
-        g_io_add_watch(data->channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, data);
+        data->source = g_io_add_watch(data->channel, G_IO_IN, (GIOFunc)spawn_output, data);
         g_io_channel_set_flags(data->channel, G_IO_FLAG_NONBLOCK, NULL);
         g_io_channel_set_close_on_unref(data->channel, true);
     }
     else {
         data->callback = NULL; 
         data->channel = NULL;
+        data->source = 0;
     }
     return data;
 }
