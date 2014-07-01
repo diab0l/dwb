@@ -18,25 +18,18 @@
 
 #include "private.h"
 
+#define SYSTEM_CHANNEL_OUT (0)
+#define SYSTEM_CHANNEL_ERR (1)
+
 typedef struct SpawnData_s {
     GIOChannel *channel;
     JSObjectRef callback;
     JSObjectRef deferred;
-    int status; 
-    int finished;
+    GMutex mutex;
+    int type;
 } SpawnData;
 
 #define G_FILE_TEST_VALID (G_FILE_TEST_IS_REGULAR | G_FILE_TEST_IS_SYMLINK | G_FILE_TEST_IS_DIR | G_FILE_TEST_IS_EXECUTABLE | G_FILE_TEST_EXISTS) 
-
-#define SPAWN_FINISHED 0x1
-#define SPAWN_CLOSED 0x2
-
-#define SPAWN_DATA_INIT(_data, _channel, _callback, _deferred) do { \
-    _data->channel = _channel; \
-    _data->callback = _callback; \
-    _data->deferred = _deferred; \
-    _data->status = 0; \
-    _data->finished = 0; } while (0)
 
 static char **
 get_environment(JSContextRef ctx, JSValueRef v, JSValueRef *exc)
@@ -75,16 +68,13 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
     char *content = NULL; 
     gboolean result = true;
     gsize length;
-    int fd, status;
+    int status;
 
+    if (!g_mutex_trylock(&data->mutex)) {
+        return true;
+    }
     if (condition == G_IO_HUP || condition == G_IO_ERR || condition == G_IO_NVAL) 
     {
-        data->finished |= SPAWN_CLOSED;
-        fd = g_io_channel_unix_get_fd(channel);
-        g_io_channel_shutdown(channel, true, NULL);
-        g_io_channel_unref(channel);
-        data->channel = NULL;
-        close(fd);
         result = false;
     }
     else 
@@ -111,31 +101,56 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
         }
         g_free(content);
     }
+    g_mutex_unlock(&data->mutex);
     return result;
-}/*}}}*/
+}
 
 
-/* {{{*/
-
-
-void 
-spawn_finish_data(JSContextRef ctx, SpawnData *data, int status)
+static void 
+spawn_finish_data(SpawnData *data, int success)
 {
-    if (data != NULL)
-    {
-        data->finished |= SPAWN_FINISHED;
-        data->status = status;
+    gchar *content = NULL;
+    gsize l = 0;
+    g_mutex_lock(&data->mutex);
+
+    JSContextRef ctx = scripts_get_global_context();
+    if (ctx != NULL) {
+        if (data->callback != NULL && data->channel != NULL) {
+            // read remaining data
+            GIOStatus status = g_io_channel_read_to_end(data->channel, &content, &l, NULL);
+            if (status == G_IO_STATUS_NORMAL && content != NULL) {
+                JSValueRef argv[] = { js_char_to_value(ctx, content) };
+                scripts_call_as_function(ctx, data->callback, data->callback, 1, argv);
+            }
+            g_free(content);
+        }
+        if (!deferred_fulfilled(data->deferred)) {
+            if (data->type == SYSTEM_CHANNEL_OUT && success == 0) {
+                JSValueRef argv[] = { JSValueMakeNumber(ctx, success) };
+                deferred_resolve(ctx, data->deferred, data->deferred, 1, argv, NULL);
+            }
+            else if (data->type == SYSTEM_CHANNEL_ERR && success != 0) {
+                JSValueRef argv[] = { JSValueMakeNumber(ctx, success) };
+                deferred_reject(ctx, data->deferred, data->deferred, 1, argv, NULL);
+            }
+        }
         if (data->callback != NULL) {
             JSValueUnprotect(ctx, data->callback);
         }
-        if (data->finished & SPAWN_CLOSED)
-            g_free(data);
-        else if (data->channel != NULL) {
-            g_io_channel_flush(data->channel, NULL);
-        }
+        scripts_release_global_context();
     }
+
+    if (data->channel != NULL) {
+        g_source_remove_by_user_data(data);
+        g_io_channel_shutdown(data->channel, true, NULL);
+        g_io_channel_unref(data->channel);
+    }
+
+    g_mutex_unlock(&data->mutex);
+    g_mutex_clear(&data->mutex);
+    g_free(data);
 }
-void 
+static void 
 watch_spawn(GPid pid, gint status, SpawnData **data)
 {
     int fail = 0;
@@ -148,35 +163,36 @@ watch_spawn(GPid pid, gint status, SpawnData **data)
         fail = WSTOPSIG(status);
     g_spawn_close_pid(pid);
 
-    if (data[0] != NULL && fail == 0) {
-        if (!deferred_fulfilled(data[0]->deferred)) {
-            JSContextRef ctx = scripts_get_global_context();
-            if (ctx != NULL) {
-                JSValueRef argv[] = { JSValueMakeNumber(ctx, fail) };
-                deferred_resolve(ctx, data[0]->deferred, data[0]->deferred, 1, argv, NULL);
-                scripts_release_global_context();
-            }
-        }
-    }
-    else if (data[1] != NULL && fail != 0) {
-        if (!deferred_fulfilled(data[1]->deferred)) {
-            JSContextRef ctx = scripts_get_global_context();
-            if (ctx != NULL) {
-                JSValueRef argv[] = { JSValueMakeNumber(ctx, fail) };
-                deferred_reject(ctx, data[1]->deferred, data[1]->deferred, 1, argv, NULL);
-                scripts_release_global_context();
-            }
-        }
-    }
-    JSContextRef ctx = scripts_get_global_context();
-    if (ctx != NULL) {
-        spawn_finish_data(ctx, data[0], fail);
-        spawn_finish_data(ctx, data[1], fail);
-        scripts_release_global_context();
-    }
+    spawn_finish_data(data[SYSTEM_CHANNEL_OUT], fail);
+    spawn_finish_data(data[SYSTEM_CHANNEL_ERR], fail);
 
     g_free(data);
 }
+
+static SpawnData *
+initialize_channel(JSContextRef ctx, JSObjectRef callback, JSObjectRef deferred, int fd, int type) {
+    SpawnData *data = g_malloc(sizeof(SpawnData));
+
+    data->deferred  = deferred;
+    data->type      = type;
+    g_mutex_init(&data->mutex);
+
+    if (callback != NULL) {
+        data->callback = callback;
+        JSValueProtect(ctx, callback);
+
+        data->channel = g_io_channel_unix_new(fd);
+        g_io_add_watch(data->channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, data);
+        g_io_channel_set_flags(data->channel, G_IO_FLAG_NONBLOCK, NULL);
+        g_io_channel_set_close_on_unref(data->channel, true);
+    }
+    else {
+        data->callback = NULL; 
+        data->channel = NULL;
+    }
+    return data;
+}
+
 
 /** 
  * Gets an environment variable
@@ -412,9 +428,8 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     char **srgv = NULL, *cmdline = NULL;
     char **envp = NULL;
     int srgc;
-    GIOChannel *out_channel = NULL, *err_channel = NULL;
     JSObjectRef oc = NULL, ec = NULL;
-    SpawnData *out_data = NULL, *err_data = NULL;
+    SpawnData **data;
     GPid pid;
     char *pipe_stdin = NULL;
     gint spawn_options = G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD;
@@ -460,37 +475,10 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
 
     JSObjectRef deferred = deferred_new(ctx);
 
-    out_data = g_malloc(sizeof(SpawnData));
-    if (oc != NULL) 
-    {
-        out_channel = g_io_channel_unix_new(outfd);
+    data = g_malloc_n(2, sizeof(SpawnData*));
 
-        SPAWN_DATA_INIT(out_data, out_channel, oc, deferred);
-
-        JSValueProtect(ctx, oc);
-        g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, out_data);
-        g_io_channel_set_flags(out_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_channel_set_close_on_unref(out_channel, true);
-    }
-    else {
-        SPAWN_DATA_INIT(out_data, NULL, NULL, deferred);
-    }
-
-    err_data = g_malloc(sizeof(SpawnData));
-    if (ec != NULL) 
-    {
-        err_channel = g_io_channel_unix_new(errfd);
-
-        SPAWN_DATA_INIT(err_data, err_channel, ec, deferred);
-
-        JSValueProtect(ctx, ec);
-        g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL, (GIOFunc)spawn_output, err_data);
-        g_io_channel_set_flags(err_channel, G_IO_FLAG_NONBLOCK, NULL);
-        g_io_channel_set_close_on_unref(err_channel, true);
-    }
-    else {
-        SPAWN_DATA_INIT(err_data, NULL, NULL, deferred);
-    }
+    data[SYSTEM_CHANNEL_OUT] = initialize_channel(ctx, oc, deferred, outfd, SYSTEM_CHANNEL_OUT);
+    data[SYSTEM_CHANNEL_ERR] = initialize_channel(ctx, ec, deferred, errfd, SYSTEM_CHANNEL_ERR);
 
     if (pipe_stdin != NULL && infd != -1)
     {
@@ -500,9 +488,6 @@ system_spawn(JSContextRef ctx, JSObjectRef function, JSObjectRef thisObject, siz
     if (infd != -1)
         close(infd);
 
-    SpawnData **data = g_malloc_n(2, sizeof(SpawnData*));
-    data[0] = out_data;
-    data[1] = err_data;
     g_child_watch_add(pid, (GChildWatchFunc)watch_spawn, data);
     ret = deferred;
 

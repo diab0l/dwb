@@ -17,7 +17,9 @@
                         onStdout = function(response) {
                             result.stdout += response;
                             if (detail.onStdout) {
-                                detail.onStdout(response);
+                                response.split("\n").forEach(function(line) {
+                                    detail.onStdout(line);
+                                });
                             }
                         };
                     }
@@ -26,7 +28,9 @@
                         onStderr = function(response) {
                             result.stderr += response;
                             if (detail.onStderr) {
-                                detail.onStderr(response);
+                                response.split("\n").forEach(function(line) {
+                                    detail.onStderr(line);
+                                });
                             }
                         };
                     }
