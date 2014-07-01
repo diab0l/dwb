@@ -74,19 +74,17 @@ spawn_output(GIOChannel *channel, GIOCondition condition, SpawnData *data)
         return true;
     }
     status = g_io_channel_read_line(channel, &content, &length, NULL, NULL);
-    if (status == G_IO_STATUS_NORMAL)
+    if (status == G_IO_STATUS_NORMAL && content != NULL)
     {
-        if (content != NULL) {
-            JSContextRef ctx = scripts_get_global_context();
-            if (ctx != NULL) {
-                JSValueRef arg = js_char_to_value(ctx, content);
-                if (arg != NULL)
-                {
-                    JSValueRef argv[] = { arg };
-                    scripts_call_as_function(ctx, data->callback, data->callback, 1, argv);
-                }
-                scripts_release_global_context();
+        JSContextRef ctx = scripts_get_global_context();
+        if (ctx != NULL) {
+            JSValueRef arg = js_char_to_value(ctx, content);
+            if (arg != NULL)
+            {
+                JSValueRef argv[] = { arg };
+                scripts_call_as_function(ctx, data->callback, data->callback, 1, argv);
             }
+            scripts_release_global_context();
         }
     }
     g_free(content);
