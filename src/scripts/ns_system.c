@@ -123,10 +123,10 @@ spawn_finish_data(SpawnData *data, int success)
         scripts_release_global_context();
     }
 
+    if (data->source != 0) {
+        g_source_remove(data->source);
+    }
     if (data->channel != NULL) {
-        if (data->source != 0) {
-            g_source_remove(data->source);
-        }
         g_io_channel_shutdown(data->channel, true, NULL);
         g_io_channel_unref(data->channel);
     }
