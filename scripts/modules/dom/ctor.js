@@ -224,7 +224,18 @@ Object.defineProperties(DOMCtor.prototype, {
         value : function(idx) {
             return this.$_collection[idx] || null;
         }
+    }, 
+    attr: {
+        value: function(prop, value) {
+            if (value) {
+                this.$_collection[0][prop] = value;
+            }
+            else {
+                return this.$_collection[0][prop];
+            }
+        }
     }
+    
 
 });
 provide("dom$ctor", DOMCtor);

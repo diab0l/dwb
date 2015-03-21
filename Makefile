@@ -74,6 +74,11 @@ install-data: all
 	for file in $(MODULEDIR)/*; do \
 		if [ -f $$file ]; then \
 			install -m 644 $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
+		elif [ -d $$file ]; then \
+			install -d $$file $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$file; \
+			for modfile in $$file/*; do \
+				install -m644 $$modfile $(DESTDIR)$(DATADIR)/$(REAL_NAME)/$$modfile; \
+			done \
 		fi \
 	done
 
