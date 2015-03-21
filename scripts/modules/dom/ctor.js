@@ -156,26 +156,36 @@ Object.defineProperties(DOMCtor.prototype, {
         value : function() { return new DOMCtor(this.document, this.$_collection[0] ? [this.$_collection[0]] : [], this.selector, this.window); }
     }, 
     /** 
-     * Applies a style hash to all elements of a collection, see {@link DOM.css}
-     * for details
+     * Without parameters it returns the computed style of the first element in
+     * the collection, if the parameter is a string it returns the computed
+     * style property of the first element in the collection, if it is an object 
+     * it applies the style hash to all elements of the collection, see {@link DOM.css} 
+     * for details, or returns the computed style of an object if 
      *
      * @name style 
      * @function
      * @memberOf Collection.prototype
      *
-     * @param {Object} css
-     *      Hash of css properties to set
+     * @param {Object} [css]
+     *      Hash of css properties to set or style property name to get
      *
-     * @returns {Collection}
-     *      self
+     * @returns {Collection|String|Computed style}
      *
      * */
     style : {
         value : function(props) {
+          if (props === undefined && this.$_collection.length > 0) {
+            return this.computedStyle(this.$_collection[0]);
+          }
+          if (this.isString(props) && this.$_collection.length > 0) {
+            return this.computedStyle(this.$_collection[0])[props];
+          }
+          else {
             this.$_collection.forEach(function(e) {
-                this.css(e, props);
+              this.css(e, props);
             }, this);
             return this;
+          }
         }
     }, 
     /** 
@@ -233,6 +243,7 @@ Object.defineProperties(DOMCtor.prototype, {
             else {
                 return this.$_collection[0][prop];
             }
+            return null;
         }
     }
     
