@@ -14,6 +14,69 @@ function DOMCtor(document, collection, selector, window) {
       window : { value : window, writable : true }
   });
 }
+/** 
+ * Equivalent to Array.forEach 
+ *
+ * @name forEach 
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.filter 
+ *
+ * @name filter 
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.map 
+ *
+ * @name map 
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.reduce 
+ *
+ * @name reduce 
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.reduceRight
+ *
+ * @name reduceRight
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.indexOf
+ *
+ * @name indexOf
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.lastIndexOf
+ *
+ * @name lastIndexOf
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.some
+ *
+ * @name some
+ * @function 
+ * @memberOf Collection.prototype
+ * */
+/** 
+ * Equivalent to Array.every
+ *
+ * @name every
+ * @function 
+ * @memberOf Collection.prototype
+ * */
 [ 'forEach', 'filter', 'map', 'reduce', 'reduceRight', 'indexOf', 'lastIndexOf', 'some', 'every' ].forEach(function(m) {
   Object.defineProperty(DOMCtor.prototype, m, {
       value : function() {
@@ -24,7 +87,7 @@ function DOMCtor(document, collection, selector, window) {
 
 Object.defineProperties(DOMCtor.prototype, DOMStaticMixin);
 /**
- * Objects that represents a collection DOM nodes.
+ * Array-like objects that represents a collection DOM nodes. 
  * @name Collection
  * @class
  *
@@ -246,9 +309,59 @@ Object.defineProperties(DOMCtor.prototype, {
             }
             return null;
         }
+    }, 
+    /** 
+     * Finds the index of an element in the collection
+     *
+     * @name findIndex
+     * @memberOf Collection.prototype
+     * @function 
+     *
+     * @param {Function} predicate 
+     *      Predicate function, if it returns true for some element this method
+     *      will return the index of the element, every predicate function is
+     *      called with 3 parameters, the element, the current index and the
+     *      collection
+     * @param {Object} thisArg
+     *      Object used as <b>this</b> in the predicate function
+     *
+     * @returns {Number} 
+     *      The index of the element or -1
+     * */
+    findIndex: {
+        value: function(predicate, scope) {
+            var i, l = this.length;
+            for (i=0; i<l; i++) {
+                if (predicate.call(scope, this[i], i, this)) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+    },
+    /** 
+     * Finds an element in the collection
+     *
+     * @name findElement
+     * @memberOf Collection.prototype
+     * @function 
+     *
+     * @param {Function} predicate 
+     *      Predicate function, if it returns true for some element this method
+     *      will return the the element. Every predicate function is called with
+     *      3 parameters, the element, the current index and the collection
+     * @param {Object} thisArg
+     *      Object used as <b>this</b> in the predicate function
+     *
+     * @returns {DOMElement} 
+     *      The element in the collection or null
+     * */
+    findElement: {
+        value: function(predicate, scope) {
+            var i = this.findIndex(predicate, scope); 
+            return i === -1 ? null : this[i];
+        }
     }
-    
-
 });
 provide("dom$ctor", DOMCtor);
 exports = DOMCtor;

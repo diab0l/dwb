@@ -11,15 +11,27 @@ var DOMCtor   = script.include("ctor.js");
  * @name DOM
  * @module
  * @constructs Factory
+ * @mixes Factory
  * @example 
+ * //!javascript
  * var dom = require("lib:dom");
  *
  * Signal.connect("documentLoaded", function(wv, frame) {
  *      var D = dom(frame);
  * });
  *
- * @param {Object} refObject
- *      Either a WebKitWebView or a WebKitWebFrame
+ * //!javascript
+ * var $ = require('lib:dom')();
+ * $('input').style({ display: 'none' });
+ *
+ * //!javascript
+ * var dom = require('lib:dom');
+ * dom.focus = dom.document.body.firstChild;
+ *
+ *
+ * @param {Object} [refObject]
+ *      Either a WebKitWebView or a WebKitWebFrame, if omitted it references the
+ *      webview of the current tab
  *
  * @returns {Factory}
  *      The factory function for a {@link Collection}
@@ -30,7 +42,23 @@ var DS = Object.create(null, DOMStaticMixin);
 
 function extendFactory(factory, document, window) {
    Object.defineProperties(factory, { 
+       /**
+        * The reference document 
+        *
+        * @name document 
+        * @memberOf Factory.prototype
+        * @readonly 
+        * @type HTMLDocument
+        * */
        document : { value : document, writable : true }, 
+      /**
+       * The reference window 
+       *
+       * @name window 
+       * @memberOf Factory.prototype
+       * @readonly 
+       * @type DOMWindow
+       * */
        window : { value : window, writable :true }
    });
    //Object.defineProperties(factory, DOMStaticMixin);
@@ -43,7 +71,9 @@ var dom = function(wof) {
   /** 
    * The factory function for a {@link Collection}.  Every Factory is bound to
    * the reference document obtained during creation of the factory function, so
-   * after a page load a new Factory has to be created
+   * after a page load a new Factory has to be created. If a factory is created
+   * without a reference document the factory always refers to the main document of
+   * the current tab
    *
    * @name Factory
    * @class
@@ -74,22 +104,6 @@ var dom = function(wof) {
      }
      return new DOMCtor(document, collection, selector, window);
    }
-   /**
-    * The reference document 
-    *
-    * @name document 
-    * @memberOf Factory.prototype
-    * @readonly 
-    * @type HTMLDocument
-    * */
-  /**
-   * The reference window 
-   *
-   * @name window 
-   * @memberOf Factory.prototype
-   * @readonly 
-   * @type DOMWindow
-   * */
    if (wof === undefined) {
      res = function wrapper(selector, node) {
        document = tabs.current.document;

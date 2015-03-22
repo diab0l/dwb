@@ -69,7 +69,7 @@ var DOMStaticMixin = {
     /**
      * Test whether an object is an array-like object
      *
-     * @name isElement
+     * @name isArrayLike
      * @memberOf Factory.prototype
      * @function
      * @param {Object} object
