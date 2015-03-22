@@ -217,10 +217,29 @@ Object.defineProperties(DOMCtor.prototype, {
             });
         }
     }, 
+    /** 
+     * Sets an attribute or property of all elements or gets an attribute or
+     * property of the first element in a collection
+     *
+     * @name attr 
+     * @memberOf Collection.prototype
+     * @function
+     *
+     * @param {String} attribute
+     *      The the attribute or property name
+     * @param {String} [value]
+     *      The value to set, optional
+     *
+     * @returns {Node}
+     *      The collection if used as a setter, the attribute or property if
+     *      used as a getter
+     * */
     attr: {
         value: function(prop, value) {
             if (value) {
-                this[prop] = value;
+                return this.each(function() {
+                    this[prop] = value;
+                });
             }
             else {
                 return this[0][prop];
