@@ -2,13 +2,26 @@ var domutil         = require("dom$util");
 var DOMStaticMixin  = require("dom$static");
 
 function DOMCtor(document, collection, selector, window) {
-    Object.defineProperties(this, {
-        document : { value :  document, writable : true },
-        $_collection : { value : collection, writable : true },
-        $_selector : { value : selector, writable : true }, 
-        window : { value : window, writable : true }
-    });
+  var i, l = collection.length;
+  for (i=0; i<l; i++) {
+    this[i] = collection[i];
+  }
+
+  Object.defineProperties(this, {
+      length: { value: l },
+      document : { value :  document, writable : true },
+      $_selector : { value : selector, writable : true }, 
+      window : { value : window, writable : true }
+  });
 }
+[ 'forEach', 'filter', 'map', 'reduce', 'reduceRight', 'indexOf', 'lastIndexOf', 'some', 'every' ].forEach(function(m) {
+  Object.defineProperty(DOMCtor.prototype, m, {
+      value : function() {
+        return Array.prototype[m].apply(this, arguments);
+     }
+  });
+});
+
 Object.defineProperties(DOMCtor.prototype, DOMStaticMixin);
 /**
  * Objects that represents a collection DOM nodes.
@@ -31,7 +44,6 @@ Object.defineProperties(DOMCtor.prototype, {
     destroy : {
         value : function() {
             this.off();
-            this.$_collection = null;
             this.document = null;
             this.$_selector = null;
             this.$_events = null;
@@ -55,7 +67,7 @@ Object.defineProperties(DOMCtor.prototype, {
      * */
     each : {
         value : function(cb, scope) {
-            this.$_collection.forEach(function(e, idx) {
+            this.forEach(function(e, idx) {
                 return cb.call(scope || e, idx, e);
             });
             return this;
@@ -64,7 +76,7 @@ Object.defineProperties(DOMCtor.prototype, {
     /** 
      * Filters a collection
      *
-     * @name filter 
+     * @name filterBy
      * @function
      * @memberOf Collection.prototype
      *
@@ -74,9 +86,9 @@ Object.defineProperties(DOMCtor.prototype, {
      * @returns {Collection}
      *      A new Collection containing the filtered nodes
      * */
-    filter : {
+    filterBy : {
         value : function(selector) {
-            var col = this.$_collection.filter(function(e) {
+            var col = this.filter(function(e) {
                 return e.matches(selector);
             });
             return new DOMCtor(this.document, col, selector, this.window);
@@ -153,7 +165,7 @@ Object.defineProperties(DOMCtor.prototype, {
      *
      * */
     first : {
-        value : function() { return new DOMCtor(this.document, this.$_collection[0] ? [this.$_collection[0]] : [], this.selector, this.window); }
+        value : function() { return new DOMCtor(this.document, this[0] ? [this[0]] : [], this.$_selector, this.window); }
     }, 
     /** 
      * Without parameters it returns the computed style of the first element in
@@ -174,14 +186,14 @@ Object.defineProperties(DOMCtor.prototype, {
      * */
     style : {
         value : function(props) {
-          if (props === undefined && this.$_collection.length > 0) {
-            return this.computedStyle(this.$_collection[0]);
+          if (props === undefined && this.length > 0) {
+            return this.computedStyle(this[0]);
           }
-          if (this.isString(props) && this.$_collection.length > 0) {
-            return this.computedStyle(this.$_collection[0])[props];
+          if (this.isString(props) && this.length > 0) {
+            return this.computedStyle(this[0])[props];
           }
           else {
-            this.$_collection.forEach(function(e) {
+            this.forEach(function(e) {
               this.css(e, props);
             }, this);
             return this;
@@ -200,48 +212,18 @@ Object.defineProperties(DOMCtor.prototype, {
      * */
     contains : {
         value : function(node) {
-            return this.$_collection.some(function(e) {
+            return this.some(function(e) {
                 return e.contains(node);
             });
-        }
-    }, 
-    /** 
-     * The dom node collection
-     *
-     * @name _ 
-     * @type Array[Node]
-     * @readonly
-     * @memberOf Collection.prototype
-     *
-     * */
-    _ : {
-        get : function() { return this.$_collection; }
-    }, 
-    /** 
-     * Gets an element from the collection
-     *
-     * @name get 
-     * @memberOf Collection.prototype
-     * @function
-     *
-     * @param {Number} idx
-     *      The index of the element
-     *      
-     * @returns {Node}
-     *      The element or null
-     * */
-    get : {
-        value : function(idx) {
-            return this.$_collection[idx] || null;
         }
     }, 
     attr: {
         value: function(prop, value) {
             if (value) {
-                this.$_collection[0][prop] = value;
+                this[prop] = value;
             }
             else {
-                return this.$_collection[0][prop];
+                return this[0][prop];
             }
             return null;
         }

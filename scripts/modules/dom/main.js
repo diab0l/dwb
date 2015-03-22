@@ -1,6 +1,6 @@
 var util = namespace("util");
 
-script.include("util.js");
+var domutil = script.include("util.js");
 
 var DOMStaticMixin = script.include("static.js");
 var DOMCtor   = script.include("ctor.js");
@@ -28,50 +28,52 @@ var DOMCtor   = script.include("ctor.js");
 
 var DS = Object.create(null, DOMStaticMixin);
 
+function extendFactory(factory, document, window) {
+   Object.defineProperties(factory, { 
+       document : { value : document, writable : true }, 
+       window : { value : window, writable :true }
+   });
+   //Object.defineProperties(factory, DOMStaticMixin);
+   return factory;
+}
+
+
 var dom = function(wof) {
-   var document = wof.document; 
-   var window;
-   // only use one reference for DOMWindow because a DOMWindow is never
-   // destroyed
-   if (wof instanceof WebKitWebView) {
-       window = script.getPrivate(wof, "domwindow");
-       if (!window) {
-           window = document.defaultView;
-           script.setPrivate(wof, "domwindow", window);
-       }
+  var document, window, res;
+  /** 
+   * The factory function for a {@link Collection}.  Every Factory is bound to
+   * the reference document obtained during creation of the factory function, so
+   * after a page load a new Factory has to be created
+   *
+   * @name Factory
+   * @class
+   *
+   * @param {String|Element|Array} selector
+   *       A CSS- or XPath-selector that will be used to create the Collection,
+   *       or an element that used to create the Collection or an Array of
+   *       Elements
+   * @param {Node} [node]
+   *       The reference node used for the query
+   *
+   * @returns {Collection}
+   *       A new Collection
+   * */
+   function $(document, window, selector, node) {
+     var collection;
+     if (selector === undefined) {
+       collection = [];
+     }
+     else if (DS.isString(selector)) {
+       collection = DS.query(node || document, selector);
+     }
+     else if (DS.isElement(selector)) {
+       collection = [selector];
+     }
+     else if (DS.isArrayLike(selector)) {
+       collection = selector;
+     }
+     return new DOMCtor(document, collection, selector, window);
    }
-   /** 
-    * The factory function for a {@link Collection}.  Every Factory is bound to
-    * the reference document obtained during creation of the factory function, so
-    * after a page load a new Factory has to be created
-    *
-    * @name Factory
-    * @class
-    *
-    * @param {String|Element|Array} selector
-    *       A CSS- or XPath-selector that will be used to create the Collection,
-    *       or an element that used to create the Collection or an Array of
-    *       Elements
-    * @param {Node} [node]
-    *       The reference node used for the query
-    *
-    * @returns {Collection}
-    *       A new Collection
-    * */
-   var res = function(selector, node) {
-       var collection;
-       if (DS.isString(selector)) {
-           collection = DS.query(node || document, selector);
-       }
-       else if (DS.isElement(selector)) {
-           collection = [selector];
-       }
-       else if (DS.isArrayLike(selector)) {
-           collection = selector;
-       }
-       return new DOMCtor(document, collection, selector, window);
-   };
-   Object.defineProperties(res, DOMStaticMixin);
    /**
     * The reference document 
     *
@@ -80,20 +82,33 @@ var dom = function(wof) {
     * @readonly 
     * @type HTMLDocument
     * */
-   /**
-    * The reference window 
-    *
-    * @name window 
-    * @memberOf Factory.prototype
-    * @readonly 
-    * @type DOMWindow
-    * */
-   Object.defineProperties(res, { 
-       document : { value : document, writable : true }, 
-       window : { value : window, writable :true },
-   });
+  /**
+   * The reference window 
+   *
+   * @name window 
+   * @memberOf Factory.prototype
+   * @readonly 
+   * @type DOMWindow
+   * */
+   if (wof === undefined) {
+     res = function wrapper(selector, node) {
+       document = tabs.current.document;
+       window = domutil.getWindow(tabs.current);
+       extendFactory(wrapper, document, window);
+       return $(document, window, selector, node);
+     };
+   }
+   else { 
+     document = wof.document;
+     if (wof instanceof WebKitWebView) {
+       window = domutil.getWindow(wof);
+     }
+     res = $.bind($, document, window);
+     extendFactory(res, document, window);
+   }
    return res;
-}
+};
+Object.defineProperties(dom, DOMStaticMixin);
 
 exports =  dom;
 // vim: ft=javascript:

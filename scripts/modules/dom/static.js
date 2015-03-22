@@ -256,7 +256,13 @@ var DOMStaticMixin = {
             var s = this.window.getComputedStyle(e);
             return this.css2obj(s.cssText);
         }
-    }, 
+    },
+    document: { get: domutil.getDocument }, 
+    window: { 
+      get: function() {
+        return domutil.getWindow(tabs.current);
+      } 
+    }
 };
 provide("dom$static", DOMStaticMixin);
 exports = DOMStaticMixin;
