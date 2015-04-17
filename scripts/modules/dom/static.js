@@ -1,5 +1,10 @@
 var domutil = require("dom$util");
 
+function getClass(instance) {
+    var s = Object.prototype.toString.call(instance);
+    return s.substring(8, s.length - 1);
+}
+
 var DOMStaticMixin = {
     /**
      * Test whether an object is a string
@@ -14,7 +19,7 @@ var DOMStaticMixin = {
      *
      * */
     isString : { 
-        value : function (s) { return typeof s == "string"; }, 
+        value : function (s) { return getClass(s) == 'String'; }
     },
     /**
      * Test whether an object is a {@link Collection}
@@ -29,7 +34,7 @@ var DOMStaticMixin = {
      *
      * */
     isCollection : {
-        value : function (d) { return d instanceof DOMCtor; },
+        value : function (d) { return d instanceof DOMCtor; }
     },
     /**
      * Test whether an object is a DOMElement
@@ -44,7 +49,7 @@ var DOMStaticMixin = {
      *
      * */
     isElement : {
-        value : function (e) { return e && e.nodeType == 1; }, 
+        value : function (e) { return e && e.nodeType == 1; } 
     },
     create : {
         value : function(name) {

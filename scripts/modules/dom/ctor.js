@@ -14,6 +14,47 @@ function DOMCtor(document, collection, selector, window) {
       window : { value : window, writable : true }
   });
 }
+
+function attrOrProp(self, setter, getter, prop, value) {
+    var key;
+    if (value) {
+        return self.each(function() {
+            setter(this, prop, value);
+        });
+    }
+    else if (self.isString(prop)) {
+        return getter(self[0], prop);
+    }
+    else if (Array.isArray(prop)) {
+        var map = {};
+        var element = self[0];
+        prop.forEach(function(p) {
+            map[p] = getter(element, p);
+        });
+        return map;
+    }
+    else {
+        for (key in prop) {
+          if (prop.hasOwnProperty(key)) {
+            attrOrProp(self, setter, getter, key, prop[key]);
+          }
+        }
+        return self;
+    }
+    return undefined;
+}
+function setAttribute(element, prop, value) {
+    element.setAttribute(prop, value);
+}
+function getAttribute(element, prop) {
+    return element.getAttribute(prop);
+}
+function setProperty(element, prop, value) {
+    element[prop] = value;
+}
+function getProperty(element, prop) {
+    return element[prop];
+}
 /** 
  * Equivalent to Array.forEach 
  *
@@ -281,35 +322,51 @@ Object.defineProperties(DOMCtor.prototype, {
         }
     }, 
     /** 
-     * Sets an attribute or property of all elements or gets an attribute or
-     * property of the first element in a collection
+     * Sets an attribute of all elements or gets an attribute or
+     * an attribute hash of the first element in a collection
      *
      * @name attr 
      * @memberOf Collection.prototype
      * @function
      *
-     * @param {String} attribute
-     *      The the attribute or property name
+     * @param {String|Array|Object} attribute
+     *      The attribute name, an array of attribute names or an hash of
+     *      attributes to set
      * @param {String} [value]
      *      The value to set, optional
      *
      * @returns {Node}
-     *      The collection if used as a setter, the attribute or property if
+     *      The collection if used as a setter, the attribute or attribute hash if
      *      used as a getter
      * */
     attr: {
         value: function(prop, value) {
-            if (value) {
-                return this.each(function() {
-                    this[prop] = value;
-                });
-            }
-            else {
-                return this[0][prop];
-            }
-            return null;
+            return attrOrProp(this, setAttribute, getAttribute, prop, value);
         }
     }, 
+    /** 
+     * Sets a property of all elements or gets a property or
+     * a property hash of the first element in a collection
+     *
+     * @name prop 
+     * @memberOf Collection.prototype
+     * @function
+     *
+     * @param {String|Array|Object} attribute
+     *      The property name, an array of property names or an hash of
+     *      properties to set
+     * @param {String} [value]
+     *      The value to set, optional
+     *
+     * @returns {Node}
+     *      The collection if used as a setter, the property or property hash if
+     *      used as a getter
+     * */
+    prop: {
+        value: function(prop, value) {
+            return attrOrProp(this, setProperty, getProperty, prop, value);
+        }
+    },
     /** 
      * Finds the index of an element in the collection
      *

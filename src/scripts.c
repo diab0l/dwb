@@ -21,7 +21,7 @@
 
 #include "scripts/private.h"
 
-#define API_VERSION 1.13
+#define API_VERSION 1.14
 
 //#define kJSDefaultFunction  (kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete )
 

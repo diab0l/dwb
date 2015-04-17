@@ -761,6 +761,116 @@ dom_element_blur(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t ar
             WEBKIT_TYPE_DOM_ELEMENT);
 }
 
+/** 
+ * Only implemented by <span class="iltype">Element</span>.
+ * @name setAttribute
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.14
+ *
+ * @param {String} name
+ *    The attribute name 
+ * @param {Object} value
+ *    The value to set, the value is converted to a string
+ *
+ */
+static JSValueRef 
+dom_element_set_attribute(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+  GError *e = NULL;
+  if (argc < 2) {
+    return NULL;
+  }
+
+  GObject *o = JSObjectGetPrivate(self);
+  if(o == NULL || !WEBKIT_DOM_IS_ELEMENT(o)) {
+    return NULL;
+  }
+  char *prop = js_value_to_char(ctx, argv[0], -1, NULL);
+  char *value = js_value_to_string(ctx, argv[1], -1, NULL);
+  if (prop == NULL || value == NULL) {
+    goto error_out;
+  }
+  webkit_dom_element_set_attribute(WEBKIT_DOM_ELEMENT(o), prop, value, &e);
+
+  if (e != NULL) {
+    js_make_exception(ctx, exc, EXCEPTION("%s"), e->message);
+    g_error_free(e);
+  }
+
+error_out: 
+  g_free(prop);
+  g_free(value);
+  return NULL;
+}
+/** 
+ * Only implemented by <span class="iltype">Element</span>.
+ * @name getAttribute
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.14
+ *
+ * @param {String} name
+ *    The attribute name 
+ *
+ * @returns {String} 
+ *    The attribute value
+ */
+static JSValueRef 
+dom_element_get_attribute(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+  JSValueRef result = NULL;
+  if (argc < 1) {
+    return NULL;
+  }
+  GObject *o = JSObjectGetPrivate(self);
+  if(o == NULL || !WEBKIT_DOM_IS_ELEMENT(o)) {
+    return NULL;
+  }
+  char *prop = js_value_to_char(ctx, argv[0], -1, NULL);
+  if (prop == NULL) {
+    return NULL;
+  }
+  char *value = webkit_dom_element_get_attribute(WEBKIT_DOM_ELEMENT(o), prop);
+  if (value != NULL && *value != '\0') {
+    result = js_char_to_value(ctx, value);
+  }
+  else {
+    result = JSValueMakeNull(ctx);
+  }
+
+  g_free(value);
+  g_free(prop);
+  return result;
+}
+/** 
+ * Only implemented by <span class="iltype">Element</span>.
+ * @name removeAttribute
+ * @memberOf DOMObject.prototype
+ * @function
+ * @since 1.14
+ *
+ * @param {String} name
+ *    The attribute name 
+ *
+ */
+static JSValueRef 
+dom_element_remove_attribute(JSContextRef ctx, JSObjectRef func, JSObjectRef self, size_t argc, const JSValueRef argv[], JSValueRef* exc) {
+  if (argc < 1) {
+    return NULL;
+  }
+  GObject *o = JSObjectGetPrivate(self);
+  if(o == NULL || !WEBKIT_DOM_IS_ELEMENT(o)) {
+    return NULL;
+  }
+  char *prop = js_value_to_char(ctx, argv[0], -1, NULL);
+  if (prop == NULL) {
+    return NULL;
+  }
+
+  webkit_dom_element_remove_attribute(WEBKIT_DOM_ELEMENT(o), prop);
+
+  g_free(prop);
+  return NULL;
+}
 #if WEBKIT_CHECK_VERSION(2, 4, 0) 
 /**
  * Callback called for DOM events. <span class="ilkw">this</span> refers to the element that connected to
@@ -955,6 +1065,9 @@ dom_initialize(ScriptContext *sctx) {
         { "stopPropagation",     dom_stop_propagation, kJSDefaultAttributes },
         { "focus",              dom_element_focus, kJSDefaultAttributes },
         { "blur",               dom_element_blur, kJSDefaultAttributes },
+        { "setAttribute",       dom_element_set_attribute, kJSDefaultAttributes },
+        { "getAttribute",       dom_element_get_attribute, kJSDefaultAttributes },
+        { "removeAttribute",    dom_element_remove_attribute, kJSDefaultAttributes },
 #if WEBKIT_CHECK_VERSION(2, 4, 0) 
         { "on",                 dom_on,       kJSDefaultAttributes },
 #endif
