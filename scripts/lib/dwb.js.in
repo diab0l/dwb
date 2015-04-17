@@ -144,6 +144,32 @@
             value : function(handle) {
                 return this._stop(handle.id);
             }
+        },
+
+        /**
+         * Calls a function once after a timeout similar to setTimeout in the
+         * web context
+         * @name timeout 
+         * @memberOf timer
+         * @function
+         *
+         * @param {Number} interval The interval in milliseconds, the minimum interval
+         *                          is 10 milliseconds
+         * @param {timer~startCallback} callback 
+         *      The callback that will be called, if the callback returns <i>false</i>
+         *      the timer will be stopped
+         *
+         * @returns {Object}
+         *      A handle, call handle.remove or timer.stop(handle) to stop the
+         *      timer.
+         * */
+        "timeout": {
+          value: function(interval, callback) {
+            return this.start(interval, function() {
+              callback();
+              return false;
+            });
+          }
         }
 
     });
