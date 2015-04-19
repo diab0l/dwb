@@ -150,7 +150,6 @@ uncamelize(char *uncamel, const char *camel, char rep, size_t length)
 }/*}}}*/
 
 
-
 char * 
 scripts_get_body(JSContextRef ctx, JSObjectRef func, JSValueRef *exc)
 {
@@ -1350,12 +1349,12 @@ scripts_init(gboolean force) {
 }/*}}}*/
 
 gboolean 
-scripts_execute_one(const char *script) 
+scripts_execute_one(const char *script, const char *path) 
 {
     gboolean ret = false;
     if (s_ctx != NULL && s_ctx->global_context != NULL)
     {
-        char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, "dwb:scripts", script);
+        char *debug = g_strdup_printf(SCRIPT_TEMPLATE_INCLUDE, path, script);
         ret = js_execute(s_ctx->global_context, debug, NULL) != NULL;
         g_free(debug);
     }
@@ -1370,9 +1369,9 @@ scripts_unprotect(JSObjectRef obj)
     JSValueUnprotect(s_ctx->global_context, obj);
     EXEC_UNLOCK;
 }
-void
-scripts_check_syntax(char **scripts)
-{
+
+void 
+for_each_script(char **scripts, void (* run)(const char *, const char *)) {
     scripts_init(true);
     for (int i=0; scripts[i]; i++)
     {
@@ -1382,14 +1381,32 @@ scripts_check_syntax(char **scripts)
             const char *tmp = content;
             if (g_str_has_prefix(tmp, "#!javascript"))
                 tmp += 12;
-            if (js_check_syntax(s_ctx->global_context, tmp, scripts[i], 0)) 
-            {
-                fprintf(stderr, "Syntax of %s is correct.\n", scripts[i]);
-            }
+            run(tmp, scripts[i]);
             g_free(content);
         }
     }
     scripts_end(true);
+}
+
+void 
+check_syntax(const char *script, const char *filename) {
+  if (js_check_syntax(s_ctx->global_context, script, filename, 0)) {
+    fprintf(stderr, "Syntax of %s is correct.\n", filename);
+  }
+}
+void 
+run_script(const char *script, const char *filename) {
+  scripts_execute_one(script, filename);
+}
+void
+scripts_check_syntax(char **scripts) 
+{
+    for_each_script(scripts, check_syntax);
+}
+void
+scripts_run_scripts(char **scripts) 
+{
+    for_each_script(scripts, run_script);
 }
 
 /* scripts_end {{{*/

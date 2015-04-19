@@ -88,4 +88,3 @@ scripts_call_as_function(JSContextRef ctx, JSObjectRef func, JSObjectRef this, s
     }
     return ret;
 }
-

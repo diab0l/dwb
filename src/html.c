@@ -24,6 +24,7 @@
 #include "scripts.h"
 #include "plugindb.h"
 
+#define SCRIPT_PATH "dwb:script"
 #define HTML_REMOVE_BUTTON "<div style='float:right;cursor:pointer;' navigation='%s %s' onclick='location.reload();'>&times</div>"
 typedef struct _HtmlTable HtmlTable;
 
@@ -60,7 +61,7 @@ static HtmlTable table[] = {
     { "dwb:keys",             "Keys",           INFO_FILE,      0, html_keys },
     { "dwb:plugins",          "Plugins",        INFO_FILE,           0, html_plugins },
     { "dwb:settings",         "Settings",       INFO_FILE,      0, html_settings },
-    { "dwb:script",          "Scripts",        NULL,           0, html_scripts },
+    { SCRIPT_PATH,            "Scripts",        NULL,           0, html_scripts },
     { "dwb:startpage",         NULL,            NULL,           0, html_startpage },
     { "dwb:cookies",         "cookies",            NULL,           0, html_cookies },
 };
@@ -601,7 +602,7 @@ html_scripts_confirm(WebKitDOMElement *el, WebKitDOMEvent *ev, GList *gl)
 #endif
     {
         char *html = webkit_dom_html_element_get_inner_text(WEBKIT_DOM_HTML_ELEMENT(el));
-        if (!scripts_execute_one(html)) 
+        if (!scripts_execute_one(html, SCRIPT_PATH)) 
             dwb_set_error_message(dwb.state.fview, "An error occured");
         else 
         {

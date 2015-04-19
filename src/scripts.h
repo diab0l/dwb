@@ -75,12 +75,13 @@ void scripts_create_tab(GList *gl);
 void scripts_remove_tab(JSObjectRef );
 
 void scripts_check_syntax(char **scripts);
+void scripts_run_scripts(char **scripts);
 void scripts_end(gboolean);
 
 gboolean scripts_init(gboolean);
 void scripts_init_script(const char *, const char *);
 void scripts_init_archive(const char *, const char *);
-gboolean scripts_execute_one(const char *script);
+gboolean scripts_execute_one(const char *script, const char *path);
 gboolean scripts_load_chrome(JSObjectRef,  const char *);
 void scripts_reapply(void);
 

@@ -21,7 +21,9 @@
 static GList *
 find_webview(JSObjectRef o) 
 {
-    g_return_val_if_fail(dwb.state.fview != NULL, NULL);
+    if (dwb.state.fview == NULL) {
+        return NULL;
+    }
 
     for (GList *r = dwb.state.fview; r; r=r->next)
         if (VIEW(r)->script_wv == o)

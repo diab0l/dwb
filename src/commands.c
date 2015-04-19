@@ -1116,7 +1116,7 @@ commands_sanitize(KeyMap *km, Arg *arg)
 DwbStatus 
 commands_eval(KeyMap *km, Arg *arg) 
 {
-  if (arg->p != NULL && scripts_execute_one(arg->p)) 
+  if (arg->p != NULL && scripts_execute_one(arg->p, "cmdline")) 
   {
       return STATUS_OK;
   }

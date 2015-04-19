@@ -57,9 +57,9 @@ term_print(JSContextRef ctx, FILE *stream, size_t argc, const JSValueRef argv[],
                 dout = JSValueToNumber(ctx, argv[i], exc);
                 if (!isnan(dout)) 
                     if ((int)dout == dout) 
-                        fprintf(stream, "%d\n", (int)dout);
+                        fprintf(stream, "%d", (int)dout);
                     else 
-                        fprintf(stream, "%f\n", dout);
+                        fprintf(stream, "%f", dout);
                 else 
                     fprintf(stream, "NAN");
                 break;
