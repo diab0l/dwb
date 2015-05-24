@@ -769,12 +769,8 @@ dwb_hide_message()
 {
     if (dwb.state.mode & INSERT_MODE) 
         dwb_set_normal_message(dwb.state.fview, false, INSERT_MODE_STRING);
-    else 
-    {
-        if (gtk_widget_get_visible(dwb.gui.bottombox)) 
-            CLEAR_COMMAND_TEXT();
-        else 
-            dom_remove_from_parent(WEBKIT_DOM_NODE(CURRENT_VIEW()->status_element), NULL);
+    else if (gtk_widget_get_visible(dwb.gui.bottombox)) {
+      CLEAR_COMMAND_TEXT();
     }
     return NULL;
 }/*}}}*/
@@ -796,13 +792,6 @@ dwb_set_normal_message(GList *gl, gboolean hide, const char  *text, ...)
     if (dwb.state.mode & COMMAND_MODE || gtk_widget_get_visible(dwb.gui.bottombox)) 
     {
         dwb_set_status_bar_text(dwb.gui.lstatus, message, &dwb.color.active_fg, dwb.font.fd_active, false);
-    }
-    else 
-    {
-        WebKitDOMDocument *doc = webkit_web_view_get_dom_document(WEBVIEW(gl));
-        WebKitDOMElement *docelement = webkit_dom_document_get_document_element(doc);
-        webkit_dom_node_append_child(WEBKIT_DOM_NODE(docelement), WEBKIT_DOM_NODE(VIEW(gl)->status_element), NULL);
-        webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(VIEW(gl)->status_element), message, NULL);
     }
 
     dwb_source_remove();
@@ -829,12 +818,6 @@ dwb_set_error_message(GList *gl, const char *error, ...)
 
     if (gtk_widget_get_visible(dwb.gui.bottombox)) {
         dwb_set_status_bar_text(dwb.gui.lstatus, message, &dwb.color.error, dwb.font.fd_active, false);
-    }
-    else {
-        WebKitDOMDocument *doc = webkit_web_view_get_dom_document(WEBVIEW(gl));
-        WebKitDOMElement *docelement = webkit_dom_document_get_document_element(doc);
-        webkit_dom_node_append_child(WEBKIT_DOM_NODE(docelement), WEBKIT_DOM_NODE(VIEW(gl)->status_element), NULL);
-        webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(VIEW(gl)->status_element), message, NULL);
     }
     dwb.state.message_id = g_timeout_add_seconds(dwb.misc.message_delay, (GSourceFunc)dwb_hide_message, NULL);
     entry_hide();
@@ -2007,7 +1990,6 @@ dwb_unfocus()
         view_set_normal_style(dwb.state.fview);
         dwb_source_remove();
         CLEAR_COMMAND_TEXT();
-        dom_remove_from_parent(WEBKIT_DOM_NODE(CURRENT_VIEW()->status_element), NULL);
         dwb.state.fview = NULL;
     }
 } /*}}}*/
@@ -3363,7 +3345,6 @@ dwb_normal_mode(gboolean clean)
         CLEAR_COMMAND_TEXT();
     }
 
-    dom_remove_from_parent(WEBKIT_DOM_NODE(CURRENT_VIEW()->status_element), NULL);
     if (mode == NORMAL_MODE) 
         webkit_web_view_set_highlight_text_matches(CURRENT_WEBVIEW(), false);
     

@@ -132,15 +132,3 @@ dom_get_active_element(WebKitDOMDocument *doc)
 }/*}}}*/
 
 
-/* dwb_dom_remove_from_parent(WebKitDOMNode *node, GError **error) {{{*/
-gboolean 
-dom_remove_from_parent(WebKitDOMNode *node, GError **error) 
-{
-    WebKitDOMNode *parent = webkit_dom_node_get_parent_node(node);
-    if (parent != NULL) 
-    {
-        webkit_dom_node_remove_child(parent, node, error);
-        return true;
-    }
-    return false;
-}/*}}}*/

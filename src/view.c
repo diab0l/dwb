@@ -622,22 +622,12 @@ view_hovering_over_link_cb(WebKitWebView *web, char *title, char *uri, GList *gl
     {
         VIEW(gl)->status->hover_uri = g_strdup(uri);
         dwb_set_status_bar_text(dwb.gui.urilabel, uri, &dwb.color.active_fg, NULL, false);
-        if (! (dwb.state.bar_visible & BAR_VIS_STATUS)) 
-        {
-            WebKitDOMDocument *doc = webkit_web_view_get_dom_document(web);
-            WebKitDOMElement *docelement = webkit_dom_document_get_document_element(doc);
-            webkit_dom_node_append_child(WEBKIT_DOM_NODE(docelement), WEBKIT_DOM_NODE(VIEW(gl)->hover.element), NULL);
-            webkit_dom_html_anchor_element_set_href(WEBKIT_DOM_HTML_ANCHOR_ELEMENT(VIEW(gl)->hover.anchor), uri);
-            webkit_dom_html_element_set_inner_text(WEBKIT_DOM_HTML_ELEMENT(VIEW(gl)->hover.anchor), uri, NULL);
-        }
     }
     else 
     {
         g_free(VIEW(gl)->status->hover_uri);
         VIEW(gl)->status->hover_uri = NULL;
         dwb_update_uri(gl, true);
-        if (! (dwb.state.bar_visible & BAR_VIS_STATUS)) 
-            dom_remove_from_parent(WEBKIT_DOM_NODE(VIEW(gl)->hover.element), NULL);
     }
 }/*}}}*/
 
@@ -1763,44 +1753,6 @@ view_create_web_view()
     gtk_widget_show_all(v->scroll);
     gtk_widget_show_all(v->tabevent);
 
-    WebKitDOMDocument *doc = webkit_web_view_get_dom_document(WEBKIT_WEB_VIEW(v->web));
-    v->hover.element = webkit_dom_document_create_element(doc, "div", NULL);
-    v->hover.anchor = webkit_dom_document_create_element(doc, "a", NULL);
-    char *font = GET_CHAR("font-hidden-statusbar");
-    char *bgcolor = GET_CHAR("background-color");
-    char *fgcolor = GET_CHAR("foreground-color");
-    gchar *style = g_strdup_printf(
-            "bottom:0px;right:0px;position:fixed;z-index:1000;\
-            text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:100%%;\
-            border-left:1px solid #555;\
-            border-top:1px solid #555;\
-            padding-left:2px;\
-            border-radius:5px 0px 0px 0px;letter-spacing:0px;background:%s;color:%s;font:%s", 
-            bgcolor, 
-            fgcolor, 
-            font);
-    webkit_dom_element_set_attribute(v->hover.element, "style", style, NULL);
-    g_free(style);
-    webkit_dom_element_set_attribute(v->hover.anchor, "style", "text-decoration:none;color:inherit;", NULL);
-    webkit_dom_node_append_child(WEBKIT_DOM_NODE(v->hover.element), WEBKIT_DOM_NODE(v->hover.anchor), NULL);
-#if WEBKIT_CHECK_VERSION(2, 2, 0)
-    webkit_dom_element_set_id(v->hover.element, "dwb_hover_element");
-#else 
-    webkit_dom_html_element_set_id(WEBKIT_DOM_HTML_ELEMENT(v->hover.element), "dwb_hover_element");
-#endif
-
-    v->status_element = webkit_dom_document_create_element(doc, "div", NULL);
-    style = g_strdup_printf(
-            "bottom:0px;left:0px;position:fixed;z-index:1000;\
-            border-right:1px solid #555;\
-            border-top:1px solid #555;\
-            padding-right:2px;\
-            border-radius:0px 5px 0px 0px;letter-spacing:0px;background:%s;color:%s;font:%s;", 
-            bgcolor, 
-            fgcolor, 
-            font);
-    webkit_dom_element_set_attribute(v->status_element, "style", style, NULL);
-    g_free(style);
     return v;
 } /*}}}*/
 
@@ -1856,10 +1808,6 @@ view_clean(GList *gl)
             g_object_unref(l->data);
         g_slist_free(v->status->styles);
     }
-
-    g_object_unref(v->hover.anchor);
-    g_object_unref(v->hover.element);
-    g_object_unref(v->status_element);
 
     g_object_unref(v->settings);
     /* Destroy widget */

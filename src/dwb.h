@@ -728,11 +728,6 @@ struct _View {
   ViewStatus *status;
   Plugins *plugins;
   WebKitWebSettings *settings;
-  struct {
-    WebKitDOMElement *element;
-    WebKitDOMElement *anchor;
-  } hover;
-  WebKitDOMElement *status_element;
   JSObjectRef js_base;
   JSObjectRef script_wv;
 };

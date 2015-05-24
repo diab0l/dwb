@@ -23,5 +23,4 @@ char * dom_node_get_attribute(WebKitDOMNode *node, const char *attribute);
 gboolean dom_add_frame_listener(WebKitWebFrame *frame, const char *signal, GCallback callback, gboolean bubble, GList *gl);
 gboolean dom_get_editable(WebKitDOMElement *element);
 WebKitDOMElement * dom_get_active_element(WebKitDOMDocument *doc);
-gboolean dom_remove_from_parent(WebKitDOMNode *node, GError **error);
 #endif
