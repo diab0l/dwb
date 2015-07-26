@@ -172,8 +172,8 @@ wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSVa
     cairo_t *cr;
     int w, h; 
     gboolean keep_aspect = false;
-    double aspect, new_width, new_height, width, height;
-    double sw, sh;
+    double aspect = 0, new_width = 0, new_height = 0, width = 0, height = 0;
+    double sw = 0, sh = 0;
 
     if (argc > 1)
     {
@@ -184,21 +184,28 @@ wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSVa
             if (argc > 2 && JSValueIsBoolean(ctx, argv[2])) 
                 keep_aspect = JSValueToBoolean(ctx, argv[2]);
 
-            if (keep_aspect && (width <= 0 || height <= 0))
+            if ((keep_aspect && (width <= 0 || height <= 0)) || (width <= 0 && height <= 0))
                 return NULL;
 
             sf = webkit_web_view_get_snapshot(wv);
             w = cairo_image_surface_get_width(sf);
             h = cairo_image_surface_get_height(sf);
 
+            if (h == 0) {
+                return NULL;
+            }
+
             aspect = (double)w/h;
             new_width = width;
             new_height = height;
 
-            if (width <= 0 || keep_aspect)
+            if (width <= 0 || keep_aspect) {
                 new_width = height * aspect;
-            if ((width > 0 && height <= 0) || keep_aspect)
+            }
+            if (height <= 0 || keep_aspect) {
                 new_height = width / aspect;
+            }
+
             if (keep_aspect) 
             {
                 if (new_width > width) 
@@ -206,7 +213,7 @@ wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSVa
                     new_width = width;
                     new_height = new_width / aspect;
                 }
-                else if (new_height > height) 
+                if (new_height > height) 
                 {
                     new_height = height;
                     new_width = new_height * aspect;
@@ -214,7 +221,7 @@ wv_to_surface(JSContextRef ctx, WebKitWebView *wv, unsigned int argc, const JSVa
             }
 
             if (width <= 0 || height <= 0)
-                sw = sh = MIN(width / w, height / h);
+                sw = sh = MIN(new_width / w, new_height / h);
             else 
             {
                 sw = width / w;
