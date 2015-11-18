@@ -253,15 +253,15 @@ gboolean handle_pinsets(json_object *pinsets)
             return FALSE;
         }
         json_object *name_obj, *good_hashes, *bad_hashes;
-        if((name_obj = json_object_object_get(pin_list, "name")) == NULL || !json_object_is_type(name_obj, json_type_string))
+        if(json_object_object_get_ex(pin_list, "name", &name_obj) == FALSE || !json_object_is_type(name_obj, json_type_string))
         {
             fprintf(stderr, "Couldn't get name from pinset %d\n", i);
             return FALSE;
         }
         const char *name = json_object_get_string(name_obj);
 
-        good_hashes = json_object_object_get(pin_list, "static_spki_hashes");
-        bad_hashes = json_object_object_get(pin_list, "bad_static_spki_hashes");
+        json_object_object_get_ex(pin_list, "static_spki_hashes", &good_hashes);
+        json_object_object_get_ex(pin_list, "bad_static_spki_hashes", &bad_hashes);
         has_certs *certs = has_certs_new();
         if(!write_cert_list(name, GOOD_CERT, certs, good_hashes) ||
                 !write_cert_list(name, BAD_CERT, certs, bad_hashes))
@@ -294,7 +294,7 @@ gboolean handle_entries(json_object *entries)
 
         /* Get hostname */
         json_object *name_obj;
-        if((name_obj = json_object_object_get(entry, "name")) == NULL ||
+        if(json_object_object_get_ex(entry, "name", &name_obj) == FALSE ||
                 !json_object_is_type(name_obj, json_type_string))
         {
             fprintf(stderr, "Couldn't process name from entry %d\n", i);
@@ -304,7 +304,8 @@ gboolean handle_entries(json_object *entries)
         char *host = g_hostname_to_unicode(name);
 
         /* Get whether to enable hsts for host */
-        json_object *mode = json_object_object_get(entry, "mode");
+        json_object *mode;
+       	json_object_object_get_ex(entry, "mode", &mode);
         gboolean hsts = mode != NULL;
         if(hsts && strcmp(json_object_get_string(mode), "force-https") != 0)
         {
@@ -312,7 +313,8 @@ gboolean handle_entries(json_object *entries)
         }
 
         /* Get sub domains directive */
-        json_object *include_subdomains = json_object_object_get(entry, "include_subdomains");
+        json_object *include_subdomains;
+       	json_object_object_get_ex(entry, "include_subdomains", &include_subdomains);
         gboolean sub_domains =  include_subdomains != NULL &&
             json_object_get_boolean(include_subdomains);
         if(include_subdomains != NULL && !json_object_is_type(include_subdomains, json_type_boolean))
@@ -324,7 +326,7 @@ gboolean handle_entries(json_object *entries)
         /* Get pins directive */
         json_object *entry_pins;
         const char *pin_name = NULL;
-        if((entry_pins = json_object_object_get(entry, "pins")) != NULL)
+        if(json_object_object_get_ex(entry, "pins", &entry_pins) == TRUE)
         {
             if(!json_object_is_type(entry_pins, json_type_string))
             {
@@ -368,7 +370,7 @@ gboolean parse_json(const char *filename)
     /* Parse and handle the pinsets entry */
     json_object *pinsets;
     pins = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free); 
-    if((pinsets = json_object_object_get(json, "pinsets")) == NULL || !json_object_is_type(pinsets, json_type_array) ||
+    if(json_object_object_get_ex(json, "pinsets", &pinsets) == FALSE || !json_object_is_type(pinsets, json_type_array) ||
             !handle_pinsets(pinsets))
     {
         fprintf(stderr, "Error while handling pinsets\n");
@@ -377,7 +379,7 @@ gboolean parse_json(const char *filename)
 
     /* Parse and handle the list of hostnames */
     json_object *entries;
-    if((entries = json_object_object_get(json, "entries")) == NULL || !json_object_is_type(entries, json_type_array) ||
+    if(json_object_object_get_ex(json, "entries", &entries) == FALSE || !json_object_is_type(entries, json_type_array) ||
             !handle_entries(entries))
     {
         fprintf(stderr, "Error while handling entries\n");
